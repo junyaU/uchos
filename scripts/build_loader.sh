@@ -2,7 +2,6 @@
 
 loader_pkg_name="UchLoaderPkg"
 edk2_path="$HOME/edk2"
-work_path="$HOME/uchos"
 
 cd $edk2_path
 source edksetup.sh 

@@ -5,10 +5,11 @@ export PATH=/usr/local/opt/llvm/bin:$PATH
 
 mount_point="mnt"
 disk_img="disk.img"
+work_path="$HOME/uchos"
 
 source ./scripts/create_disk_img.sh
-
 source ./scripts/build_loader.sh
+source ./scripts/build_kernel.sh
 
 hdiutil detach $mount_point
 
