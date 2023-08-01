@@ -166,6 +166,14 @@ EFI_STATUS EFIAPI LoaderMain(EFI_HANDLE image_handle,
             ;
     }
 
+    struct FrameBufferConf conf = {
+        (UINT8 *)gop->Mode->FrameBufferBase,
+        gop->Mode->Info->PixelsPerScanLine,
+        gop->Mode->Info->HorizontalResolution,
+        gop->Mode->Info->VerticalResolution,
+        kPixelRGBResv8BitPerColor,
+    };
+
     CHAR8 memory_map_buf[4096 * 4];
     struct MemoryMap memory_map = {
         sizeof(memory_map_buf), memory_map_buf, 0, 0, 0, 0};
@@ -185,9 +193,8 @@ EFI_STATUS EFIAPI LoaderMain(EFI_HANDLE image_handle,
 
     UINT64 entry_addr = *(UINT64 *)(kernel_buf + 24);
 
-    typedef void __attribute__((sysv_abi)) KernelEntryPoint(UINT64, UINT64);
-    ((KernelEntryPoint *)entry_addr)(gop->Mode->FrameBufferBase,
-                                     gop->Mode->FrameBufferSize);
+    typedef void __attribute__((sysv_abi)) KernelEntryPoint(const struct FrameBufferConf *frame_buffer_conf, const struct MemoryMap *memory_map);
+    ((KernelEntryPoint *)entry_addr)(&conf, &memory_map);
 
     return EFI_SUCCESS;
 }

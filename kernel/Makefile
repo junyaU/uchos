@@ -1,5 +1,5 @@
 TARGET = kernel.elf
-OBJS = main.o
+OBJS = main.o color.o screen.o point2d.o
 DEPENDS = $(join $(dir $(OBJS)),$(addprefix .,$(notdir $(OBJS:.o=.d))))
 
 LIBS_PATH = $(HOME)/osbook/devenv/x86_64-elf
