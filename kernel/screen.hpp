@@ -4,6 +4,7 @@
 
 #include "../UchLoaderPkg/frame_buffer_conf.hpp"
 #include "color.hpp"
+#include "font.hpp"
 #include "point2d.hpp"
 
 class Screen {
@@ -15,6 +16,8 @@ class Screen {
     void PutPixel(Point2D point, const uint32_t color_code);
     void FillRectangle(Point2D position, Point2D size,
                        const uint32_t color_code);
+    void DrawString(Point2D position, const char* s, BitmapFont& bitmap_font,
+                    const uint32_t color_code);
 
    private:
     uint64_t pixels_per_scan_line_;

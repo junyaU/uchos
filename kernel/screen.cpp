@@ -21,3 +21,28 @@ void Screen::FillRectangle(Point2D position, Point2D size,
         }
     }
 }
+
+void Screen::DrawString(Point2D position, const char* s,
+                        BitmapFont& bitmap_font, const uint32_t color_code) {
+    int font_position = 0;
+    while (*s) {
+        const uint8_t* font = bitmap_font.GetFont(*s);
+        if (font) {
+            for (int dy = 0; dy < bitmap_font.Height(); dy++) {
+                for (int dx = 0; dx < bitmap_font.Width(); dx++) {
+                    if (font[dy] << dx & 0x80) {
+                        PutPixel(
+                            position +
+                                Point2D{
+                                    font_position * bitmap_font.Width() + dx,
+                                    dy},
+                            color_code);
+                    }
+                }
+            }
+        }
+
+        font_position++;
+        s++;
+    }
+}

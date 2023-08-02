@@ -1,5 +1,5 @@
 TARGET = kernel.elf
-OBJS = main.o color.o screen.o point2d.o
+OBJS = main.o color.o screen.o point2d.o hankaku.o font.o
 DEPENDS = $(join $(dir $(OBJS)),$(addprefix .,$(notdir $(OBJS:.o=.d))))
 
 LIBS_PATH = $(HOME)/osbook/devenv/x86_64-elf
@@ -38,6 +38,18 @@ kernel.elf: $(OBJS)
 	clang $(CPPFLAGS) $(CFLAGS) -MM $< > $@
 	$(eval OBJ = $(<:.c=.o))
 	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
+
+%.o: %.asm Makefile
+	nasm -f elf64 -o $@ $<
+
+hankaku.bin: hankaku.txt
+	../tools/makefont.py -o $@ $<
+
+hankaku.o: hankaku.bin
+	objcopy -I binary -O elf64-x86-64 -B i386:x86-64 $< $@
+
+.%.d: %.bin
+	touch $@
 
 .PHONY: depends
 depends:
