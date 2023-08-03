@@ -43,7 +43,7 @@ kernel.elf: $(OBJS)
 	nasm -f elf64 -o $@ $<
 
 hankaku.bin: hankaku.txt
-	../tools/makefont.py -o $@ $<
+	go run ../tools/font_to_binary.go -o $@ -i $<
 
 hankaku.o: hankaku.bin
 	objcopy -I binary -O elf64-x86-64 -B i386:x86-64 $< $@

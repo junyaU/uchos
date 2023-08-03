@@ -15,5 +15,5 @@ const uint8_t* BitmapFont::GetFont(char c) {
         return nullptr;
     }
 
-    return font_data_ + index;
+    return &font_data_[index];
 }
