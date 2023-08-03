@@ -1,6 +1,7 @@
 #include "font.hpp"
 
 #include <cstdint>
+#include <new>
 
 extern const uint8_t _binary_hankaku_bin_start;
 extern const uint8_t _binary_hankaku_bin_end;
@@ -16,4 +17,11 @@ const uint8_t* BitmapFont::GetFont(char c) {
     }
 
     return &font_data_[index];
+}
+
+BitmapFont* bitmap_font;
+char bitmap_font_buffer[sizeof(BitmapFont)];
+
+void InitializeFont() {
+    bitmap_font = new (bitmap_font_buffer) BitmapFont{8, 16};
 }

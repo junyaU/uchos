@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "point2d.hpp"
+
 class BitmapFont {
    public:
     BitmapFont(int width, int height);
@@ -14,3 +16,7 @@ class BitmapFont {
     int width_;
     int height_;
 };
+
+extern BitmapFont* bitmap_font;
+
+void InitializeFont();
