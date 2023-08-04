@@ -5,6 +5,7 @@
 #include "color.hpp"
 #include "font.hpp"
 #include "screen.hpp"
+#include "system_logger.hpp"
 
 extern "C" void KernelMain(const FrameBufferConf& frame_buffer_conf,
                            const MemoryMap& memory_map) {
@@ -12,8 +13,10 @@ extern "C" void KernelMain(const FrameBufferConf& frame_buffer_conf,
 
     InitializeFont();
 
-    Color font_color{255, 255, 255};
-    screen->DrawString({250, 100}, "uchos", font_color.GetCode());
+    InitializeSystemLogger();
+
+    system_logger->Print("Hello, System Logger!");
+    system_logger->Print("Hikaki TV every day!");
 
     while (true) __asm__("hlt");
 }
