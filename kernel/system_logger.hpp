@@ -11,9 +11,11 @@ class SystemLogger {
     SystemLogger(Color font_color);
 
     void Print(const char* s);
+    void Clear();
 
    private:
     void NextLine();
+    void ScrollLines();
 
     char buffer_[kLines][kCharsPerLine + 1];
     int cursor_y_{0};
