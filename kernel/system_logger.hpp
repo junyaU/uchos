@@ -11,6 +11,8 @@ class SystemLogger {
     SystemLogger(Color font_color);
 
     void Print(const char* s);
+    void Printf(const char* format, ...);
+
     void Clear();
 
    private:

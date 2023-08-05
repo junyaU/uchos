@@ -1,5 +1,7 @@
 #include "system_logger.hpp"
 
+#include <cstdio>
+
 #include "font.hpp"
 #include "screen.hpp"
 
@@ -28,6 +30,17 @@ void SystemLogger::Print(const char* s) {
 
         s++;
     }
+}
+
+void SystemLogger::Printf(const char* format, ...) {
+    char s[1024];
+
+    va_list ap;
+    va_start(ap, format);
+    vsprintf(s, format, ap);
+    va_end(ap);
+
+    Print(s);
 }
 
 void SystemLogger::Clear() {
