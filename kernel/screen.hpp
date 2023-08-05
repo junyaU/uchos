@@ -18,6 +18,7 @@ class Screen {
     void FillRectangle(Point2D position, Point2D size,
                        const uint32_t color_code);
     void DrawString(Point2D position, const char* s, const uint32_t color_code);
+    void DrawString(Point2D position, char s, const uint32_t color_code);
 
    private:
     uint64_t pixels_per_scan_line_;

@@ -52,6 +52,11 @@ void Screen::DrawString(Point2D position, const char* s,
     }
 }
 
+void Screen::DrawString(Point2D position, char s, const uint32_t color_code) {
+    char temp[2] = {s, '\0'};
+    DrawString(position, temp, color_code);
+}
+
 Screen* screen;
 char screen_buffer[sizeof(Screen)];
 

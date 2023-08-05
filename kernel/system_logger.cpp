@@ -16,19 +16,22 @@ void SystemLogger::Print(const char* s) {
         buffer_[cursor_y_][cursor_x_] = *s;
         screen->DrawString(Point2D{cursor_x_ * bitmap_font->Width(),
                                    cursor_y_ * bitmap_font->Height()},
-                           s, font_color_.GetCode());
-
-        cursor_x_++;
+                           *s, font_color_.GetCode());
 
         if (cursor_x_ == kCharsPerLine) {
             NextLine();
+        } else {
+            cursor_x_++;
         }
 
         s++;
     }
 }
 
-void SystemLogger::NextLine() {}
+void SystemLogger::NextLine() {
+    cursor_x_ = 0;
+    cursor_y_++;
+}
 
 SystemLogger* system_logger;
 char system_logger_buf[sizeof(SystemLogger)];

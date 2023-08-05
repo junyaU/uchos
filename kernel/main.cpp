@@ -16,7 +16,14 @@ extern "C" void KernelMain(const FrameBufferConf& frame_buffer_conf,
     InitializeSystemLogger();
 
     system_logger->Print("Hello, System Logger!");
-    system_logger->Print("Hikaki TV every day!");
+    system_logger->Print("aaaaaaaaaaaaaaaaa");
+    system_logger->Print("bbbbbbbbbbbbbbbbb");
+    system_logger->Print("ccccccccccccccccc");
+    system_logger->Print("ddddddddddddddddd");
+    system_logger->Print("eeeeeeeeeeeeeeeee");
+    system_logger->Print("fffffffffffffffff");
+    system_logger->Print("ggggggggggggggggg");
+    system_logger->Print("hhhhhhhhhhhhhhhhh");
 
     while (true) __asm__("hlt");
 }

@@ -7,7 +7,7 @@
 
 class SystemLogger {
    public:
-    static const int kLines = 25, kCharsPerLine = 90;
+    static const int kLines = 25, kCharsPerLine = 80;
     SystemLogger(Color font_color);
 
     void Print(const char* s);
