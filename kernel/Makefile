@@ -1,5 +1,5 @@
 TARGET = kernel.elf
-OBJS = main.o color.o screen.o point2d.o hankaku.o font.o system_logger.o newlib_support.o
+OBJS = main.o color.o screen.o point2d.o hankaku.o font.o system_logger.o newlib_support.o interrupt/handler.o interrupt/idt.o
 DEPENDS = $(join $(dir $(OBJS)),$(addprefix .,$(notdir $(OBJS:.o=.d))))
 
 LIBS_PATH = $(HOME)/osbook/devenv/x86_64-elf
@@ -14,6 +14,11 @@ CXXFLAGS += -O2 -Wall -g --target=x86_64-elf -ffreestanding -mno-red-zone \
             -fno-exceptions -fno-rtti -std=c++17
 LDFLAGS  += --entry KernelMain -z norelro --image-base 0x100000 --static -z separate-code -L$(LIBS_PATH)/lib
 
+INTERRUPT_PATH = interrupt
+
+INTERRUPT_SRCS = $(wildcard interrupt/*.cpp)
+INTERRUPT_OBJS = $(INTERRUPT_SRC:.cpp=.o)
+
 .PHONY: all clean
 all: $(TARGET)
 
@@ -26,7 +31,15 @@ kernel.elf: $(OBJS)
 %.o: %.cpp Makefile
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
+interrupt/%.o: interrupt/%.cpp Makefile
+	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
 .%.d: %.cpp
+	clang++ $(CPPFLAGS) $(CXXFLAGS) -MM $< > $@
+	$(eval OBJ = $(<:.cpp=.o))
+	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
+
+.%.d: interrupt/%.cpp
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -MM $< > $@
 	$(eval OBJ = $(<:.cpp=.o))
 	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
@@ -38,6 +51,7 @@ kernel.elf: $(OBJS)
 	clang $(CPPFLAGS) $(CFLAGS) -MM $< > $@
 	$(eval OBJ = $(<:.c=.o))
 	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
+
 
 %.o: %.asm Makefile
 	nasm -f elf64 -o $@ $<

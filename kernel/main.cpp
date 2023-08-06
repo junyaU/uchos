@@ -4,6 +4,7 @@
 #include "../UchLoaderPkg/memory_map.hpp"
 #include "color.hpp"
 #include "font.hpp"
+#include "interrupt/idt.hpp"
 #include "screen.hpp"
 #include "system_logger.hpp"
 
@@ -15,7 +16,11 @@ extern "C" void KernelMain(const FrameBufferConf& frame_buffer_conf,
 
     InitializeSystemLogger();
 
-    system_logger->Print("Hello, uchan OS!\n");
+    InitializeInterrupt();
+
+    system_logger->Print("Hello, uch OS!\n");
+
+    asm volatile("int $0x40");
 
     while (true) __asm__("hlt");
 }
