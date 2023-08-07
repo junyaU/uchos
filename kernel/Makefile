@@ -1,5 +1,5 @@
 TARGET = kernel.elf
-OBJS = main.o color.o screen.o point2d.o hankaku.o font.o system_logger.o newlib_support.o interrupt/handler.o interrupt/idt.o
+OBJS = main.o graphics/color.o graphics/screen.o point2d.o graphics/hankaku.o graphics/font.o graphics/system_logger.o newlib_support.o interrupt/handler.o interrupt/idt.o
 DEPENDS = $(join $(dir $(OBJS)),$(addprefix .,$(notdir $(OBJS:.o=.d))))
 
 LIBS_PATH = $(HOME)/osbook/devenv/x86_64-elf
@@ -34,12 +34,20 @@ kernel.elf: $(OBJS)
 interrupt/%.o: interrupt/%.cpp Makefile
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
+graphics/%.o: graphics/%.cpp Makefile
+	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
 .%.d: %.cpp
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -MM $< > $@
 	$(eval OBJ = $(<:.cpp=.o))
 	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
 
 .%.d: interrupt/%.cpp
+	clang++ $(CPPFLAGS) $(CXXFLAGS) -MM $< > $@
+	$(eval OBJ = $(<:.cpp=.o))
+	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
+
+.%.d: graphics/%.cpp
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -MM $< > $@
 	$(eval OBJ = $(<:.cpp=.o))
 	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
@@ -56,13 +64,13 @@ interrupt/%.o: interrupt/%.cpp Makefile
 %.o: %.asm Makefile
 	nasm -f elf64 -o $@ $<
 
-hankaku.bin: hankaku.txt
+graphics/hankaku.bin: graphics/hankaku.txt
 	go run ../tools/font_to_binary.go -o $@ -i $<
 
-hankaku.o: hankaku.bin
+graphics/hankaku.o: graphics/hankaku.bin
 	objcopy -I binary -O elf64-x86-64 -B i386:x86-64 $< $@
 
-.%.d: %.bin
+graphics/.%.d: graphics/%.bin
 	touch $@
 
 .PHONY: depends

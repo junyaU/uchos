@@ -1,6 +1,6 @@
 #include "handler.hpp"
 
-#include "system_logger.hpp"
+#include "graphics/system_logger.hpp"
 
 void NotifyEndOfInterrupt() {
     volatile auto eoi = reinterpret_cast<uint32_t*>(0xfee000b0);

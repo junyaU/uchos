@@ -2,11 +2,11 @@
 
 #include "../UchLoaderPkg/frame_buffer_conf.hpp"
 #include "../UchLoaderPkg/memory_map.hpp"
-#include "color.hpp"
-#include "font.hpp"
+#include "graphics/color.hpp"
+#include "graphics/font.hpp"
+#include "graphics/screen.hpp"
+#include "graphics/system_logger.hpp"
 #include "interrupt/idt.hpp"
-#include "screen.hpp"
-#include "system_logger.hpp"
 
 extern "C" void KernelMain(const FrameBufferConf& frame_buffer_conf,
                            const MemoryMap& memory_map) {
