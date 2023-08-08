@@ -2,11 +2,11 @@
 
 #include "../UchLoaderPkg/frame_buffer_conf.hpp"
 #include "../UchLoaderPkg/memory_map.hpp"
-#include "acpi.hpp"
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
 #include "graphics/system_logger.hpp"
 #include "interrupt/idt.hpp"
+#include "timers/acpi.hpp"
 
 extern "C" void KernelMain(const FrameBufferConf& frame_buffer_conf,
                            const MemoryMap& memory_map,
@@ -21,7 +21,7 @@ extern "C" void KernelMain(const FrameBufferConf& frame_buffer_conf,
 
     system_logger->Print("Hello, uch OS!\n");
 
-    system_logger->Printf("acpi sig: %s\n", rsdp.signature);
+    acpi::Initialize(rsdp);
 
     asm volatile("int $0x40");
 

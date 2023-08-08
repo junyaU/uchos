@@ -1,5 +1,5 @@
 TARGET = kernel.elf
-OBJS = main.o graphics/color.o graphics/screen.o point2d.o graphics/hankaku.o graphics/font.o graphics/system_logger.o newlib_support.o interrupt/handler.o interrupt/idt.o
+OBJS = main.o graphics/color.o graphics/screen.o point2d.o graphics/hankaku.o graphics/font.o graphics/system_logger.o newlib_support.o interrupt/handler.o interrupt/idt.o timers/acpi.o asm_utils.o
 DEPENDS = $(join $(dir $(OBJS)),$(addprefix .,$(notdir $(OBJS:.o=.d))))
 
 LIBS_PATH = $(HOME)/osbook/devenv/x86_64-elf
@@ -37,6 +37,9 @@ interrupt/%.o: interrupt/%.cpp Makefile
 graphics/%.o: graphics/%.cpp Makefile
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
+times/%.o: times/%.cpp Makefile
+	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
 .%.d: %.cpp
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -MM $< > $@
 	$(eval OBJ = $(<:.cpp=.o))
@@ -48,6 +51,11 @@ graphics/%.o: graphics/%.cpp Makefile
 	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
 
 .%.d: graphics/%.cpp
+	clang++ $(CPPFLAGS) $(CXXFLAGS) -MM $< > $@
+	$(eval OBJ = $(<:.cpp=.o))
+	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
+
+.%.d: times/%.cpp
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -MM $< > $@
 	$(eval OBJ = $(<:.cpp=.o))
 	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
