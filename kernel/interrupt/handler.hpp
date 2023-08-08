@@ -11,3 +11,5 @@ struct InterruptFrame {
 };
 
 void TestInterrupt(InterruptFrame* frame);
+
+void TimerInterrupt(InterruptFrame* frame);

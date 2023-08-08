@@ -11,3 +11,8 @@ __attribute__((interrupt)) void TestInterrupt(InterruptFrame* frame) {
     system_logger->Print("Test Interrupt!\n");
     NotifyEndOfInterrupt();
 }
+
+__attribute__((interrupt)) void TimerInterrupt(InterruptFrame* frame) {
+    system_logger->Print("Timer Interrupt!\n");
+    NotifyEndOfInterrupt();
+}

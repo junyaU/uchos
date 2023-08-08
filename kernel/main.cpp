@@ -7,6 +7,7 @@
 #include "graphics/system_logger.hpp"
 #include "interrupt/idt.hpp"
 #include "timers/acpi.hpp"
+#include "timers/local_apic.hpp"
 
 extern "C" void KernelMain(const FrameBufferConf& frame_buffer_conf,
                            const MemoryMap& memory_map,
@@ -22,6 +23,8 @@ extern "C" void KernelMain(const FrameBufferConf& frame_buffer_conf,
     system_logger->Print("Hello, uch OS!\n");
 
     acpi::Initialize(rsdp);
+
+    local_apic::Initialize();
 
     asm volatile("int $0x40");
 

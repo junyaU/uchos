@@ -29,8 +29,15 @@ uint16_t GetCS() {
 }
 
 void InitializeInterrupt() {
+    auto cs = GetCS();
+
     SetIDTEntry(idt[InterruptVector::kTest],
                 reinterpret_cast<uint64_t>(TestInterrupt),
-                TypeAttr{GateType::kInterruptGate, 0, 1}, GetCS());
+                TypeAttr{GateType::kInterruptGate, 0, 1}, cs);
+    SetIDTEntry(idt[InterruptVector::kLocalApicTimer],
+                reinterpret_cast<uint64_t>(TimerInterrupt),
+                TypeAttr{GateType::kInterruptGate, 0, 1}, cs);
     LoadIDT(sizeof(idt), reinterpret_cast<uint64_t>(&idt[0]));
+
+    __asm__("sti");
 }

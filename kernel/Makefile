@@ -1,5 +1,5 @@
 TARGET = kernel.elf
-OBJS = main.o graphics/color.o graphics/screen.o point2d.o graphics/hankaku.o graphics/font.o graphics/system_logger.o newlib_support.o interrupt/handler.o interrupt/idt.o timers/acpi.o asm_utils.o
+OBJS = main.o graphics/color.o graphics/screen.o point2d.o graphics/hankaku.o graphics/font.o graphics/system_logger.o newlib_support.o interrupt/handler.o interrupt/idt.o timers/acpi.o timers/local_apic.o asm_utils.o
 DEPENDS = $(join $(dir $(OBJS)),$(addprefix .,$(notdir $(OBJS:.o=.d))))
 
 LIBS_PATH = $(HOME)/osbook/devenv/x86_64-elf
