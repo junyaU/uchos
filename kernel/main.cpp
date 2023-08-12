@@ -9,9 +9,11 @@
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 
-extern "C" void KernelMain(const FrameBufferConf& frame_buffer_conf,
-                           const MemoryMap& memory_map,
-                           const acpi::RSDP& rsdp) {
+// 1MiB
+char kernel_stack[1024 * 1024];
+
+extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
+                     const MemoryMap& memory_map, const acpi::RSDP& rsdp) {
     InitializeScreen(frame_buffer_conf, {0, 120, 215}, {0, 80, 155});
 
     InitializeFont();
