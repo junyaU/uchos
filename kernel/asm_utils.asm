@@ -4,7 +4,7 @@ section .text
 
 extern kernel_stack
 extern Main
-global Kernel
+global KernelMain
 KernelMain:
     mov rsp, kernel_stack + 1024 * 1024
     call Main
