@@ -1,5 +1,5 @@
 TARGET = kernel.elf
-OBJS = main.o graphics/color.o graphics/screen.o point2d.o graphics/hankaku.o graphics/font.o graphics/system_logger.o newlib_support.o interrupt/handler.o interrupt/idt.o timers/acpi.o timers/local_apic.o asm_utils.o
+OBJS = main.o graphics/color.o graphics/screen.o point2d.o graphics/hankaku.o graphics/font.o graphics/system_logger.o newlib_support.o interrupt/handler.o interrupt/idt.o timers/acpi.o timers/local_apic.o memory/segment.o memory/memory.o asm_utils.o
 DEPENDS = $(join $(dir $(OBJS)),$(addprefix .,$(notdir $(OBJS:.o=.d))))
 
 LIBS_PATH = $(HOME)/osbook/devenv/x86_64-elf
@@ -40,6 +40,9 @@ graphics/%.o: graphics/%.cpp Makefile
 times/%.o: times/%.cpp Makefile
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
+memory/%.o: memory/%.cpp Makefile
+	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
 .%.d: %.cpp
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -MM $< > $@
 	$(eval OBJ = $(<:.cpp=.o))
@@ -60,6 +63,11 @@ times/%.o: times/%.cpp Makefile
 	$(eval OBJ = $(<:.cpp=.o))
 	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
 
+.%.d: memory/%.cpp
+	clang++ $(CPPFLAGS) $(CXXFLAGS) -MM $< > $@
+	$(eval OBJ = $(<:.cpp=.o))
+	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
+
 %.o: %.c Makefile
 	clang $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
@@ -67,7 +75,6 @@ times/%.o: times/%.cpp Makefile
 	clang $(CPPFLAGS) $(CFLAGS) -MM $< > $@
 	$(eval OBJ = $(<:.c=.o))
 	sed -I '' -e 's|$(notdir $(OBJ))|$(OBJ)|' $@
-
 
 %.o: %.asm Makefile
 	nasm -f elf64 -o $@ $<

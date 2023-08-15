@@ -6,6 +6,7 @@
 #include "graphics/screen.hpp"
 #include "graphics/system_logger.hpp"
 #include "interrupt/idt.hpp"
+#include "memory/segment.hpp"
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 
@@ -19,6 +20,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
     InitializeFont();
 
     InitializeSystemLogger();
+
+    InitializeSegmentation();
 
     InitializeInterrupt();
 

@@ -18,7 +18,3 @@ ReadFromIoPort:
     mov dx, di
     in eax, dx
     ret
-
-
-
-
