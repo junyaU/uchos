@@ -1,6 +1,7 @@
 #include "idt.hpp"
 
 #include "handler.hpp"
+#include "memory/segment.hpp"
 #include "vector.hpp"
 
 std::array<IDTEntry, 256> idt;
@@ -29,14 +30,32 @@ uint16_t GetCS() {
 }
 
 void InitializeInterrupt() {
-    auto cs = GetCS();
+    auto set_idt_entry = [](int irq, auto handler) {
+        SetIDTEntry(idt[irq], reinterpret_cast<uint64_t>(handler),
+                    TypeAttr{GateType::kInterruptGate, 0, 1}, kKernelCS);
+    };
 
-    SetIDTEntry(idt[InterruptVector::kTest],
-                reinterpret_cast<uint64_t>(TestInterrupt),
-                TypeAttr{GateType::kInterruptGate, 0, 1}, cs);
-    SetIDTEntry(idt[InterruptVector::kLocalApicTimer],
-                reinterpret_cast<uint64_t>(TimerInterrupt),
-                TypeAttr{GateType::kInterruptGate, 0, 1}, cs);
+    set_idt_entry(InterruptVector::kTest, TestInterrupt);
+    set_idt_entry(InterruptVector::kLocalApicTimer, TimerInterrupt);
+    set_idt_entry(0, InterruptHandlerDE);
+    set_idt_entry(1, InterruptHandlerDB);
+    set_idt_entry(3, InterruptHandlerBP);
+    set_idt_entry(4, InterruptHandlerOF);
+    set_idt_entry(5, InterruptHandlerBR);
+    set_idt_entry(6, InterruptHandlerUD);
+    set_idt_entry(7, InterruptHandlerNM);
+    set_idt_entry(8, InterruptHandlerDF);
+    set_idt_entry(10, InterruptHandlerTS);
+    set_idt_entry(11, InterruptHandlerNP);
+    set_idt_entry(12, InterruptHandlerSS);
+    set_idt_entry(13, InterruptHandlerGP);
+    set_idt_entry(14, InterruptHandlerPF);
+    set_idt_entry(16, InterruptHandlerMF);
+    set_idt_entry(17, InterruptHandlerAC);
+    set_idt_entry(18, InterruptHandlerMC);
+    set_idt_entry(19, InterruptHandlerXM);
+    set_idt_entry(20, InterruptHandlerVE);
+
     LoadIDT(sizeof(idt), reinterpret_cast<uint64_t>(&idt[0]));
 
     __asm__("sti");
