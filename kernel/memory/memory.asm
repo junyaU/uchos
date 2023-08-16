@@ -46,3 +46,8 @@ LoadGDT:
     mov rsp, rbp
     pop rbp
     ret
+
+global SetCR3 ; rdi = addr 
+SetCR3:
+    mov cr3, rdi
+    ret
