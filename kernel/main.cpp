@@ -6,6 +6,7 @@
 #include "graphics/screen.hpp"
 #include "graphics/system_logger.hpp"
 #include "interrupt/idt.hpp"
+#include "memory/buddy_system.hpp"
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"
 #include "timers/acpi.hpp"
@@ -27,6 +28,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
     InitializePaging();
 
     InitializeInterrupt();
+
+    InitializeBuddySystem(memory_map);
 
     system_logger->Print("Hello, uch OS!\n");
 
