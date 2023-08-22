@@ -37,7 +37,5 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
     local_apic::Initialize();
 
-    asm volatile("int $0x40");
-
     while (true) __asm__("hlt");
 }

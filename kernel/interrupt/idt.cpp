@@ -35,7 +35,6 @@ void InitializeInterrupt() {
                     TypeAttr{GateType::kInterruptGate, 0, 1}, kKernelCS);
     };
 
-    set_idt_entry(InterruptVector::kTest, TestInterrupt);
     set_idt_entry(InterruptVector::kLocalApicTimer, TimerInterrupt);
     set_idt_entry(0, InterruptHandlerDE);
     set_idt_entry(1, InterruptHandlerDB);

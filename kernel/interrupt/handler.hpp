@@ -12,8 +12,6 @@ struct InterruptFrame {
     uint64_t ss;
 };
 
-void TestInterrupt(InterruptFrame* frame);
-
 void TimerInterrupt(InterruptFrame* frame);
 
 #define FaultHandlerWithError(error_code)                                \
