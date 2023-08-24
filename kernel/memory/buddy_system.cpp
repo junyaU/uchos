@@ -15,6 +15,22 @@ BuddySystem* buddy_system;
 
 BuddySystem::BuddySystem() {}
 
+int BuddySystem::CalculateOrder(size_t size) const
+{
+	int num_pages = (size + kMemoryBlockSize - 1) / kMemoryBlockSize;
+
+	int order = 0;
+	while (num_pages > static_cast<int>(std::pow(2, order))) {
+		order++;
+	}
+
+	if (order > kMaxOrder) {
+		return -1;
+	}
+
+	return order;
+}
+
 void BuddySystem::SplitMemoryBlock(int order)
 {
 	auto block = free_lists_[order].front();
@@ -30,15 +46,9 @@ void BuddySystem::SplitMemoryBlock(int order)
 
 void* BuddySystem::Allocate(size_t size)
 {
-	int num_pages = (size + kMemoryBlockSize - 1) / kMemoryBlockSize;
-
-	int order = 0;
-	while (num_pages > static_cast<int>(std::pow(2, order))) {
-		order++;
-	}
-
-	if (order > kMaxOrder) {
-		system_logger->Printf("order is too large: %d\n", order);
+	int order = CalculateOrder(size);
+	if (order == -1) {
+		system_logger->Printf("invalid size: %d\n", size);
 		return nullptr;
 	}
 
@@ -52,7 +62,7 @@ void* BuddySystem::Allocate(size_t size)
 		}
 
 		if (next_order == -1) {
-			system_logger->Print("out of memory\n");
+			system_logger->Printf("failed to allocate memory: order=%d\n", order);
 			return nullptr;
 		}
 
@@ -65,6 +75,39 @@ void* BuddySystem::Allocate(size_t size)
 	free_lists_[order].pop_front();
 
 	return addr;
+}
+
+void BuddySystem::Free(void* addr, size_t size)
+{
+	int order = CalculateOrder(size);
+	if (order == -1) {
+		system_logger->Printf("invalid size: %d\n", size);
+		return;
+	}
+
+	while (order <= kMaxOrder) {
+		if (order == kMaxOrder) {
+			free_lists_[order].push_back(addr);
+			return;
+		}
+
+		auto buddy_addr = reinterpret_cast<uintptr_t>(addr) ^
+						  (static_cast<int>(std::pow(2, order)) * kMemoryBlockSize);
+
+		auto it = std::find(free_lists_[order].begin(), free_lists_[order].end(),
+							reinterpret_cast<void*>(buddy_addr));
+		if (it == free_lists_[order].end()) {
+			free_lists_[order].push_back(addr);
+			return;
+		}
+
+		free_lists_[order].erase(it);
+
+		addr = reinterpret_cast<void*>(
+				std::min(reinterpret_cast<uintptr_t>(addr), buddy_addr));
+
+		order++;
+	}
 }
 
 void BuddySystem::RegisterMemory(int num_pages, void* addr)
@@ -98,7 +141,7 @@ void InitializeHeap()
 
 	auto heap = buddy_system->Allocate(kHeapSize);
 	if (heap == nullptr) {
-		system_logger->Print("failed to allocate heap\n");
+		system_logger->Printf("failed to allocate heap\n");
 		return;
 	}
 

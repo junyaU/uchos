@@ -33,6 +33,16 @@ public:
 	void* Allocate(size_t size);
 
 	/**
+	 * \brief Frees a block of memory allocated by the buddy system.
+	 *
+	 * This function frees a block of memory allocated by the buddy system. The
+	 * block is added to the appropriate free list for future allocations.
+	 *
+	 * \param addr A pointer to the memory to be freed.
+	 */
+	void Free(void* addr, size_t size);
+
+	/**
 	 * \brief Registers a block of memory pages with the buddy system.
 	 *
 	 * This function divides the given memory into appropriate order blocks
@@ -54,6 +64,18 @@ private:
 	 * \param order The order of the memory block to be split.
 	 */
 	void SplitMemoryBlock(int order);
+
+	/**
+	 * \brief Calculates the order of a memory block of the given size.
+	 *
+	 * This function calculates the order of a memory block of the given size.
+	 * The order is the power of two that is equal to or greater than the size.
+	 * -1 is returned if the size is too large to be allocated by the buddy system.
+	 *
+	 * \param size The size of the memory block.
+	 * \return The order of the memory block.
+	 */
+	int CalculateOrder(size_t size) const;
 
 	std::array<std::list<void*, PoolAllocator<void*, kPoolSize>>, kMaxOrder + 1>
 			free_lists_;
