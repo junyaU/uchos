@@ -1,5 +1,5 @@
 TARGET = kernel.elf
-OBJS = main.o point2d.o newlib_support.o asm_utils.o
+OBJS = main.o point2d.o newlib_support.o libcxx_support.o asm_utils.o
 DEPENDS = $(join $(dir $(OBJS)),$(addprefix .,$(notdir $(OBJS:.o=.d))))
 
 include common.mk

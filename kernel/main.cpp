@@ -11,31 +11,38 @@
 #include "memory/segment.hpp"
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
+#include <new>
 
 // 1MiB
 char kernel_stack[1024 * 1024];
 
 extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
-                     const MemoryMap& memory_map, const acpi::RSDP& rsdp) {
-    InitializeScreen(frame_buffer_conf, {0, 120, 215}, {0, 80, 155});
+					 const MemoryMap& memory_map,
+					 const acpi::RSDP& rsdp)
+{
+	InitializeScreen(frame_buffer_conf, { 0, 120, 215 }, { 0, 80, 155 });
 
-    InitializeFont();
+	InitializeFont();
 
-    InitializeSystemLogger();
+	InitializeSystemLogger();
 
-    InitializeSegmentation();
+	InitializeSegmentation();
 
-    InitializePaging();
+	InitializePaging();
 
-    InitializeInterrupt();
+	InitializeInterrupt();
 
-    InitializeBuddySystem(memory_map);
+	InitializeBuddySystem(memory_map);
 
-    system_logger->Print("Hello, uch OS!\n");
+	InitializeHeap();
 
-    acpi::Initialize(rsdp);
+	SystemLogger* heap_test_logger = new SystemLogger({ 255, 255, 255 });
+	heap_test_logger->Print("Hello, uch OS!\n");
 
-    local_apic::Initialize();
+	acpi::Initialize(rsdp);
 
-    while (true) __asm__("hlt");
+	local_apic::Initialize();
+
+	while (true)
+		__asm__("hlt");
 }

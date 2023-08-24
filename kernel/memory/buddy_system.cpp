@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <sys/types.h>
 
 #include "graphics/system_logger.hpp"
 
@@ -14,8 +15,58 @@ BuddySystem* buddy_system;
 
 BuddySystem::BuddySystem() {}
 
-// Registers the given memory pages and address with the buddy system.
-// Divides the memory into appropriate order blocks and adds them to the free lists.
+void BuddySystem::SplitMemoryBlock(int order)
+{
+	auto block = free_lists_[order].front();
+	free_lists_[order].pop_front();
+
+	auto nextSmallerBlockSize =
+			kMemoryBlockSize * static_cast<int>(std::pow(2, order - 1));
+
+	free_lists_[order - 1].push_back(block);
+	free_lists_[order - 1].push_back(reinterpret_cast<void*>(
+			reinterpret_cast<uintptr_t>(block) + nextSmallerBlockSize));
+}
+
+void* BuddySystem::Allocate(size_t size)
+{
+	int num_pages = (size + kMemoryBlockSize - 1) / kMemoryBlockSize;
+
+	int order = 0;
+	while (num_pages > static_cast<int>(std::pow(2, order))) {
+		order++;
+	}
+
+	if (order > kMaxOrder) {
+		system_logger->Printf("order is too large: %d\n", order);
+		return nullptr;
+	}
+
+	if (free_lists_[order].empty()) {
+		int next_order = -1;
+		for (int i = order + 1; i <= kMaxOrder; i++) {
+			if (!free_lists_[i].empty()) {
+				next_order = i;
+				break;
+			}
+		}
+
+		if (next_order == -1) {
+			system_logger->Print("out of memory\n");
+			return nullptr;
+		}
+
+		for (int i = next_order; i > order; i--) {
+			SplitMemoryBlock(i);
+		}
+	}
+
+	auto addr = free_lists_[order].front();
+	free_lists_[order].pop_front();
+
+	return addr;
+}
+
 void BuddySystem::RegisterMemory(int num_pages, void* addr)
 {
 	if (!addr || num_pages <= 0) {
@@ -28,16 +79,33 @@ void BuddySystem::RegisterMemory(int num_pages, void* addr)
 
 		this->free_lists_[order].push_back(addr);
 
-		auto next_addr = reinterpret_cast<uintptr_t>(addr) +
-						 kUEFIPageSize * static_cast<uintptr_t>(std::pow(2, order));
+		auto next_addr =
+				reinterpret_cast<uintptr_t>(addr) +
+				kMemoryBlockSize * static_cast<uintptr_t>(std::pow(2, order));
 
 		addr = reinterpret_cast<void*>(next_addr);
 		num_pages -= static_cast<int>(std::pow(2, order));
 	}
 }
 
-// Initializes the buddy system by iterating over the UEFI memory map.
-// Registers available memory regions with the buddy system.
+extern "C" caddr_t program_break, program_break_end;
+
+void InitializeHeap()
+{
+	// 128 MiB
+	const int kHeapFrames = 64 * 512;
+	const size_t kHeapSize = kHeapFrames * kMemoryBlockSize;
+
+	auto heap = buddy_system->Allocate(kHeapSize);
+	if (heap == nullptr) {
+		system_logger->Print("failed to allocate heap\n");
+		return;
+	}
+
+	program_break = reinterpret_cast<caddr_t>(heap);
+	program_break_end = program_break + kHeapSize;
+}
+
 void InitializeBuddySystem(const MemoryMap& memory_map)
 {
 	buddy_system = new (memory_pool) BuddySystem();
