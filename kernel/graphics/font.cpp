@@ -8,23 +8,23 @@ extern const uint8_t _binary_graphics_hankaku_bin_end;
 extern const uint8_t _binary_graphics_hankaku_bin_size;
 
 BitmapFont::BitmapFont(int width, int height)
-    : font_data_{&_binary_graphics_hankaku_bin_start},
-      width_{width},
-      height_{height} {}
+	: font_data_{ &_binary_graphics_hankaku_bin_start },
+	  width_{ width },
+	  height_{ height }
+{
+}
 
-const uint8_t* BitmapFont::GetFont(char c) {
-    auto index = height_ * static_cast<unsigned int>(c);
-    if (index >=
-        reinterpret_cast<uintptr_t>(&_binary_graphics_hankaku_bin_size)) {
-        return nullptr;
-    }
+const uint8_t* BitmapFont::GetFont(char c)
+{
+	auto index = height_ * static_cast<unsigned int>(c);
+	if (index >= reinterpret_cast<uintptr_t>(&_binary_graphics_hankaku_bin_size)) {
+		return nullptr;
+	}
 
-    return &font_data_[index];
+	return &font_data_[index];
 }
 
 BitmapFont* bitmap_font;
 char bitmap_font_buffer[sizeof(BitmapFont)];
 
-void InitializeFont() {
-    bitmap_font = new (bitmap_font_buffer) BitmapFont{8, 16};
-}
+void InitializeFont() { bitmap_font = new (bitmap_font_buffer) BitmapFont{ 8, 16 }; }

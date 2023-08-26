@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <sys/types.h>
 
 #include "graphics/system_logger.hpp"
@@ -79,6 +80,15 @@ void* BuddySystem::Allocate(size_t size)
 
 void BuddySystem::Free(void* addr, size_t size)
 {
+	for (int i = 0; i <= kMaxOrder; i++) {
+		auto it = std::find(free_lists_[i].begin(), free_lists_[i].end(), addr);
+		if (it != free_lists_[i].end()) {
+			system_logger->Printf(
+					"double free detected at address: %p in order: %d\n", addr, i);
+			return;
+		}
+	}
+
 	int order = CalculateOrder(size);
 	if (order == -1) {
 		system_logger->Printf("invalid size: %d\n", size);
