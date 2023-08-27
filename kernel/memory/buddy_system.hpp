@@ -8,10 +8,6 @@
 #include "../../UchLoaderPkg/memory_map.hpp"
 #include "pool.hpp"
 
-static const size_t kPoolSize = 4 * 1024;
-
-static const auto kMaxOrder = 18;
-
 static const auto kMemoryBlockSize = 4 * 1024;
 
 class BuddySystem
@@ -54,6 +50,8 @@ public:
 	void RegisterMemory(int num_pages, void* addr);
 
 private:
+	static const auto kMaxOrder = 18;
+
 	/**
 	 * \brief Splits a memory block of the given order into two smaller blocks.
 	 *
@@ -77,7 +75,7 @@ private:
 	 */
 	int CalculateOrder(size_t size) const;
 
-	std::array<std::list<void*, PoolAllocator<void*, kPoolSize>>, kMaxOrder + 1>
+	std::array<std::list<void*, PoolAllocator<void*, 4 * 1024>>, kMaxOrder + 1>
 			free_lists_;
 };
 

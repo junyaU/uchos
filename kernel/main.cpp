@@ -11,7 +11,8 @@
 #include "memory/segment.hpp"
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
-#include <new>
+
+#include "system_event_queue.hpp"
 
 // 1MiB
 char kernel_stack[1024 * 1024];
@@ -36,13 +37,11 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	InitializeHeap();
 
-	SystemLogger* heap_test_logger = new SystemLogger({ 255, 255, 255 });
-	heap_test_logger->Print("Hello, uch OS!\n");
+	system_logger->Print("Hello, uch OS!\n");
 
 	acpi::Initialize(rsdp);
 
 	local_apic::Initialize();
 
-	while (true)
-		__asm__("hlt");
+	HandleSystemEvents();
 }
