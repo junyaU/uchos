@@ -11,6 +11,7 @@
 #include "memory/segment.hpp"
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
+#include "timers/timer.hpp"
 
 #include "system_event_queue.hpp"
 
@@ -42,6 +43,10 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	acpi::Initialize(rsdp);
 
 	local_apic::Initialize();
+
+	InitializeTimer();
+
+	timer->AddTimerEvent(5000);
 
 	HandleSystemEvents();
 }

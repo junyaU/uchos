@@ -5,6 +5,7 @@
 
 #include "acpi.hpp"
 #include "interrupt/vector.hpp"
+#include "timer.hpp"
 
 namespace local_apic
 {
@@ -33,7 +34,7 @@ void Initialize()
 
 	uint64_t freq = static_cast<uint64_t>(elapsed * 10);
 	kLvtTimer = (0b010 << 16) | InterruptVector::kLocalApicTimer;
-	kInitialCount = freq;
+	kInitialCount = freq / kFrequency;
 }
 
 } // namespace local_apic

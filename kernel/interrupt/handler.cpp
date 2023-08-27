@@ -1,4 +1,5 @@
 #include "handler.hpp"
+#include "timers/timer.hpp"
 
 namespace
 {
@@ -11,5 +12,6 @@ void NotifyEndOfInterrupt()
 
 __attribute__((interrupt)) void TimerInterrupt(InterruptFrame* frame)
 {
+	timer->IncrementTick();
 	NotifyEndOfInterrupt();
 }

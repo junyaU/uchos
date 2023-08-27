@@ -1,5 +1,6 @@
 #include "system_event_queue.hpp"
 
+#include "graphics/system_logger.hpp"
 #include "system_event.hpp"
 
 bool SystemEventQueue::Queue(SystemEvent event)
@@ -15,7 +16,7 @@ bool SystemEventQueue::Queue(SystemEvent event)
 SystemEvent SystemEventQueue::Dequeue()
 {
 	if (events_.empty()) {
-		return SystemEvent{};
+		return SystemEvent{ SystemEvent::kEmpty, 0 };
 	}
 
 	auto event = events_.front();
@@ -30,10 +31,6 @@ void HandleSystemEvents()
 	system_event_queue = new SystemEventQueue;
 
 	while (true) {
-		__asm__("hlt");
-	}
-
-	while (true) {
 		if (system_event_queue->Empty()) {
 			continue;
 		}
@@ -41,6 +38,7 @@ void HandleSystemEvents()
 		auto event = system_event_queue->Dequeue();
 		switch (event.type_) {
 			case SystemEvent::kTimerTimeout:
+				system_logger->Print("Timer timeout\n");
 				break;
 			default:
 				break;
