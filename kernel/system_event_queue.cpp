@@ -2,6 +2,7 @@
 
 #include "graphics/system_logger.hpp"
 #include "system_event.hpp"
+#include "timers/timer.hpp"
 
 bool SystemEventQueue::Queue(SystemEvent event)
 {
@@ -40,6 +41,12 @@ void HandleSystemEvents()
 			case SystemEvent::kTimerTimeout:
 				system_logger->Print("Timer timeout\n");
 				break;
+
+			case SystemEvent::kTimerPeriodicTimeout:
+				timer->AddTimerEvent(event.args_.timer.period, true);
+				system_logger->Print("Timer periodic timeout\n");
+				break;
+
 			default:
 				break;
 		}

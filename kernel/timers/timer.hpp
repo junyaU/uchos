@@ -17,7 +17,7 @@ class Timer
 public:
 	Timer() : tick_(0) {}
 
-	void AddTimerEvent(unsigned long millisec);
+	void AddTimerEvent(unsigned long millisec, bool periodic = false);
 
 	void IncrementTick();
 

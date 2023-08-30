@@ -4,10 +4,15 @@
 
 #include "graphics/system_logger.hpp"
 
-void Timer::AddTimerEvent(unsigned long millisec)
+void Timer::AddTimerEvent(unsigned long millisec, bool periodic)
 {
-	auto event = SystemEvent{ SystemEvent::kTimerTimeout };
+	auto event = SystemEvent{
+		periodic ? SystemEvent::kTimerPeriodicTimeout : SystemEvent::kTimerTimeout,
+	};
+
 	event.args_.timer.timeout = tick_ + (millisec * kFrequency) / 1000;
+	event.args_.timer.period = millisec;
+
 	events_.push(event);
 }
 
