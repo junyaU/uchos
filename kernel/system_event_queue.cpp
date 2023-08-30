@@ -42,11 +42,6 @@ void HandleSystemEvents()
 				system_logger->Print("Timer timeout\n");
 				break;
 
-			case SystemEvent::kTimerPeriodicTimeout:
-				timer->AddTimerEvent(event.args_.timer.period, true);
-				system_logger->Print("Timer periodic timeout\n");
-				break;
-
 			default:
 				break;
 		}

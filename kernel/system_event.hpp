@@ -6,14 +6,14 @@ struct SystemEvent {
 	enum Type {
 		kEmpty,
 		kTimerTimeout,
-		kTimerPeriodicTimeout,
 	} type_;
 
 	union {
 		struct {
 			uint64_t id;
 			uint64_t timeout;
-			uint64_t period;
+			unsigned int period;
+			int periodical;
 		} timer;
 	} args_;
 };

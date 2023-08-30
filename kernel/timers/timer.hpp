@@ -18,13 +18,17 @@ class Timer
 public:
 	Timer() : tick_{ 0 }, last_id_{ 1 } {}
 
-	uint64_t AddTimerEvent(unsigned long millisec, bool periodic = false);
+	uint64_t AddTimerEvent(unsigned long millisec);
+
+	uint64_t AddPeriodicTimerEvent(unsigned long millisec, uint64_t id = 0);
 
 	void RemoveTimerEvent(uint64_t id);
 
 	void IncrementTick();
 
 private:
+	uint64_t CalculateTimeoutTicks(unsigned long millisec);
+
 	uint64_t tick_;
 	uint64_t last_id_;
 	std::unordered_set<uint64_t> ignore_events_;
