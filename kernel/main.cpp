@@ -46,7 +46,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	InitializeTimer();
 
-	timer->AddTimerEvent(2500, true);
+	auto id = timer->AddTimerEvent(5000);
+	timer->RemoveTimerEvent(id);
 
 	HandleSystemEvents();
 }

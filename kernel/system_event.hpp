@@ -11,6 +11,7 @@ struct SystemEvent {
 
 	union {
 		struct {
+			uint64_t id;
 			uint64_t timeout;
 			uint64_t period;
 		} timer;
