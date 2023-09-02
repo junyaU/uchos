@@ -60,6 +60,8 @@ void Timer::IncrementTick()
 {
 	tick_++;
 
+	events_.push(SystemEvent{ SystemEvent::kDrawScreenTimer, { { tick_ } } });
+
 	while (!events_.empty() && events_.top().args_.timer.timeout <= tick_) {
 		auto event = events_.top();
 		events_.pop();

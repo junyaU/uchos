@@ -82,3 +82,15 @@ void InitializeScreen(const FrameBufferConf& frame_buffer_conf,
 						  { screen->Width(), taskbar_height },
 						  screen->TaskbarColor().GetCode());
 }
+
+void DrawTimer(const char* s)
+{
+	Point2D draw_area = { 0, static_cast<int>(screen->Height() -
+											  screen->Height() * 0.08) };
+
+	screen->FillRectangle(draw_area,
+						  { bitmap_font->Width() * 8, bitmap_font->Height() },
+						  screen->TaskbarColor().GetCode());
+
+	screen->DrawString(draw_area, s, 0xffffff);
+}
