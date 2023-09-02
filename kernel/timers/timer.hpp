@@ -11,7 +11,7 @@ inline bool operator<(const SystemEvent& lhs, const SystemEvent& rhs)
 	return lhs.args_.timer.timeout > rhs.args_.timer.timeout;
 }
 
-static const int kFrequency = 100;
+static const int kTimerFrequency = 100;
 
 class Timer
 {

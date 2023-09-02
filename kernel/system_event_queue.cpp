@@ -48,11 +48,11 @@ void HandleSystemEvents()
 			case SystemEvent::kDrawScreenTimer:
 				char timer_value[14];
 				sprintf(timer_value, "%lu",
-						event.args_.draw_screen_timer.value / kFrequency);
-
+						event.args_.draw_screen_timer.value / kTimerFrequency);
 				DrawTimer(timer_value);
 
 			default:
+				system_logger->Printf("Unknown event type: %d\n", event.type_);
 				break;
 		}
 	}

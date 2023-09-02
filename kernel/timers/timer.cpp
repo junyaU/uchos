@@ -6,7 +6,7 @@
 
 uint64_t Timer::CalculateTimeoutTicks(unsigned long millisec)
 {
-	return tick_ + (millisec * kFrequency) / 1000;
+	return tick_ + (millisec * kTimerFrequency) / 1000;
 }
 
 uint64_t Timer::AddTimerEvent(unsigned long millisec)
@@ -60,7 +60,9 @@ void Timer::IncrementTick()
 {
 	tick_++;
 
-	events_.push(SystemEvent{ SystemEvent::kDrawScreenTimer, { { tick_ } } });
+	if (tick_ % kTimerFrequency == 0) {
+		events_.push(SystemEvent{ SystemEvent::kDrawScreenTimer, { { tick_ } } });
+	}
 
 	while (!events_.empty() && events_.top().args_.timer.timeout <= tick_) {
 		auto event = events_.top();
