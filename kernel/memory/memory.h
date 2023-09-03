@@ -12,4 +12,6 @@ void LoadDataSegment(uint16_t ds);
 void LoadGDT(uint16_t size, uint64_t offset);
 
 void SetCR3(uint64_t addr);
+
+uint64_t GetCR3();
 }
