@@ -7,13 +7,16 @@
 #include "graphics/system_logger.hpp"
 #include "interrupt/idt.hpp"
 #include "memory/buddy_system.hpp"
+#include "memory/memory.h"
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"
+#include "system_event_queue.hpp"
+#include "task/task_manager.hpp"
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"
 
-#include "system_event_queue.hpp"
+#include <cstdio>
 
 // 1MiB
 char kernel_stack[1024 * 1024];
@@ -47,6 +50,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	InitializeTimer();
 
 	timer->AddPeriodicTimerEvent(3000);
+
+	InitializeTask2Context();
 
 	HandleSystemEvents();
 }

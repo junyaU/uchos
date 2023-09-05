@@ -3,6 +3,8 @@
 #include "graphics/screen.hpp"
 #include "graphics/system_logger.hpp"
 #include "system_event.hpp"
+#include "task/context.hpp"
+#include "task/task.h"
 #include "timers/timer.hpp"
 
 #include <cstdio>
@@ -20,7 +22,7 @@ bool SystemEventQueue::Queue(SystemEvent event)
 SystemEvent SystemEventQueue::Dequeue()
 {
 	if (events_.empty()) {
-		return SystemEvent{ SystemEvent::kEmpty, 0 };
+		return SystemEvent{ SystemEvent::kEmpty, { { 0 } } };
 	}
 
 	auto event = events_.front();
@@ -36,6 +38,7 @@ void HandleSystemEvents()
 
 	while (true) {
 		if (system_event_queue->Empty()) {
+			ExecuteContextSwitch(&task_2_context, &task_main_context);
 			continue;
 		}
 
@@ -50,6 +53,7 @@ void HandleSystemEvents()
 				sprintf(timer_value, "%lu",
 						event.args_.draw_screen_timer.value / kTimerFrequency);
 				DrawTimer(timer_value);
+				break;
 
 			default:
 				system_logger->Printf("Unknown event type: %d\n", event.type_);

@@ -7,6 +7,7 @@ include ./memory/Makefile
 include ./graphics/Makefile
 include ./interrupt/Makefile
 include ./timers/Makefile
+include ./task/Makefile
 
 .PHONY: all 
 all: $(TARGET)
