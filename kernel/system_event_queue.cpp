@@ -37,8 +37,9 @@ void HandleSystemEvents()
 	system_event_queue = new SystemEventQueue;
 
 	while (true) {
+		__asm__("cli");
 		if (system_event_queue->Empty()) {
-			ExecuteContextSwitch(&task_2_context, &task_main_context);
+			__asm__("sti\n\thlt");
 			continue;
 		}
 

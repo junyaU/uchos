@@ -12,6 +12,7 @@ inline bool operator<(const SystemEvent& lhs, const SystemEvent& rhs)
 }
 
 static const int kTimerFrequency = 100;
+static const int kSwitchTextMillisec = 20;
 
 class Timer
 {
@@ -22,9 +23,11 @@ public:
 
 	uint64_t AddPeriodicTimerEvent(unsigned long millisec, uint64_t id = 0);
 
+	void AddSwitchTaskEvent(unsigned long millisec);
+
 	void RemoveTimerEvent(uint64_t id);
 
-	void IncrementTick();
+	bool IncrementTick();
 
 private:
 	uint64_t CalculateTimeoutTicks(unsigned long millisec);

@@ -6,12 +6,26 @@
 #include "graphics/system_logger.hpp"
 #include "memory/memory.h"
 #include "memory/segment.hpp"
+#include "system_event.hpp"
 #include "task.h"
+#include "timers/timer.hpp"
 
 #include <cstdio>
 #include <vector>
 
 alignas(16) Context task_main_context, task_2_context;
+
+void SwitchTask()
+{
+	static bool task_main = true;
+	if (task_main) {
+		task_main = false;
+		ExecuteContextSwitch(&task_2_context, &task_main_context);
+	} else {
+		task_main = true;
+		ExecuteContextSwitch(&task_main_context, &task_2_context);
+	}
+}
 
 // test task
 void Task2()
@@ -32,8 +46,6 @@ void Task2()
 		screen->DrawString(draw_area, count, 0xffffff);
 
 		i++;
-
-		ExecuteContextSwitch(&task_main_context, &task_2_context);
 	}
 }
 
@@ -53,3 +65,5 @@ void InitializeTask2Context()
 
 	*reinterpret_cast<uint32_t*>(&task_2_context.fxsave_area[24]) = 0x1f80;
 }
+
+void InitializeTask() { timer->AddSwitchTaskEvent(kSwitchTextMillisec); }

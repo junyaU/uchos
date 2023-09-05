@@ -1,4 +1,6 @@
 #include "handler.hpp"
+#include "graphics/system_logger.hpp"
+#include "task/task_manager.hpp"
 #include "timers/timer.hpp"
 
 namespace
@@ -12,6 +14,10 @@ void NotifyEndOfInterrupt()
 
 __attribute__((interrupt)) void TimerInterrupt(InterruptFrame* frame)
 {
-	timer->IncrementTick();
+	const bool need_context_switch = timer->IncrementTick();
 	NotifyEndOfInterrupt();
+
+	if (need_context_switch) {
+		SwitchTask();
+	}
 }

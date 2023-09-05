@@ -46,6 +46,15 @@ uint64_t Timer::AddPeriodicTimerEvent(unsigned long millisec, uint64_t id)
 	return event.args_.timer.id;
 }
 
+void Timer::AddSwitchTaskEvent(unsigned long millisec)
+{
+	auto event = SystemEvent{ SystemEvent::kSwitchTask };
+
+	event.args_.timer.timeout = CalculateTimeoutTicks(millisec);
+
+	events_.push(event);
+}
+
 void Timer::RemoveTimerEvent(uint64_t id)
 {
 	if (id == 0 || last_id_ < id) {
@@ -56,7 +65,7 @@ void Timer::RemoveTimerEvent(uint64_t id)
 	ignore_events_.insert(id);
 }
 
-void Timer::IncrementTick()
+bool Timer::IncrementTick()
 {
 	tick_++;
 
@@ -64,9 +73,17 @@ void Timer::IncrementTick()
 		events_.push(SystemEvent{ SystemEvent::kDrawScreenTimer, { { tick_ } } });
 	}
 
+	bool need_switch_task = false;
 	while (!events_.empty() && events_.top().args_.timer.timeout <= tick_) {
 		auto event = events_.top();
 		events_.pop();
+
+		if (event.type_ == SystemEvent::kSwitchTask) {
+			need_switch_task = true;
+			event.args_.timer.timeout = CalculateTimeoutTicks(kSwitchTextMillisec);
+			events_.push(event);
+			continue;
+		}
 
 		auto it = std::find(ignore_events_.begin(), ignore_events_.end(),
 							event.args_.timer.id);
@@ -86,6 +103,8 @@ void Timer::IncrementTick()
 			events_.push(event);
 		}
 	}
+
+	return need_switch_task;
 }
 
 Timer* timer;

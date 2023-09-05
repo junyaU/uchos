@@ -53,5 +53,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	InitializeTask2Context();
 
+	InitializeTask();
+
 	HandleSystemEvents();
 }
