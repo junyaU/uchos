@@ -13,7 +13,7 @@ static const auto kMemoryBlockSize = 4 * 1024;
 class BuddySystem
 {
 public:
-	BuddySystem();
+	BuddySystem() = default;
 
 	/**
 	 * \brief Allocates memory of the specified size using the buddy system.

@@ -14,8 +14,6 @@ char memory_pool[sizeof(BuddySystem)];
 
 BuddySystem* buddy_system;
 
-BuddySystem::BuddySystem() {}
-
 int BuddySystem::CalculateOrder(size_t size) const
 {
 	int num_pages = (size + kMemoryBlockSize - 1) / kMemoryBlockSize;

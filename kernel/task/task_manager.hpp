@@ -3,6 +3,7 @@
 #include "context.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <queue>
 #include <vector>
 
 // stack 4kiB
@@ -27,14 +28,17 @@ class TaskManager
 public:
 	TaskManager();
 
-	int AddTask(uint64_t entry_point);
+	int AddTask(uint64_t entry_point, bool is_running = false);
 
-	void SwitchTask();
+	void Wakeup(int task_id);
+	void Sleep(int task_id);
+
+	void SwitchTask(bool current_sleep = false);
 
 private:
 	int last_task_id_;
-	int current_task_index_;
-	std::vector<std::unique_ptr<Task>> tasks_;
+	std::vector<std::unique_ptr<Task>> wait_tasks_;
+	std::deque<Task*> running_tasks_;
 };
 
 extern TaskManager* task_manager;

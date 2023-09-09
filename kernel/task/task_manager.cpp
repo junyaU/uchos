@@ -27,42 +27,64 @@ Task::Task(int id, uint64_t task_addr) : id_{ id }, stack_{ 4096 }, context_{ 0 
 	context_.ss = kKernelSS;
 }
 
-TaskManager::TaskManager() : last_task_id_{ 0 }, current_task_index_{ 0 }
+TaskManager::TaskManager() : last_task_id_{ 0 }
 {
-	tasks_.emplace_back(new Task(last_task_id_, 0));
+	running_tasks_.push_back(new Task(last_task_id_, 0));
 	++last_task_id_;
 }
 
-int TaskManager::AddTask(uint64_t task_addr)
+int TaskManager::AddTask(uint64_t task_addr, bool is_running)
 {
-	int current_task_id = last_task_id_;
-	tasks_.emplace_back(new Task(current_task_id, task_addr));
+	Task* task = new Task(last_task_id_, task_addr);
+
+	if (is_running) {
+		running_tasks_.push_back(task);
+	} else {
+		wait_tasks_.emplace_back(task);
+	}
 
 	++last_task_id_;
 
-	return current_task_id;
+	return task->ID();
 }
 
-void TaskManager::SwitchTask()
+void TaskManager::SwitchTask(bool current_sleep)
 {
-	if (tasks_.size() <= 1) {
+	if (running_tasks_.size() <= 1) {
 		return;
 	}
 
-	Task& current_task = *tasks_[current_task_index_];
+	Task& current_task = *running_tasks_.front();
+	running_tasks_.pop_front();
 
-	if (current_task_index_ == tasks_.size() - 1) {
-		current_task_index_ = 0;
+	if (!current_sleep) {
+		running_tasks_.push_back(&current_task);
 	} else {
-		++current_task_index_;
+		wait_tasks_.emplace_back(&current_task);
 	}
 
-	Task& next_task = *tasks_[current_task_index_];
+	Task& next_task = *running_tasks_.front();
 
 	ExecuteContextSwitch(&next_task.TaskContext(), &current_task.TaskContext());
 }
 
-// test task
+void TaskManager::Sleep(int task_id)
+{
+	auto task = running_tasks_.front();
+	if (task->ID() == task_id) {
+		SwitchTask(true);
+		return;
+	}
+
+	for (auto it = running_tasks_.begin(); it != running_tasks_.end(); ++it) {
+		if ((*it)->ID() == task_id) {
+			running_tasks_.erase(it);
+			wait_tasks_.emplace_back(*it);
+			return;
+		}
+	}
+}
+
 void Task2()
 {
 	int i = 0;
@@ -92,14 +114,39 @@ void Task3()
 	}
 }
 
+void Task4()
+{
+	int i = 0;
+	while (true) {
+		char count[14];
+
+		sprintf(count, "%d", i);
+
+		Point2D draw_area = { static_cast<int>(150),
+							  static_cast<int>(screen->Height() -
+											   screen->Height() * 0.08) };
+
+		screen->FillRectangle(draw_area,
+							  { bitmap_font->Width() * 8, bitmap_font->Height() },
+							  screen->TaskbarColor().GetCode());
+
+		screen->DrawString(draw_area, count, 0xffffff);
+
+		i++;
+	}
+}
+
 TaskManager* task_manager;
 
 void InitializeTaskManager()
 {
 	task_manager = new TaskManager();
 
-	task_manager->AddTask(reinterpret_cast<uint64_t>(Task2));
-	task_manager->AddTask(reinterpret_cast<uint64_t>(Task3));
+	task_manager->AddTask(reinterpret_cast<uint64_t>(Task2), true);
+	task_manager->AddTask(reinterpret_cast<uint64_t>(Task3), true);
+	auto id = task_manager->AddTask(reinterpret_cast<uint64_t>(Task4), true);
+
+	task_manager->Sleep(id);
 
 	timer->AddSwitchTaskEvent(kSwitchTextMillisec);
 }
