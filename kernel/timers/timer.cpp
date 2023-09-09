@@ -70,7 +70,9 @@ bool Timer::IncrementTick()
 	tick_++;
 
 	if (tick_ % kTimerFrequency == 0) {
+		__asm__("cli");
 		events_.push(SystemEvent{ SystemEvent::kDrawScreenTimer, { { tick_ } } });
+		__asm__("sti");
 	}
 
 	bool need_switch_task = false;
@@ -81,7 +83,11 @@ bool Timer::IncrementTick()
 		if (event.type_ == SystemEvent::kSwitchTask) {
 			need_switch_task = true;
 			event.args_.timer.timeout = CalculateTimeoutTicks(kSwitchTextMillisec);
+
+			__asm__("cli");
 			events_.push(event);
+			__asm__("sti");
+
 			continue;
 		}
 
@@ -100,7 +106,10 @@ bool Timer::IncrementTick()
 		if (event.args_.timer.periodical) {
 			event.args_.timer.timeout =
 					CalculateTimeoutTicks(event.args_.timer.period);
+
+			__asm__("cli");
 			events_.push(event);
+			__asm__("sti");
 		}
 	}
 

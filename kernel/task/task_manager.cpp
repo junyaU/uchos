@@ -13,18 +13,53 @@
 #include <cstdio>
 #include <vector>
 
-alignas(16) Context task_main_context, task_2_context;
-
-void SwitchTask()
+Task::Task(int id, uint64_t task_addr) : id_{ id }, stack_{ 4096 }, context_{ 0 }
 {
-	static bool task_main = true;
-	if (task_main) {
-		task_main = false;
-		ExecuteContextSwitch(&task_2_context, &task_main_context);
-	} else {
-		task_main = true;
-		ExecuteContextSwitch(&task_main_context, &task_2_context);
+	const size_t stack_size = 4096 / sizeof(stack_[0]);
+	stack_.resize(stack_size);
+	uint64_t stack_end = reinterpret_cast<uint64_t>(&stack_[stack_size]);
+
+	context_.rsp = (stack_end & ~0xflu) - 8;
+	context_.cr3 = GetCR3();
+	context_.rflags = 0x202;
+	context_.rip = task_addr;
+	context_.cs = kKernelCS;
+	context_.ss = kKernelSS;
+}
+
+TaskManager::TaskManager() : last_task_id_{ 0 }, current_task_index_{ 0 }
+{
+	tasks_.emplace_back(new Task(last_task_id_, 0));
+	++last_task_id_;
+}
+
+int TaskManager::AddTask(uint64_t task_addr)
+{
+	int current_task_id = last_task_id_;
+	tasks_.emplace_back(new Task(current_task_id, task_addr));
+
+	++last_task_id_;
+
+	return current_task_id;
+}
+
+void TaskManager::SwitchTask()
+{
+	if (tasks_.size() <= 1) {
+		return;
 	}
+
+	Task& current_task = *tasks_[current_task_index_];
+
+	if (current_task_index_ == tasks_.size() - 1) {
+		current_task_index_ = 0;
+	} else {
+		++current_task_index_;
+	}
+
+	Task& next_task = *tasks_[current_task_index_];
+
+	ExecuteContextSwitch(&next_task.TaskContext(), &current_task.TaskContext());
 }
 
 // test task
@@ -33,6 +68,7 @@ void Task2()
 	int i = 0;
 	while (true) {
 		char count[14];
+
 		sprintf(count, "%d", i);
 
 		Point2D draw_area = { static_cast<int>(300),
@@ -49,21 +85,21 @@ void Task2()
 	}
 }
 
-void InitializeTask2Context()
+void Task3()
 {
-	std::vector<uint64_t> stack(1024);
-	uint64_t stack_end = reinterpret_cast<uint64_t>(&stack[1024]);
-
-	memset(&task_2_context, 0, sizeof(task_2_context));
-
-	task_2_context.cr3 = GetCR3();
-	task_2_context.rsp = (stack_end & ~0xflu) - 8;
-	task_2_context.rflags = 0x202;
-	task_2_context.rip = reinterpret_cast<uint64_t>(Task2);
-	task_2_context.cs = kKernelCS;
-	task_2_context.ss = kKernelSS;
-
-	*reinterpret_cast<uint32_t*>(&task_2_context.fxsave_area[24]) = 0x1f80;
+	while (true) {
+		__asm__("hlt");
+	}
 }
 
-void InitializeTask() { timer->AddSwitchTaskEvent(kSwitchTextMillisec); }
+TaskManager* task_manager;
+
+void InitializeTaskManager()
+{
+	task_manager = new TaskManager();
+
+	task_manager->AddTask(reinterpret_cast<uint64_t>(Task2));
+	task_manager->AddTask(reinterpret_cast<uint64_t>(Task3));
+
+	timer->AddSwitchTaskEvent(kSwitchTextMillisec);
+}

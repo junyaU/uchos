@@ -14,10 +14,10 @@ void NotifyEndOfInterrupt()
 
 __attribute__((interrupt)) void TimerInterrupt(InterruptFrame* frame)
 {
-	const bool need_context_switch = timer->IncrementTick();
+	const bool need_switch_task = timer->IncrementTick();
 	NotifyEndOfInterrupt();
 
-	if (need_context_switch) {
-		SwitchTask();
+	if (need_switch_task) {
+		task_manager->SwitchTask();
 	}
 }

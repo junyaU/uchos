@@ -51,9 +51,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	timer->AddPeriodicTimerEvent(3000);
 
-	InitializeTask2Context();
-
-	InitializeTask();
+	InitializeTaskManager();
 
 	HandleSystemEvents();
 }
