@@ -37,10 +37,11 @@ int TaskManager::AddTask(uint64_t task_addr, bool is_running)
 {
 	Task* task = new Task(last_task_id_, task_addr);
 
+	tasks_.emplace_back(task);
+
 	if (is_running) {
+		task->Wakeup();
 		running_tasks_.push_back(task);
-	} else {
-		wait_tasks_.emplace_back(task);
 	}
 
 	++last_task_id_;
@@ -59,8 +60,6 @@ void TaskManager::SwitchTask(bool current_sleep)
 
 	if (!current_sleep) {
 		running_tasks_.push_back(&current_task);
-	} else {
-		wait_tasks_.emplace_back(&current_task);
 	}
 
 	Task& next_task = *running_tasks_.front();
@@ -76,13 +75,39 @@ void TaskManager::Sleep(int task_id)
 		return;
 	}
 
-	for (auto it = running_tasks_.begin(); it != running_tasks_.end(); ++it) {
-		if ((*it)->ID() == task_id) {
-			running_tasks_.erase(it);
-			wait_tasks_.emplace_back(*it);
-			return;
-		}
+	auto it = std::find_if(running_tasks_.begin(), running_tasks_.end(),
+						   [task_id](const auto& t) { return t->ID() == task_id; });
+	if (it == running_tasks_.end()) {
+		system_logger->Printf("TaskManager::Sleep: task ID is not running: %d\n",
+							  task_id);
+		return;
 	}
+
+	(*it)->Sleep();
+	running_tasks_.erase(it);
+}
+
+void TaskManager::Wakeup(int task_id)
+{
+	if (last_task_id_ < task_id) {
+		system_logger->Printf("TaskManager::Wakeup: invalid task ID: %d\n", task_id);
+		return;
+	}
+	auto it = std::find_if(tasks_.begin(), tasks_.end(),
+						   [task_id](const auto& t) { return t->ID() == task_id; });
+	if (it == tasks_.end()) {
+		system_logger->Printf("TaskManager::Wakeup: no such task ID: %d\n", task_id);
+		return;
+	}
+
+	if ((*it)->IsRunning()) {
+		system_logger->Printf("TaskManager::Wakeup: task %d is already running\n",
+							  task_id);
+		return;
+	}
+
+	(*it)->Wakeup();
+	running_tasks_.push_back(it->get());
 }
 
 void Task2()
@@ -147,6 +172,8 @@ void InitializeTaskManager()
 	auto id = task_manager->AddTask(reinterpret_cast<uint64_t>(Task4), true);
 
 	task_manager->Sleep(id);
+
+	// task_manager->Wakeup(id);
 
 	timer->AddSwitchTaskEvent(kSwitchTextMillisec);
 }

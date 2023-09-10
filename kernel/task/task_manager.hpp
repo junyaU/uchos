@@ -6,8 +6,6 @@
 #include <queue>
 #include <vector>
 
-// stack 4kiB
-
 class Task
 {
 public:
@@ -17,8 +15,15 @@ public:
 
 	Context& TaskContext() { return context_; }
 
+	void Sleep() { is_running_ = false; }
+
+	void Wakeup() { is_running_ = true; }
+
+	bool IsRunning() const { return is_running_; }
+
 private:
 	int id_;
+	bool is_running_;
 	std::vector<uint64_t> stack_;
 	alignas(16) Context context_;
 };
@@ -37,7 +42,7 @@ public:
 
 private:
 	int last_task_id_;
-	std::vector<std::unique_ptr<Task>> wait_tasks_;
+	std::vector<std::unique_ptr<Task>> tasks_;
 	std::deque<Task*> running_tasks_;
 };
 

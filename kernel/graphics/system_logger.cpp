@@ -4,6 +4,8 @@
 
 #include "font.hpp"
 #include "screen.hpp"
+#include <stdarg.h>
+
 
 SystemLogger::SystemLogger(Color font_color) : font_color_{ font_color } { Clear(); }
 
