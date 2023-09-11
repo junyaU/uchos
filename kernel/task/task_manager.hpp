@@ -9,7 +9,7 @@
 class Task
 {
 public:
-	Task(int id, uint64_t task_addr);
+	Task(int id, uint64_t task_addr, bool is_runnning, int priority);
 
 	int ID() const { return id_; }
 
@@ -23,6 +23,7 @@ public:
 
 private:
 	int id_;
+	int priority_;
 	bool is_running_;
 	std::vector<uint64_t> stack_;
 	alignas(16) Context context_;
@@ -33,7 +34,7 @@ class TaskManager
 public:
 	TaskManager();
 
-	int AddTask(uint64_t entry_point, bool is_running = false);
+	int AddTask(uint64_t entry_point, int priority, bool is_running = false);
 
 	void Wakeup(int task_id);
 	void Sleep(int task_id);
@@ -42,8 +43,7 @@ public:
 
 private:
 	int last_task_id_;
-	std::vector<std::unique_ptr<Task>> tasks_;
-	std::deque<Task*> running_tasks_;
+	std::deque<std::unique_ptr<Task>> tasks_;
 };
 
 extern TaskManager* task_manager;

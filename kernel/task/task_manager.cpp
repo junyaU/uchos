@@ -13,7 +13,12 @@
 #include <cstdio>
 #include <vector>
 
-Task::Task(int id, uint64_t task_addr) : id_{ id }, stack_{ 4096 }, context_{ 0 }
+Task::Task(int id, uint64_t task_addr, bool is_runnning, int priority)
+	: id_{ id },
+	  priority_{ priority },
+	  is_running_{ is_runnning },
+	  stack_{ 4096 },
+	  context_{ 0 }
 {
 	const size_t stack_size = 4096 / sizeof(stack_[0]);
 	stack_.resize(stack_size);
@@ -29,20 +34,15 @@ Task::Task(int id, uint64_t task_addr) : id_{ id }, stack_{ 4096 }, context_{ 0 
 
 TaskManager::TaskManager() : last_task_id_{ 0 }
 {
-	running_tasks_.push_back(new Task(last_task_id_, 0));
+	tasks_.emplace_back(new Task(last_task_id_, 0, true, 2));
 	++last_task_id_;
 }
 
-int TaskManager::AddTask(uint64_t task_addr, bool is_running)
+int TaskManager::AddTask(uint64_t task_addr, int priority, bool is_running)
 {
-	Task* task = new Task(last_task_id_, task_addr);
+	Task* task = new Task(last_task_id_, task_addr, is_running, priority);
 
 	tasks_.emplace_back(task);
-
-	if (is_running) {
-		task->Wakeup();
-		running_tasks_.push_back(task);
-	}
 
 	++last_task_id_;
 
@@ -51,40 +51,41 @@ int TaskManager::AddTask(uint64_t task_addr, bool is_running)
 
 void TaskManager::SwitchTask(bool current_sleep)
 {
-	if (running_tasks_.size() <= 1) {
+	if (tasks_.size() <= 1) {
 		return;
 	}
 
-	Task& current_task = *running_tasks_.front();
-	running_tasks_.pop_front();
+	Task& current_task = *tasks_.front();
 
 	if (!current_sleep) {
-		running_tasks_.push_back(&current_task);
+		current_task.Sleep();
 	}
 
-	Task& next_task = *running_tasks_.front();
+	tasks_.push_back(std::move(tasks_.front()));
+	tasks_.pop_front();
+
+	Task& next_task = *tasks_.front();
 
 	ExecuteContextSwitch(&next_task.TaskContext(), &current_task.TaskContext());
 }
 
 void TaskManager::Sleep(int task_id)
 {
-	auto task = running_tasks_.front();
-	if (task->ID() == task_id) {
+	auto task = *tasks_.front();
+	if (task.ID() == task_id) {
 		SwitchTask(true);
 		return;
 	}
 
-	auto it = std::find_if(running_tasks_.begin(), running_tasks_.end(),
+	auto it = std::find_if(tasks_.begin(), tasks_.end(),
 						   [task_id](const auto& t) { return t->ID() == task_id; });
-	if (it == running_tasks_.end()) {
+	if (it == tasks_.end()) {
 		system_logger->Printf("TaskManager::Sleep: task ID is not running: %d\n",
 							  task_id);
 		return;
 	}
 
 	(*it)->Sleep();
-	running_tasks_.erase(it);
 }
 
 void TaskManager::Wakeup(int task_id)
@@ -93,6 +94,7 @@ void TaskManager::Wakeup(int task_id)
 		system_logger->Printf("TaskManager::Wakeup: invalid task ID: %d\n", task_id);
 		return;
 	}
+
 	auto it = std::find_if(tasks_.begin(), tasks_.end(),
 						   [task_id](const auto& t) { return t->ID() == task_id; });
 	if (it == tasks_.end()) {
@@ -107,10 +109,9 @@ void TaskManager::Wakeup(int task_id)
 	}
 
 	(*it)->Wakeup();
-	running_tasks_.push_back(it->get());
 }
 
-void Task2()
+void TaskA()
 {
 	int i = 0;
 	while (true) {
@@ -132,14 +133,7 @@ void Task2()
 	}
 }
 
-void Task3()
-{
-	while (true) {
-		__asm__("hlt");
-	}
-}
-
-void Task4()
+void TaskB()
 {
 	int i = 0;
 	while (true) {
@@ -167,13 +161,8 @@ void InitializeTaskManager()
 {
 	task_manager = new TaskManager();
 
-	task_manager->AddTask(reinterpret_cast<uint64_t>(Task2), true);
-	task_manager->AddTask(reinterpret_cast<uint64_t>(Task3), true);
-	auto id = task_manager->AddTask(reinterpret_cast<uint64_t>(Task4), true);
-
-	task_manager->Sleep(id);
-
-	// task_manager->Wakeup(id);
+	task_manager->AddTask(reinterpret_cast<uint64_t>(TaskA), 2, true);
+	task_manager->AddTask(reinterpret_cast<uint64_t>(TaskB), 2, true);
 
 	timer->AddSwitchTaskEvent(kSwitchTextMillisec);
 }
