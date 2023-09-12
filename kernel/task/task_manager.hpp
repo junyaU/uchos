@@ -21,6 +21,8 @@ public:
 
 	bool IsRunning() const { return is_running_; }
 
+	int Priority() const { return priority_; }
+
 private:
 	int id_;
 	int priority_;
@@ -40,6 +42,8 @@ public:
 	void Sleep(int task_id);
 
 	void SwitchTask(bool current_sleep = false);
+
+	int NextQuantum();
 
 private:
 	int last_task_id_;

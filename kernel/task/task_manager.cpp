@@ -57,7 +57,7 @@ void TaskManager::SwitchTask(bool current_sleep)
 
 	Task& current_task = *tasks_.front();
 
-	if (!current_sleep) {
+	if (current_sleep) {
 		current_task.Sleep();
 	}
 
@@ -109,6 +109,26 @@ void TaskManager::Wakeup(int task_id)
 	}
 
 	(*it)->Wakeup();
+}
+
+int TaskManager::NextQuantum()
+{
+	auto it = std::find_if(tasks_.begin() + 1, tasks_.end(),
+						   [](const auto& t) { return t->IsRunning(); });
+	if (it == tasks_.end()) {
+		return 0;
+	}
+
+	switch ((*it)->Priority()) {
+		case 2:
+			return 80;
+		case 1:
+			return 50;
+		case 0:
+			return 20;
+		default:
+			return 0;
+	}
 }
 
 void TaskA()

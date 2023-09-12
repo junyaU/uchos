@@ -3,6 +3,7 @@
 #include "system_event_queue.hpp"
 
 #include "graphics/system_logger.hpp"
+#include "task/task_manager.hpp"
 
 uint64_t Timer::CalculateTimeoutTicks(unsigned long millisec)
 {
@@ -82,7 +83,9 @@ bool Timer::IncrementTick()
 
 		if (event.type_ == SystemEvent::kSwitchTask) {
 			need_switch_task = true;
-			event.args_.timer.timeout = CalculateTimeoutTicks(kSwitchTextMillisec);
+
+			event.args_.timer.timeout =
+					CalculateTimeoutTicks(task_manager->NextQuantum());
 
 			__asm__("cli");
 			events_.push(event);
