@@ -1,7 +1,7 @@
 #include "segment.hpp"
 
 #include "graphics/system_logger.hpp"
-#include "memory.h"
+#include "segments_operations.h"
 
 namespace
 {

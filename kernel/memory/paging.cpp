@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include "memory.h"
+#include "page_operations.h"
 
 namespace
 {

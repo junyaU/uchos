@@ -7,7 +7,6 @@
 #include "graphics/system_logger.hpp"
 #include "interrupt/idt.hpp"
 #include "memory/buddy_system.hpp"
-#include "memory/memory.h"
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"
 #include "system_event_queue.hpp"
