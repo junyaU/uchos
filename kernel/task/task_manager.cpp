@@ -92,13 +92,17 @@ void TaskManager::Wakeup(int task_id)
 
 int TaskManager::NextQuantum()
 {
+	int priority = 0;
 	auto it = std::find_if(tasks_.begin() + 1, tasks_.end(),
 						   [](const auto& t) { return t->IsRunning(); });
 	if (it == tasks_.end()) {
-		return 0;
+		auto current_task = *tasks_.front();
+		priority = current_task.Priority();
+	} else {
+		priority = (*it)->Priority();
 	}
 
-	switch ((*it)->Priority()) {
+	switch (priority) {
 		case 2:
 			return 80;
 		case 1:
@@ -110,58 +114,11 @@ int TaskManager::NextQuantum()
 	}
 }
 
-void TaskA()
-{
-	int i = 0;
-	while (true) {
-		char count[14];
-
-		sprintf(count, "%d", i);
-
-		Point2D draw_area = { static_cast<int>(300),
-							  static_cast<int>(screen->Height() -
-											   screen->Height() * 0.08) };
-
-		screen->FillRectangle(draw_area,
-							  { bitmap_font->Width() * 8, bitmap_font->Height() },
-							  screen->TaskbarColor().GetCode());
-
-		screen->DrawString(draw_area, count, 0xffffff);
-
-		i++;
-	}
-}
-
-void TaskB()
-{
-	int i = 0;
-	while (true) {
-		char count[14];
-
-		sprintf(count, "%d", i);
-
-		Point2D draw_area = { static_cast<int>(150),
-							  static_cast<int>(screen->Height() -
-											   screen->Height() * 0.08) };
-
-		screen->FillRectangle(draw_area,
-							  { bitmap_font->Width() * 8, bitmap_font->Height() },
-							  screen->TaskbarColor().GetCode());
-
-		screen->DrawString(draw_area, count, 0xffffff);
-
-		i++;
-	}
-}
-
 TaskManager* task_manager;
 
 void InitializeTaskManager()
 {
 	task_manager = new TaskManager();
-
-	task_manager->AddTask(reinterpret_cast<uint64_t>(TaskA), 2, true);
-	task_manager->AddTask(reinterpret_cast<uint64_t>(TaskB), 2, true);
 
 	timer->AddSwitchTaskEvent(kSwitchTextMillisec);
 }
