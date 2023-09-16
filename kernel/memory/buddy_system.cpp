@@ -19,7 +19,7 @@ int BuddySystem::CalculateOrder(size_t size) const
 	int num_pages = (size + kMemoryBlockSize - 1) / kMemoryBlockSize;
 
 	int order = 0;
-	while (num_pages > static_cast<int>(std::pow(2, order))) {
+	while (num_pages > (1 << order)) {
 		order++;
 	}
 
@@ -35,8 +35,7 @@ void BuddySystem::SplitMemoryBlock(int order)
 	auto block = free_lists_[order].front();
 	free_lists_[order].pop_front();
 
-	auto nextSmallerBlockSize =
-			kMemoryBlockSize * static_cast<int>(std::pow(2, order - 1));
+	auto nextSmallerBlockSize = kMemoryBlockSize * (1 << (order - 1));
 
 	free_lists_[order - 1].push_back(block);
 	free_lists_[order - 1].push_back(reinterpret_cast<void*>(
@@ -100,7 +99,7 @@ void BuddySystem::Free(void* addr, size_t size)
 		}
 
 		auto buddy_addr = reinterpret_cast<uintptr_t>(addr) ^
-						  (static_cast<int>(std::pow(2, order)) * kMemoryBlockSize);
+						  ((1 << order) * kMemoryBlockSize);
 
 		auto it = std::find(free_lists_[order].begin(), free_lists_[order].end(),
 							reinterpret_cast<void*>(buddy_addr));
@@ -130,12 +129,11 @@ void BuddySystem::RegisterMemory(int num_pages, void* addr)
 
 		this->free_lists_[order].push_back(addr);
 
-		auto next_addr =
-				reinterpret_cast<uintptr_t>(addr) +
-				kMemoryBlockSize * static_cast<uintptr_t>(std::pow(2, order));
+		auto next_addr = reinterpret_cast<uintptr_t>(addr) +
+						 kMemoryBlockSize * static_cast<uintptr_t>(1 << order);
 
 		addr = reinterpret_cast<void*>(next_addr);
-		num_pages -= static_cast<int>(std::pow(2, order));
+		num_pages -= 1 << order;
 	}
 }
 
