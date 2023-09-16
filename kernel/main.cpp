@@ -50,5 +50,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	InitializeTaskManager();
 
+	buddy_system->ShowFreeMemorySize();
+
 	HandleSystemEvents();
 }

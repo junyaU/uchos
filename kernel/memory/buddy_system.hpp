@@ -49,6 +49,32 @@ public:
 	 */
 	void RegisterMemory(int num_pages, void* addr);
 
+	/**
+	 * \brief Calculates the total number of available memory blocks in the system.
+	 *
+	 * This function iterates over all free lists in the buddy system and calculates
+	 * the sum of available blocks. Each block in a free list of a particular order
+	 * represents 2^order individual memory blocks.
+	 *
+	 * \return The total number of unused memory blocks managed by the buddy system.
+	 */
+	unsigned int CalculateAvailableBlocks() const;
+
+	/**
+	 * \brief Displays the current free memory size in comparison to the total memory
+	 * size.
+	 *
+	 * This function calculates and logs the amount of free memory currently
+	 * available in the buddy system as a fraction of the total memory size. The
+	 * output is formatted in MiB for easy interpretation.
+	 */
+	void ShowFreeMemorySize() const;
+
+	void SetTotalMemoryBlocks(unsigned int total_memory_blocks)
+	{
+		total_memory_blocks_ = total_memory_blocks;
+	}
+
 private:
 	static const auto kMaxOrder = 18;
 
@@ -74,6 +100,8 @@ private:
 	 * \return The order of the memory block.
 	 */
 	int CalculateOrder(size_t size) const;
+
+	unsigned int total_memory_blocks_;
 
 	std::array<std::list<void*, PoolAllocator<void*, 4 * 1024>>, kMaxOrder + 1>
 			free_lists_;

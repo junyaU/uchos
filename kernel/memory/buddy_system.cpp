@@ -30,6 +30,16 @@ int BuddySystem::CalculateOrder(size_t size) const
 	return order;
 }
 
+unsigned int BuddySystem::CalculateAvailableBlocks() const
+{
+	int num_blocks = 0;
+	for (int order = 0; order <= kMaxOrder; order++) {
+		num_blocks += free_lists_[order].size() * (1 << order);
+	}
+
+	return num_blocks;
+}
+
 void BuddySystem::SplitMemoryBlock(int order)
 {
 	auto block = free_lists_[order].front();
@@ -137,6 +147,15 @@ void BuddySystem::RegisterMemory(int num_pages, void* addr)
 	}
 }
 
+void BuddySystem::ShowFreeMemorySize() const
+{
+	unsigned int current_memory_blocks = CalculateAvailableBlocks();
+
+	system_logger->Printf("free memory size: %u MiB / %u MiB\n",
+						  current_memory_blocks * kMemoryBlockSize / 1024 / 1024,
+						  total_memory_blocks_ * kMemoryBlockSize / 1024 / 1024);
+}
+
 extern "C" caddr_t program_break, program_break_end;
 
 void InitializeHeap()
@@ -174,4 +193,8 @@ void InitializeBuddySystem(const MemoryMap& memory_map)
 				static_cast<int>(descriptor->number_of_pages),
 				reinterpret_cast<void*>(descriptor->physical_start));
 	}
+
+	unsigned int num_blocks = buddy_system->CalculateAvailableBlocks();
+
+	buddy_system->SetTotalMemoryBlocks(num_blocks);
 }
