@@ -1,6 +1,7 @@
 #include "buddy_system.hpp"
 
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <optional>
 #include <sys/types.h>
@@ -10,17 +11,28 @@
 namespace
 {
 char memory_pool[sizeof(BuddySystem)];
+
+int bit_width(unsigned int x)
+{
+	if (x == 0) {
+		return 0;
+	}
+
+	return CHAR_BIT * sizeof(unsigned int) - __builtin_clz(x);
 }
+} // namespace
 
 BuddySystem* buddy_system;
 
 int BuddySystem::CalculateOrder(size_t size) const
 {
-	int num_pages = (size + kMemoryBlockSize - 1) / kMemoryBlockSize;
+	int required_block_count = (size + kMemoryBlockSize - 1) / kMemoryBlockSize;
 
-	int order = 0;
-	while (num_pages > (1 << order)) {
-		order++;
+	int order;
+	if ((required_block_count & (required_block_count - 1)) == 0) {
+		order = bit_width(required_block_count) - 1;
+	} else {
+		order = bit_width(required_block_count);
 	}
 
 	if (order > kMaxOrder) {
