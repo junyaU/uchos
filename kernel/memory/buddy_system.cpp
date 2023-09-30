@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <climits>
-#include <cmath>
 #include <optional>
 #include <sys/types.h>
 
@@ -24,15 +23,13 @@ int bit_width(unsigned int x)
 
 BuddySystem* buddy_system;
 
-int BuddySystem::CalculateOrder(size_t size) const
+int BuddySystem::__calculate_order(int required_blocks) const
 {
-	int required_block_count = (size + kMemoryBlockSize - 1) / kMemoryBlockSize;
-
 	int order;
-	if ((required_block_count & (required_block_count - 1)) == 0) {
-		order = bit_width(required_block_count) - 1;
+	if ((required_blocks & (required_blocks - 1)) == 0) {
+		order = bit_width(required_blocks) - 1;
 	} else {
-		order = bit_width(required_block_count);
+		order = bit_width(required_blocks);
 	}
 
 	if (order > kMaxOrder) {
@@ -40,6 +37,16 @@ int BuddySystem::CalculateOrder(size_t size) const
 	}
 
 	return order;
+}
+
+int BuddySystem::calculate_order(size_t size) const
+{
+	return __calculate_order((size + kMemoryBlockSize - 1) / kMemoryBlockSize);
+}
+
+int BuddySystem::calculate_order(int num_pages) const
+{
+	return __calculate_order(num_pages);
 }
 
 unsigned int BuddySystem::CalculateAvailableBlocks() const
@@ -66,7 +73,7 @@ void BuddySystem::SplitMemoryBlock(int order)
 
 void* BuddySystem::Allocate(size_t size)
 {
-	int order = CalculateOrder(size);
+	int order = calculate_order(size);
 	if (order == -1) {
 		system_logger->Printf("invalid size: %d\n", size);
 		return nullptr;
@@ -108,7 +115,7 @@ void BuddySystem::Free(void* addr, size_t size)
 		}
 	}
 
-	int order = CalculateOrder(size);
+	int order = calculate_order(size);
 	if (order == -1) {
 		system_logger->Printf("invalid size: %d\n", size);
 		return;
@@ -146,16 +153,36 @@ void BuddySystem::RegisterMemory(int num_pages, void* addr)
 	}
 
 	while (num_pages > 0) {
-		const auto order =
-				std::min(static_cast<int>(std::log2(num_pages)), kMaxOrder);
+		const auto order = std::min(calculate_order(num_pages), kMaxOrder);
+
+		int num_blocks = 1 << order;
 
 		this->free_lists_[order].push_back(addr);
 
+		// void* temp_addr = addr;
+		// for (int i = 0; i < num_blocks; i++) {
+		// 	page* p = alloc_page();
+		// 	if (!p) {
+		// 		system_logger->Printf("failed to allocate page\n");
+		// 		return;
+		// 	}
+
+		// 	p->set_ptr(temp_addr);
+
+		// 	free_lists_[order].push_back(p);
+		// 	temp_addr = reinterpret_cast<void*>(
+		// 			reinterpret_cast<uintptr_t>(temp_addr) + kMemoryBlockSize);
+
+		// 	if (i != num_blocks - 1) {
+		// 		p->set_adjacent_ptr(temp_addr);
+		// 	}
+		// }
+
 		auto next_addr = reinterpret_cast<uintptr_t>(addr) +
-						 kMemoryBlockSize * static_cast<uintptr_t>(1 << order);
+						 kMemoryBlockSize * static_cast<uintptr_t>(num_blocks);
 
 		addr = reinterpret_cast<void*>(next_addr);
-		num_pages -= 1 << order;
+		num_pages -= num_blocks;
 	}
 }
 

@@ -6,6 +6,7 @@
 #include <list>
 
 #include "../../UchLoaderPkg/memory_map.hpp"
+#include "page.hpp"
 #include "pool.hpp"
 
 static const auto kMemoryBlockSize = 4 * 1024;
@@ -99,7 +100,11 @@ private:
 	 * \param size The size of the memory block.
 	 * \return The order of the memory block.
 	 */
-	int CalculateOrder(size_t size) const;
+	int calculate_order(size_t size) const;
+
+	int calculate_order(int num_pages) const;
+
+	int __calculate_order(int required_blocks) const;
 
 	unsigned int total_memory_blocks_;
 
