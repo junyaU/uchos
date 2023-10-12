@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 
+const int PAGE_SIZE = 4096;
+
 class page
 {
 public:
@@ -30,7 +32,5 @@ private:
 };
 
 const int MAX_PAGES = 260000;
-
-std::array<page, MAX_PAGES> pages;
 
 page* alloc_page();

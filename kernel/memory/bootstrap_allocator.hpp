@@ -6,8 +6,8 @@
 #include <array>
 #include <cstdint>
 
-// 128 GiB
-const uint64_t MAX_PHYS_MEM_BYTES = 64ULL * 1024 * 1024 * 1024;
+// 64 GiB
+static const uint64_t MAX_PHYS_MEM_BYTES = 64UL * 1024 * 1024 * 1024;
 const uint64_t TOTAL_PAGES = MAX_PHYS_MEM_BYTES / PAGE_SIZE;
 
 class bootstrap_allocator
@@ -21,7 +21,7 @@ public:
 	void mark_available(void* addr, size_t size);
 
 private:
-	std::array<unsigned long, TOTAL_PAGES / sizeof(unsigned long) * 8> bitmap;
+	std::array<unsigned long, TOTAL_PAGES / (sizeof(unsigned long) * 8)> bitmap;
 	void *memory_start, *memory_end;
 };
 
