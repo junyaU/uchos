@@ -6,6 +6,7 @@
 #include "graphics/screen.hpp"
 #include "graphics/system_logger.hpp"
 #include "interrupt/idt.hpp"
+#include "memory/bootstrap_allocator.hpp"
 #include "memory/buddy_system.hpp"
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"
@@ -35,6 +36,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	InitializePaging();
 
 	InitializeInterrupt();
+
+	initialize_bootstrap_allocator(memory_map);
 
 	InitializeBuddySystem(memory_map);
 
