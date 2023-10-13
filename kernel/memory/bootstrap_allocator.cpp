@@ -47,7 +47,15 @@ void* bootstrap_allocator::allocate(size_t size)
 	return nullptr;
 }
 
-void free(void* addr, size_t size) {}
+void bootstrap_allocator::free(void* addr, size_t size)
+{
+	auto start = reinterpret_cast<uintptr_t>(addr) / PAGE_SIZE;
+	auto end = (reinterpret_cast<uintptr_t>(addr) + size) / PAGE_SIZE;
+
+	for (auto i = start; i < end; i++) {
+		bitmap[i / BITMAP_ENTRY_SIZE] &= ~(1UL << (i % BITMAP_ENTRY_SIZE));
+	}
+}
 
 void bootstrap_allocator::mark_available(void* addr, size_t size)
 {
