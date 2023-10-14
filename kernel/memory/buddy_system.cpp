@@ -6,6 +6,7 @@
 #include <sys/types.h>
 
 #include "graphics/system_logger.hpp"
+#include "memory/bootstrap_allocator.hpp"
 
 namespace
 {
@@ -159,25 +160,6 @@ void BuddySystem::RegisterMemory(int num_pages, void* addr)
 
 		this->free_lists_[order].push_back(addr);
 
-		// void* temp_addr = addr;
-		// for (int i = 0; i < num_blocks; i++) {
-		// 	page* p = alloc_page();
-		// 	if (!p) {
-		// 		system_logger->Printf("failed to allocate page\n");
-		// 		return;
-		// 	}
-
-		// 	p->set_ptr(temp_addr);
-
-		// 	free_lists_[order].push_back(p);
-		// 	temp_addr = reinterpret_cast<void*>(
-		// 			reinterpret_cast<uintptr_t>(temp_addr) + kMemoryBlockSize);
-
-		// 	if (i != num_blocks - 1) {
-		// 		p->set_adjacent_ptr(temp_addr);
-		// 	}
-		// }
-
 		auto next_addr = reinterpret_cast<uintptr_t>(addr) +
 						 kMemoryBlockSize * static_cast<uintptr_t>(num_blocks);
 
@@ -193,24 +175,6 @@ void BuddySystem::ShowFreeMemorySize() const
 	system_logger->Printf("free memory size: %u MiB / %u MiB\n",
 						  current_memory_blocks * kMemoryBlockSize / 1024 / 1024,
 						  total_memory_blocks_ * kMemoryBlockSize / 1024 / 1024);
-}
-
-extern "C" caddr_t program_break, program_break_end;
-
-void InitializeHeap()
-{
-	// 128 MiB
-	const int kHeapFrames = 64 * 512;
-	const size_t kHeapSize = kHeapFrames * kMemoryBlockSize;
-
-	auto heap = buddy_system->Allocate(kHeapSize);
-	if (heap == nullptr) {
-		system_logger->Printf("failed to allocate heap\n");
-		return;
-	}
-
-	program_break = reinterpret_cast<caddr_t>(heap);
-	program_break_end = program_break + kHeapSize;
 }
 
 void InitializeBuddySystem(const MemoryMap& memory_map)

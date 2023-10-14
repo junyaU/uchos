@@ -8,6 +8,7 @@
 #include "interrupt/idt.hpp"
 #include "memory/bootstrap_allocator.hpp"
 #include "memory/buddy_system.hpp"
+#include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"
 #include "system_event_queue.hpp"
@@ -39,9 +40,11 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_bootstrap_allocator(memory_map);
 
-	InitializeBuddySystem(memory_map);
+	initialize_heap();
 
-	InitializeHeap();
+	initialize_pages();
+
+	InitializeBuddySystem(memory_map);
 
 	system_logger->Print("Hello, uch OS!\n");
 

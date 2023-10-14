@@ -1,29 +1,23 @@
 #include "bootstrap_allocator.hpp"
 #include <limits>
+#include <sys/types.h>
 
 #include "graphics/system_logger.hpp"
 
-bootstrap_allocator::bootstrap_allocator() : memory_start{ 0x0 }, memory_end{ 0x0 }
+bootstrap_allocator::bootstrap_allocator() : memory_start_{ 0x0 }, memory_end_{ 0x0 }
 {
-	bitmap.fill(1);
+	bitmap_.fill(1);
 }
 
 void* bootstrap_allocator::allocate(size_t size)
 {
 	const size_t num_pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
 
-	system_logger->Printf("num_pages: %d\n", num_pages);
-
-	const auto memory_start_index =
-			reinterpret_cast<uintptr_t>(memory_start) / PAGE_SIZE;
-	const auto memory_end_index =
-			reinterpret_cast<uintptr_t>(memory_end) / PAGE_SIZE;
-
 	size_t consecutive_start_index = 0;
 	size_t num_consecutive_pages = 0;
 
-	for (size_t i = memory_start_index; i < memory_end_index; i++) {
-		if (bitmap[i / BITMAP_ENTRY_SIZE] & (1UL << (i % BITMAP_ENTRY_SIZE))) {
+	for (size_t i = start_index(); i < end_index(); i++) {
+		if (is_bit_set(i)) {
 			num_consecutive_pages = 0;
 			continue;
 		}
@@ -37,7 +31,7 @@ void* bootstrap_allocator::allocate(size_t size)
 		if (num_consecutive_pages == num_pages) {
 			for (size_t j = consecutive_start_index;
 				 j < consecutive_start_index + num_pages; j++) {
-				bitmap[j / BITMAP_ENTRY_SIZE] |= 1UL << (j % BITMAP_ENTRY_SIZE);
+				bitmap_[j / BITMAP_ENTRY_SIZE] |= 1UL << (j % BITMAP_ENTRY_SIZE);
 			}
 
 			return reinterpret_cast<void*>(consecutive_start_index * PAGE_SIZE);
@@ -53,7 +47,7 @@ void bootstrap_allocator::free(void* addr, size_t size)
 	auto end = (reinterpret_cast<uintptr_t>(addr) + size) / PAGE_SIZE;
 
 	for (auto i = start; i < end; i++) {
-		bitmap[i / BITMAP_ENTRY_SIZE] &= ~(1UL << (i % BITMAP_ENTRY_SIZE));
+		bitmap_[i / BITMAP_ENTRY_SIZE] &= ~(1UL << (i % BITMAP_ENTRY_SIZE));
 	}
 }
 
@@ -63,14 +57,10 @@ void bootstrap_allocator::mark_available(void* addr, size_t size)
 	auto end = (reinterpret_cast<uintptr_t>(addr) + size) / PAGE_SIZE;
 
 	for (auto i = start; i < end; i++) {
-		bitmap[i / BITMAP_ENTRY_SIZE] &= ~(1UL << (i % BITMAP_ENTRY_SIZE));
+		bitmap_[i / BITMAP_ENTRY_SIZE] &= ~(1UL << (i % BITMAP_ENTRY_SIZE));
 	}
 
-	if (memory_start == nullptr || memory_start > addr) {
-		memory_start = addr;
-	}
-
-	memory_end = std::max(memory_end, reinterpret_cast<void*>(end * PAGE_SIZE));
+	memory_end_ = std::max(memory_end_, reinterpret_cast<void*>(end * PAGE_SIZE));
 }
 
 char bootstrap_allocator_buffer[sizeof(bootstrap_allocator)];
@@ -94,4 +84,22 @@ void initialize_bootstrap_allocator(const MemoryMap& mem_map)
 		boot_allocator->mark_available(reinterpret_cast<void*>(desc->physical_start),
 									   desc->number_of_pages * PAGE_SIZE);
 	}
+}
+
+extern "C" caddr_t program_break, program_break_end;
+
+void initialize_heap()
+{
+	// 128 MiB
+	const int heap_pages = 64 * 512;
+	const size_t heap_size = heap_pages * PAGE_SIZE;
+
+	auto heap = boot_allocator->allocate(heap_size);
+	if (heap == nullptr) {
+		system_logger->Printf("failed to allocate heap\n");
+		return;
+	}
+
+	program_break = reinterpret_cast<caddr_t>(heap);
+	program_break_end = program_break + heap_size;
 }

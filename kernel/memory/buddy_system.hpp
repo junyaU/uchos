@@ -123,13 +123,3 @@ extern BuddySystem* buddy_system;
  * \param memory_map A reference to the UEFI memory map.
  */
 void InitializeBuddySystem(const MemoryMap& memory_map);
-
-/**
- * \brief Initializes the heap memory for the system.
- *
- * This function allocates a contiguous block of memory to serve as the system's
- * heap. The size of the heap is defined by kHeapFrames and kMemoryBlockSize. After
- * allocation, the program break pointers (`program_break` and `program_break_end`)
- * are set to the boundaries of the allocated heap memory.
- */
-void InitializeHeap();

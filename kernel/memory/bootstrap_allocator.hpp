@@ -18,14 +18,30 @@ public:
 
 	void* allocate(size_t size);
 	void free(void* addr, size_t size);
-
 	void mark_available(void* addr, size_t size);
 
+	bool is_bit_set(size_t i) const
+	{
+		return bitmap_[i / BITMAP_ENTRY_SIZE] & (1UL << (i % BITMAP_ENTRY_SIZE));
+	}
+
+	size_t start_index() const
+	{
+		return reinterpret_cast<uintptr_t>(memory_start_) / PAGE_SIZE;
+	}
+
+	size_t end_index() const
+	{
+		return reinterpret_cast<uintptr_t>(memory_end_) / PAGE_SIZE;
+	}
+
 private:
-	std::array<unsigned long, TOTAL_PAGES / BITMAP_ENTRY_SIZE> bitmap;
-	void *memory_start, *memory_end;
+	std::array<unsigned long, TOTAL_PAGES / BITMAP_ENTRY_SIZE> bitmap_;
+	void *memory_start_, *memory_end_;
 };
 
 extern bootstrap_allocator* boot_allocator;
 
 void initialize_bootstrap_allocator(const MemoryMap& mem_map);
+
+void initialize_heap();
