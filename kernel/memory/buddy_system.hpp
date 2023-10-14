@@ -9,8 +9,6 @@
 #include "page.hpp"
 #include "pool.hpp"
 
-static const auto kMemoryBlockSize = 4 * 1024;
-
 class BuddySystem
 {
 public:
@@ -48,7 +46,7 @@ public:
 	 * \param num_pages The number of memory pages in the block.
 	 * \param addr The starting address of the memory block.
 	 */
-	void RegisterMemory(int num_pages, void* addr);
+	void register_memory(size_t num_pages, page* addr);
 
 	/**
 	 * \brief Calculates the total number of available memory blocks in the system.
@@ -60,16 +58,6 @@ public:
 	 * \return The total number of unused memory blocks managed by the buddy system.
 	 */
 	unsigned int CalculateAvailableBlocks() const;
-
-	/**
-	 * \brief Displays the current free memory size in comparison to the total memory
-	 * size.
-	 *
-	 * This function calculates and logs the amount of free memory currently
-	 * available in the buddy system as a fraction of the total memory size. The
-	 * output is formatted in MiB for easy interpretation.
-	 */
-	void ShowFreeMemorySize() const;
 
 	void SetTotalMemoryBlocks(unsigned int total_memory_blocks)
 	{
@@ -108,7 +96,7 @@ private:
 
 	unsigned int total_memory_blocks_;
 
-	std::array<std::list<void*, PoolAllocator<void*, 4 * 1024>>, kMaxOrder + 1>
+	std::array<std::list<void*, PoolAllocator<void*, PAGE_SIZE>>, kMaxOrder + 1>
 			free_lists_;
 };
 
@@ -122,4 +110,4 @@ extern BuddySystem* buddy_system;
  *
  * \param memory_map A reference to the UEFI memory map.
  */
-void InitializeBuddySystem(const MemoryMap& memory_map);
+void initialize_buddy_system();

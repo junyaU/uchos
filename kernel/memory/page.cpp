@@ -2,6 +2,9 @@
 #include "bootstrap_allocator.hpp"
 #include "graphics/system_logger.hpp"
 
+#include <array>
+#include <vector>
+
 std::vector<page> pages;
 
 void initialize_pages()
@@ -21,4 +24,19 @@ void initialize_pages()
 			pages[page_index].set_free();
 		}
 	}
+}
+
+void print_available_memory()
+{
+	size_t available_pages = 0;
+
+	for (const auto& page : pages) {
+		if (page.is_free()) {
+			available_pages++;
+		}
+	}
+
+	system_logger->Printf("available memory: %u MiB / %u MiB\n",
+						  available_pages * PAGE_SIZE / 1024 / 1024,
+						  pages.size() * PAGE_SIZE / 1024 / 1024);
 }

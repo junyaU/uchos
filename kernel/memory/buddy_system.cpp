@@ -10,8 +10,6 @@
 
 namespace
 {
-char memory_pool[sizeof(BuddySystem)];
-
 int bit_width(unsigned int x)
 {
 	if (x == 0) {
@@ -42,7 +40,7 @@ int BuddySystem::__calculate_order(int required_blocks) const
 
 int BuddySystem::calculate_order(size_t size) const
 {
-	return __calculate_order((size + kMemoryBlockSize - 1) / kMemoryBlockSize);
+	return __calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
 }
 
 int BuddySystem::calculate_order(int num_pages) const
@@ -65,7 +63,7 @@ void BuddySystem::SplitMemoryBlock(int order)
 	auto block = free_lists_[order].front();
 	free_lists_[order].pop_front();
 
-	auto nextSmallerBlockSize = kMemoryBlockSize * (1 << (order - 1));
+	auto nextSmallerBlockSize = PAGE_SIZE * (1 << (order - 1));
 
 	free_lists_[order - 1].push_back(block);
 	free_lists_[order - 1].push_back(reinterpret_cast<void*>(
@@ -128,8 +126,8 @@ void BuddySystem::Free(void* addr, size_t size)
 			return;
 		}
 
-		auto buddy_addr = reinterpret_cast<uintptr_t>(addr) ^
-						  ((1 << order) * kMemoryBlockSize);
+		auto buddy_addr =
+				reinterpret_cast<uintptr_t>(addr) ^ ((1 << order) * PAGE_SIZE);
 
 		auto it = std::find(free_lists_[order].begin(), free_lists_[order].end(),
 							reinterpret_cast<void*>(buddy_addr));
@@ -147,57 +145,52 @@ void BuddySystem::Free(void* addr, size_t size)
 	}
 }
 
-void BuddySystem::RegisterMemory(int num_pages, void* addr)
+void BuddySystem::register_memory(size_t num_consecutive_pages, page* start_page)
 {
-	if (!addr || num_pages <= 0) {
+	if (num_consecutive_pages <= 0) {
 		return;
 	}
 
-	while (num_pages > 0) {
-		const auto order = std::min(calculate_order(num_pages), kMaxOrder);
+	while (num_consecutive_pages > 0) {
+		const auto order =
+				std::min(calculate_order(num_consecutive_pages), kMaxOrder);
 
-		int num_blocks = 1 << order;
+		this->free_lists_[order].push_back(start_page);
 
-		this->free_lists_[order].push_back(addr);
+		int num_order_pages = 1 << order;
 
-		auto next_addr = reinterpret_cast<uintptr_t>(addr) +
-						 kMemoryBlockSize * static_cast<uintptr_t>(num_blocks);
+		start_page = &pages[start_page->index() + num_order_pages];
 
-		addr = reinterpret_cast<void*>(next_addr);
-		num_pages -= num_blocks;
+		num_consecutive_pages -= num_order_pages;
 	}
 }
 
-void BuddySystem::ShowFreeMemorySize() const
+void initialize_buddy_system()
 {
-	unsigned int current_memory_blocks = CalculateAvailableBlocks();
+	buddy_system = new BuddySystem();
 
-	system_logger->Printf("free memory size: %u MiB / %u MiB\n",
-						  current_memory_blocks * kMemoryBlockSize / 1024 / 1024,
-						  total_memory_blocks_ * kMemoryBlockSize / 1024 / 1024);
-}
+	size_t concecutive_start_index = 0;
+	size_t num_consecutive_pages = 0;
+	for (size_t i = 0; i < pages.size(); i++) {
+		if (pages[i].is_used()) {
+			if (num_consecutive_pages > 0) {
+				buddy_system->register_memory(num_consecutive_pages,
+											  &pages[concecutive_start_index]);
+			}
 
-void InitializeBuddySystem(const MemoryMap& memory_map)
-{
-	buddy_system = new (memory_pool) BuddySystem();
-
-	const auto memmap_base = reinterpret_cast<uintptr_t>(memory_map.buffer);
-	const auto memmap_end = memmap_base + memory_map.map_size;
-
-	for (uintptr_t iter = memmap_base; iter < memmap_end;
-		 iter += memory_map.descriptor_size) {
-		auto descriptor = reinterpret_cast<MemoryDescriptor*>(iter);
-
-		if (!IsAvailableMemory(static_cast<MemoryType>(descriptor->type))) {
+			num_consecutive_pages = 0;
 			continue;
 		}
 
-		buddy_system->RegisterMemory(
-				static_cast<int>(descriptor->number_of_pages),
-				reinterpret_cast<void*>(descriptor->physical_start));
+		if (num_consecutive_pages == 0) {
+			concecutive_start_index = i;
+		}
+
+		num_consecutive_pages++;
 	}
 
-	unsigned int num_blocks = buddy_system->CalculateAvailableBlocks();
-
-	buddy_system->SetTotalMemoryBlocks(num_blocks);
+	if (num_consecutive_pages > 0) {
+		buddy_system->register_memory(num_consecutive_pages,
+									  &pages[concecutive_start_index]);
+	}
 }

@@ -11,8 +11,10 @@ class page
 public:
 	page() : status_{ 0 }, ptr_{ nullptr } {}
 
-	bool is_free() const;
-	bool is_used() const;
+	size_t index() const { return reinterpret_cast<uintptr_t>(ptr_) / PAGE_SIZE; }
+
+	bool is_free() const { return status_ == 0; }
+	bool is_used() const { return status_ == 1; }
 	bool is_reserved() const;
 
 	void* ptr() const { return ptr_; }
@@ -31,3 +33,5 @@ private:
 extern std::vector<page> pages;
 
 void initialize_pages();
+
+void print_available_memory();

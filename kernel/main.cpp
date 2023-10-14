@@ -17,9 +17,7 @@
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"
 
-#include <cstdio>
-
-// 1MiB
+// 1MiB　
 char kernel_stack[1024 * 1024];
 
 extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
@@ -44,7 +42,9 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_pages();
 
-	InitializeBuddySystem(memory_map);
+	initialize_buddy_system();
+
+	print_available_memory();
 
 	system_logger->Print("Hello, uch OS!\n");
 
@@ -55,8 +55,6 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	InitializeTimer();
 
 	InitializeTaskManager();
-
-	buddy_system->ShowFreeMemorySize();
 
 	HandleSystemEvents();
 }

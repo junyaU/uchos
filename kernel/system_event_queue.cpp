@@ -3,8 +3,6 @@
 #include "graphics/screen.hpp"
 #include "graphics/system_logger.hpp"
 #include "system_event.hpp"
-#include "task/context.hpp"
-#include "task/context_switch.h"
 #include "timers/timer.hpp"
 
 #include <cstdio>

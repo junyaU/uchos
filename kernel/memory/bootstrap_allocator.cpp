@@ -4,7 +4,7 @@
 
 #include "graphics/system_logger.hpp"
 
-bootstrap_allocator::bootstrap_allocator() : memory_start_{ 0x0 }, memory_end_{ 0x0 }
+bootstrap_allocator::bootstrap_allocator() : bitmap_{}, memory_start_{ 0x0 }, memory_end_{ 0x0 }
 {
 	bitmap_.fill(1);
 }
