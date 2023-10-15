@@ -44,6 +44,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_memory_manager();
 
+	disable_bootstrap_allocator();
+
 	system_logger->Print("Hello, uch OS!\n");
 
 	print_available_memory();

@@ -3,6 +3,7 @@
 #include <limits>
 #include <sys/types.h>
 
+#include "buddy_system.hpp"
 #include "graphics/system_logger.hpp"
 
 bootstrap_allocator::bootstrap_allocator()
@@ -121,4 +122,12 @@ void initialize_heap()
 
 	program_break = reinterpret_cast<caddr_t>(heap);
 	program_break_end = program_break + heap_size;
+}
+
+void disable_bootstrap_allocator()
+{
+	if (boot_allocator) {
+		memory_manager->free(boot_allocator, sizeof(bootstrap_allocator));
+		boot_allocator = nullptr;
+	}
 }

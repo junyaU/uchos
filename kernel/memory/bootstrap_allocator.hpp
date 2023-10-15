@@ -47,3 +47,5 @@ extern bootstrap_allocator* boot_allocator;
 void initialize_bootstrap_allocator(const MemoryMap& mem_map);
 
 void initialize_heap();
+
+void disable_bootstrap_allocator();
