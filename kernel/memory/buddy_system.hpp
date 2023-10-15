@@ -9,10 +9,10 @@
 #include "page.hpp"
 #include "pool.hpp"
 
-class BuddySystem
+class buddy_system
 {
 public:
-	BuddySystem() = default;
+	buddy_system() = default;
 
 	/**
 	 * \brief Allocates memory of the specified size using the buddy system.
@@ -25,7 +25,7 @@ public:
 	 * \return A pointer to the allocated memory, or nullptr if the allocation
 	 * failed.
 	 */
-	void* Allocate(size_t size);
+	void* allocate(size_t size);
 
 	/**
 	 * \brief Frees a block of memory allocated by the buddy system.
@@ -35,7 +35,7 @@ public:
 	 *
 	 * \param addr A pointer to the memory to be freed.
 	 */
-	void Free(void* addr, size_t size);
+	void free(void* addr, size_t size);
 
 	/**
 	 * \brief Registers a block of memory pages with the buddy system.
@@ -46,68 +46,42 @@ public:
 	 * \param num_pages The number of memory pages in the block.
 	 * \param addr The starting address of the memory block.
 	 */
-	void register_memory(size_t num_pages, page* addr);
+	void register_memory(int num_pages, page* addr);
 
-	/**
-	 * \brief Calculates the total number of available memory blocks in the system.
-	 *
-	 * This function iterates over all free lists in the buddy system and calculates
-	 * the sum of available blocks. Each block in a free list of a particular order
-	 * represents 2^order individual memory blocks.
-	 *
-	 * \return The total number of unused memory blocks managed by the buddy system.
-	 */
-	unsigned int CalculateAvailableBlocks() const;
-
-	void SetTotalMemoryBlocks(unsigned int total_memory_blocks)
-	{
-		total_memory_blocks_ = total_memory_blocks;
-	}
+	void print_free_lists() const;
 
 private:
-	static const auto kMaxOrder = 18;
+	static const auto MAX_ORDER = 18;
 
 	/**
 	 * \brief Splits a memory block of the given order into two smaller blocks.
 	 *
-	 * This function is used in the buddy memory allocation system to split larger
-	 * blocks of memory into two smaller, equally-sized blocks when no blocks of the
-	 * desired size are available.
+	 * This function is used in the buddy memory allocation system to split
+	 * larger blocks of memory into two smaller, equally-sized blocks when no
+	 * blocks of the desired size are available.
 	 *
 	 * \param order The order of the memory block to be split.
 	 */
-	void SplitMemoryBlock(int order);
+	void split_page_block(int order);
 
 	/**
 	 * \brief Calculates the order of a memory block of the given size.
 	 *
 	 * This function calculates the order of a memory block of the given size.
 	 * The order is the power of two that is equal to or greater than the size.
-	 * -1 is returned if the size is too large to be allocated by the buddy system.
+	 * -1 is returned if the size is too large to be allocated by the buddy
+	 * system.
 	 *
 	 * \param size The size of the memory block.
 	 * \return The order of the memory block.
 	 */
-	int calculate_order(size_t size) const;
 
-	int calculate_order(int num_pages) const;
+	int calculate_order(size_t num_pages) const;
 
-	int __calculate_order(int required_blocks) const;
-
-	unsigned int total_memory_blocks_;
-
-	std::array<std::list<void*, PoolAllocator<void*, PAGE_SIZE>>, kMaxOrder + 1>
+	std::array<std::list<page*, PoolAllocator<page*, PAGE_SIZE>>, MAX_ORDER + 1>
 			free_lists_;
 };
 
-extern BuddySystem* buddy_system;
+extern buddy_system* memory_manager;
 
-/**
- * \brief Initializes the buddy system using the provided UEFI memory map.
- *
- * This function iterates over the UEFI memory map and registers available
- * memory regions with the buddy system.
- *
- * \param memory_map A reference to the UEFI memory map.
- */
-void initialize_buddy_system();
+void initialize_memory_manager();

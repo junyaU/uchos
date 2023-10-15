@@ -20,6 +20,8 @@ public:
 	void free(void* addr, size_t size);
 	void mark_available(void* addr, size_t size);
 
+	void show_available_memory() const;
+
 	bool is_bit_set(size_t i) const
 	{
 		return bitmap_[i / BITMAP_ENTRY_SIZE] & (1UL << (i % BITMAP_ENTRY_SIZE));

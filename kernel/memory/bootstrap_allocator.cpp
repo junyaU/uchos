@@ -1,12 +1,14 @@
 #include "bootstrap_allocator.hpp"
+#include <climits>
 #include <limits>
 #include <sys/types.h>
 
 #include "graphics/system_logger.hpp"
 
-bootstrap_allocator::bootstrap_allocator() : bitmap_{}, memory_start_{ 0x0 }, memory_end_{ 0x0 }
+bootstrap_allocator::bootstrap_allocator()
+	: bitmap_{}, memory_start_{ 0x0 }, memory_end_{ 0x0 }
 {
-	bitmap_.fill(1);
+	bitmap_.fill(ULONG_MAX);
 }
 
 void* bootstrap_allocator::allocate(size_t size)
@@ -38,6 +40,8 @@ void* bootstrap_allocator::allocate(size_t size)
 		}
 	}
 
+	system_logger->Printf("failed to allocate %u bytes\n", size);
+
 	return nullptr;
 }
 
@@ -61,6 +65,21 @@ void bootstrap_allocator::mark_available(void* addr, size_t size)
 	}
 
 	memory_end_ = std::max(memory_end_, reinterpret_cast<void*>(end * PAGE_SIZE));
+}
+
+void bootstrap_allocator::show_available_memory() const
+{
+	size_t available_pages = 0;
+
+	for (size_t i = start_index(); i < end_index(); i++) {
+		if (!is_bit_set(i)) {
+			available_pages++;
+		}
+	}
+
+	system_logger->Printf("available memory: %u MiB / %u MiB\n",
+						  available_pages * PAGE_SIZE / 1024 / 1024,
+						  (end_index() - start_index()) * PAGE_SIZE / 1024 / 1024);
 }
 
 char bootstrap_allocator_buffer[sizeof(bootstrap_allocator)];

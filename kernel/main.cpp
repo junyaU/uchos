@@ -42,11 +42,11 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_pages();
 
-	initialize_buddy_system();
-
-	print_available_memory();
+	initialize_memory_manager();
 
 	system_logger->Print("Hello, uch OS!\n");
+
+	print_available_memory();
 
 	acpi::Initialize(rsdp);
 
