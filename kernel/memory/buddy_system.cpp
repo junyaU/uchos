@@ -5,7 +5,7 @@
 #include <optional>
 #include <sys/types.h>
 
-#include "graphics/system_logger.hpp"
+#include "graphics/kernel_logger.hpp"
 #include "memory/bootstrap_allocator.hpp"
 
 namespace
@@ -53,7 +53,7 @@ void* buddy_system::allocate(size_t size)
 {
 	int order = calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
 	if (order == -1) {
-		system_logger->Printf("invalid size: %d\n", size);
+		klogger->printf("invalid size: %d\n", size);
 		return nullptr;
 	}
 
@@ -67,7 +67,7 @@ void* buddy_system::allocate(size_t size)
 		}
 
 		if (next_order == -1) {
-			system_logger->Printf("failed to allocate memory: order=%d\n", order);
+			klogger->printf("failed to allocate memory: order=%d\n", order);
 			return nullptr;
 		}
 
@@ -80,7 +80,7 @@ void* buddy_system::allocate(size_t size)
 
 	auto page = free_lists_[order].front();
 	if (page->is_used()) {
-		system_logger->Printf("page is used\n");
+		klogger->printf("page is used\n");
 		return nullptr;
 	}
 
@@ -97,13 +97,13 @@ void buddy_system::free(void* addr, size_t size)
 {
 	auto start_page = &pages[reinterpret_cast<uintptr_t>(addr) / PAGE_SIZE];
 	if (start_page->is_free()) {
-		system_logger->Printf("double free detected at address: %p\n", addr);
+		klogger->printf("double free detected at address: %p\n", addr);
 		return;
 	}
 
 	int order = calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
 	if (order == -1) {
-		system_logger->Printf("invalid size: %d\n", size);
+		klogger->printf("invalid size: %d\n", size);
 		return;
 	}
 
@@ -164,7 +164,7 @@ void buddy_system::register_memory(int num_consecutive_pages, page* start_page)
 void buddy_system::print_free_lists() const
 {
 	for (int i = 0; i <= MAX_ORDER; i++) {
-		system_logger->Printf("order: %d  size: %d\n", i, free_lists_[i].size());
+		klogger->printf("order: %d  size: %d\n", i, free_lists_[i].size());
 	}
 }
 

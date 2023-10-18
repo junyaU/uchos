@@ -4,7 +4,7 @@
 #include <sys/types.h>
 
 #include "buddy_system.hpp"
-#include "graphics/system_logger.hpp"
+#include "graphics/kernel_logger.hpp"
 
 bootstrap_allocator::bootstrap_allocator()
 	: bitmap_{}, memory_start_{ 0x0 }, memory_end_{ 0x0 }
@@ -41,7 +41,7 @@ void* bootstrap_allocator::allocate(size_t size)
 		}
 	}
 
-	system_logger->Printf("failed to allocate %u bytes\n", size);
+	klogger->printf("failed to allocate %u bytes\n", size);
 
 	return nullptr;
 }
@@ -78,9 +78,9 @@ void bootstrap_allocator::show_available_memory() const
 		}
 	}
 
-	system_logger->Printf("available memory: %u MiB / %u MiB\n",
-						  available_pages * PAGE_SIZE / 1024 / 1024,
-						  (end_index() - start_index()) * PAGE_SIZE / 1024 / 1024);
+	klogger->printf("available memory: %u MiB / %u MiB\n",
+					available_pages * PAGE_SIZE / 1024 / 1024,
+					(end_index() - start_index()) * PAGE_SIZE / 1024 / 1024);
 }
 
 char bootstrap_allocator_buffer[sizeof(bootstrap_allocator)];
@@ -116,7 +116,7 @@ void initialize_heap()
 
 	auto heap = boot_allocator->allocate(heap_size);
 	if (heap == nullptr) {
-		system_logger->Printf("failed to allocate heap\n");
+		klogger->printf("failed to allocate heap\n");
 		return;
 	}
 

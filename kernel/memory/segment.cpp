@@ -1,6 +1,5 @@
 #include "segment.hpp"
 
-#include "graphics/system_logger.hpp"
 #include "segments_operations.h"
 
 namespace

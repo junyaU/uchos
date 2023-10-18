@@ -1,6 +1,6 @@
 #include "page.hpp"
 #include "bootstrap_allocator.hpp"
-#include "graphics/system_logger.hpp"
+#include "graphics/kernel_logger.hpp"
 
 #include <array>
 #include <vector>
@@ -36,7 +36,7 @@ void print_available_memory()
 		}
 	}
 
-	system_logger->Printf("available memory: %u MiB / %u MiB\n",
-						  available_pages * PAGE_SIZE / 1024 / 1024,
-						  pages.size() * PAGE_SIZE / 1024 / 1024);
+	klogger->printf("available memory: %u MiB / %u MiB\n",
+					available_pages * PAGE_SIZE / 1024 / 1024,
+					pages.size() * PAGE_SIZE / 1024 / 1024);
 }

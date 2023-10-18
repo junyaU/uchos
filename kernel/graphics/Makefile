@@ -1,5 +1,5 @@
 GRAPHICS_PATH = graphics
-OBJS += $(GRAPHICS_PATH)/color.o $(GRAPHICS_PATH)/screen.o $(GRAPHICS_PATH)/hankaku.o $(GRAPHICS_PATH)/font.o $(GRAPHICS_PATH)/system_logger.o
+OBJS += $(GRAPHICS_PATH)/color.o $(GRAPHICS_PATH)/screen.o $(GRAPHICS_PATH)/hankaku.o $(GRAPHICS_PATH)/font.o $(GRAPHICS_PATH)/kernel_logger.o
 
 include common.mk
 

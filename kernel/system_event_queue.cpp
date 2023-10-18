@@ -1,7 +1,7 @@
 #include "system_event_queue.hpp"
 
+#include "graphics/kernel_logger.hpp"
 #include "graphics/screen.hpp"
-#include "graphics/system_logger.hpp"
 #include "system_event.hpp"
 #include "timers/timer.hpp"
 
@@ -44,7 +44,7 @@ void HandleSystemEvents()
 		auto event = system_event_queue->Dequeue();
 		switch (event.type_) {
 			case SystemEvent::kTimerTimeout:
-				system_logger->Print("Timer timeout\n");
+				klogger->print("Timer timeout\n");
 				break;
 
 			case SystemEvent::kDrawScreenTimer:
@@ -55,7 +55,7 @@ void HandleSystemEvents()
 				break;
 
 			default:
-				system_logger->Printf("Unknown event type: %d\n", event.type_);
+				klogger->printf("Unknown event type: %d\n", event.type_);
 				break;
 		}
 	}

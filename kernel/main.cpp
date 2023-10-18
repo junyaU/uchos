@@ -3,8 +3,8 @@
 #include "../UchLoaderPkg/frame_buffer_conf.hpp"
 #include "../UchLoaderPkg/memory_map.hpp"
 #include "graphics/font.hpp"
+#include "graphics/kernel_logger.hpp"
 #include "graphics/screen.hpp"
-#include "graphics/system_logger.hpp"
 #include "interrupt/idt.hpp"
 #include "memory/bootstrap_allocator.hpp"
 #include "memory/buddy_system.hpp"
@@ -28,7 +28,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	InitializeFont();
 
-	InitializeSystemLogger();
+	initialize_kernel_logger();
 
 	InitializeSegmentation();
 
@@ -46,7 +46,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	disable_bootstrap_allocator();
 
-	system_logger->Print("Hello, uch OS!\n");
+	klogger->print("Hello, uch OS!\n");
 
 	print_available_memory();
 

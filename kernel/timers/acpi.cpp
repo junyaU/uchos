@@ -4,7 +4,7 @@
 #include <cstring>
 
 #include "asm_utils.h"
-#include "graphics/system_logger.hpp"
+#include "graphics/kernel_logger.hpp"
 
 namespace acpi
 {
@@ -45,7 +45,7 @@ const FADT* fadt;
 void Initialize(const RSDP& rsdp)
 {
 	if (!rsdp.IsValid()) {
-		system_logger->Print("acpi is invalid\n");
+		klogger->print("acpi is invalid\n");
 		return;
 	}
 
@@ -60,7 +60,7 @@ void Initialize(const RSDP& rsdp)
 	}
 
 	if (fadt == nullptr) {
-		system_logger->Print("FADT is not found\n");
+		klogger->print("FADT is not found\n");
 		return;
 	}
 }

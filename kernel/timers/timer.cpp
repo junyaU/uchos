@@ -2,7 +2,7 @@
 
 #include "system_event_queue.hpp"
 
-#include "graphics/system_logger.hpp"
+#include "graphics/kernel_logger.hpp"
 #include "task/task_manager.hpp"
 
 uint64_t Timer::CalculateTimeoutTicks(unsigned long millisec)
@@ -33,7 +33,7 @@ uint64_t Timer::AddPeriodicTimerEvent(unsigned long millisec, uint64_t id)
 		id = last_id_;
 		last_id_++;
 	} else if (last_id_ < id) {
-		system_logger->Printf("invalid timer id: %lu\n", id);
+		klogger->printf("invalid timer id: %lu\n", id);
 		return 0;
 	}
 
@@ -59,7 +59,7 @@ void Timer::AddSwitchTaskEvent(unsigned long millisec)
 void Timer::RemoveTimerEvent(uint64_t id)
 {
 	if (id == 0 || last_id_ < id) {
-		system_logger->Printf("invalid timer id: %lu\n", id);
+		klogger->printf("invalid timer id: %lu\n", id);
 		return;
 	}
 
@@ -102,8 +102,8 @@ bool Timer::IncrementTick()
 		}
 
 		if (!system_event_queue->Queue(event)) {
-			system_logger->Printf("failed to queue timer event: %lu\n",
-								  event.args_.timer.id);
+			klogger->printf("failed to queue timer event: %lu\n",
+							event.args_.timer.id);
 		}
 
 		if (event.args_.timer.periodical) {

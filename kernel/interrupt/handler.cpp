@@ -1,5 +1,5 @@
 #include "handler.hpp"
-#include "graphics/system_logger.hpp"
+#include "graphics/kernel_logger.hpp"
 #include "task/task_manager.hpp"
 #include "timers/timer.hpp"
 
