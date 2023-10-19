@@ -1,10 +1,10 @@
 #include "kernel_logger.hpp"
 
 #include <cstdio>
+#include <stdarg.h>
 
 #include "font.hpp"
 #include "screen.hpp"
-#include <stdarg.h>
 
 kernel_logger::kernel_logger(Color font_color) : font_color_{ font_color }
 {
