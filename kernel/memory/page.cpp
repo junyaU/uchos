@@ -26,6 +26,11 @@ void initialize_pages()
 	}
 }
 
+page* get_page(void* ptr)
+{
+	return &pages[reinterpret_cast<uintptr_t>(ptr) / PAGE_SIZE];
+}
+
 void print_available_memory()
 {
 	size_t available_pages = 0;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "memory/slab.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -15,7 +17,6 @@ public:
 
 	bool is_free() const { return status_ == 0; }
 	bool is_used() const { return status_ == 1; }
-	bool is_reserved() const;
 
 	void* ptr() const { return ptr_; }
 
@@ -23,15 +24,21 @@ public:
 
 	void set_free() { status_ = 0; }
 	void set_used() { status_ = 1; }
-	void set_reserved();
+
+	void set_cache(m_cache* cache) { cache_ = cache; }
+	void set_slab(m_slab* slab) { slab_ = slab; }
 
 private:
 	int status_;
+	m_cache* cache_;
+	m_slab* slab_;
 	void* ptr_;
 };
 
 extern std::vector<page> pages;
 
 void initialize_pages();
+
+page* get_page(void* ptr);
 
 void print_available_memory();

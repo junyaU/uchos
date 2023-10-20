@@ -11,11 +11,13 @@
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"
+#include "memory/slab.hpp"
 #include "system_event_queue.hpp"
 #include "task/task_manager.hpp"
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"
+#include <array>
 
 // 1MiB　
 char kernel_stack[1024 * 1024];
@@ -46,7 +48,21 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	disable_bootstrap_allocator();
 
+	initialize_slab_allocator();
+
 	klogger->print("Hello, uch OS!\n");
+
+	print_available_memory();
+
+	m_cache& cache = m_cache_create(nullptr, sizeof(Timer));
+
+	void* addr = kmalloc(sizeof(Timer));
+	if (addr == nullptr) {
+		klogger->printf("failed to allocate memory\n");
+		return;
+	}
+
+	klogger->printf("allocated memory: %p\n", addr);
 
 	print_available_memory();
 
