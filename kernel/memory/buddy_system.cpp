@@ -5,31 +5,15 @@
 #include <optional>
 #include <sys/types.h>
 
+#include "bit_utils.hpp"
 #include "graphics/kernel_logger.hpp"
 #include "memory/bootstrap_allocator.hpp"
-
-namespace
-{
-int bit_width(unsigned int x)
-{
-	if (x == 0) {
-		return 0;
-	}
-
-	return CHAR_BIT * sizeof(unsigned int) - __builtin_clz(x);
-}
-} // namespace
 
 buddy_system* memory_manager;
 
 int buddy_system::calculate_order(size_t num_pages) const
 {
-	int order;
-	if ((num_pages & (num_pages - 1)) == 0) {
-		order = bit_width(num_pages) - 1;
-	} else {
-		order = bit_width(num_pages);
-	}
+	int order = bit_ceil(num_pages);
 
 	if (order > MAX_ORDER) {
 		return -1;
