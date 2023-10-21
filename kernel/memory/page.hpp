@@ -28,6 +28,9 @@ public:
 	void set_cache(m_cache* cache) { cache_ = cache; }
 	void set_slab(m_slab* slab) { slab_ = slab; }
 
+	m_cache* cache() const { return cache_; }
+	m_slab* slab() const { return slab_; }
+
 private:
 	int status_;
 	m_cache* cache_;

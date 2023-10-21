@@ -64,7 +64,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	klogger->printf("allocated memory: %p\n", addr);
 
-	print_available_memory();
+	kfree(addr);
 
 	acpi::Initialize(rsdp);
 

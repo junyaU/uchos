@@ -7,12 +7,13 @@
 
 #include <cstdio>
 #include <cstring>
+#include <iterator>
 #include <memory>
 
 m_cache* get_cache_in_chain(char* name)
 {
 	for (auto& cache : cache_chain) {
-		if (strcmp(cache->name, name) == 0) {
+		if (strcmp(cache->name(), name) == 0) {
 			return cache.get();
 		}
 	}
@@ -21,18 +22,27 @@ m_cache* get_cache_in_chain(char* name)
 }
 
 m_cache::m_cache(char name[20], size_t object_size)
-	: object_size(object_size),
-	  num_active_objects(0),
-	  num_total_objects(0),
-	  num_active_slabs(0),
-	  num_total_slabs(0),
-	  num_pages_per_slab(0)
+	: object_size_(object_size),
+	  num_active_objects_(0),
+	  num_total_objects_(0),
+	  num_active_slabs_(0),
+	  num_total_slabs_(0),
+	  num_pages_per_slab_(0)
 {
-	strncpy(this->name, name, sizeof(this->name) - 1);
-	this->name[sizeof(this->name) - 1] = '\0';
+	strncpy(name_, name, sizeof(name_) - 1);
+	name[sizeof(name_) - 1] = '\0';
 
-	// TODO
-	this->num_pages_per_slab = 1;
+	if (object_size_ > 2048) {
+		num_pages_per_slab_ = 2;
+	} else {
+		num_pages_per_slab_ = 1;
+	}
+}
+
+m_slab::m_slab(void* base_addr, size_t num_objs)
+	: base_addr_(base_addr), num_in_use_(0)
+{
+	objects_.resize(num_objs);
 }
 
 m_cache& m_cache_create(char* name, size_t obj_size)
@@ -50,62 +60,94 @@ m_cache& m_cache_create(char* name, size_t obj_size)
 	return *cache_chain.back();
 }
 
-void m_cache_grow(m_cache* cache)
+bool m_cache::grow()
 {
-	size_t bytes_per_slab = cache->num_pages_per_slab * PAGE_SIZE;
+	size_t bytes_per_slab = num_pages_per_slab_ * PAGE_SIZE;
 	void* addr = memory_manager->allocate(bytes_per_slab);
 	if (addr == nullptr) {
 		klogger->printf("m_cache_grow: failed to allocate memory\n");
-		return;
+		return false;
 	}
 
-	auto slab = std::make_unique<m_slab>(addr, cache->slabs_free);
-	slab->objects.resize(bytes_per_slab / cache->object_size);
+	size_t num_objs = bytes_per_slab / object_size_;
+	auto slab = std::make_unique<m_slab>(addr, num_objs);
 
 	page* page = get_page(addr);
-	page->set_cache(cache);
+	page->set_cache(this);
 	page->set_slab(slab.get());
 
-	cache->num_total_slabs++;
-	cache->num_total_objects += slab->objects.size();
+	num_total_slabs_++;
+	num_total_objects_ += num_objs;
 
-	cache->slabs_free.push_back(std::move(slab));
+	slabs_free_.push_back(std::move(slab));
+	auto last_it = std::prev(slabs_free_.end());
+	(*last_it)->set_position_in_list(last_it);
+
+	return true;
 }
 
-void* m_cache_alloc(m_cache* cache)
+void* m_cache::alloc()
 {
-	if (cache->slabs_partial.empty()) {
-		if (cache->slabs_free.empty()) {
-			m_cache_grow(cache);
+	if (slabs_partial_.empty()) {
+		if (slabs_free_.empty() && !grow()) {
+			klogger->printf("m_cache_alloc: failed to grow\n");
+			return nullptr;
 		}
 
-		auto free_slab = std::move(cache->slabs_free.front());
-		cache->slabs_free.pop_front();
+		auto free_slab = slabs_free_.front().get();
+		free_slab->move_list(slabs_free_, slabs_partial_);
 
-		cache->slabs_partial.push_back(std::move(free_slab));
-		cache->num_active_slabs++;
+		num_active_slabs_++;
 	}
 
-	auto current_slab = cache->slabs_partial.front().get();
-	for (size_t i = 0; i < current_slab->objects.size(); i++) {
-		if (!current_slab->objects[i].is_allocated) {
-			current_slab->objects[i].is_allocated = true;
-			current_slab->num_in_use++;
+	auto current_slab = slabs_partial_.front().get();
+	void* addr = current_slab->alloc_object(object_size_);
+	if (addr == nullptr) {
+		klogger->printf("m_cache_alloc: failed to allocate object\n");
+		return nullptr;
+	}
 
-			cache->num_active_objects++;
-			if (current_slab->num_in_use == current_slab->objects.size()) {
-				auto full_slab = std::move(cache->slabs_partial.front());
-				cache->slabs_partial.pop_front();
-				cache->slabs_full.push_back(std::move(full_slab));
-			}
+	num_active_objects_++;
+	if (current_slab->is_full()) {
+		auto full_slab = slabs_partial_.front().get();
+		full_slab->move_list(slabs_partial_, slabs_full_);
+	}
 
-			return reinterpret_cast<void*>(
-					reinterpret_cast<uintptr_t>(current_slab->base_addr) +
-					i * cache->object_size);
+	return addr;
+}
+
+void m_slab::move_list(std::list<std::unique_ptr<m_slab>>& from,
+					   std::list<std::unique_ptr<m_slab>>& to)
+{
+	auto current_slab = std::move(*position_in_list_);
+	from.erase(position_in_list_);
+	to.push_back(std::move(current_slab));
+	position_in_list_ = std::prev(to.end());
+}
+
+void* m_slab::alloc_object(size_t obj_size)
+{
+	for (size_t i = 0; i < objects_.size(); i++) {
+		if (!objects_[i].is_allocated()) {
+			objects_[i].allocate();
+			num_in_use_++;
+
+			return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(base_addr_) +
+										   i * obj_size);
 		}
 	}
 
 	return nullptr;
+}
+
+void m_slab::free_object(void* addr, size_t obj_size)
+{
+	size_t objs_index = (reinterpret_cast<uintptr_t>(addr) -
+						 reinterpret_cast<uintptr_t>(base_addr_)) /
+						obj_size;
+
+	objects_[objs_index].free();
+	num_in_use_--;
 }
 
 void* kmalloc(size_t size)
@@ -120,8 +162,25 @@ void* kmalloc(size_t size)
 		cache = &m_cache_create(name, size);
 	}
 
-	return m_cache_alloc(cache);
+	return cache->alloc();
 }
+
+void kfree(void* addr)
+{
+	page* page = get_page(addr);
+	m_cache* cache = page->cache();
+	m_slab* slab = page->slab();
+
+	slab->free_object(addr, cache->object_size());
+	cache->decrease_num_active_objects();
+
+	if (slab->is_empty()) {
+		slab->move_list(cache->slabs_partial_, cache->slabs_free_);
+		cache->decrease_num_active_slabs();
+	} else if (slab->was_previously_full()) {
+		slab->move_list(cache->slabs_full_, cache->slabs_partial_);
+	}
+};
 
 std::list<std::unique_ptr<m_cache>> cache_chain;
 void initialize_slab_allocator()
