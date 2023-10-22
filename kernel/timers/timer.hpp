@@ -4,7 +4,7 @@
 #include <queue>
 #include <unordered_set>
 
-#include "system_event.hpp"
+#include "../system_event.hpp"
 
 inline bool operator<(const SystemEvent& lhs, const SystemEvent& rhs)
 {

@@ -1,5 +1,6 @@
 #!/bin/zsh
 
-make kernel.elf -C $work_path/kernel
+cmake -B $work_path/build $work_path/kernel
+make -C $work_path/build
 
-cp $work_path/kernel/kernel.elf $mount_point/kernel.elf
+cp $work_path/build/UchosKernel $mount_point/kernel.elf

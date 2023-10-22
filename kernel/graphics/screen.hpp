@@ -2,10 +2,10 @@
 
 #include <cstdint>
 
-#include "../UchLoaderPkg/frame_buffer_conf.hpp"
+#include "../../UchLoaderPkg/frame_buffer_conf.hpp"
 #include "color.hpp"
 #include "font.hpp"
-#include "point2d.hpp"
+#include "../point2d.hpp"
 
 class Screen
 {

@@ -1,7 +1,5 @@
-#include <cstdint>
-
-#include "../UchLoaderPkg/frame_buffer_conf.hpp"
-#include "../UchLoaderPkg/memory_map.hpp"
+#include "config.hpp"
+#include "graphics/color.hpp"
 #include "graphics/font.hpp"
 #include "graphics/kernel_logger.hpp"
 #include "graphics/screen.hpp"
@@ -17,7 +15,6 @@
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"
-#include <array>
 
 // 1MiB　
 char kernel_stack[1024 * 1024];

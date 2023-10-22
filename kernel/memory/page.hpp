@@ -1,6 +1,6 @@
 #pragma once
 
-#include "memory/slab.hpp"
+#include "slab.hpp"
 
 #include <cstddef>
 #include <cstdint>

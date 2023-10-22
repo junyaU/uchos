@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "point2d.hpp"
+#include "../point2d.hpp"
 
 class BitmapFont
 {
