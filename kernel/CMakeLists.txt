@@ -7,8 +7,15 @@ project(UchosKernel)
 # Set the C++ standard to use.
 set(CMAKE_CXX_STANDARD 17)
 
+# Set the compiler to be used.
+set(CMAKE_CXX_COMPILER /usr/bin/clang++)
+set(CMAKE_C_COMPILER /usr/bin/clang)
+
+# Set the linker to be used.
+set(CMAKE_LINKER /usr/bin/ld.lld)
+
 # Define base directories for ease of reference.
-set(BASEDIR "~/osbook/devenv/x86_64-elf")
+set(BASEDIR "../x86_64-elf")
 set(EDK2DIR "~/edk2")
 
 # Disable the use of rpath.
