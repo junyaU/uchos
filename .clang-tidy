@@ -33,4 +33,3 @@ Checks: '-*,
     -readability-isolate-declaration,
     -readability-magic-numbers,
     '
-...

@@ -25,13 +25,14 @@ jobs:
     - name: Install dependencie
       run: |
         sudo apt-get update
-        sudo apt-get install -y nasm cmake clang lld
+        sudo apt-get install -y nasm cmake clang lld clang-tidy
         curl -L https://github.com/uchan-nos/mikanos-build/releases/download/v2.0/x86_64-elf.tar.gz -o x86_64-elf.tar.gz
         tar -xzvf x86_64-elf.tar.gz
     - name: Configure CMake
       run: |
         cmake -S kernel -B build \
-              -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} 
+              -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
     - name: Build
       run: cmake --build build --config ${{env.BUILD_TYPE}}
 
@@ -40,4 +41,13 @@ jobs:
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.BUILD_TYPE}}
+  
+    - name: Run clang-tidy
+      run: |
+        OUTPUT=$(find . \( -name '*.cpp' -o -name '*.c' \) -not -path './x86_64-elf/*' -not -path './UchLoaderPkg/*' -not -path './build/CMakeFiles/*' | xargs clang-tidy -p build)
+        echo "$OUTPUT"
+        if echo "$OUTPUT" | grep -E "warning:|error:"; then
+          exit 1
+        fi
+
 
