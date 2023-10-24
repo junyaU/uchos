@@ -13,7 +13,7 @@ kernel_logger::kernel_logger(Color font_color) : font_color_{ font_color }
 
 void kernel_logger::print(const char* s)
 {
-	while (*s) {
+	while (*s != '\0') {
 		if (*s == '\n') {
 			next_line();
 			s++;
@@ -33,18 +33,6 @@ void kernel_logger::print(const char* s)
 
 		s++;
 	}
-}
-
-void kernel_logger::printf(const char* format, ...)
-{
-	char s[1024];
-
-	va_list ap;
-	va_start(ap, format);
-	vsprintf(s, format, ap);
-	va_end(ap);
-
-	print(s);
 }
 
 void kernel_logger::clear()
@@ -100,7 +88,7 @@ void kernel_logger::scroll_lines()
 }
 
 kernel_logger* klogger;
-char kernel_logger_buf[sizeof(kernel_logger)];
+alignas(kernel_logger) char kernel_logger_buf[sizeof(kernel_logger)];
 
 void initialize_kernel_logger()
 {

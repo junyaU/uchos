@@ -2,6 +2,8 @@
 
 #include <array>
 #include <cstdint>
+#include <cstdio>
+#include <stdarg.h>
 
 #include "color.hpp"
 
@@ -12,7 +14,14 @@ public:
 	kernel_logger(Color font_color);
 
 	void print(const char* s);
-	void printf(const char* format, ...);
+
+	template<typename... Args>
+	void printf(const char* format, Args... args)
+	{
+		char s[1024];
+		sprintf(s, format, args...);
+		print(s);
+	}
 
 	void clear();
 

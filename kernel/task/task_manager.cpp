@@ -1,12 +1,12 @@
 #include "task_manager.hpp"
 
+#include "../graphics/kernel_logger.hpp"
+#include "../graphics/screen.hpp"
 #include "../point2d.hpp"
+#include "../system_event.hpp"
+#include "../timers/timer.hpp"
 #include "context.hpp"
 #include "context_switch.h"
-#include "graphics/kernel_logger.hpp"
-#include "graphics/screen.hpp"
-#include "system_event.hpp"
-#include "timers/timer.hpp"
 
 #include <cstdio>
 #include <vector>

@@ -51,11 +51,11 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	print_available_memory();
 
-	m_cache& cache = m_cache_create(nullptr, sizeof(Timer));
+	m_cache_create(nullptr, sizeof(Timer));
 
 	void* addr = kmalloc(sizeof(Timer));
 	if (addr == nullptr) {
-		klogger->printf("failed to allocate memory\n");
+		klogger->print("failed to allocate memory\n");
 		return;
 	}
 

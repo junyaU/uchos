@@ -1,6 +1,6 @@
 #include "page.hpp"
+#include "../graphics/kernel_logger.hpp"
 #include "bootstrap_allocator.hpp"
-#include "graphics/kernel_logger.hpp"
 
 #include <array>
 #include <vector>
@@ -15,7 +15,7 @@ void initialize_pages()
 	pages.resize(memory_end_index - memory_start_index);
 
 	for (size_t i = memory_start_index; i < memory_end_index; i++) {
-		size_t page_index = i - memory_start_index;
+		const size_t page_index = i - memory_start_index;
 
 		pages[page_index].set_ptr(reinterpret_cast<void*>(i * PAGE_SIZE));
 		if (boot_allocator->is_bit_set(i)) {

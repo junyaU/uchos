@@ -36,12 +36,12 @@ void Screen::FillRectangle(Point2D position, Point2D size, const uint32_t color_
 void Screen::DrawString(Point2D position, const char* s, const uint32_t color_code)
 {
 	int font_position = 0;
-	while (*s) {
+	while (*s != '\0') {
 		const uint8_t* font = bitmap_font->GetFont(*s);
-		if (font) {
+		if (font != nullptr) {
 			for (int dy = 0; dy < bitmap_font->Height(); dy++) {
 				for (int dx = 0; dx < bitmap_font->Width(); dx++) {
-					if (font[dy] << dx & 0x80) {
+					if ((font[dy] << dx & 0x80) != 0) {
 						PutPixel(position +
 										 Point2D{ font_position * bitmap_font
 																		  ->Width() +
@@ -65,7 +65,7 @@ void Screen::DrawString(Point2D position, char s, const uint32_t color_code)
 }
 
 Screen* screen;
-char screen_buffer[sizeof(Screen)];
+alignas(Screen) char screen_buffer[sizeof(Screen)];
 
 void InitializeScreen(const FrameBufferConf& frame_buffer_conf,
 					  Color bg_color,
@@ -77,7 +77,7 @@ void InitializeScreen(const FrameBufferConf& frame_buffer_conf,
 	screen->FillRectangle(Point2D{ 0, 0 }, screen->Size(),
 						  screen->BgColor().GetCode());
 
-	int taskbar_height = screen->Height() * 0.08;
+	const int taskbar_height = screen->Height() * 0.08;
 	screen->FillRectangle({ 0, screen->Height() - taskbar_height },
 						  { screen->Width(), taskbar_height },
 						  screen->TaskbarColor().GetCode());
@@ -85,8 +85,8 @@ void InitializeScreen(const FrameBufferConf& frame_buffer_conf,
 
 void DrawTimer(const char* s)
 {
-	Point2D draw_area = { 0, static_cast<int>(screen->Height() -
-											  screen->Height() * 0.08) };
+	const Point2D draw_area = { 0, static_cast<int>(screen->Height() -
+													screen->Height() * 0.08) };
 
 	screen->FillRectangle(draw_area,
 						  { bitmap_font->Width() * 8, bitmap_font->Height() },

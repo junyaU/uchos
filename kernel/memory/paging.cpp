@@ -20,7 +20,7 @@ alignas(kPageSize4KiB)
 
 void SetupIdentityMapping()
 {
-	pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table[0]) | 0x003;
+	pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table) | 0x003;
 	for (int i_pdpt = 0; i_pdpt < kPageDirectoryCount; i_pdpt++) {
 		pdp_table[i_pdpt] =
 				reinterpret_cast<uint64_t>(&page_directory[i_pdpt]) | 0x003;
@@ -34,5 +34,5 @@ void SetupIdentityMapping()
 void InitializePaging()
 {
 	SetupIdentityMapping();
-	SetCR3(reinterpret_cast<uint64_t>(&pml4_table[0]));
+	SetCR3(reinterpret_cast<uint64_t>(&pml4_table));
 }

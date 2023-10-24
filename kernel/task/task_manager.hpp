@@ -11,7 +11,7 @@ class TaskManager
 public:
 	TaskManager();
 
-	int AddTask(uint64_t entry_point, int priority, bool is_running = false);
+	int AddTask(uint64_t task_addr, int priority, bool is_running = false);
 
 	void Wakeup(int task_id);
 	void Sleep(int task_id);

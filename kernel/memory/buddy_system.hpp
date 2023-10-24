@@ -43,10 +43,10 @@ public:
 	 * This function divides the given memory into appropriate order blocks
 	 * and adds them to the system's free lists for future allocations.
 	 *
-	 * \param num_pages The number of memory pages in the block.
-	 * \param addr The starting address of the memory block.
+	 * \param num_consecutive_pages The number of memory pages in the block.
+	 * \param start_page The starting address of the memory block.
 	 */
-	void register_memory(int num_pages, page* addr);
+	void register_memory(int num_consecutive_pages, page* start_page);
 
 	void print_free_lists() const;
 
@@ -76,7 +76,7 @@ private:
 	 * \return The order of the memory block.
 	 */
 
-	int calculate_order(size_t num_pages) const;
+	static int calculate_order(size_t num_pages);
 
 	std::array<std::list<page*, PoolAllocator<page*, PAGE_SIZE>>, MAX_ORDER + 1>
 			free_lists_;

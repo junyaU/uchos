@@ -18,7 +18,7 @@ unsigned int bit_ceil(unsigned int x)
 {
 	if ((x & (x - 1)) == 0) {
 		return bit_width(x) - 1;
-	} else {
-		return bit_width(x);
 	}
+
+	return bit_width(x);
 }

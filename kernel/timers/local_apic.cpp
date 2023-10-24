@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "../interrupt/vector.hpp"
 #include "acpi.hpp"
-#include "interrupt/vector.hpp"
 #include "timer.hpp"
 
 namespace local_apic
@@ -18,7 +18,7 @@ volatile uint32_t& kCurrentCount = *reinterpret_cast<uint32_t*>(0xfee00390);
 // register to set the divide value of the counter
 volatile uint32_t& kDivideConf = *reinterpret_cast<uint32_t*>(0xfee003e0);
 
-const uint32_t kCountMax = 0xffffffffu;
+const uint32_t kCountMax = 0xffffffffU;
 
 void Initialize()
 {
@@ -28,11 +28,11 @@ void Initialize()
 	kInitialCount = kCountMax;
 
 	acpi::WaitByPMTimer(100);
-	uint32_t elapsed = kCountMax - kCurrentCount;
+	const uint32_t elapsed = kCountMax - kCurrentCount;
 
 	kInitialCount = 0;
 
-	uint64_t freq = static_cast<uint64_t>(elapsed * 10);
+	const uint64_t freq = static_cast<uint64_t>(elapsed * 10);
 	kLvtTimer = (0b010 << 16) | InterruptVector::kLocalApicTimer;
 	kInitialCount = freq / kTimerFrequency;
 }

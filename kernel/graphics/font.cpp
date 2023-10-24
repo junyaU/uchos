@@ -23,6 +23,6 @@ const uint8_t* BitmapFont::GetFont(char c)
 }
 
 BitmapFont* bitmap_font;
-char bitmap_font_buffer[sizeof(BitmapFont)];
+alignas(BitmapFont) char bitmap_font_buffer[sizeof(BitmapFont)];
 
 void InitializeFont() { bitmap_font = new (bitmap_font_buffer) BitmapFont{ 8, 16 }; }

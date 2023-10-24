@@ -3,8 +3,8 @@
 #include <limits>
 #include <sys/types.h>
 
+#include "../graphics/kernel_logger.hpp"
 #include "buddy_system.hpp"
-#include "graphics/kernel_logger.hpp"
 
 bootstrap_allocator::bootstrap_allocator()
 	: bitmap_{}, memory_start_{ 0x0 }, memory_end_{ 0x0 }
@@ -83,7 +83,8 @@ void bootstrap_allocator::show_available_memory() const
 					(end_index() - start_index()) * PAGE_SIZE / 1024 / 1024);
 }
 
-char bootstrap_allocator_buffer[sizeof(bootstrap_allocator)];
+alignas(bootstrap_allocator) char bootstrap_allocator_buffer[sizeof(
+		bootstrap_allocator)];
 bootstrap_allocator* boot_allocator;
 
 void initialize_bootstrap_allocator(const MemoryMap& mem_map)
@@ -95,7 +96,7 @@ void initialize_bootstrap_allocator(const MemoryMap& mem_map)
 
 	for (uintptr_t iter = mem_map_base; iter < mem_map_end;
 		 iter += mem_map.descriptor_size) {
-		auto desc = reinterpret_cast<MemoryDescriptor*>(iter);
+		auto* desc = reinterpret_cast<MemoryDescriptor*>(iter);
 
 		if (!IsAvailableMemory(static_cast<MemoryType>(desc->type))) {
 			continue;
@@ -111,12 +112,12 @@ extern "C" caddr_t program_break, program_break_end;
 void initialize_heap()
 {
 	// 128 MiB
-	const int heap_pages = 64 * 512;
+	const size_t heap_pages = 64UL * 512;
 	const size_t heap_size = heap_pages * PAGE_SIZE;
 
-	auto heap = boot_allocator->allocate(heap_size);
+	auto* heap = boot_allocator->allocate(heap_size);
 	if (heap == nullptr) {
-		klogger->printf("failed to allocate heap\n");
+		klogger->print("failed to allocate heap\n");
 		return;
 	}
 
@@ -126,7 +127,7 @@ void initialize_heap()
 
 void disable_bootstrap_allocator()
 {
-	if (boot_allocator) {
+	if (boot_allocator != nullptr) {
 		memory_manager->free(boot_allocator, sizeof(bootstrap_allocator));
 		boot_allocator = nullptr;
 	}

@@ -33,7 +33,7 @@ void SetupSegments()
 	SetCodeSegment(gdt[1], DescriptorType::kExecuteRead, 0);
 	SetDataSegment(gdt[2], DescriptorType::kReadWrite, 0);
 
-	LoadGDT(sizeof(gdt) - 1, reinterpret_cast<uint64_t>(&gdt[0]));
+	LoadGDT(sizeof(gdt) - 1, reinterpret_cast<uint64_t>(&gdt));
 }
 
 void InitializeSegmentation()

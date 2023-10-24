@@ -65,7 +65,7 @@ bool m_cache::grow()
 	size_t bytes_per_slab = num_pages_per_slab_ * PAGE_SIZE;
 	void* addr = memory_manager->allocate(bytes_per_slab);
 	if (addr == nullptr) {
-		klogger->printf("m_cache_grow: failed to allocate memory\n");
+		klogger->print("m_cache_grow: failed to allocate memory\n");
 		return false;
 	}
 
@@ -90,7 +90,7 @@ void* m_cache::alloc()
 {
 	if (slabs_partial_.empty()) {
 		if (slabs_free_.empty() && !grow()) {
-			klogger->printf("m_cache_alloc: failed to grow\n");
+			klogger->print("m_cache_alloc: failed to grow\n");
 			return nullptr;
 		}
 
@@ -103,7 +103,7 @@ void* m_cache::alloc()
 	auto current_slab = slabs_partial_.front().get();
 	void* addr = current_slab->alloc_object(object_size_);
 	if (addr == nullptr) {
-		klogger->printf("m_cache_alloc: failed to allocate object\n");
+		klogger->print("m_cache_alloc: failed to allocate object\n");
 		return nullptr;
 	}
 

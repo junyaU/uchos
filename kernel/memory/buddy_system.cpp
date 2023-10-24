@@ -5,15 +5,15 @@
 #include <optional>
 #include <sys/types.h>
 
-#include "bit_utils.hpp"
-#include "graphics/kernel_logger.hpp"
-#include "memory/bootstrap_allocator.hpp"
+#include "../bit_utils.hpp"
+#include "../graphics/kernel_logger.hpp"
+#include "bootstrap_allocator.hpp"
 
 buddy_system* memory_manager;
 
-int buddy_system::calculate_order(size_t num_pages) const
+int buddy_system::calculate_order(size_t num_pages)
 {
-	int order = bit_ceil(num_pages);
+	const int order = bit_ceil(num_pages);
 
 	if (order > MAX_ORDER) {
 		return -1;
@@ -24,10 +24,10 @@ int buddy_system::calculate_order(size_t num_pages) const
 
 void buddy_system::split_page_block(int order)
 {
-	auto page = free_lists_[order].front();
+	auto* page = free_lists_[order].front();
 	free_lists_[order].pop_front();
 
-	int lower_order = order - 1;
+	const int lower_order = order - 1;
 
 	free_lists_[lower_order].push_back(page);
 	free_lists_[lower_order].push_back(&pages[page->index() + (1 << (lower_order))]);
@@ -35,7 +35,7 @@ void buddy_system::split_page_block(int order)
 
 void* buddy_system::allocate(size_t size)
 {
-	int order = calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
+	const int order = calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
 	if (order == -1) {
 		klogger->printf("invalid size: %d\n", size);
 		return nullptr;
@@ -60,11 +60,11 @@ void* buddy_system::allocate(size_t size)
 		}
 	}
 
-	size_t num_order_pages = 1 << order;
+	const size_t num_order_pages = 1 << order;
 
-	auto page = free_lists_[order].front();
+	auto* page = free_lists_[order].front();
 	if (page->is_used()) {
-		klogger->printf("page is used\n");
+		klogger->print("page is used\n");
 		return nullptr;
 	}
 
@@ -79,7 +79,7 @@ void* buddy_system::allocate(size_t size)
 
 void buddy_system::free(void* addr, size_t size)
 {
-	auto start_page = &pages[reinterpret_cast<uintptr_t>(addr) / PAGE_SIZE];
+	auto* start_page = &pages[reinterpret_cast<uintptr_t>(addr) / PAGE_SIZE];
 	if (start_page->is_free()) {
 		klogger->printf("double free detected at address: %p\n", addr);
 		return;
@@ -92,7 +92,7 @@ void buddy_system::free(void* addr, size_t size)
 	}
 
 	while (order <= MAX_ORDER) {
-		size_t num_order_pages = 1 << order;
+		const size_t num_order_pages = 1 << order;
 
 		if (order == MAX_ORDER) {
 			free_lists_[order].push_back(start_page);
@@ -137,7 +137,7 @@ void buddy_system::register_memory(int num_consecutive_pages, page* start_page)
 
 		this->free_lists_[order].push_back(start_page);
 
-		int num_order_pages = 1 << order;
+		const int num_order_pages = 1 << order;
 
 		start_page = &pages[start_page->index() + num_order_pages];
 

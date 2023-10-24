@@ -1,6 +1,6 @@
 #include "task.hpp"
-#include "memory/page_operations.h"
-#include "memory/segment.hpp"
+#include "../memory/page_operations.h"
+#include "../memory/segment.hpp"
 
 Task::Task(int id, uint64_t task_addr, bool is_runnning, int priority)
 	: id_{ id },
@@ -11,9 +11,9 @@ Task::Task(int id, uint64_t task_addr, bool is_runnning, int priority)
 {
 	const size_t stack_size = 4096 / sizeof(stack_[0]);
 	stack_.resize(stack_size);
-	uint64_t stack_end = reinterpret_cast<uint64_t>(&stack_[stack_size]);
+	const uint64_t stack_end = reinterpret_cast<uint64_t>(&stack_[stack_size]);
 
-	context_.rsp = (stack_end & ~0xflu) - 8;
+	context_.rsp = (stack_end & ~0xfLU) - 8;
 	context_.cr3 = GetCR3();
 	context_.rflags = 0x202;
 	context_.rip = task_addr;

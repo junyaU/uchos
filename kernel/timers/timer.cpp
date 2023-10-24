@@ -1,11 +1,10 @@
 #include "timer.hpp"
 
-#include "system_event_queue.hpp"
+#include "../system_event_queue.hpp"
+#include "../graphics/kernel_logger.hpp"
+#include "../task/task_manager.hpp"
 
-#include "graphics/kernel_logger.hpp"
-#include "task/task_manager.hpp"
-
-uint64_t Timer::CalculateTimeoutTicks(unsigned long millisec)
+uint64_t Timer::CalculateTimeoutTicks(unsigned long millisec) const
 {
 	return tick_ + (millisec * kTimerFrequency) / 1000;
 }
@@ -106,7 +105,7 @@ bool Timer::IncrementTick()
 							event.args_.timer.id);
 		}
 
-		if (event.args_.timer.periodical) {
+		if (event.args_.timer.periodical == 1) {
 			event.args_.timer.timeout =
 					CalculateTimeoutTicks(event.args_.timer.period);
 

@@ -30,7 +30,7 @@ public:
 	bool IncrementTick();
 
 private:
-	uint64_t CalculateTimeoutTicks(unsigned long millisec);
+	uint64_t CalculateTimeoutTicks(unsigned long millisec) const;
 
 	uint64_t tick_;
 	uint64_t last_id_;

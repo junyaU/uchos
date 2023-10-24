@@ -1,10 +1,10 @@
 #include "acpi.hpp"
 
+#include "../asm_utils.h"
+#include "../graphics/kernel_logger.hpp"
+
 #include <cstdlib>
 #include <cstring>
-
-#include "asm_utils.h"
-#include "graphics/kernel_logger.hpp"
 
 namespace acpi
 {
@@ -72,15 +72,15 @@ void WaitByPMTimer(unsigned long millisec)
 	const uint32_t initial_count = ReadFromIoPort(fadt->pm_tmr_blk);
 	uint32_t end_count = initial_count + (kPMTimerFrequency * millisec) / 1000;
 
-	const bool enable32bit = (fadt->flags >> 8) & 1;
+	const bool enable32bit = ((fadt->flags >> 8) & 1) != 0;
 	if (!enable32bit) {
-		end_count &= 0x00ffffffu;
+		end_count &= 0x00ffffffU;
 	}
 
-	bool wrapped = end_count < initial_count;
+	const bool wrapped = end_count < initial_count;
 	if (wrapped) {
-		while (ReadFromIoPort(fadt->pm_tmr_blk) >= initial_count)
-			;
+		while (ReadFromIoPort(fadt->pm_tmr_blk) >= initial_count) {
+		};
 	}
 
 	while (ReadFromIoPort(fadt->pm_tmr_blk) < end_count) {

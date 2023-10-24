@@ -1,7 +1,7 @@
 #include "idt.hpp"
 
+#include "../memory/segment.hpp"
 #include "handler.hpp"
-#include "memory/segment.hpp"
 #include "vector.hpp"
 
 std::array<IDTEntry, 256> idt;
@@ -11,8 +11,8 @@ void SetIDTEntry(IDTEntry& entry,
 				 TypeAttr type_attr,
 				 uint16_t segment_selector)
 {
-	entry.offset_low = offset & 0xffffu;
-	entry.offset_middle = (offset >> 16) & 0xffffu;
+	entry.offset_low = offset & 0xffffU;
+	entry.offset_middle = (offset >> 16) & 0xffffU;
 	entry.offset_high = offset >> 32;
 	entry.segment_selector = segment_selector;
 	entry.ist = 0;
