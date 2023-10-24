@@ -1,9 +1,9 @@
 #include "slab.hpp"
 
-#include "bit_utils.hpp"
+#include "../bit_utils.hpp"
+#include "../graphics/kernel_logger.hpp"
 #include "buddy_system.hpp"
-#include "graphics/kernel_logger.hpp"
-#include "memory/page.hpp"
+#include "page.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -45,7 +45,7 @@ m_slab::m_slab(void* base_addr, size_t num_objs)
 	objects_.resize(num_objs);
 }
 
-m_cache& m_cache_create(char* name, size_t obj_size)
+m_cache& m_cache_create(const char* name, size_t obj_size)
 {
 	obj_size = 1 << bit_ceil(obj_size);
 
@@ -55,21 +55,22 @@ m_cache& m_cache_create(char* name, size_t obj_size)
 		name = temp_name;
 	}
 
-	cache_chain.push_back(std::make_unique<m_cache>(name, obj_size));
+	cache_chain.push_back(
+			std::make_unique<m_cache>(const_cast<char*>(name), obj_size));
 
 	return *cache_chain.back();
 }
 
 bool m_cache::grow()
 {
-	size_t bytes_per_slab = num_pages_per_slab_ * PAGE_SIZE;
+	size_t const bytes_per_slab = num_pages_per_slab_ * PAGE_SIZE;
 	void* addr = memory_manager->allocate(bytes_per_slab);
 	if (addr == nullptr) {
 		klogger->print("m_cache_grow: failed to allocate memory\n");
 		return false;
 	}
 
-	size_t num_objs = bytes_per_slab / object_size_;
+	size_t const num_objs = bytes_per_slab / object_size_;
 	auto slab = std::make_unique<m_slab>(addr, num_objs);
 
 	page* page = get_page(addr);
@@ -94,13 +95,13 @@ void* m_cache::alloc()
 			return nullptr;
 		}
 
-		auto free_slab = slabs_free_.front().get();
+		auto* free_slab = slabs_free_.front().get();
 		free_slab->move_list(slabs_free_, slabs_partial_);
 
 		num_active_slabs_++;
 	}
 
-	auto current_slab = slabs_partial_.front().get();
+	auto* current_slab = slabs_partial_.front().get();
 	void* addr = current_slab->alloc_object(object_size_);
 	if (addr == nullptr) {
 		klogger->print("m_cache_alloc: failed to allocate object\n");
@@ -109,7 +110,7 @@ void* m_cache::alloc()
 
 	num_active_objects_++;
 	if (current_slab->is_full()) {
-		auto full_slab = slabs_partial_.front().get();
+		auto* full_slab = slabs_partial_.front().get();
 		full_slab->move_list(slabs_partial_, slabs_full_);
 	}
 
@@ -142,9 +143,9 @@ void* m_slab::alloc_object(size_t obj_size)
 
 void m_slab::free_object(void* addr, size_t obj_size)
 {
-	size_t objs_index = (reinterpret_cast<uintptr_t>(addr) -
-						 reinterpret_cast<uintptr_t>(base_addr_)) /
-						obj_size;
+	size_t const objs_index = (reinterpret_cast<uintptr_t>(addr) -
+							   reinterpret_cast<uintptr_t>(base_addr_)) /
+							  obj_size;
 
 	objects_[objs_index].free();
 	num_in_use_--;
@@ -157,7 +158,7 @@ void* kmalloc(size_t size)
 	char name[20];
 	sprintf(name, "cache-%d", static_cast<int>(size));
 
-	auto cache = get_cache_in_chain(name);
+	auto* cache = get_cache_in_chain(name);
 	if (cache == nullptr) {
 		cache = &m_cache_create(name, size);
 	}

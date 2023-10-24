@@ -78,7 +78,7 @@ extern std::list<std::unique_ptr<m_cache>> cache_chain;
 
 m_cache* get_cache_in_chain(char* name);
 
-m_cache& m_cache_create(char* name, size_t object_size);
+m_cache& m_cache_create(const char* name, size_t obj_size);
 
 void* kmalloc(size_t size);
 

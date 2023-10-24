@@ -33,12 +33,8 @@ union SegmentDescriptor {
 	} bits __attribute__((packed));
 } __attribute__((packed));
 
-void SetDataSegment(SegmentDescriptor& desc,
-					DescriptorType type,
-					unsigned int descriptor_privilege_level);
-void SetCodeSegment(SegmentDescriptor& desc,
-					DescriptorType type,
-					unsigned int descriptor_privilege_level);
+void SetDataSegment(SegmentDescriptor& desc, DescriptorType type, unsigned int dpl);
+void SetCodeSegment(SegmentDescriptor& desc, DescriptorType type, unsigned int dpl);
 
 const uint16_t kKernelCS = 1 << 3;
 const uint16_t kKernelSS = 2 << 3;

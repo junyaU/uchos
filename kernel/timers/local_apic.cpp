@@ -32,7 +32,7 @@ void Initialize()
 
 	kInitialCount = 0;
 
-	const uint64_t freq = static_cast<uint64_t>(elapsed * 10);
+	const uint32_t freq = elapsed * 10;
 	kLvtTimer = (0b010 << 16) | InterruptVector::kLocalApicTimer;
 	kInitialCount = freq / kTimerFrequency;
 }

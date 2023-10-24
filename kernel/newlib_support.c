@@ -1,10 +1,11 @@
 #include <errno.h>
 #include <sys/types.h>
 
-void _exit(void)
+void _exit(int status)
 {
-	while (1)
+	while (1) {
 		__asm__("hlt");
+	};
 }
 
 caddr_t program_break, program_break_end;

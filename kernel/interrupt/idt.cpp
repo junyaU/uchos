@@ -61,7 +61,7 @@ void InitializeInterrupt()
 	set_idt_entry(19, InterruptHandlerXM);
 	set_idt_entry(20, InterruptHandlerVE);
 
-	LoadIDT(sizeof(idt), reinterpret_cast<uint64_t>(&idt[0]));
+	LoadIDT(sizeof(idt), reinterpret_cast<uint64_t>(idt.data()));
 
 	__asm__("sti");
 }
