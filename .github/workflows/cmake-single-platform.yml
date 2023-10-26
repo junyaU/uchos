@@ -34,9 +34,10 @@ jobs:
         OUTPUT=$(cmake -S kernel -B build \
               -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
               -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=${IWYU_PATH} \
-              -DCMAKE_C_INCLUDE_WHAT_YOU_USE=${IWYU_PATH} 2>&1)
+              -DCMAKE_C_INCLUDE_WHAT_YOU_USE=${IWYU_PATH})
         echo "$OUTPUT"
         if echo "$OUTPUT" | grep -E "Warning: include-what-you-use reported diagnostics"; then
+          sleep 3
           exit 1
         fi
     - name: Build
