@@ -33,8 +33,9 @@ jobs:
         IWYU_PATH=$(which include-what-you-use)
         cmake -S kernel -B build \
               -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
               -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=${IWYU_PATH} \
-              -DCMAKE_C_INCLUDE_WHAT_YOU_USE=${IWYU_PATH}
+              -DCMAKE_C_INCLUDE_WHAT_YOU_USE=${IWYU_PATH} \
     - name: Build
       run: cmake --build build --config ${{env.BUILD_TYPE}}
 
