@@ -1,10 +1,10 @@
 #pragma once
 
+#include "../system_event.hpp"
 #include <cstdint>
+#include <memory>
 #include <queue>
 #include <unordered_set>
-
-#include "../system_event.hpp"
 
 inline bool operator<(const SystemEvent& lhs, const SystemEvent& rhs)
 {

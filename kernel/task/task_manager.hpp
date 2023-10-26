@@ -1,10 +1,10 @@
 #pragma once
 
-#include "context.hpp"
-#include "task.hpp"
+class Task;
 
 #include <cstdint>
-#include <queue>
+#include <deque>
+#include <memory>
 
 class TaskManager
 {

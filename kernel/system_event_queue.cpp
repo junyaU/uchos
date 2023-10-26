@@ -1,11 +1,10 @@
 #include "system_event_queue.hpp"
-
 #include "graphics/kernel_logger.hpp"
 #include "graphics/screen.hpp"
 #include "system_event.hpp"
 #include "timers/timer.hpp"
-
-#include <cstdio>
+#include <queue>
+#include <stdio.h>
 
 bool SystemEventQueue::Queue(SystemEvent event)
 {

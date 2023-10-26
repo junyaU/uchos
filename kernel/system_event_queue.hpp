@@ -1,9 +1,6 @@
 #pragma once
 
-#include <cstdint>
-
 #include "system_event.hpp"
-
 #include <queue>
 
 class SystemEventQueue

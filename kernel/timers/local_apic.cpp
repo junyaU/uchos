@@ -1,11 +1,8 @@
 #include "local_apic.hpp"
-
-#include <cstdlib>
-#include <cstring>
-
 #include "../interrupt/vector.hpp"
 #include "acpi.hpp"
 #include "timer.hpp"
+#include <stdint.h>
 
 namespace local_apic
 {

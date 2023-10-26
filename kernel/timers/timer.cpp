@@ -1,8 +1,13 @@
 #include "timer.hpp"
-
-#include "../system_event_queue.hpp"
 #include "../graphics/kernel_logger.hpp"
+#include "../system_event.hpp"
+#include "../system_event_queue.hpp"
 #include "../task/task_manager.hpp"
+#include <__hash_table>
+#include <algorithm>
+#include <queue>
+#include <type_traits>
+#include <unordered_set>
 
 uint64_t Timer::CalculateTimeoutTicks(unsigned long millisec) const
 {
