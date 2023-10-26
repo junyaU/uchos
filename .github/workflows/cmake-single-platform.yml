@@ -38,7 +38,7 @@ jobs:
               -DCMAKE_C_INCLUDE_WHAT_YOU_USE=${IWYU_PATH} \
     - name: Build
       run: | 
-          OUTPUT=$(cmake --build build --config ${{env.BUILD_TYPE}})
+          OUTPUT=$(cmake --build build --config ${{env.BUILD_TYPE}} 2>&1)
           echo "$OUTPUT"
           if echo "$OUTPUT" | grep -E "Warning: include-what-you-use reported diagnostics"; then
             echo "include-what-you-use found warnings"
