@@ -25,16 +25,20 @@ jobs:
     - name: Install dependencie
       run: |
         sudo apt-get update
-        sudo apt-get install -y nasm cmake clang lld clang-tidy
+        sudo apt-get install -y nasm clang lld clang-tidy iwyu
         curl -L https://github.com/uchan-nos/mikanos-build/releases/download/v2.0/x86_64-elf.tar.gz -o x86_64-elf.tar.gz
         tar -xzvf x86_64-elf.tar.gz
     - name: Configure CMake
       run: |
+        IWYU_PATH=$(which include-what-you-use)
+        IWYU_OPTIONS="-Xiwyu --verbose=3"
         cmake -S kernel -B build \
               -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+              -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="${IWYU_PATH};${IWYU_OPTIONS}" \
+              -DCMAKE_C_INCLUDE_WHAT_YOU_USE="${IWYU_PATH};${IWYU_OPTIONS}" \
     - name: Build
-      run: cmake --build build --config ${{env.BUILD_TYPE}}
+      run: VERBOSE=1 cmake --build build --config ${{env.BUILD_TYPE}}
 
     - name: Test
       working-directory: build
