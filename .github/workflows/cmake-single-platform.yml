@@ -31,14 +31,16 @@ jobs:
     - name: Configure CMake
       run: |
         IWYU_PATH=$(which include-what-you-use)
-        IWYU_OPTIONS="-Xiwyu --verbose=3"
-        cmake -S kernel -B build \
+        OUTPUT=$(cmake -S kernel -B build \
               -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
-              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-              -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="${IWYU_PATH};${IWYU_OPTIONS}" \
-              -DCMAKE_C_INCLUDE_WHAT_YOU_USE="${IWYU_PATH};${IWYU_OPTIONS}" \
+              -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=${IWYU_PATH} \
+              -DCMAKE_C_INCLUDE_WHAT_YOU_USE=${IWYU_PATH} 2>&1)
+        echo "$OUTPUT"
+        if echo "$OUTPUT" | grep -E "Warning: include-what-you-use reported diagnostics"; then
+          exit 1
+        fi
     - name: Build
-      run: VERBOSE=1 cmake --build build --config ${{env.BUILD_TYPE}}
+      run: cmake --build build --config ${{env.BUILD_TYPE}}
 
     - name: Test
       working-directory: build
