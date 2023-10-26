@@ -37,7 +37,13 @@ jobs:
               -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=${IWYU_PATH} \
               -DCMAKE_C_INCLUDE_WHAT_YOU_USE=${IWYU_PATH} \
     - name: Build
-      run: cmake --build build --config ${{env.BUILD_TYPE}}
+      run: | 
+          OUTPUT=$(cmake --build build --config ${{env.BUILD_TYPE}})
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -E "Warning: include-what-you-use reported diagnostics"; then
+            echo "include-what-you-use found warnings"
+            exit 1
+          fi
 
     - name: Test
       working-directory: build
@@ -49,7 +55,7 @@ jobs:
       run: |
         OUTPUT=$(find . \( -name '*.cpp' -o -name '*.c' \) -not -path './x86_64-elf/*' -not -path './UchLoaderPkg/*' -not -path './build/CMakeFiles/*' | xargs clang-tidy -p build)
         echo "$OUTPUT"
-        if echo "$OUTPUT" | grep -E "warning:|error:|Warning: include-what-you-use reported diagnostics"; then
+        if echo "$OUTPUT" | grep -E "warning:|error:"; then
           echo "clang-tidy found warnings or errors"
           exit 1
         fi
