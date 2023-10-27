@@ -5,6 +5,8 @@
 #include <memory>
 #include <vector>
 
+const size_t END_BUFCTL = 9999;
+
 class m_object
 {
 public:
@@ -45,6 +47,8 @@ private:
 	std::vector<m_object> objects_;
 	void* base_addr_;
 	size_t num_in_use_;
+	std::vector<size_t> bufctl_;
+	size_t free_object_index_;
 };
 
 class m_cache

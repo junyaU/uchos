@@ -5,7 +5,6 @@
 #include "page.hpp"
 #include <stdio.h>
 
-
 m_cache* get_cache_in_chain(char* name)
 {
 	for (auto& cache : cache_chain) {
@@ -36,9 +35,14 @@ m_cache::m_cache(char name[20], size_t object_size)
 }
 
 m_slab::m_slab(void* base_addr, size_t num_objs)
-	: base_addr_(base_addr), num_in_use_(0)
+	: base_addr_(base_addr), num_in_use_(0), free_object_index_(0)
 {
 	objects_.resize(num_objs);
+	for (size_t i = 0; i < num_objs; i++) {
+		bufctl_.push_back(i);
+	}
+
+	bufctl_.push_back(END_BUFCTL);
 }
 
 m_cache& m_cache_create(const char* name, size_t obj_size)
