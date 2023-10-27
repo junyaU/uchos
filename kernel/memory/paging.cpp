@@ -1,8 +1,6 @@
 #include "paging.hpp"
-
-#include <array>
-
 #include "page_operations.h"
+#include <array>
 
 namespace
 {

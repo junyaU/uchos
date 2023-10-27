@@ -1,13 +1,7 @@
 #include "buddy_system.hpp"
-
-#include <algorithm>
-#include <climits>
-#include <optional>
-#include <sys/types.h>
-
 #include "../bit_utils.hpp"
 #include "../graphics/kernel_logger.hpp"
-#include "bootstrap_allocator.hpp"
+#include "page.hpp"
 
 buddy_system* memory_manager;
 

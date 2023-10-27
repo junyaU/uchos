@@ -1,10 +1,11 @@
 #pragma once
 
-#include "../../UchLoaderPkg/memory_map.hpp"
-#include "page.hpp"
+struct MemoryMap;
 
+#include "page.hpp"
 #include <array>
 #include <cstdint>
+#include <stddef.h>
 
 // 64 GiB
 static const uint64_t MAX_PHYS_MEM_BYTES = 64UL * 1024 * 1024 * 1024;

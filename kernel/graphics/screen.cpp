@@ -1,9 +1,8 @@
 #include "screen.hpp"
-
-#include <new>
-
+#include "../../UchLoaderPkg/frame_buffer_conf.hpp"
 #include "color.hpp"
 #include "font.hpp"
+#include <new>
 
 Screen::Screen(const FrameBufferConf& frame_buffer_conf,
 			   Color bg_color,

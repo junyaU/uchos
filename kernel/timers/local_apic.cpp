@@ -2,7 +2,6 @@
 #include "../interrupt/vector.hpp"
 #include "acpi.hpp"
 #include "timer.hpp"
-#include <stdint.h>
 
 namespace local_apic
 {

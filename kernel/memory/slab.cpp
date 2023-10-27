@@ -1,14 +1,10 @@
 #include "slab.hpp"
-
 #include "../bit_utils.hpp"
 #include "../graphics/kernel_logger.hpp"
 #include "buddy_system.hpp"
 #include "page.hpp"
+#include <stdio.h>
 
-#include <cstdio>
-#include <cstring>
-#include <iterator>
-#include <memory>
 
 m_cache* get_cache_in_chain(char* name)
 {

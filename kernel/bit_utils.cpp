@@ -1,9 +1,5 @@
 #include "bit_utils.hpp"
-
-#include <algorithm>
 #include <climits>
-#include <optional>
-#include <sys/types.h>
 
 unsigned int bit_width(unsigned int x)
 {

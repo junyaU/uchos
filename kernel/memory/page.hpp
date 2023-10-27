@@ -1,6 +1,7 @@
 #pragma once
 
-#include "slab.hpp"
+class m_cache;
+class m_slab;
 
 #include <cstddef>
 #include <cstdint>

@@ -1,13 +1,8 @@
 #include "task_manager.hpp"
-
 #include "../graphics/kernel_logger.hpp"
 #include "../timers/timer.hpp"
 #include "context_switch.h"
 #include "task.hpp"
-
-#include <algorithm>
-#include <memory>
-#include <type_traits>
 
 TaskManager::TaskManager() : last_task_id_{ 0 }
 {

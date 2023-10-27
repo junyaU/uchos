@@ -1,11 +1,10 @@
 #pragma once
 
-#include <cstdint>
+struct FrameBufferConf;
 
-#include "../../UchLoaderPkg/frame_buffer_conf.hpp"
-#include "color.hpp"
-#include "font.hpp"
 #include "../point2d.hpp"
+#include "color.hpp"
+#include <cstdint>
 
 class Screen
 {

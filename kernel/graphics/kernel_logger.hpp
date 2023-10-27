@@ -1,11 +1,7 @@
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <cstdio>
-#include <stdarg.h>
-
 #include "color.hpp"
+#include <stdio.h>
 
 class kernel_logger
 {

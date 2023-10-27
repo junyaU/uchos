@@ -1,6 +1,5 @@
 #include "font.hpp"
 
-#include <cstdint>
 #include <new>
 
 extern const uint8_t _binary_hankaku_bin_start;

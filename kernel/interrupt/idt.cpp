@@ -1,8 +1,9 @@
 #include "idt.hpp"
-
 #include "../memory/segment.hpp"
 #include "handler.hpp"
 #include "vector.hpp"
+#include <array>
+#include <stddef.h>
 
 std::array<IDTEntry, 256> idt;
 

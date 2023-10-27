@@ -1,13 +1,10 @@
 #pragma once
 
-#include <array>
-#include <cstddef>
-#include <cstdint>
-#include <list>
-
-#include "../../UchLoaderPkg/memory_map.hpp"
 #include "page.hpp"
 #include "pool.hpp"
+#include <array>
+#include <cstddef>
+#include <list>
 
 class buddy_system
 {

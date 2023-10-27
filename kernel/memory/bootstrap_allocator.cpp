@@ -1,10 +1,8 @@
 #include "bootstrap_allocator.hpp"
-#include <climits>
-#include <limits>
-#include <sys/types.h>
-
+#include "../../UchLoaderPkg/memory_map.hpp"
 #include "../graphics/kernel_logger.hpp"
 #include "buddy_system.hpp"
+#include "page.hpp"
 
 bootstrap_allocator::bootstrap_allocator()
 	: bitmap_{}, memory_start_{ 0x0 }, memory_end_{ 0x0 }

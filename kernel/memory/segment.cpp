@@ -1,6 +1,6 @@
 #include "segment.hpp"
-
 #include "segments_operations.h"
+#include <array>
 
 namespace
 {

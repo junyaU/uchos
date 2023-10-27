@@ -1,10 +1,7 @@
 #include "acpi.hpp"
-
 #include "../asm_utils.h"
 #include "../graphics/kernel_logger.hpp"
-
-#include <cstdlib>
-#include <cstring>
+#include <string.h>
 
 namespace acpi
 {

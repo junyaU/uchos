@@ -1,3 +1,6 @@
+struct FrameBufferConf;
+struct MemoryMap;
+
 #include "graphics/font.hpp"
 #include "graphics/kernel_logger.hpp"
 #include "graphics/screen.hpp"
@@ -13,8 +16,6 @@
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"
-struct FrameBufferConf;
-struct MemoryMap;
 
 // 1MiB　
 char kernel_stack[1024 * 1024];
@@ -31,7 +32,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	InitializeSegmentation();
 
-	InitializePaging();
+	InitializePaging();　
 
 	InitializeInterrupt();
 

@@ -3,7 +3,6 @@
 #include "graphics/screen.hpp"
 #include "system_event.hpp"
 #include "timers/timer.hpp"
-#include <queue>
 #include <stdio.h>
 
 bool SystemEventQueue::Queue(SystemEvent event)

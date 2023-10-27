@@ -2,9 +2,6 @@
 #include "../graphics/kernel_logger.hpp"
 #include "bootstrap_allocator.hpp"
 
-#include <array>
-#include <vector>
-
 std::vector<page> pages;
 
 void initialize_pages()

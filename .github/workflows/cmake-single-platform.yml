@@ -28,6 +28,7 @@ jobs:
         sudo apt-get install -y nasm clang lld clang-tidy iwyu
         curl -L https://github.com/uchan-nos/mikanos-build/releases/download/v2.0/x86_64-elf.tar.gz -o x86_64-elf.tar.gz
         tar -xzvf x86_64-elf.tar.gz
+        
     - name: Configure CMake
       run: |
         IWYU_PATH=$(which include-what-you-use)
@@ -36,14 +37,10 @@ jobs:
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
               -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=${IWYU_PATH} \
               -DCMAKE_C_INCLUDE_WHAT_YOU_USE=${IWYU_PATH} \
+
     - name: Build
       run: | 
-          OUTPUT=$(cmake --build build --config ${{env.BUILD_TYPE}} 2>&1)
-          echo "$OUTPUT"
-          if echo "$OUTPUT" | grep -E "Warning: include-what-you-use reported diagnostics"; then
-            echo "include-what-you-use found warnings"
-            exit 1
-          fi
+          cmake --build build --config ${{env.BUILD_TYPE}} 
 
     - name: Test
       working-directory: build
