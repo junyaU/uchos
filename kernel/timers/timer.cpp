@@ -8,7 +8,7 @@ uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 	return tick_ + (millisec * TIMER_FREQUENCY) / 1000;
 }
 
-uint64_t kernel_timer::add_timer_Event(unsigned long millisec)
+uint64_t kernel_timer::add_timer_event(unsigned long millisec)
 {
 	auto event = SystemEvent{ SystemEvent::kTimerTimeout };
 

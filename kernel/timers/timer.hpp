@@ -19,7 +19,14 @@ class kernel_timer
 public:
 	kernel_timer() : tick_{ 0 }, last_id_{ 1 } {}
 
-	uint64_t add_timer_Event(unsigned long millisec);
+	uint64_t current_tick() const { return tick_; }
+
+	float tick_to_time(uint64_t tick) const
+	{
+		return static_cast<float>(tick) / TIMER_FREQUENCY;
+	}
+
+	uint64_t add_timer_event(unsigned long millisec);
 
 	uint64_t add_periodic_timer_event(unsigned long millisec, uint64_t id = 0);
 

@@ -22,7 +22,7 @@ char kernel_stack[1024 * 1024];
 
 extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 					 const MemoryMap& memory_map,
-					 const acpi::RSDP& rsdp)
+					 const acpi::root_system_description_pointer& rsdp)
 {
 	InitializeScreen(frame_buffer_conf, { 0, 120, 215 }, { 0, 80, 155 });
 
@@ -48,6 +48,12 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_slab_allocator();
 
+	acpi::initialize(rsdp);
+
+	local_apic::Initialize();
+
+	initialize_timer();
+
 	klogger->print("Hello, uch OS!\n");
 
 	print_available_memory();
@@ -64,13 +70,14 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	kfree(addr);
 
-	acpi::Initialize(rsdp);
-
-	local_apic::Initialize();
-
-	initialize_timer();
+	auto start_time = ktimer->current_tick();
 
 	InitializeTaskManager();
+
+	auto end_time = ktimer->current_tick();
+
+	klogger->printf("task manager start time: %lu\n", start_time);
+	klogger->printf("task manager end time: %lu\n", end_time);
 
 	HandleSystemEvents();
 }
