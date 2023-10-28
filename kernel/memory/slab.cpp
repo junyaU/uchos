@@ -5,7 +5,6 @@
 #include "page.hpp"
 #include <stdio.h>
 
-
 m_cache* get_cache_in_chain(char* name)
 {
 	for (auto& cache : cache_chain) {
@@ -39,6 +38,10 @@ m_slab::m_slab(void* base_addr, size_t num_objs)
 	: base_addr_(base_addr), num_in_use_(0)
 {
 	objects_.resize(num_objs);
+
+	for (size_t i = 0; i < num_objs; i++) {
+		free_objects_index_.push_back(i);
+	}
 }
 
 m_cache& m_cache_create(const char* name, size_t obj_size)
@@ -124,17 +127,17 @@ void m_slab::move_list(std::list<std::unique_ptr<m_slab>>& from,
 
 void* m_slab::alloc_object(size_t obj_size)
 {
-	for (size_t i = 0; i < objects_.size(); i++) {
-		if (!objects_[i].is_allocated()) {
-			objects_[i].allocate();
-			num_in_use_++;
-
-			return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(base_addr_) +
-										   i * obj_size);
-		}
+	if (free_objects_index_.empty()) {
+		return nullptr;
 	}
 
-	return nullptr;
+	size_t const obj_index = free_objects_index_.front();
+	free_objects_index_.pop_front();
+	objects_[obj_index].increase_usage_count();
+	num_in_use_++;
+
+	return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(base_addr_) +
+								   obj_index * obj_size);
 }
 
 void m_slab::free_object(void* addr, size_t obj_size)
@@ -143,7 +146,7 @@ void m_slab::free_object(void* addr, size_t obj_size)
 							   reinterpret_cast<uintptr_t>(base_addr_)) /
 							  obj_size;
 
-	objects_[objs_index].free();
+	free_objects_index_.push_back(objs_index);
 	num_in_use_--;
 }
 

@@ -23,14 +23,14 @@ void Initialize()
 
 	kInitialCount = kCountMax;
 
-	acpi::WaitByPMTimer(100);
+	acpi::wait_by_pm_timer(100);
 	const uint32_t elapsed = kCountMax - kCurrentCount;
 
 	kInitialCount = 0;
 
 	const uint32_t freq = elapsed * 10;
 	kLvtTimer = (0b010 << 16) | InterruptVector::kLocalApicTimer;
-	kInitialCount = freq / kTimerFrequency;
+	kInitialCount = freq / TIMER_FREQUENCY;
 }
 
 } // namespace local_apic

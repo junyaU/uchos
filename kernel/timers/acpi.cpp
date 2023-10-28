@@ -5,7 +5,7 @@
 
 namespace acpi
 {
-bool RSDP::IsValid() const
+bool root_system_description_pointer::is_valid() const
 {
 	if (strncmp(signature, "RSD PTR ", 8) != 0) {
 		return false;
@@ -23,7 +23,7 @@ bool RSDP::IsValid() const
 	return sum == 0;
 }
 
-bool SDTHeader::IsValid(const char* expected_signature) const
+bool sdt_header::is_valid(const char* expected_signature) const
 {
 	if (strncmp(signature, expected_signature, 4) != 0) {
 		return false;
@@ -37,21 +37,22 @@ bool SDTHeader::IsValid(const char* expected_signature) const
 	return sum == 0;
 }
 
-const FADT* fadt;
+const fixed_acpi_description_table* fadt;
 
-void Initialize(const RSDP& rsdp)
+void initialize(const root_system_description_pointer& rsdp)
 {
-	if (!rsdp.IsValid()) {
+	if (!rsdp.is_valid()) {
 		klogger->print("acpi is invalid\n");
 		return;
 	}
 
 	fadt = nullptr;
-	const auto* xsdt = reinterpret_cast<const XSDT*>(rsdp.xsdt_address);
+	const auto* xsdt = reinterpret_cast<const extended_system_description_table*>(
+			rsdp.xsdt_address);
 	for (int i = 0; i < xsdt->Count(); i++) {
 		const auto& entry = (*xsdt)[i];
-		if (entry.IsValid("FACP")) {
-			fadt = reinterpret_cast<const FADT*>(&entry);
+		if (entry.is_valid("FACP")) {
+			fadt = reinterpret_cast<const fixed_acpi_description_table*>(&entry);
 			break;
 		}
 	}
@@ -62,12 +63,12 @@ void Initialize(const RSDP& rsdp)
 	}
 }
 
-const int kPMTimerFrequency = 3579545;
+const int PM_TIMER_FREQUENCY = 3579545;
 
-void WaitByPMTimer(unsigned long millisec)
+void wait_by_pm_timer(unsigned long millisec)
 {
 	const uint32_t initial_count = ReadFromIoPort(fadt->pm_tmr_blk);
-	uint32_t end_count = initial_count + (kPMTimerFrequency * millisec) / 1000;
+	uint32_t end_count = initial_count + (PM_TIMER_FREQUENCY * millisec) / 1000;
 
 	const bool enable32bit = ((fadt->flags >> 8) & 1) != 0;
 	if (!enable32bit) {
@@ -81,7 +82,23 @@ void WaitByPMTimer(unsigned long millisec)
 	}
 
 	while (ReadFromIoPort(fadt->pm_tmr_blk) < end_count) {
-		// asm volatile("pause");
 	}
 }
+
+uint32_t get_pm_timer_count()
+{
+	const uint32_t count = ReadFromIoPort(fadt->pm_tmr_blk);
+	const bool enable32bit = ((fadt->flags >> 8) & 1) != 0;
+	if (enable32bit) {
+		return count;
+	}
+
+	return count & 0x00ffffffU;
+}
+
+float pm_timer_count_to_millisec(uint32_t count)
+{
+	return static_cast<float>(count) * 1000 / PM_TIMER_FREQUENCY;
+}
+
 } // namespace acpi

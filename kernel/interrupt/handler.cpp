@@ -1,5 +1,4 @@
 #include "handler.hpp"
-#include "../graphics/kernel_logger.hpp"
 #include "../task/task_manager.hpp"
 #include "../timers/timer.hpp"
 
@@ -14,7 +13,7 @@ namespace
 
 __attribute__((interrupt)) void TimerInterrupt(InterruptFrame* frame)
 {
-	const bool need_switch_task = timer->IncrementTick();
+	const bool need_switch_task = ktimer->increment_tick();
 	NotifyEndOfInterrupt();
 
 	if (need_switch_task) {

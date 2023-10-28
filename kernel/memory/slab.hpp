@@ -10,12 +10,10 @@ class m_object
 public:
 	m_object() = default;
 
-	bool is_allocated() const { return is_allocated_; }
-	void allocate() { is_allocated_ = true; }
-	void free() { is_allocated_ = false; }
+	void increase_usage_count() { usage_count_++; }
 
 private:
-	bool is_allocated_ = false;
+	unsigned int usage_count_;
 };
 
 class m_slab
@@ -45,6 +43,7 @@ private:
 	std::vector<m_object> objects_;
 	void* base_addr_;
 	size_t num_in_use_;
+	std::list<size_t> free_objects_index_;
 };
 
 class m_cache

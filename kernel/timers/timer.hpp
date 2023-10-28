@@ -11,26 +11,33 @@ inline bool operator<(const SystemEvent& lhs, const SystemEvent& rhs)
 	return lhs.args_.timer.timeout > rhs.args_.timer.timeout;
 }
 
-static const int kTimerFrequency = 100;
-static const int kSwitchTextMillisec = 20;
+static const int TIMER_FREQUENCY = 100;
+static const int SWITCH_TEXT_MILLISEC = 20;
 
-class Timer
+class kernel_timer
 {
 public:
-	Timer() : tick_{ 0 }, last_id_{ 1 } {}
+	kernel_timer() : tick_{ 0 }, last_id_{ 1 } {}
 
-	uint64_t AddTimerEvent(unsigned long millisec);
+	uint64_t current_tick() const { return tick_; }
 
-	uint64_t AddPeriodicTimerEvent(unsigned long millisec, uint64_t id = 0);
+	float tick_to_time(uint64_t tick) const
+	{
+		return static_cast<float>(tick) / TIMER_FREQUENCY;
+	}
 
-	void AddSwitchTaskEvent(unsigned long millisec);
+	uint64_t add_timer_event(unsigned long millisec);
 
-	void RemoveTimerEvent(uint64_t id);
+	uint64_t add_periodic_timer_event(unsigned long millisec, uint64_t id = 0);
 
-	bool IncrementTick();
+	void add_switch_task_event(unsigned long millisec);
+
+	void remove_timer_event(uint64_t id);
+
+	bool increment_tick();
 
 private:
-	uint64_t CalculateTimeoutTicks(unsigned long millisec) const;
+	uint64_t calculate_timeout_ticks(unsigned long millisec) const;
 
 	uint64_t tick_;
 	uint64_t last_id_;
@@ -38,6 +45,6 @@ private:
 	std::priority_queue<SystemEvent> events_;
 };
 
-extern Timer* timer;
+extern kernel_timer* ktimer;
 
-void InitializeTimer();
+void initialize_timer();

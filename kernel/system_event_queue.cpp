@@ -48,7 +48,7 @@ void HandleSystemEvents()
 			case SystemEvent::kDrawScreenTimer:
 				char timer_value[14];
 				sprintf(timer_value, "%lu",
-						event.args_.draw_screen_timer.value / kTimerFrequency);
+						event.args_.draw_screen_timer.value / TIMER_FREQUENCY);
 				DrawTimer(timer_value);
 				break;
 

@@ -22,7 +22,7 @@ char kernel_stack[1024 * 1024];
 
 extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 					 const MemoryMap& memory_map,
-					 const acpi::RSDP& rsdp)
+					 const acpi::root_system_description_pointer& rsdp)
 {
 	InitializeScreen(frame_buffer_conf, { 0, 120, 215 }, { 0, 80, 155 });
 
@@ -48,29 +48,32 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_slab_allocator();
 
+	acpi::initialize(rsdp);
+
+	local_apic::Initialize();
+
+	initialize_timer();
+
 	klogger->print("Hello, uch OS!\n");
+
+	InitializeTaskManager();
 
 	print_available_memory();
 
-	m_cache_create(nullptr, sizeof(Timer));
+	m_cache_create(nullptr, sizeof(kernel_timer));
 
-	void* addr = kmalloc(sizeof(Timer));
+	auto start = acpi::get_pm_timer_count();
+	void* addr = kmalloc(sizeof(kernel_timer));
+	auto end = acpi::get_pm_timer_count();
+
+	klogger->printf("kmalloc: %f\n", acpi::pm_timer_count_to_millisec(end - start));
+
 	if (addr == nullptr) {
 		klogger->print("failed to allocate memory\n");
 		return;
 	}
 
-	klogger->printf("allocated memory: %p\n", addr);
-
 	kfree(addr);
-
-	acpi::Initialize(rsdp);
-
-	local_apic::Initialize();
-
-	InitializeTimer();
-
-	InitializeTaskManager();
 
 	HandleSystemEvents();
 }
