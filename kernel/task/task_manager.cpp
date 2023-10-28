@@ -112,5 +112,5 @@ void InitializeTaskManager()
 {
 	task_manager = new TaskManager();
 
-	timer->AddSwitchTaskEvent(kSwitchTextMillisec);
+	ktimer->add_switch_task_event(SWITCH_TEXT_MILLISEC);
 }

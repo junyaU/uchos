@@ -3,17 +3,17 @@
 #include "../system_event_queue.hpp"
 #include "../task/task_manager.hpp"
 
-uint64_t Timer::CalculateTimeoutTicks(unsigned long millisec) const
+uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 {
-	return tick_ + (millisec * kTimerFrequency) / 1000;
+	return tick_ + (millisec * TIMER_FREQUENCY) / 1000;
 }
 
-uint64_t Timer::AddTimerEvent(unsigned long millisec)
+uint64_t kernel_timer::add_timer_Event(unsigned long millisec)
 {
 	auto event = SystemEvent{ SystemEvent::kTimerTimeout };
 
 	event.args_.timer.id = last_id_;
-	event.args_.timer.timeout = CalculateTimeoutTicks(millisec);
+	event.args_.timer.timeout = calculate_timeout_ticks(millisec);
 	event.args_.timer.period = millisec;
 
 	events_.push(event);
@@ -23,7 +23,7 @@ uint64_t Timer::AddTimerEvent(unsigned long millisec)
 	return event.args_.timer.id;
 }
 
-uint64_t Timer::AddPeriodicTimerEvent(unsigned long millisec, uint64_t id)
+uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec, uint64_t id)
 {
 	auto event = SystemEvent{ SystemEvent::kTimerTimeout };
 
@@ -36,7 +36,7 @@ uint64_t Timer::AddPeriodicTimerEvent(unsigned long millisec, uint64_t id)
 	}
 
 	event.args_.timer.id = id;
-	event.args_.timer.timeout = CalculateTimeoutTicks(millisec);
+	event.args_.timer.timeout = calculate_timeout_ticks(millisec);
 	event.args_.timer.period = millisec;
 	event.args_.timer.periodical = 1;
 
@@ -45,16 +45,16 @@ uint64_t Timer::AddPeriodicTimerEvent(unsigned long millisec, uint64_t id)
 	return event.args_.timer.id;
 }
 
-void Timer::AddSwitchTaskEvent(unsigned long millisec)
+void kernel_timer::add_switch_task_event(unsigned long millisec)
 {
 	auto event = SystemEvent{ SystemEvent::kSwitchTask };
 
-	event.args_.timer.timeout = CalculateTimeoutTicks(millisec);
+	event.args_.timer.timeout = calculate_timeout_ticks(millisec);
 
 	events_.push(event);
 }
 
-void Timer::RemoveTimerEvent(uint64_t id)
+void kernel_timer::remove_timer_event(uint64_t id)
 {
 	if (id == 0 || last_id_ < id) {
 		klogger->printf("invalid timer id: %lu\n", id);
@@ -64,11 +64,11 @@ void Timer::RemoveTimerEvent(uint64_t id)
 	ignore_events_.insert(id);
 }
 
-bool Timer::IncrementTick()
+bool kernel_timer::increment_tick()
 {
 	tick_++;
 
-	if (tick_ % kTimerFrequency == 0) {
+	if (tick_ % TIMER_FREQUENCY == 0) {
 		__asm__("cli");
 		events_.push(SystemEvent{ SystemEvent::kDrawScreenTimer, { { tick_ } } });
 		__asm__("sti");
@@ -83,7 +83,7 @@ bool Timer::IncrementTick()
 			need_switch_task = true;
 
 			event.args_.timer.timeout =
-					CalculateTimeoutTicks(task_manager->NextQuantum());
+					calculate_timeout_ticks(task_manager->NextQuantum());
 
 			__asm__("cli");
 			events_.push(event);
@@ -106,7 +106,7 @@ bool Timer::IncrementTick()
 
 		if (event.args_.timer.periodical == 1) {
 			event.args_.timer.timeout =
-					CalculateTimeoutTicks(event.args_.timer.period);
+					calculate_timeout_ticks(event.args_.timer.period);
 
 			__asm__("cli");
 			events_.push(event);
@@ -117,6 +117,6 @@ bool Timer::IncrementTick()
 	return need_switch_task;
 }
 
-Timer* timer;
+kernel_timer* ktimer;
 
-void InitializeTimer() { timer = new Timer; }
+void initialize_timer() { ktimer = new kernel_timer; }

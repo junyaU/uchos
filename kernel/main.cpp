@@ -52,9 +52,9 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	print_available_memory();
 
-	m_cache_create(nullptr, sizeof(Timer));
+	m_cache_create(nullptr, sizeof(kernel_timer));
 
-	void* addr = kmalloc(sizeof(Timer));
+	void* addr = kmalloc(sizeof(kernel_timer));
 	if (addr == nullptr) {
 		klogger->print("failed to allocate memory\n");
 		return;
@@ -68,7 +68,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	local_apic::Initialize();
 
-	InitializeTimer();
+	initialize_timer();
 
 	InitializeTaskManager();
 

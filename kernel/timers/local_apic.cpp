@@ -30,7 +30,7 @@ void Initialize()
 
 	const uint32_t freq = elapsed * 10;
 	kLvtTimer = (0b010 << 16) | InterruptVector::kLocalApicTimer;
-	kInitialCount = freq / kTimerFrequency;
+	kInitialCount = freq / TIMER_FREQUENCY;
 }
 
 } // namespace local_apic
