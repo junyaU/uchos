@@ -23,7 +23,7 @@ void Initialize()
 
 	kInitialCount = kCountMax;
 
-	acpi::wait_by_pmtimer(100);
+	acpi::wait_by_pm_timer(100);
 	const uint32_t elapsed = kCountMax - kCurrentCount;
 
 	kInitialCount = 0;

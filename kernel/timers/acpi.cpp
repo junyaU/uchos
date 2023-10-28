@@ -63,12 +63,12 @@ void initialize(const root_system_description_pointer& rsdp)
 	}
 }
 
-const int kPMTimerFrequency = 3579545;
+const int PM_TIMER_FREQUENCY = 3579545;
 
-void wait_by_pmtimer(unsigned long millisec)
+void wait_by_pm_timer(unsigned long millisec)
 {
 	const uint32_t initial_count = ReadFromIoPort(fadt->pm_tmr_blk);
-	uint32_t end_count = initial_count + (kPMTimerFrequency * millisec) / 1000;
+	uint32_t end_count = initial_count + (PM_TIMER_FREQUENCY * millisec) / 1000;
 
 	const bool enable32bit = ((fadt->flags >> 8) & 1) != 0;
 	if (!enable32bit) {
@@ -84,4 +84,21 @@ void wait_by_pmtimer(unsigned long millisec)
 	while (ReadFromIoPort(fadt->pm_tmr_blk) < end_count) {
 	}
 }
+
+uint32_t get_pm_timer_count()
+{
+	const uint32_t count = ReadFromIoPort(fadt->pm_tmr_blk);
+	const bool enable32bit = ((fadt->flags >> 8) & 1) != 0;
+	if (enable32bit) {
+		return count;
+	}
+
+	return count & 0x00ffffffU;
+}
+
+float pm_timer_count_to_millisec(uint32_t count)
+{
+	return static_cast<float>(count) * 1000 / PM_TIMER_FREQUENCY;
+}
+
 } // namespace acpi

@@ -4,7 +4,6 @@
 #include <cstdint>
 
 // Advanced Configuration and Power Interface
-
 namespace acpi
 {
 struct root_system_description_pointer {
@@ -37,7 +36,6 @@ struct sdt_header {
 	bool is_valid(const char* expected_signature) const;
 } __attribute__((packed));
 
-// eXtended System Descripter Table
 struct extended_system_description_table {
 	sdt_header header;
 
@@ -66,5 +64,9 @@ extern const fixed_acpi_description_table* fadt;
 
 void initialize(const root_system_description_pointer& rsdp);
 
-void wait_by_pmtimer(unsigned long millisec);
+void wait_by_pm_timer(unsigned long millisec);
+
+uint32_t get_pm_timer_count();
+
+float pm_timer_count_to_millisec(uint32_t count);
 } // namespace acpi

@@ -56,28 +56,24 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	klogger->print("Hello, uch OS!\n");
 
+	InitializeTaskManager();
+
 	print_available_memory();
 
 	m_cache_create(nullptr, sizeof(kernel_timer));
 
+	auto start = acpi::get_pm_timer_count();
 	void* addr = kmalloc(sizeof(kernel_timer));
+	auto end = acpi::get_pm_timer_count();
+
+	klogger->printf("kmalloc: %f\n", acpi::pm_timer_count_to_millisec(end - start));
+
 	if (addr == nullptr) {
 		klogger->print("failed to allocate memory\n");
 		return;
 	}
 
-	klogger->printf("allocated memory: %p\n", addr);
-
 	kfree(addr);
-
-	auto start_time = ktimer->current_tick();
-
-	InitializeTaskManager();
-
-	auto end_time = ktimer->current_tick();
-
-	klogger->printf("task manager start time: %lu\n", start_time);
-	klogger->printf("task manager end time: %lu\n", end_time);
 
 	HandleSystemEvents();
 }
