@@ -5,19 +5,15 @@
 #include <memory>
 #include <vector>
 
-const size_t END_BUFCTL = 9999;
-
 class m_object
 {
 public:
 	m_object() = default;
 
-	bool is_allocated() const { return is_allocated_; }
-	void allocate() { is_allocated_ = true; }
-	void free() { is_allocated_ = false; }
+	void increase_usage_count() { usage_count_++; }
 
 private:
-	bool is_allocated_ = false;
+	unsigned int usage_count_;
 };
 
 class m_slab
@@ -47,8 +43,7 @@ private:
 	std::vector<m_object> objects_;
 	void* base_addr_;
 	size_t num_in_use_;
-	std::vector<size_t> bufctl_;
-	size_t free_object_index_;
+	std::list<size_t> free_objects_index_;
 };
 
 class m_cache
