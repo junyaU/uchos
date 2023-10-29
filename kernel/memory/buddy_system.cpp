@@ -142,12 +142,14 @@ void buddy_system::register_memory(int num_consecutive_pages, page* start_page)
 void buddy_system::print_free_lists() const
 {
 	for (int i = 0; i <= MAX_ORDER; i++) {
-		klogger->printf("order: %d  size: %d\n", i, free_lists_[i].size());
+		klogger->printf("%d ", free_lists_[i].size());
 	}
 }
 
 void initialize_memory_manager()
 {
+	klogger->info("initializing memory manager...");
+
 	memory_manager = new buddy_system();
 
 	size_t concecutive_start_index = 0;
@@ -175,4 +177,6 @@ void initialize_memory_manager()
 		memory_manager->register_memory(num_consecutive_pages,
 										&pages[concecutive_start_index]);
 	}
+
+	klogger->info("Memory manager initialized successfully.");
 }

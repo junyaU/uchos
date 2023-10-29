@@ -1,13 +1,10 @@
 #include "system_event_queue.hpp"
 #include "graphics/kernel_logger.hpp"
-#include "graphics/screen.hpp"
 #include "system_event.hpp"
-#include "timers/timer.hpp"
-#include <stdio.h>
 
-bool SystemEventQueue::Queue(SystemEvent event)
+bool kernel_event_queue::queue(SystemEvent event)
 {
-	if (events_.size() >= kQueueSize) {
+	if (events_.size() >= QUEUE_SIZE) {
 		return false;
 	}
 
@@ -15,7 +12,7 @@ bool SystemEventQueue::Queue(SystemEvent event)
 	return true;
 }
 
-SystemEvent SystemEventQueue::Dequeue()
+SystemEvent kernel_event_queue::dequeue()
 {
 	if (events_.empty()) {
 		return SystemEvent{ SystemEvent::kEmpty, { { 0 } } };
@@ -26,30 +23,26 @@ SystemEvent SystemEventQueue::Dequeue()
 	return event;
 }
 
-SystemEventQueue* system_event_queue;
+kernel_event_queue* kevent_queue;
 
-void HandleSystemEvents()
+void handle_system_events()
 {
-	system_event_queue = new SystemEventQueue;
+	kevent_queue = new kernel_event_queue();
 
 	while (true) {
 		__asm__("cli");
-		if (system_event_queue->Empty()) {
+		if (kevent_queue->empty()) {
 			__asm__("sti\n\thlt");
 			continue;
 		}
 
-		auto event = system_event_queue->Dequeue();
+		auto event = kevent_queue->dequeue();
 		switch (event.type_) {
 			case SystemEvent::kTimerTimeout:
 				klogger->print("Timer timeout\n");
 				break;
 
 			case SystemEvent::kDrawScreenTimer:
-				char timer_value[14];
-				sprintf(timer_value, "%lu",
-						event.args_.draw_screen_timer.value / TIMER_FREQUENCY);
-				DrawTimer(timer_value);
 				break;
 
 			default:

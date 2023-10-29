@@ -1,36 +1,39 @@
 #include "paging.hpp"
+#include "../graphics/kernel_logger.hpp"
 #include "page_operations.h"
 #include <array>
 
 namespace
 {
-const uint64_t kPageSize4KiB = 4096;
-const uint64_t kPageSize2MiB = 512 * kPageSize4KiB;
-const uint64_t kPageSize1GiB = 512 * kPageSize2MiB;
+const uint64_t PAGE_4KIB = 4096;
+const uint64_t PAGE_2MIB = 512 * PAGE_4KIB;
+const uint64_t PAGE_1GIB = 512 * PAGE_2MIB;
 
-const size_t kPageDirectoryCount = 64;
+const size_t PAGE_DIRECTORY_COUNT = 64;
 
-alignas(kPageSize4KiB) std::array<uint64_t, 512> pml4_table;
-alignas(kPageSize4KiB) std::array<uint64_t, 512> pdp_table;
-alignas(kPageSize4KiB)
-		std::array<std::array<uint64_t, 512>, kPageDirectoryCount> page_directory;
+alignas(PAGE_4KIB) std::array<uint64_t, 512> pml4_table;
+alignas(PAGE_4KIB) std::array<uint64_t, 512> pdp_table;
+alignas(PAGE_4KIB)
+		std::array<std::array<uint64_t, 512>, PAGE_DIRECTORY_COUNT> page_directory;
 } // namespace
 
-void SetupIdentityMapping()
+void setup_identity_mapping()
 {
 	pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table) | 0x003;
-	for (int i_pdpt = 0; i_pdpt < kPageDirectoryCount; i_pdpt++) {
+	for (int i_pdpt = 0; i_pdpt < PAGE_DIRECTORY_COUNT; i_pdpt++) {
 		pdp_table[i_pdpt] =
 				reinterpret_cast<uint64_t>(&page_directory[i_pdpt]) | 0x003;
 		for (int i_pd = 0; i_pd < 512; i_pd++) {
 			page_directory[i_pdpt][i_pd] =
-					i_pdpt * kPageSize1GiB + i_pd * kPageSize2MiB | 0x083;
+					i_pdpt * PAGE_1GIB + i_pd * PAGE_2MIB | 0x083;
 		}
 	}
 }
 
-void InitializePaging()
+void initialize_paging()
 {
-	SetupIdentityMapping();
-	SetCR3(reinterpret_cast<uint64_t>(&pml4_table));
+	klogger->info("Initializing paging...");
+	setup_identity_mapping();
+	set_cr3(reinterpret_cast<uint64_t>(&pml4_table));
+	klogger->info("Paging initialized successfully.");
 }

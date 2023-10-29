@@ -41,6 +41,8 @@ const fixed_acpi_description_table* fadt;
 
 void initialize(const root_system_description_pointer& rsdp)
 {
+	klogger->info("Initializing ACPI...");
+
 	if (!rsdp.is_valid()) {
 		klogger->print("acpi is invalid\n");
 		return;
@@ -61,6 +63,10 @@ void initialize(const root_system_description_pointer& rsdp)
 		klogger->print("FADT is not found\n");
 		return;
 	}
+
+	klogger->print("PM timer is available\n");
+
+	klogger->info("ACPI initialized successfully.");
 }
 
 const int PM_TIMER_FREQUENCY = 3579545;

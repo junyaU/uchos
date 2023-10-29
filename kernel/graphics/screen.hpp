@@ -6,37 +6,30 @@ struct FrameBufferConf;
 #include "color.hpp"
 #include <cstdint>
 
-class Screen
+class screen
 {
 public:
-	Screen(const FrameBufferConf& frame_buffer_conf,
-		   Color bg_color,
-		   Color taskbar_color);
-	int Width() const { return horizontal_resolution_; }
-	int Height() const { return vertical_resolution_; }
-	Point2D Size() const { return { Width(), Height() }; }
+	screen(const FrameBufferConf& frame_buffer_conf, Color bg_color);
 
-	Color BgColor() const { return bg_color_; }
-	Color TaskbarColor() const { return taskbar_color_; }
+	int width() const { return horizontal_resolution_; }
+	int height() const { return vertical_resolution_; }
+	Point2D size() const { return { width(), height() }; }
 
-	void PutPixel(Point2D point, const uint32_t color_code);
-	void FillRectangle(Point2D position, Point2D size, const uint32_t color_code);
-	void DrawString(Point2D position, const char* s, const uint32_t color_code);
-	void DrawString(Point2D position, char s, const uint32_t color_code);
+	Color bg_color() const { return bg_color_; }
+
+	void put_pixel(Point2D point, uint32_t color_code);
+	void fill_rectangle(Point2D position, Point2D size, uint32_t color_code);
+	void draw_string(Point2D position, const char* s, uint32_t color_code);
+	void draw_string(Point2D position, char s, uint32_t color_code);
 
 private:
 	uint64_t pixels_per_scan_line_;
 	uint64_t horizontal_resolution_;
 	uint64_t vertical_resolution_;
 	Color bg_color_;
-	Color taskbar_color_;
 	uint32_t* frame_buffer_;
 };
 
-extern Screen* screen;
+extern screen* kscreen;
 
-void InitializeScreen(const FrameBufferConf& frame_buffer_conf,
-					  Color bg_color,
-					  Color taskbar_color);
-
-void DrawTimer(const char* s);
+void initialize_screen(const FrameBufferConf& frame_buffer_conf, Color bg_color);

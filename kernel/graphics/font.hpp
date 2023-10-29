@@ -4,13 +4,13 @@
 
 #include "../point2d.hpp"
 
-class BitmapFont
+class bitmap_font
 {
 public:
-	BitmapFont(int width, int height);
-	const uint8_t* GetFont(char c);
-	int Width() const { return width_; }
-	int Height() const { return height_; }
+	bitmap_font(int width, int height);
+	const uint8_t* get_font(char c);
+	int width() const { return width_; }
+	int height() const { return height_; }
 
 private:
 	const uint8_t* font_data_;
@@ -18,6 +18,6 @@ private:
 	int height_;
 };
 
-extern BitmapFont* bitmap_font;
+extern bitmap_font* kfont;
 
-void InitializeFont();
+void initialize_font();

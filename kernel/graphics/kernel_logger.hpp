@@ -1,12 +1,15 @@
 #pragma once
 
 #include "color.hpp"
+#include "font.hpp"
 #include <stdio.h>
 
 class kernel_logger
 {
 public:
-	static const int COLUMN_CHARS = 25, ROW_CHARS = 80;
+	static const int COLUMN_CHARS = 30, ROW_CHARS = 98, LINE_SPACING = 3,
+					 START_X = 7, START_Y = 7;
+
 	kernel_logger(Color font_color);
 
 	void print(const char* s);
@@ -19,9 +22,17 @@ public:
 		print(s);
 	}
 
+	void info(const char* s);
+
 	void clear();
 
 private:
+	static int adjusted_x(int x) { return x * kfont->width() + START_X; }
+	static int adjusted_y(int y)
+	{
+		return y * kfont->height() + START_Y + (y * LINE_SPACING);
+	}
+
 	void next_line();
 	void scroll_lines();
 

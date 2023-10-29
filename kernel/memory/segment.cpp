@@ -1,13 +1,16 @@
 #include "segment.hpp"
+#include "../graphics/kernel_logger.hpp"
 #include "segments_operations.h"
 #include <array>
 
 namespace
 {
-std::array<SegmentDescriptor, 3> gdt;
+std::array<segment_descriptor, 3> gdt;
 } // namespace
 
-void SetCodeSegment(SegmentDescriptor& desc, DescriptorType type, unsigned int dpl)
+void set_code_segment(segment_descriptor& desc,
+					  descriptor_type type,
+					  unsigned int dpl)
 {
 	desc.data = 0;
 	desc.bits.type = type;
@@ -20,27 +23,31 @@ void SetCodeSegment(SegmentDescriptor& desc, DescriptorType type, unsigned int d
 	desc.bits.granularity = 1;
 }
 
-void SetDataSegment(SegmentDescriptor& desc, DescriptorType type, unsigned int dpl)
+void set_data_segment(segment_descriptor& desc,
+					  descriptor_type type,
+					  unsigned int dpl)
 {
-	SetCodeSegment(desc, type, dpl);
+	set_code_segment(desc, type, dpl);
 	desc.bits.long_mode = 0;
 	desc.bits.default_operation_size = 1;
 }
 
-void SetupSegments()
+void setup_segments()
 {
 	gdt[0].data = 0;
-	SetCodeSegment(gdt[1], DescriptorType::kExecuteRead, 0);
-	SetDataSegment(gdt[2], DescriptorType::kReadWrite, 0);
+	set_code_segment(gdt[1], descriptor_type::kExecuteRead, 0);
+	set_data_segment(gdt[2], descriptor_type::kReadWrite, 0);
 
-	LoadGDT(sizeof(gdt) - 1, reinterpret_cast<uint64_t>(&gdt));
+	load_gdt(sizeof(gdt) - 1, reinterpret_cast<uint64_t>(&gdt));
 }
 
-void InitializeSegmentation()
+void initialize_segmentation()
 {
-	SetupSegments();
+	klogger->info("Initializing segmentation...");
+	setup_segments();
 
-	LoadDataSegment(kKernelDS);
-	LoadCodeSegment(kKernelCS);
-	LoadStackSegment(kKernelSS);
+	load_data_segment(KERNEL_DS);
+	load_code_segment(KERNEL_CS);
+	load_stack_segment(KERNEL_SS);
+	klogger->info("Segmentation initialized successfully.");
 }

@@ -1,12 +1,12 @@
 bits 64
 section .text
 
-global SetCR3 ; rdi = addr 
-SetCR3:
+global set_cr3 ; rdi = addr
+set_cr3:
     mov cr3, rdi
     ret
 
-global GetCR3
-GetCR3:
+global get_cr3
+get_cr3:
     mov rax, cr3
     ret

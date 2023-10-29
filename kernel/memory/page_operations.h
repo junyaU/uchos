@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 extern "C" {
-void SetCR3(uint64_t addr);
+void set_cr3(uint64_t addr);
 
-uint64_t GetCR3();
+uint64_t get_cr3();
 }
