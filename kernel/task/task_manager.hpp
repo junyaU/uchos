@@ -2,29 +2,30 @@
 
 class Task;
 
+#include "../memory/slab.hpp"
 #include <cstdint>
 #include <deque>
 #include <memory>
 
-class TaskManager
+class task_manager
 {
 public:
-	TaskManager();
+	task_manager();
 
-	int AddTask(uint64_t task_addr, int priority, bool is_running = false);
+	int add_task(uint64_t task_addr, int priority, bool is_running = false);
 
-	void Wakeup(int task_id);
-	void Sleep(int task_id);
+	void wakeup(int task_id);
+	void sleep(int task_id);
 
-	void SwitchTask(bool current_sleep = false);
+	void switch_task(bool current_sleep = false);
 
-	int NextQuantum();
+	int next_quantum();
 
 private:
 	int last_task_id_;
-	std::deque<std::unique_ptr<Task>> tasks_;
+	std::deque<std::unique_ptr<Task, kfree_deleter>> tasks_;
 };
 
-extern TaskManager* task_manager;
+extern task_manager* ktask_manager;
 
-void InitializeTaskManager();
+void initialize_task_manager();

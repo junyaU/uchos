@@ -84,4 +84,8 @@ void* kmalloc(size_t size);
 
 void kfree(void* addr);
 
+struct kfree_deleter {
+	void operator()(void* p) { kfree(p); }
+};
+
 void initialize_slab_allocator();

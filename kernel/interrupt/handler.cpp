@@ -17,6 +17,6 @@ __attribute__((interrupt)) void TimerInterrupt(InterruptFrame* frame)
 	NotifyEndOfInterrupt();
 
 	if (need_switch_task) {
-		task_manager->SwitchTask();
+		ktask_manager->switch_task();
 	}
 }

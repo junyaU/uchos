@@ -7,6 +7,10 @@
 
 m_cache* get_cache_in_chain(char* name)
 {
+	if (cache_chain.empty()) {
+		return nullptr;
+	}
+
 	for (auto& cache : cache_chain) {
 		if (strcmp(cache->name(), name) == 0) {
 			return cache.get();
@@ -183,7 +187,4 @@ void kfree(void* addr)
 };
 
 std::list<std::unique_ptr<m_cache>> cache_chain;
-void initialize_slab_allocator()
-{
-	cache_chain = std::list<std::unique_ptr<m_cache>>();
-}
+void initialize_slab_allocator() { cache_chain.clear(); }
