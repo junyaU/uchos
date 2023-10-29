@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-enum DescriptorType {
+enum descriptor_type {
 	kUpper8Bytes = 0,
 	kLDT = 2,
 	kTSSAvailable = 9,
@@ -12,14 +12,14 @@ enum DescriptorType {
 	kExecuteRead = 10,
 };
 
-union SegmentDescriptor {
+union segment_descriptor {
 	uint64_t data;
 
 	struct {
 		uint64_t limit_low : 16;
 		uint64_t base_low : 16;
 		uint64_t base_middle : 8;
-		DescriptorType type : 4;
+		descriptor_type type : 4;
 		uint64_t system_segment : 1;
 		uint64_t descriptor_privilege_level : 2;
 		uint64_t present : 1;
@@ -32,12 +32,16 @@ union SegmentDescriptor {
 	} bits __attribute__((packed));
 } __attribute__((packed));
 
-void SetDataSegment(SegmentDescriptor& desc, DescriptorType type, unsigned int dpl);
-void SetCodeSegment(SegmentDescriptor& desc, DescriptorType type, unsigned int dpl);
+void set_data_segment(segment_descriptor& desc,
+					  descriptor_type type,
+					  unsigned int dpl);
+void set_code_segment(segment_descriptor& desc,
+					  descriptor_type type,
+					  unsigned int dpl);
 
-const uint16_t kKernelCS = 1 << 3;
-const uint16_t kKernelSS = 2 << 3;
-const uint16_t kKernelDS = 0;
+const uint16_t KERNEL_CS = 1 << 3;
+const uint16_t KERNEL_SS = 2 << 3;
+const uint16_t KERNEL_DS = 0;
 
-void SetupSegments();
-void InitializeSegmentation();
+void setup_segments();
+void initialize_segmentation();

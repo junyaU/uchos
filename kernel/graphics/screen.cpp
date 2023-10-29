@@ -73,15 +73,3 @@ void initialize_screen(const FrameBufferConf& frame_buffer_conf, Color bg_color)
 	kscreen->fill_rectangle(Point2D{ 0, 0 }, kscreen->size(),
 							kscreen->bg_color().GetCode());
 }
-
-void draw_timer(const char* s)
-{
-	const Point2D draw_area = { 0, static_cast<int>(kscreen->height() -
-													kscreen->height() * 0.08) };
-
-	kscreen->fill_rectangle(draw_area,
-							{ bitmap_font->Width() * 8, bitmap_font->Height() },
-							kscreen->bg_color().GetCode());
-
-	kscreen->draw_string(draw_area, s, 0xffffff);
-}

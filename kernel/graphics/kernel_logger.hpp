@@ -7,7 +7,7 @@
 class kernel_logger
 {
 public:
-	static const int COLUMN_CHARS = 25, ROW_CHARS = 80, LINE_SPACING = 3,
+	static const int COLUMN_CHARS = 30, ROW_CHARS = 98, LINE_SPACING = 3,
 					 START_X = 7, START_Y = 7;
 
 	kernel_logger(Color font_color);

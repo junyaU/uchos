@@ -33,5 +33,3 @@ private:
 extern screen* kscreen;
 
 void initialize_screen(const FrameBufferConf& frame_buffer_conf, Color bg_color);
-
-void draw_timer(const char* s);

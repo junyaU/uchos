@@ -2,8 +2,6 @@
 #include "../memory/segment.hpp"
 #include "handler.hpp"
 #include "vector.hpp"
-#include <array>
-#include <stddef.h>
 
 std::array<IDTEntry, 256> idt;
 
@@ -39,7 +37,7 @@ void InitializeInterrupt()
 {
 	auto set_idt_entry = [](int irq, auto handler) {
 		SetIDTEntry(idt[irq], reinterpret_cast<uint64_t>(handler),
-					TypeAttr{ GateType::kInterruptGate, 0, 1 }, kKernelCS);
+					TypeAttr{ GateType::kInterruptGate, 0, 1 }, KERNEL_CS);
 	};
 
 	set_idt_entry(InterruptVector::kLocalApicTimer, TimerInterrupt);

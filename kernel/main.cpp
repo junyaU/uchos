@@ -30,7 +30,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_kernel_logger();
 
-	InitializeSegmentation();
+	initialize_segmentation();
 
 	InitializePaging();
 
@@ -54,7 +54,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_timer();
 
-	klogger->print("Hello, uch OS!\n");
+	klogger->printf("Hello, uchos! %d\n", 1);
 
 	initialize_task_manager();
 

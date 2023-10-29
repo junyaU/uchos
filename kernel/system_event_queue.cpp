@@ -1,9 +1,6 @@
 #include "system_event_queue.hpp"
 #include "graphics/kernel_logger.hpp"
-#include "graphics/screen.hpp"
 #include "system_event.hpp"
-#include "timers/timer.hpp"
-#include <stdio.h>
 
 bool SystemEventQueue::Queue(SystemEvent event)
 {
@@ -46,10 +43,6 @@ void HandleSystemEvents()
 				break;
 
 			case SystemEvent::kDrawScreenTimer:
-				char timer_value[14];
-				sprintf(timer_value, "%lu",
-						event.args_.draw_screen_timer.value / TIMER_FREQUENCY);
-				draw_timer(timer_value);
 				break;
 
 			default:

@@ -17,6 +17,6 @@ Task::Task(int id, uint64_t task_addr, bool is_runnning, int priority)
 	context_.cr3 = GetCR3();
 	context_.rflags = 0x202;
 	context_.rip = task_addr;
-	context_.cs = kKernelCS;
-	context_.ss = kKernelSS;
+	context_.cs = KERNEL_CS;
+	context_.ss = KERNEL_SS;
 }

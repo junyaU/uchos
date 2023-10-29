@@ -1,8 +1,8 @@
 bits 64
 section .text
 
-global LoadCodeSegment ; rdi = cs
-LoadCodeSegment:
+global load_code_segment ; rdi = cs
+load_code_segment:
     push rbp
     mov rbp, rsp
     mov rax, .epilogue
@@ -14,8 +14,8 @@ LoadCodeSegment:
     pop rbp
     ret
 
-global LoadStackSegment ; rdi = ss
-LoadStackSegment:
+global load_stack_segment ; rdi = ss
+load_stack_segment:
     push rbp
     mov rbp, rsp
     mov ss, rdi
@@ -23,8 +23,8 @@ LoadStackSegment:
     pop rbp
     ret
 
-global LoadDataSegment ; rdi = ds
-LoadDataSegment:
+global load_data_segment ; rdi = ds
+load_data_segment:
     push rbp
     mov rbp, rsp
     mov ds, rdi
@@ -35,8 +35,8 @@ LoadDataSegment:
     pop rbp
     ret
 
-global LoadGDT ; di = size, rsi = offset
-LoadGDT:
+global load_gdt ; di = size, rsi = offset
+load_gdt:
     push rbp
     mov rbp, rsp
     sub rsp, 0x10
