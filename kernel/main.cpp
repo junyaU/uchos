@@ -24,7 +24,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 					 const MemoryMap& memory_map,
 					 const acpi::root_system_description_pointer& rsdp)
 {
-	InitializeScreen(frame_buffer_conf, { 0, 120, 215 }, { 0, 80, 155 });
+	initialize_screen(frame_buffer_conf, { 0, 0, 0 });
 
 	InitializeFont();
 

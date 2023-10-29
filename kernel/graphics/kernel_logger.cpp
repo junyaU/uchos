@@ -1,5 +1,4 @@
 #include "kernel_logger.hpp"
-#include "../point2d.hpp"
 #include "color.hpp"
 #include "font.hpp"
 #include "screen.hpp"
@@ -21,9 +20,8 @@ void kernel_logger::print(const char* s)
 		}
 
 		buffer_[cursor_y_][cursor_x_] = *s;
-		screen->DrawString(Point2D{ cursor_x_ * bitmap_font->Width(),
-									cursor_y_ * bitmap_font->Height() },
-						   *s, font_color_.GetCode());
+		kscreen->draw_string(Point2D{ adjusted_x(cursor_x_), adjusted_y(cursor_y_) },
+							 *s, font_color_.GetCode());
 
 		if (cursor_x_ == ROW_CHARS - 1) {
 			next_line();
@@ -44,11 +42,13 @@ void kernel_logger::clear()
 	cursor_x_ = 0;
 	cursor_y_ = 0;
 
-	screen->FillRectangle(
+	kscreen->fill_rectangle(
 			Point2D{ 0, 0 },
-			Point2D{ kernel_logger::ROW_CHARS * bitmap_font->Width(),
-					 kernel_logger::COLUMN_CHARS * bitmap_font->Height() },
-			screen->BgColor().GetCode());
+			Point2D{ kernel_logger::ROW_CHARS * bitmap_font->Width() + START_X,
+					 kernel_logger::COLUMN_CHARS * bitmap_font->Height() +
+							 (kernel_logger::COLUMN_CHARS * LINE_SPACING) +
+							 START_Y },
+			kscreen->bg_color().GetCode());
 }
 
 void kernel_logger::next_line()
@@ -63,11 +63,10 @@ void kernel_logger::next_line()
 
 void kernel_logger::scroll_lines()
 {
-	screen->FillRectangle(
+	kscreen->fill_rectangle(
 			Point2D{ 0, 0 },
-			Point2D{ kernel_logger::ROW_CHARS * bitmap_font->Width(),
-					 kernel_logger::COLUMN_CHARS * bitmap_font->Height() },
-			screen->BgColor().GetCode());
+			Point2D{ adjusted_x(ROW_CHARS), adjusted_y(COLUMN_CHARS) },
+			kscreen->bg_color().GetCode());
 
 	memcpy(buffer_[0], buffer_[1], sizeof(buffer_) - sizeof(buffer_[0]));
 
@@ -77,9 +76,8 @@ void kernel_logger::scroll_lines()
 
 	for (int y = 0; y < kernel_logger::COLUMN_CHARS - 1; y++) {
 		for (int x = 0; x < kernel_logger::ROW_CHARS; x++) {
-			screen->DrawString(
-					Point2D{ x * bitmap_font->Width(), y * bitmap_font->Height() },
-					buffer_[y][x], font_color_.GetCode());
+			kscreen->draw_string(Point2D{ adjusted_x(x), adjusted_y(y) },
+								 buffer_[y][x], font_color_.GetCode());
 		}
 	}
 

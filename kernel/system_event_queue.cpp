@@ -49,7 +49,7 @@ void HandleSystemEvents()
 				char timer_value[14];
 				sprintf(timer_value, "%lu",
 						event.args_.draw_screen_timer.value / TIMER_FREQUENCY);
-				DrawTimer(timer_value);
+				draw_timer(timer_value);
 				break;
 
 			default:
