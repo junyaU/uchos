@@ -28,33 +28,33 @@ set(CMAKE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} -f elf64")
 
 # Specify the include directories for the compiler.
 include_directories(
-    ${CMAKE_SOURCE_DIR}
-    ${BASEDIR}/include/c++/v1
-    ${BASEDIR}/include
-    ${BASEDIR}/include/freetype2
-    ${EDK2DIR}/MdePkg/Include
-    ${EDK2DIR}/MdePkg/Include/X64
+        ${CMAKE_SOURCE_DIR}
+        ${BASEDIR}/include/c++/v1
+        ${BASEDIR}/include
+        ${BASEDIR}/include/freetype2
+        ${EDK2DIR}/MdePkg/Include
+        ${EDK2DIR}/MdePkg/Include/X64
 )
 
 # Add compile options for both C and C++.
 add_compile_options(
-    -O2
-    -Wall
-    -g
-    --target=x86_64-elf
-    -ffreestanding
-    -mno-red-zone
-    -nostdlibinc
-    -D__ELF__
-    -D_LDBL_EQ_DBL
-    -D_GNU_SOURCE
-    -D_POSIX_TIMERS
+        -O2
+        -Wall
+        -g
+        --target=x86_64-elf
+        -ffreestanding
+        -mno-red-zone
+        -nostdlibinc
+        -D__ELF__
+        -D_LDBL_EQ_DBL
+        -D_GNU_SOURCE
+        -D_POSIX_TIMERS
 )
 
 # Add specific compile options for C++.
 add_compile_options(
-    $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
-    $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
 )
 
 # Specify the linker to be used and its options.
@@ -67,13 +67,13 @@ link_directories(${BASEDIR}/lib)
 
 # Define the source files for the main target.
 set(SOURCE_FILES
-    main.cpp
-    newlib_support.c
-    libcxx_support.cpp
-    asm_utils.asm
-    system_event_queue.cpp
-    bit_utils.cpp
-)
+        main.cpp
+        newlib_support.c
+        libcxx_support.cpp
+        asm_utils.asm
+        system_event_queue.cpp
+        bit_utils.cpp
+        )
 
 # Add subdirectories that contain their own CMakeLists.txt files.
 add_subdirectory(memory)

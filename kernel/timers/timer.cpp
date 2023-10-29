@@ -1,5 +1,6 @@
 #include "timer.hpp"
 #include "../graphics/kernel_logger.hpp"
+#include "../memory/slab.hpp"
 #include "../system_event_queue.hpp"
 #include "../task/task_manager.hpp"
 
@@ -83,7 +84,7 @@ bool kernel_timer::increment_tick()
 			need_switch_task = true;
 
 			event.args_.timer.timeout =
-					calculate_timeout_ticks(task_manager->NextQuantum());
+					calculate_timeout_ticks(ktask_manager->next_quantum());
 
 			__asm__("cli");
 			events_.push(event);
@@ -118,5 +119,8 @@ bool kernel_timer::increment_tick()
 }
 
 kernel_timer* ktimer;
-
-void initialize_timer() { ktimer = new kernel_timer; }
+void initialize_timer()
+{
+	void* addr = kmalloc(sizeof(kernel_timer));
+	ktimer = new (addr) kernel_timer;
+}

@@ -4,15 +4,16 @@
 #include "context_switch.h"
 #include "task.hpp"
 
-TaskManager::TaskManager() : last_task_id_{ 0 }
+task_manager::task_manager() : last_task_id_{ 0 }
 {
 	tasks_.emplace_back(new Task(last_task_id_, 0, true, 2));
 	++last_task_id_;
 }
 
-int TaskManager::AddTask(uint64_t task_addr, int priority, bool is_running)
+int task_manager::add_task(uint64_t task_addr, int priority, bool is_running)
 {
-	Task* task = new Task(last_task_id_, task_addr, is_running, priority);
+	void* addr = kmalloc(sizeof(Task));
+	Task* task = new (addr) Task(last_task_id_, task_addr, is_running, priority);
 
 	tasks_.emplace_back(task);
 
@@ -21,7 +22,7 @@ int TaskManager::AddTask(uint64_t task_addr, int priority, bool is_running)
 	return task->ID();
 }
 
-void TaskManager::SwitchTask(bool current_sleep)
+void task_manager::switch_task(bool current_sleep)
 {
 	if (tasks_.size() <= 1) {
 		return;
@@ -41,11 +42,11 @@ void TaskManager::SwitchTask(bool current_sleep)
 	ExecuteContextSwitch(&next_task.TaskContext(), &current_task.TaskContext());
 }
 
-void TaskManager::Sleep(int task_id)
+void task_manager::sleep(int task_id)
 {
 	auto task = *tasks_.front();
 	if (task.ID() == task_id) {
-		SwitchTask(true);
+		switch_task(true);
 		return;
 	}
 
@@ -59,7 +60,7 @@ void TaskManager::Sleep(int task_id)
 	(*it)->Sleep();
 }
 
-void TaskManager::Wakeup(int task_id)
+void task_manager::wakeup(int task_id)
 {
 	if (last_task_id_ < task_id) {
 		klogger->printf("TaskManager::Wakeup: invalid task ID: %d\n", task_id);
@@ -82,7 +83,7 @@ void TaskManager::Wakeup(int task_id)
 	(*it)->Wakeup();
 }
 
-int TaskManager::NextQuantum()
+int task_manager::next_quantum()
 {
 	int priority = 0;
 	auto it = std::find_if(tasks_.begin() + 1, tasks_.end(),
@@ -106,11 +107,11 @@ int TaskManager::NextQuantum()
 	}
 }
 
-TaskManager* task_manager;
+task_manager* ktask_manager;
 
-void InitializeTaskManager()
+void initialize_task_manager()
 {
-	task_manager = new TaskManager();
+	ktask_manager = new task_manager();
 
 	ktimer->add_switch_task_event(SWITCH_TEXT_MILLISEC);
 }

@@ -18,7 +18,7 @@ class kernel_timer
 {
 public:
 	kernel_timer() : tick_{ 0 }, last_id_{ 1 } {}
-
+	
 	uint64_t current_tick() const { return tick_; }
 
 	float tick_to_time(uint64_t tick) const
