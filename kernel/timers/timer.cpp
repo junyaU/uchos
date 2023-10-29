@@ -121,10 +121,10 @@ bool kernel_timer::increment_tick()
 kernel_timer* ktimer;
 void initialize_timer()
 {
-	klogger->info("initializing logical timer...");
+	klogger->info("Initializing logical timer...");
 
 	void* addr = kmalloc(sizeof(kernel_timer));
 	ktimer = new (addr) kernel_timer;
 
-	klogger->info("logical timer initialized successfully.");
+	klogger->info("Logical timer initialized successfully.");
 }
