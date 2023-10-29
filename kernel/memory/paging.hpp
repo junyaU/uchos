@@ -1,3 +1,3 @@
 #pragma once
 
-void InitializePaging();
+void initialize_paging();

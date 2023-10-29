@@ -100,7 +100,7 @@ bool kernel_timer::increment_tick()
 			continue;
 		}
 
-		if (!system_event_queue->Queue(event)) {
+		if (!kevent_queue->queue(event)) {
 			klogger->printf("failed to queue timer event: %lu\n",
 							event.args_.timer.id);
 		}
@@ -121,6 +121,10 @@ bool kernel_timer::increment_tick()
 kernel_timer* ktimer;
 void initialize_timer()
 {
+	klogger->info("initializing logical timer...");
+
 	void* addr = kmalloc(sizeof(kernel_timer));
 	ktimer = new (addr) kernel_timer;
+
+	klogger->info("logical timer initialized successfully.");
 }

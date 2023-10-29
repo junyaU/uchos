@@ -35,16 +35,14 @@ void screen::draw_string(Point2D position, const char* s, uint32_t color_code)
 {
 	int font_position = 0;
 	while (*s != '\0') {
-		const uint8_t* font = bitmap_font->GetFont(*s);
+		const uint8_t* font = kfont->get_font(*s);
 		if (font != nullptr) {
-			for (int dy = 0; dy < bitmap_font->Height(); dy++) {
-				for (int dx = 0; dx < bitmap_font->Width(); dx++) {
+			for (int dy = 0; dy < kfont->height(); dy++) {
+				for (int dx = 0; dx < kfont->width(); dx++) {
 					if ((font[dy] << dx & 0x80) != 0) {
 						put_pixel(
 								position +
-										Point2D{ font_position * bitmap_font
-																		 ->Width() +
-														 dx,
+										Point2D{ font_position * kfont->width() + dx,
 												 dy },
 								color_code);
 					}

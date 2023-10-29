@@ -22,13 +22,15 @@ public:
 		print(s);
 	}
 
+	void info(const char* s);
+
 	void clear();
 
 private:
-	static int adjusted_x(int x) { return x * bitmap_font->Width() + START_X; }
+	static int adjusted_x(int x) { return x * kfont->width() + START_X; }
 	static int adjusted_y(int y)
 	{
-		return y * bitmap_font->Height() + START_Y + (y * LINE_SPACING);
+		return y * kfont->height() + START_Y + (y * LINE_SPACING);
 	}
 
 	void next_line();

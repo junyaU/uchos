@@ -33,6 +33,13 @@ void kernel_logger::print(const char* s)
 	}
 }
 
+void kernel_logger::info(const char* s)
+{
+	print("[INFO] ");
+	print(s);
+	print("\n");
+}
+
 void kernel_logger::clear()
 {
 	for (int y = 0; y < kernel_logger::COLUMN_CHARS; y++) {
@@ -44,8 +51,8 @@ void kernel_logger::clear()
 
 	kscreen->fill_rectangle(
 			Point2D{ 0, 0 },
-			Point2D{ kernel_logger::ROW_CHARS * bitmap_font->Width() + START_X,
-					 kernel_logger::COLUMN_CHARS * bitmap_font->Height() +
+			Point2D{ kernel_logger::ROW_CHARS * kfont->width() + START_X,
+					 kernel_logger::COLUMN_CHARS * kfont->height() +
 							 (kernel_logger::COLUMN_CHARS * LINE_SPACING) +
 							 START_Y },
 			kscreen->bg_color().GetCode());

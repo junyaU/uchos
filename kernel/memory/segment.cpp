@@ -1,4 +1,5 @@
 #include "segment.hpp"
+#include "../graphics/kernel_logger.hpp"
 #include "segments_operations.h"
 #include <array>
 
@@ -42,9 +43,11 @@ void setup_segments()
 
 void initialize_segmentation()
 {
+	klogger->info("Initializing segmentation...");
 	setup_segments();
 
 	load_data_segment(KERNEL_DS);
 	load_code_segment(KERNEL_CS);
 	load_stack_segment(KERNEL_SS);
+	klogger->info("Segmentation initialized successfully.");
 }

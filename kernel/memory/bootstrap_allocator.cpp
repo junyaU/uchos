@@ -87,6 +87,7 @@ bootstrap_allocator* boot_allocator;
 
 void initialize_bootstrap_allocator(const MemoryMap& mem_map)
 {
+	klogger->info("Initializing bootstrap allocator...");
 	boot_allocator = new (bootstrap_allocator_buffer) bootstrap_allocator();
 
 	const auto mem_map_base = reinterpret_cast<uintptr_t>(mem_map.buffer);
@@ -103,6 +104,10 @@ void initialize_bootstrap_allocator(const MemoryMap& mem_map)
 		boot_allocator->mark_available(reinterpret_cast<void*>(desc->physical_start),
 									   desc->number_of_pages * PAGE_SIZE);
 	}
+
+	boot_allocator->show_available_memory();
+
+	klogger->info("Bootstrap allocator initialized successfully.");
 }
 
 extern "C" caddr_t program_break, program_break_end;
@@ -129,4 +134,6 @@ void disable_bootstrap_allocator()
 		memory_manager->free(boot_allocator, sizeof(bootstrap_allocator));
 		boot_allocator = nullptr;
 	}
+
+	klogger->info("Bootstrap allocator disabled.");
 }

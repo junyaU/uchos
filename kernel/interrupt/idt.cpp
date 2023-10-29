@@ -1,66 +1,64 @@
 #include "idt.hpp"
+#include "../graphics/kernel_logger.hpp"
 #include "../memory/segment.hpp"
 #include "handler.hpp"
 #include "vector.hpp"
 
-std::array<IDTEntry, 256> idt;
+std::array<idt_entry, 256> idt;
 
-void SetIDTEntry(IDTEntry& entry,
-				 uint64_t offset,
-				 TypeAttr type_attr,
-				 uint16_t segment_selector)
+void set_idt_entry(idt_entry& entry,
+				   uint64_t offset,
+				   type_attr attr,
+				   uint16_t segment_selector)
 {
 	entry.offset_low = offset & 0xffffU;
 	entry.offset_middle = (offset >> 16) & 0xffffU;
 	entry.offset_high = offset >> 32;
 	entry.segment_selector = segment_selector;
 	entry.ist = 0;
-	entry.type_attr = type_attr;
+	entry.attr = attr;
 }
 
-void LoadIDT(size_t size, uint64_t addr)
+void load_idt(size_t size, uint64_t addr)
 {
-	IDTR idtr;
-	idtr.limit = size - 1;
-	idtr.base = addr;
-	__asm__("lidt %0" : : "m"(idtr));
+	idtr r;
+	r.limit = size - 1;
+	r.base = addr;
+	__asm__("lidt %0" : : "m"(r));
 }
 
-uint16_t GetCS()
+void initialize_interrupt()
 {
-	uint16_t cs;
-	__asm__("mov %%cs, %0" : "=r"(cs));
-	return cs;
-}
+	klogger->info("Initializing interrupt...");
 
-void InitializeInterrupt()
-{
-	auto set_idt_entry = [](int irq, auto handler) {
-		SetIDTEntry(idt[irq], reinterpret_cast<uint64_t>(handler),
-					TypeAttr{ GateType::kInterruptGate, 0, 1 }, KERNEL_CS);
+	auto set_entry = [](int irq, auto handler) {
+		set_idt_entry(idt[irq], reinterpret_cast<uint64_t>(handler),
+					  type_attr{ gate_type::kInterruptGate, 0, 1 }, KERNEL_CS);
 	};
 
-	set_idt_entry(InterruptVector::kLocalApicTimer, TimerInterrupt);
-	set_idt_entry(0, InterruptHandlerDE);
-	set_idt_entry(1, InterruptHandlerDB);
-	set_idt_entry(3, InterruptHandlerBP);
-	set_idt_entry(4, InterruptHandlerOF);
-	set_idt_entry(5, InterruptHandlerBR);
-	set_idt_entry(6, InterruptHandlerUD);
-	set_idt_entry(7, InterruptHandlerNM);
-	set_idt_entry(8, InterruptHandlerDF);
-	set_idt_entry(10, InterruptHandlerTS);
-	set_idt_entry(11, InterruptHandlerNP);
-	set_idt_entry(12, InterruptHandlerSS);
-	set_idt_entry(13, InterruptHandlerGP);
-	set_idt_entry(14, InterruptHandlerPF);
-	set_idt_entry(16, InterruptHandlerMF);
-	set_idt_entry(17, InterruptHandlerAC);
-	set_idt_entry(18, InterruptHandlerMC);
-	set_idt_entry(19, InterruptHandlerXM);
-	set_idt_entry(20, InterruptHandlerVE);
+	set_entry(InterruptVector::kLocalApicTimer, TimerInterrupt);
+	set_entry(0, InterruptHandlerDE);
+	set_entry(1, InterruptHandlerDB);
+	set_entry(3, InterruptHandlerBP);
+	set_entry(4, InterruptHandlerOF);
+	set_entry(5, InterruptHandlerBR);
+	set_entry(6, InterruptHandlerUD);
+	set_entry(7, InterruptHandlerNM);
+	set_entry(8, InterruptHandlerDF);
+	set_entry(10, InterruptHandlerTS);
+	set_entry(11, InterruptHandlerNP);
+	set_entry(12, InterruptHandlerSS);
+	set_entry(13, InterruptHandlerGP);
+	set_entry(14, InterruptHandlerPF);
+	set_entry(16, InterruptHandlerMF);
+	set_entry(17, InterruptHandlerAC);
+	set_entry(18, InterruptHandlerMC);
+	set_entry(19, InterruptHandlerXM);
+	set_entry(20, InterruptHandlerVE);
 
-	LoadIDT(sizeof(idt), reinterpret_cast<uint64_t>(idt.data()));
+	load_idt(sizeof(idt), reinterpret_cast<uint64_t>(idt.data()));
 
 	__asm__("sti");
+
+	klogger->info("Interrupt initialized successfully.");
 }

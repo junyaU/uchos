@@ -3,19 +3,20 @@
 #include "system_event.hpp"
 #include <queue>
 
-class SystemEventQueue
+class kernel_event_queue
 {
 public:
-	SystemEventQueue(){};
-	bool Queue(SystemEvent event);
-	SystemEvent Dequeue();
-	bool Empty() const { return events_.empty(); }
+	kernel_event_queue() = default;
+
+	bool queue(SystemEvent event);
+	SystemEvent dequeue();
+	bool empty() const { return events_.empty(); }
 
 private:
-	static const int kQueueSize = 1000;
+	static const int QUEUE_SIZE = 1000;
 	std::queue<SystemEvent> events_;
 };
 
-extern SystemEventQueue* system_event_queue;
+extern kernel_event_queue* kevent_queue;
 
-void HandleSystemEvents();
+void handle_system_events();

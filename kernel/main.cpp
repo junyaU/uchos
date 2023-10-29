@@ -26,15 +26,15 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 {
 	initialize_screen(frame_buffer_conf, { 0, 0, 0 });
 
-	InitializeFont();
+	initialize_font();
 
 	initialize_kernel_logger();
 
 	initialize_segmentation();
 
-	InitializePaging();
+	initialize_paging();
 
-	InitializeInterrupt();
+	initialize_interrupt();
 
 	initialize_bootstrap_allocator(memory_map);
 
@@ -48,17 +48,17 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_slab_allocator();
 
+	print_available_memory();
+
 	acpi::initialize(rsdp);
 
-	local_apic::Initialize();
+	local_apic::initialize();
 
 	initialize_timer();
 
-	klogger->printf("Hello, uchos! %d\n", 1);
-
 	initialize_task_manager();
 
-	print_available_memory();
+	klogger->print("Hello, uchos\n");
 
-	HandleSystemEvents();
+	handle_system_events();
 }

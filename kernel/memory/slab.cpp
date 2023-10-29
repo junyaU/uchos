@@ -187,4 +187,11 @@ void kfree(void* addr)
 };
 
 std::list<std::unique_ptr<m_cache>> cache_chain;
-void initialize_slab_allocator() { cache_chain.clear(); }
+void initialize_slab_allocator()
+{
+	klogger->info("Initializing slab allocator...");
+	
+	cache_chain.clear();
+
+	klogger->info("Initializing slab allocator successfully.");
+}

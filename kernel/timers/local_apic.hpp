@@ -3,6 +3,6 @@
 namespace local_apic
 {
 
-void Initialize();
+void initialize();
 
 } // namespace local_apic

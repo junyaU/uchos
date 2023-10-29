@@ -14,7 +14,7 @@ Task::Task(int id, uint64_t task_addr, bool is_runnning, int priority)
 	const uint64_t stack_end = reinterpret_cast<uint64_t>(&stack_[stack_size]);
 
 	context_.rsp = (stack_end & ~0xfLU) - 8;
-	context_.cr3 = GetCR3();
+	context_.cr3 = get_cr3();
 	context_.rflags = 0x202;
 	context_.rip = task_addr;
 	context_.cs = KERNEL_CS;
