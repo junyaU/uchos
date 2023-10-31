@@ -13,8 +13,15 @@ KernelMain:
     jmp .fin
 
 
-global ReadFromIoPort ; uint32_t InL(uint32_t addr)
-ReadFromIoPort:
+global read_from_io_port ; uint32_t read_from_io_port(uint16_t addr)
+read_from_io_port:
     mov dx, di
     in eax, dx
+    ret
+
+global write_to_io_port ; void write_to_io_port(uint16_t addr, uint32_t value)
+write_to_io_port:
+    mov dx, di
+    mov eax, esi
+    out dx, eax
     ret

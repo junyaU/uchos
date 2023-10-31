@@ -73,7 +73,7 @@ const int PM_TIMER_FREQUENCY = 3579545;
 
 void wait_by_pm_timer(unsigned long millisec)
 {
-	const uint32_t initial_count = ReadFromIoPort(fadt->pm_tmr_blk);
+	const uint32_t initial_count = read_from_io_port(fadt->pm_tmr_blk);
 	uint32_t end_count = initial_count + (PM_TIMER_FREQUENCY * millisec) / 1000;
 
 	const bool enable32bit = ((fadt->flags >> 8) & 1) != 0;
@@ -83,17 +83,17 @@ void wait_by_pm_timer(unsigned long millisec)
 
 	const bool wrapped = end_count < initial_count;
 	if (wrapped) {
-		while (ReadFromIoPort(fadt->pm_tmr_blk) >= initial_count) {
+		while (read_from_io_port(fadt->pm_tmr_blk) >= initial_count) {
 		};
 	}
 
-	while (ReadFromIoPort(fadt->pm_tmr_blk) < end_count) {
+	while (read_from_io_port(fadt->pm_tmr_blk) < end_count) {
 	}
 }
 
 uint32_t get_pm_timer_count()
 {
-	const uint32_t count = ReadFromIoPort(fadt->pm_tmr_blk);
+	const uint32_t count = read_from_io_port(fadt->pm_tmr_blk);
 	const bool enable32bit = ((fadt->flags >> 8) & 1) != 0;
 	if (enable32bit) {
 		return count;
