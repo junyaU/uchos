@@ -19,6 +19,14 @@ void initialize()
 		}
 	}
 
+	if (xhc_dev == nullptr) {
+		klogger->error("xHCI device not found.");
+		return;
+	}
+
+	const uint64_t bar = pci::read_base_address_register(*xhc_dev, 0);
+	const uint64_t xhc_mmio_base = bar & ~static_cast<uint64_t>(0xf);
+
 	klogger->info("xHCI initialized successfully.");
 }
 } // namespace usb::xhci

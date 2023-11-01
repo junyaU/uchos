@@ -106,6 +106,27 @@ void load_devices()
 	}
 }
 
+uint64_t read_base_address_register(device& dev, unsigned int index)
+{
+	const auto base_addr_index = 0x10 + index * 4;
+	write_to_io_port(
+			CONFIG_ADDRESS_PORT,
+			calc_config_addr(dev.bus, dev.device, dev.function, base_addr_index));
+
+	const auto bar_low = read_from_io_port(CONFIG_DATA_PORT);
+
+	if ((bar_low & 4) == 0) {
+		return bar_low;
+	}
+
+	write_to_io_port(CONFIG_ADDRESS_PORT,
+					 calc_config_addr(dev.bus, dev.device, dev.function,
+									  base_addr_index + 4));
+	const auto bar_high = read_from_io_port(CONFIG_DATA_PORT);
+
+	return bar_low | (static_cast<uint64_t>(bar_high) << 32);
+}
+
 } // namespace pci
 
 void initialize_pci()

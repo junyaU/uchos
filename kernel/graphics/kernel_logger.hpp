@@ -24,6 +24,8 @@ public:
 
 	void info(const char* s);
 
+	void error(const char* s);
+
 	void clear();
 
 private:

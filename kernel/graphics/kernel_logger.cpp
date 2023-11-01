@@ -40,6 +40,13 @@ void kernel_logger::info(const char* s)
 	print("\n");
 }
 
+void kernel_logger::error(const char* s)
+{
+	print("[ERROR] ");
+	print(s);
+	print("\n");
+}
+
 void kernel_logger::clear()
 {
 	for (int y = 0; y < kernel_logger::COLUMN_CHARS; y++) {

@@ -29,6 +29,8 @@ struct device {
 	bool is_intel() const { return vendor_id == 0x8086; }
 };
 
+uint64_t read_base_address_register(device& dev, unsigned int index);
+
 inline std::array<device, 32> devices;
 inline int num_devices;
 
