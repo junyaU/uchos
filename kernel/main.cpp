@@ -5,6 +5,7 @@ struct MemoryMap;
 #include "graphics/kernel_logger.hpp"
 #include "graphics/screen.hpp"
 #include "hardware/pci.hpp"
+#include "hardware/usb/xhci/xhci.hpp"
 #include "interrupt/idt.hpp"
 #include "memory/bootstrap_allocator.hpp"
 #include "memory/buddy_system.hpp"
@@ -62,6 +63,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	klogger->print("Hello, uchos\n");
 
 	initialize_pci();
+
+	usb::xhci::initialize();
 
 	handle_system_events();
 }

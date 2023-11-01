@@ -55,12 +55,10 @@ void read_function(uint8_t bus, uint8_t dev, uint8_t func)
 	d.function = func;
 	d.header_type = header_type;
 	d.class_code = class_code;
+	d.vendor_id = read_vendor_id(bus, dev, func);
 
 	devices[dev] = d;
-
-	klogger->printf(
-			"bus: %d, device: %d, function: %d, header_type: %d, class_code: %d\n",
-			bus, dev, func, header_type, class_code.base);
+	num_devices++;
 }
 
 void read_device(uint8_t bus, uint8_t device)
@@ -92,9 +90,9 @@ void read_bus(uint8_t bus)
 
 void load_devices()
 {
-	auto header_type = pci::read_header_type(0, 0, 0);
+	auto host_bridge_header_type = read_header_type(0, 0, 0);
 
-	if (pci::is_single_function_device(header_type)) {
+	if (pci::is_single_function_device(host_bridge_header_type)) {
 		pci::read_bus(0);
 		return;
 	}
@@ -110,4 +108,14 @@ void load_devices()
 
 } // namespace pci
 
-void initialize_pci() { pci::load_devices(); }
+void initialize_pci()
+{
+	pci::load_devices();
+	for (int i = 0; i < pci::num_devices; i++) {
+		auto d = pci::devices[i];
+
+		klogger->printf(
+				"bus: %d, device: %d, function: %d, vendor_id: %d, class_code: %d\n",
+				d.bus, d.device, d.function, d.vendor_id, d.class_code.base);
+	}
+}

@@ -85,4 +85,4 @@ add_subdirectory(hardware)
 
 # Define the main target and link it with the necessary libraries.
 add_executable(UchosKernel ${SOURCE_FILES})
-target_link_libraries(UchosKernel c c++ c++abi m UchosGraphics UchosMemory UchosInterrupt UchosTimers UchosTask UchosHardware)
+target_link_libraries(UchosKernel c c++ c++abi m UchosGraphics UchosMemory UchosInterrupt UchosTimers UchosTask UchosHardware UchosXhci)
