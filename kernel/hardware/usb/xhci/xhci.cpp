@@ -24,6 +24,8 @@ void initialize()
 		return;
 	}
 
+	// TODO: MSI (Message Signaled Interrupts) support
+
 	const uint64_t bar = pci::read_base_address_register(*xhc_dev, 0);
 	const uint64_t xhc_mmio_base = bar & ~static_cast<uint64_t>(0xf);
 
