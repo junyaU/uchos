@@ -1,4 +1,17 @@
+/**
+ * @file hardware/usb/endpoint.hpp
+ *
+ * @brief USB endpoint
+ *
+ * This file provides classes and functions to handle USB endpoints, including
+ * definitions of endpoint types, endpoint identifiers, and utilities to create
+ * endpoint configurations from USB endpoint descriptors.
+ *
+ */
+
 #pragma once
+
+#include "descriptor.hpp"
 
 namespace usb
 {
@@ -35,7 +48,7 @@ private:
 	int addr_;
 };
 
-constexpr endpoint_id default_control_pipe_id = endpoint_id(0, true);
+constexpr endpoint_id DEFAULT_CONTROL_PIPE_ID = endpoint_id(0, true);
 
 struct endpoint_config {
 	endpoint_id id;
@@ -43,5 +56,7 @@ struct endpoint_config {
 	int max_packet_size;
 	int interval;
 };
+
+endpoint_config make_endpoint_config(const endpoint_descriptor& desc);
 
 } // namespace usb

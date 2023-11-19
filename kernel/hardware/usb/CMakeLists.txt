@@ -1,4 +1,6 @@
 set(USB_SOURCE_FILES
+        device.cpp
+        endpoint.cpp
         memory.cpp
         )
 
