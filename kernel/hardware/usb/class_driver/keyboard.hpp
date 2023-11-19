@@ -1,5 +1,5 @@
 /**
- * @file usb/class_driver/keyboard.hpp
+ * @file hardware/usb/class_driver/keyboard.hpp
  *
  * @brief USB keyboard class driver
  *
@@ -27,6 +27,8 @@ public:
 
 	void* operator new(size_t size);
 	void operator delete(void* ptr) noexcept;
+
+	void on_data_received() override;
 
 	using observer_type = void(uint8_t modifier, uint8_t keycode, bool pressed);
 	void subscribe(std::function<observer_type> observer);

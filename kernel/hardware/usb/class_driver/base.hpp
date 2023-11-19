@@ -1,5 +1,5 @@
 /**
- * @file usb/class_driver/base.hpp
+ * @file hardware/usb/class_driver/base.hpp
  *
  * Base class for USB class drivers.
  * This class provides the interface and common functionalities for
@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "../descriptor.hpp"
 #include "../endpoint.hpp"
 #include "../setup_stage_data.hpp"
 
@@ -37,5 +38,7 @@ public:
 private:
 	device* device_;
 };
+
+class_driver* new_class_driver(device* dev, const interface_descriptor& if_desc);
 
 } // namespace usb

@@ -3,7 +3,6 @@
 #include "../../../graphics/kernel_logger.hpp"
 #include "../device.hpp"
 
-
 namespace usb
 {
 hid_driver::hid_driver(device* dev, int interface_index, int in_packet_size)
