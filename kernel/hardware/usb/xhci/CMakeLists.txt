@@ -1,6 +1,8 @@
 set(XHCI_SOURCE_FILES
-        xhci.cpp
+        device.cpp
         ring.cpp
+        trb.cpp
+        xhci.cpp
         )
 
 add_library(UchosXhci ${XHCI_SOURCE_FILES})

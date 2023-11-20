@@ -22,7 +22,7 @@ public:
 	template<class trb_type>
 	trb* push(const trb_type& trb)
 	{
-		return push(trb.data());
+		return push(trb.data);
 	}
 
 	trb* buffer() const { return buffer_; }
