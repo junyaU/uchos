@@ -1,3 +1,16 @@
+/**
+ * @file hardware/usb/xhci/context.hpp
+ *
+ * @brief USB xHCI context
+ *
+ * This file contains structures and unions used to represent and manage
+ * contexts in USB xHCI (eXtensible Host Controller Interface). These contexts
+ * include slot, endpoint, and various control contexts that are essential
+ * for managing the state and configuration of USB devices and their
+ * respective endpoints.
+ *
+ */
+
 #pragma once
 
 #include "../endpoint.hpp"

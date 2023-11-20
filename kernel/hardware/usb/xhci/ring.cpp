@@ -44,7 +44,7 @@ void ring::copy_to_last(const std::array<uint32_t, 4>& data)
 
 trb* ring::push(const std::array<uint32_t, 4>& data)
 {
-	auto trb_ptr = &buffer_[write_index_];
+	auto* trb_ptr = &buffer_[write_index_];
 	copy_to_last(data);
 
 	++write_index_;
