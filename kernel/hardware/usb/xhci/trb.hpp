@@ -36,6 +36,44 @@ union trb {
 	} __attribute__((packed)) bits;
 };
 
+union normal_trb {
+	static const unsigned int TYPE = 1;
+
+	std::array<uint32_t, 4> data{};
+
+	struct {
+		uint64_t data_buffer_pointer;
+
+		uint32_t trb_transfer_length : 17;
+		uint32_t td_size : 5;
+		uint32_t interrupter_target : 10;
+
+		uint32_t cycle_bit : 1;
+		uint32_t evaluate_next_trb : 1;
+		uint32_t interrupt_on_short_packet : 1;
+		uint32_t no_snoop : 1;
+		uint32_t chain_bit : 1;
+		uint32_t interrupt_on_completion : 1;
+		uint32_t immediate_data : 1;
+		uint32_t : 2;
+		uint32_t block_event_interrupt : 1;
+		uint32_t trb_type : 6;
+		uint32_t : 16;
+	} __attribute__((packed)) bits;
+
+	normal_trb() {
+		bits.trb_type = TYPE;
+	}
+
+	void* pointer() const {
+		return reinterpret_cast<trb*>(bits.data_buffer_pointer);
+	}
+
+	void set_pointer(const void* p) {
+		bits.data_buffer_pointer = reinterpret_cast<uint64_t>(p);
+	}
+};
+
 union setup_stage_trb {
 	static const unsigned int TYPE = 2;
 	static const unsigned int NO_DATA_STAGE = 0;

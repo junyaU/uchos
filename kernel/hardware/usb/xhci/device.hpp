@@ -55,7 +55,7 @@ public:
 	void interrupt_in(endpoint_id ep_id, void* buf, int len) override;
 	void interrupt_out(endpoint_id ep_id, const void* buf, int len) override;
 
-	void on_transfer_event_received(transfer_event_trb* trb);
+	void on_transfer_event_received(const transfer_event_trb& trb);
 
 private:
 	alignas(64) struct device_context ctx_;
