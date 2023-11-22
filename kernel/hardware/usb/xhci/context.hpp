@@ -137,5 +137,4 @@ struct input_context {
 	}
 
 } __attribute__((packed));
-
 } // namespace usb::xhci

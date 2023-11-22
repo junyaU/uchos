@@ -152,8 +152,9 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 {
 	const auto residual_length = event_trb.bits.trb_transfer_length;
 
-	if (event_trb.bits.completion_code != 1 &&
-		event_trb.bits.completion_code != 13) {
+	bool is_success = event_trb.bits.completion_code == 1 ||
+					  event_trb.bits.completion_code == 13;
+	if (!is_success) {
 		klogger->printf("transfer failed: completion code: %d\n",
 						event_trb.bits.completion_code);
 		return;
@@ -199,7 +200,6 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 
 	return this->on_control_completed(event_trb.endpoint_id(), setup_data,
 									  data_stage_buf, transfer_length);
-
 }
 
 } // namespace usb::xhci
