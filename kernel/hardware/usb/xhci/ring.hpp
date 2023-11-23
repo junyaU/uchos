@@ -1,3 +1,13 @@
+/**
+ * @file hardware/usb/xhci/ring.hpp
+ *
+ * @brief Ring buffer for xHCI
+ *
+ * This file defines the classes related to the management of ring buffers in the
+ * xHCI context. Ring buffers are used in xHCI for managing various types of data
+ * transfer and event handling.
+ *
+ */
 #pragma once
 
 #include "registers.hpp"
@@ -37,6 +47,46 @@ private:
 	void copy_to_last(const std::array<uint32_t, 4>& data);
 
 	trb* push(const std::array<uint32_t, 4>& data);
+};
+
+union event_ring_segment_table_entry {
+	std::array<uint32_t, 4> data;
+
+	struct {
+		uint64_t ring_segment_base_address;
+
+		uint32_t ring_segment_size : 16;
+		uint32_t : 16;
+
+		uint32_t : 32;
+	} __attribute__((packed)) bits;
+};
+
+class event_ring
+{
+public:
+	void initialize(size_t buf_size, interrupter_register_set* interrupter_register);
+
+	trb* read_dequeue_pointer() const
+	{
+		return reinterpret_cast<trb*>(interrupter_register_->erdp.read().pointer());
+	}
+
+	void write_dequeue_pointer(trb* p);
+
+	trb* front() const { return read_dequeue_pointer(); }
+
+	bool has_front() const { return front()->bits.cycle_bit == cycle_bit_; }
+
+	void pop();
+
+private:
+	trb* buffer_;
+	size_t buffer_size_;
+
+	bool cycle_bit_;
+	event_ring_segment_table_entry* segment_table_;
+	interrupter_register_set* interrupter_register_;
 };
 
 } // namespace usb::xhci

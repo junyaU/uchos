@@ -2,20 +2,18 @@
 #include "../../../graphics/kernel_logger.hpp"
 #include "../memory.hpp"
 
-#include <cstring>
-
 namespace usb::xhci
 {
 ring::~ring()
 {
-	if (buffer_) {
+	if (buffer_ != nullptr) {
 		free_memory(buffer_);
 	}
 }
 
 void ring::initialize(size_t buf_size)
 {
-	if (buffer_) {
+	if (buffer_ != nullptr) {
 		free_memory(buffer_);
 	}
 
@@ -60,4 +58,70 @@ trb* ring::push(const std::array<uint32_t, 4>& data)
 	return trb_ptr;
 }
 
+void event_ring::initialize(size_t buf_size,
+							interrupter_register_set* interrupter_register)
+{
+	if (buffer_ != nullptr) {
+		free_memory(buffer_);
+	}
+
+	cycle_bit_ = true;
+	buffer_size_ = buf_size;
+	interrupter_register_ = interrupter_register;
+
+	buffer_ = alloc_array<trb>(buffer_size_, 64, 64 * 1024);
+	if (buffer_ == nullptr) {
+		klogger->error("failed to allocate memory for event ring");
+		return;
+	}
+	memset(buffer_, 0, buffer_size_ * sizeof(trb));
+
+	segment_table_ = alloc_array<event_ring_segment_table_entry>(1, 64, 64 * 1024);
+	if (segment_table_ == nullptr) {
+		free_memory(buffer_);
+		klogger->error("failed to allocate memory for event ring segment table");
+		return;
+	}
+	memset(segment_table_, 0, sizeof(event_ring_segment_table_entry));
+
+	segment_table_[0].bits.ring_segment_base_address =
+			reinterpret_cast<uint64_t>(buffer_);
+	segment_table_[0].bits.ring_segment_size = buffer_size_;
+
+	erstsz_bitmap event_ring_segment_table_size =
+			interrupter_register_->erstsz.read();
+	event_ring_segment_table_size.set_size(1);
+	interrupter_register_->erstsz.write(event_ring_segment_table_size);
+
+	write_dequeue_pointer(&buffer_[0]);
+
+	erstba_bitmap event_ring_segment_table_base_address =
+			interrupter_register_->erstba.read();
+	event_ring_segment_table_base_address.set_pointer(
+			reinterpret_cast<uint64_t>(segment_table_));
+	interrupter_register_->erstba.write(event_ring_segment_table_base_address);
+}
+
+void event_ring::write_dequeue_pointer(trb* p)
+{
+	auto erdp = interrupter_register_->erdp.read();
+	erdp.set_pointer(reinterpret_cast<uint64_t>(p));
+	interrupter_register_->erdp.write(erdp);
+}
+
+void event_ring::pop()
+{
+	auto* p = read_dequeue_pointer() + 1;
+
+	trb* segment_begin =
+			reinterpret_cast<trb*>(segment_table_[0].bits.ring_segment_base_address);
+	trb* segment_end = segment_begin + segment_table_[0].bits.ring_segment_size;
+
+	if (p == segment_end) {
+		p = segment_begin;
+		cycle_bit_ = !cycle_bit_;
+	}
+
+	write_dequeue_pointer(p);
+}
 } // namespace usb::xhci

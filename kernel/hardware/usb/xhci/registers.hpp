@@ -266,6 +266,165 @@ struct operational_registers {
 	memory_mapped_register<config_bitmap> config;
 } __attribute__((packed));
 
+union port_sc_bitmap {
+	uint32_t data[1];
+
+	struct {
+		uint32_t current_connect_status : 1;
+		uint32_t port_enabled_disabled : 1;
+		uint32_t : 1;
+		uint32_t over_current_active : 1;
+		uint32_t port_reset : 1;
+		uint32_t port_link_state : 4;
+		uint32_t port_power : 1;
+		uint32_t port_speed : 4;
+		uint32_t port_indicator_control : 2;
+		uint32_t port_link_state_write_strobe : 1;
+		uint32_t connect_status_change : 1;
+		uint32_t port_enabled_disabled_change : 1;
+		uint32_t warm_port_reset_change : 1;
+		uint32_t over_current_change : 1;
+		uint32_t port_reset_change : 1;
+		uint32_t port_link_state_change : 1;
+		uint32_t port_config_error_change : 1;
+		uint32_t cold_attach_status : 1;
+		uint32_t wake_on_connect_enable : 1;
+		uint32_t wake_on_disconnect_enable : 1;
+		uint32_t wake_on_over_current_enable : 1;
+		uint32_t : 2;
+		uint32_t device_removable : 1;
+		uint32_t warm_port_reset : 1;
+	} __attribute__((packed)) bits;
+} __attribute__((packed));
+
+union port_pmsc_bitmap {
+	uint32_t data[1];
+
+	struct {
+		uint32_t u1_timeout : 8;
+		uint32_t u2_timeout : 8;
+		uint32_t force_link_pm_accept : 1;
+		uint32_t : 15;
+	} __attribute__((packed)) bits_usb3;
+} __attribute__((packed));
+
+union port_li_bitmap {
+	uint32_t data[1];
+
+	struct {
+		uint32_t link_error_count : 16;
+		uint32_t rx_lane_count : 4;
+		uint32_t tx_lane_count : 4;
+		uint32_t : 8;
+	} __attribute__((packed)) bits_usb3;
+} __attribute__((packed));
+
+union port_hlpmc_bitmap {
+	uint32_t data[1];
+
+	struct {
+		uint32_t host_initiated_resume_duration_mode : 2;
+		uint32_t l1_timeout : 8;
+		uint32_t best_effort_service_latency_deep : 4;
+		uint32_t : 18;
+	} __attribute__((packed)) bits_usb2;
+} __attribute__((packed));
+
+/**
+ * @brief Port registers of xHCI
+ *
+ * This struct represents the port registers of the xHCI host controller.
+ */
+struct port_register_set {
+	memory_mapped_register<port_sc_bitmap> port_sc;
+	memory_mapped_register<port_pmsc_bitmap> port_pmsc;
+	memory_mapped_register<port_li_bitmap> port_li;
+	memory_mapped_register<port_hlpmc_bitmap> port_hlpmc;
+} __attribute__((packed));
+
+using port_register_set_array = array_wrapper<port_register_set>;
+
+union iman_bitmap {
+	uint32_t data[1];
+
+	struct {
+		uint32_t interrupt_pending : 1;
+		uint32_t interrupt_enable : 1;
+		uint32_t : 30;
+	} __attribute__((packed)) bits;
+} __attribute__((packed));
+
+union imod_bitmap {
+	uint32_t data[1];
+
+	struct {
+		uint32_t interrupt_moderation_interval : 16;
+		uint32_t interrupt_moderation_counter : 16;
+	} __attribute__((packed)) bits;
+} __attribute__((packed));
+
+union erstsz_bitmap {
+	uint32_t data[1];
+
+	struct {
+		uint32_t event_ring_segment_table_size : 16;
+		uint32_t : 16;
+	} __attribute__((packed)) bits;
+
+	uint32_t size() const { return bits.event_ring_segment_table_size; }
+
+	void set_size(uint32_t s) { bits.event_ring_segment_table_size = s; }
+} __attribute__((packed));
+
+union erstba_bitmap {
+	uint64_t data[1];
+
+	struct {
+		uint64_t : 6;
+		uint64_t event_ring_segment_table_base_address : 58;
+	} __attribute__((packed)) bits;
+
+	uint64_t pointer() const
+	{
+		return bits.event_ring_segment_table_base_address << 6;
+	}
+
+	void set_pointer(uint64_t addr)
+	{
+		bits.event_ring_segment_table_base_address = addr >> 6;
+	}
+} __attribute__((packed));
+
+union erdp_bitmap {
+	uint64_t data[1];
+
+	struct {
+		uint64_t dequeue_erst_segment_index : 3;
+		uint64_t event_handler_busy : 1;
+		uint64_t event_ring_dequeue_pointer : 60;
+	} __attribute__((packed)) bits;
+
+	uint64_t pointer() const { return bits.event_ring_dequeue_pointer << 4; }
+
+	void set_pointer(uint64_t addr) { bits.event_ring_dequeue_pointer = addr >> 4; }
+} __attribute__((packed));
+
+/**
+ * @brief Interrupter registers of xHCI
+ *
+ * This struct represents the interrupter registers of the xHCI host controller.
+ */
+struct interrupter_register_set {
+	memory_mapped_register<iman_bitmap> iman;
+	memory_mapped_register<imod_bitmap> imod;
+	memory_mapped_register<erstsz_bitmap> erstsz;
+	uint32_t reserved;
+	memory_mapped_register<erstba_bitmap> erstba;
+	memory_mapped_register<erdp_bitmap> erdp;
+} __attribute__((packed));
+
+using interrupter_register_set_array = array_wrapper<interrupter_register_set>;
+
 union doorbell_bitmap {
 	uint32_t data[1];
 
@@ -289,5 +448,7 @@ public:
 		reg_.write(value);
 	}
 };
+
+using doorbell_register_array = array_wrapper<doorbell_register>;
 
 } // namespace usb::xhci
