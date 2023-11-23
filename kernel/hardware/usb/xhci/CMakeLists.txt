@@ -1,6 +1,7 @@
 set(XHCI_SOURCE_FILES
         device.cpp
         device_manager.cpp
+        port.cpp
         ring.cpp
         trb.cpp
         xhci.cpp
