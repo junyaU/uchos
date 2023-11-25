@@ -34,7 +34,7 @@ public:
 	void initialize();
 
 	device_context* context() { return &ctx_; }
-	input_control_context* input_context() { return &input_ctx_; }
+	input_context* input_context() { return &input_ctx_; }
 
 	slot_state slot_state() { return state_; }
 	uint8_t slot_id() { return slot_id_; }
@@ -59,7 +59,7 @@ public:
 
 private:
 	alignas(64) struct device_context ctx_;
-	alignas(64) struct input_control_context input_ctx_;
+	alignas(64) struct input_context input_ctx_;
 
 	const uint8_t slot_id_;
 	doorbell_register* const doorbell_register_;

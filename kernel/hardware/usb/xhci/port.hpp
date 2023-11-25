@@ -13,6 +13,7 @@
 
 #include "registers.hpp"
 
+#include <array>
 #include <cstdint>
 
 #define CLEAR_STATUS_BIT(bitname)                                                   \
@@ -54,4 +55,23 @@ private:
 	const uint8_t port_num_;
 	port_register_set& regs_;
 };
+
+enum class port_connection_state {
+	DISCONNECTED,
+	WAITING_ADDRESSED,
+	RESETTING_PORT,
+	ENABLEING_SLOT,
+	ADDRESSING_DEVICE,
+	INITIALIZING_DEVICE,
+	CONFIGURING_ENDPOINTS,
+	CONFIGURED,
+};
+
+std::array<volatile port_connection_state, 256> port_connection_states{};
+
+uint8_t addressing_port{ 0 };
+
+void reset_port(port& p);
+
+void configure_port(port& p);
 } // namespace usb::xhci

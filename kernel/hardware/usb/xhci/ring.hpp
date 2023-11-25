@@ -8,6 +8,7 @@
  * transfer and event handling.
  *
  */
+
 #pragma once
 
 #include "registers.hpp"
@@ -89,4 +90,5 @@ private:
 	interrupter_register_set* interrupter_register_;
 };
 
+void register_command_ring(ring* r, memory_mapped_register<crcr_bitmap>* crcr);
 } // namespace usb::xhci

@@ -1,4 +1,5 @@
 #include "port.hpp"
+#include "../../../graphics/kernel_logger.hpp"
 #include "registers.hpp"
 #include "xhci.hpp"
 
@@ -39,4 +40,38 @@ void port::reset()
 }
 
 device* port::initialize() { return nullptr; }
+
+void reset_port(port& p)
+{
+	const bool is_connected = p.is_connected();
+	if (!is_connected) {
+		return;
+	}
+
+	if (addressing_port != 0) {
+		port_connection_states[p.number()] =
+				port_connection_state::WAITING_ADDRESSED;
+		return;
+	}
+
+	const auto port_state = port_connection_states[p.number()];
+	if (port_state != port_connection_state::DISCONNECTED &&
+		port_state != port_connection_state::WAITING_ADDRESSED) {
+		klogger->printf("port %d is not disconnected or waiting addressed\n",
+						p.number());
+		return;
+	}
+
+	addressing_port = p.number();
+	port_connection_states[p.number()] = port_connection_state::RESETTING_PORT;
+	p.reset();
+}
+
+void configure_port(port& p)
+{
+	if (port_connection_states[p.number()] == port_connection_state::DISCONNECTED) {
+		reset_port(p);
+	}
+}
+
 } // namespace usb::xhci

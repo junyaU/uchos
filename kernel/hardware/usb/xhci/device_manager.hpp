@@ -30,6 +30,7 @@ public:
 	void remove(uint8_t slot_id);
 
 private:
+	// contexts_[0] is reserved for scratchpad buffer array
 	device_context** contexts_;
 	size_t max_slots_;
 	device** devices_;
