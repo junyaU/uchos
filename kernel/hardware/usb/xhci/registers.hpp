@@ -76,6 +76,8 @@ union doorbell_offset_bitmap {
 		uint32_t reserved : 2;
 		uint32_t doorbell_array_offset : 30;
 	} __attribute__((packed)) bits;
+
+	uint32_t offset() const { return bits.doorbell_array_offset << 2; }
 } __attribute__((packed));
 
 union rts_offset_bitmap {
@@ -266,6 +268,7 @@ struct operational_registers {
 	memory_mapped_register<config_bitmap> config;
 } __attribute__((packed));
 
+// port status and control
 union port_sc_bitmap {
 	uint32_t data[1];
 
@@ -363,6 +366,7 @@ union imod_bitmap {
 	} __attribute__((packed)) bits;
 } __attribute__((packed));
 
+// event ring segment table size
 union erstsz_bitmap {
 	uint32_t data[1];
 
@@ -376,6 +380,7 @@ union erstsz_bitmap {
 	void set_size(uint32_t s) { bits.event_ring_segment_table_size = s; }
 } __attribute__((packed));
 
+// event ring segment table base address
 union erstba_bitmap {
 	uint64_t data[1];
 
@@ -395,6 +400,7 @@ union erstba_bitmap {
 	}
 } __attribute__((packed));
 
+// event ring dequeue pointer
 union erdp_bitmap {
 	uint64_t data[1];
 
@@ -450,5 +456,57 @@ public:
 };
 
 using doorbell_register_array = array_wrapper<doorbell_register>;
+
+union extended_register_bitmap {
+	uint32_t data[1];
+
+	struct {
+		uint32_t capability_id : 8;
+		uint32_t next_capability_pointer : 8;
+		uint32_t value : 16;
+	} __attribute__((packed)) bits;
+} __attribute__((packed));
+
+class extended_register_list
+{
+public:
+	using value_type = memory_mapped_register<extended_register_bitmap>;
+
+	class iterator
+	{
+	public:
+		iterator(value_type* reg) : reg_(reg) {}
+		auto operator->() { return reg_; }
+		auto& operator*() { return *reg_; }
+		bool operator==(const iterator& rhs) { return reg_ == rhs.reg_; }
+		bool operator!=(const iterator& rhs) { return reg_ != rhs.reg_; }
+		iterator& operator++();
+
+	private:
+		value_type* reg_;
+	};
+
+	extended_register_list(uint64_t mmio_base, hcc_params1_register hccp);
+	iterator begin() const { return begin_; }
+	iterator end() const { return iterator{ nullptr }; }
+
+private:
+	const iterator begin_;
+};
+
+union usb_legacy_support_bitmap {
+	uint32_t data[1];
+
+	struct {
+		uint32_t capability_id : 8;
+		uint32_t next_pointer : 8;
+		uint32_t hc_bios_owned_semaphore : 1;
+		uint32_t : 7;
+		uint32_t hc_os_owned_semaphore : 1;
+		uint32_t : 7;
+	} __attribute__((packed)) bits;
+} __attribute__((packed));
+
+// void register_command_ring(ring* r, memory_mapped_register<crcr_bitmap>* crcr);
 
 } // namespace usb::xhci
