@@ -25,3 +25,8 @@ write_to_io_port:
     mov eax, esi
     out dx, eax
     ret
+
+global most_significant_bit ; int most_significant_bit(uint32_t value)
+most_significant_bit:
+    bsr eax, edi
+    ret

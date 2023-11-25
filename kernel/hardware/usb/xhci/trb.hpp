@@ -16,6 +16,7 @@
 
 #include "../endpoint.hpp"
 #include "../setup_stage_data.hpp"
+#include "context.hpp"
 
 #include <array>
 #include <cstdint>
@@ -61,15 +62,15 @@ union normal_trb {
 		uint32_t : 16;
 	} __attribute__((packed)) bits;
 
-	normal_trb() {
-		bits.trb_type = TYPE;
-	}
+	normal_trb() { bits.trb_type = TYPE; }
 
-	void* pointer() const {
+	void* pointer() const
+	{
 		return reinterpret_cast<trb*>(bits.data_buffer_pointer);
 	}
 
-	void set_pointer(const void* p) {
+	void set_pointer(const void* p)
+	{
 		bits.data_buffer_pointer = reinterpret_cast<uint64_t>(p);
 	}
 };
@@ -212,6 +213,63 @@ union link_trb {
 	}
 };
 
+union enable_slot_command_trb {
+	static const unsigned int TYPE = 9;
+	std::array<uint32_t, 4> data{};
+
+	struct {
+		uint32_t : 32;
+
+		uint32_t : 32;
+
+		uint32_t : 32;
+
+		uint32_t cycle_bit : 1;
+		uint32_t : 9;
+		uint32_t trb_type : 6;
+		uint32_t slot_type : 5;
+		uint32_t : 11;
+	} __attribute__((packed)) bits;
+
+	enable_slot_command_trb() { bits.trb_type = TYPE; }
+};
+
+union configure_endpoint_command_trb {
+	static const unsigned int TYPE = 12;
+	std::array<uint32_t, 4> data{};
+
+	struct {
+		uint64_t : 4;
+		uint64_t input_context_pointer : 60;
+
+		uint32_t : 32;
+
+		uint32_t cycle_bit : 1;
+		uint32_t : 8;
+		uint32_t deconfigure : 1;
+		uint32_t trb_type : 6;
+		uint32_t : 8;
+		uint32_t slot_id : 8;
+	} __attribute__((packed)) bits;
+
+	configure_endpoint_command_trb(const input_context* ctx, uint8_t slot_id)
+	{
+		bits.trb_type = TYPE;
+		bits.slot_id = slot_id;
+		set_pointer(ctx);
+	}
+
+	input_context* pointer() const
+	{
+		return reinterpret_cast<input_context*>(bits.input_context_pointer << 4);
+	}
+
+	void set_pointer(const input_context* p)
+	{
+		bits.input_context_pointer = reinterpret_cast<uint64_t>(p) >> 4;
+	}
+};
+
 union transfer_event_trb {
 	static const unsigned int TYPE = 32;
 	std::array<uint32_t, 4> data{};
@@ -242,6 +300,58 @@ union transfer_event_trb {
 	}
 
 	endpoint_id endpoint_id() const { return usb::endpoint_id{ bits.endpoint_id }; }
+};
+
+union command_completion_event_trb {
+	static const unsigned int TYPE = 33;
+	std::array<uint32_t, 4> data{};
+
+	struct {
+		uint64_t : 4;
+		uint64_t command_trb_pointer : 60;
+
+		uint32_t command_completion_parameter : 24;
+		uint32_t completion_code : 8;
+
+		uint32_t cycle_bit : 1;
+		uint32_t : 9;
+		uint32_t trb_type : 6;
+		uint32_t vf_id : 8;
+		uint32_t slot_id : 8;
+	} __attribute__((packed)) bits;
+
+	command_completion_event_trb() { bits.trb_type = TYPE; }
+
+	trb* pointer() const
+	{
+		return reinterpret_cast<trb*>(bits.command_trb_pointer << 4);
+	}
+
+	void set_pointer(trb* p)
+	{
+		bits.command_trb_pointer = reinterpret_cast<uint64_t>(p) >> 4;
+	}
+};
+
+union port_status_change_event_trb {
+	static const unsigned int TYPE = 34;
+	std::array<uint32_t, 4> data{};
+
+	struct {
+		uint32_t : 24;
+		uint32_t port_id : 8;
+
+		uint32_t : 32;
+
+		uint32_t : 24;
+		uint32_t completion_code : 8;
+
+		uint32_t cycle_bit : 1;
+		uint32_t : 9;
+		uint32_t trb_type : 6;
+	} __attribute__((packed)) bits;
+
+	port_status_change_event_trb() { bits.trb_type = TYPE; }
 };
 
 template<class to_type, class from_type>

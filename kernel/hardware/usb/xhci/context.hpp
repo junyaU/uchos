@@ -14,13 +14,12 @@
 #pragma once
 
 #include "../endpoint.hpp"
-#include "trb.hpp"
 
 #include <cstdint>
 
 namespace usb::xhci
 {
-
+union trb;
 union slot_context {
 	uint32_t raw[8];
 
@@ -137,4 +136,11 @@ struct input_context {
 	}
 
 } __attribute__((packed));
+
+void initialize_slot_context(slot_context& ctx, uint8_t port_id, int port_speed);
+
+void initialize_endpoint0_context(endpoint_context& ctx,
+								  trb* transfer_ring_buffer,
+								  int max_packet_size);
+
 } // namespace usb::xhci

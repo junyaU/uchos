@@ -124,4 +124,14 @@ void event_ring::pop()
 
 	write_dequeue_pointer(p);
 }
+
+void register_command_ring(ring* r, memory_mapped_register<crcr_bitmap>* crcr)
+{
+	crcr_bitmap value = crcr->read();
+	value.bits.ring_cycle_state = true;
+	value.bits.command_stop = false;
+	value.bits.command_abort = false;
+	value.set_pointer(reinterpret_cast<uint64_t>(r->buffer()));
+	crcr->write(value);
+}
 } // namespace usb::xhci
