@@ -67,9 +67,9 @@ enum class port_connection_state {
 	CONFIGURED,
 };
 
-std::array<volatile port_connection_state, 256> port_connection_states{};
+inline std::array<volatile port_connection_state, 256> port_connection_states{};
 
-uint8_t addressing_port{ 0 };
+inline uint8_t addressing_port{ 0 };
 
 void reset_port(port& p);
 

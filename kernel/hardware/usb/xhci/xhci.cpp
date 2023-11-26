@@ -3,13 +3,26 @@
 #include "../../../graphics/kernel_logger.hpp"
 #include "../../pci.hpp"
 #include "../memory.hpp"
+#include "context.hpp"
 #include "speed.hpp"
 #include "trb.hpp"
-#include <cstring>
 
 namespace
 {
 using namespace usb::xhci;
+
+unsigned int determine_max_packet_size_for_control_pipe(int port_speed)
+{
+	switch (port_speed) {
+		case SUPER_SPEED:
+			return 512;
+		case HIGH_SPEED:
+			return 64;
+		default:
+			return 8;
+	}
+}
+
 void enable_slot(controller& xhc, port& p)
 {
 	const bool is_enabled = p.is_enabled();
@@ -23,6 +36,31 @@ void enable_slot(controller& xhc, port& p)
 		xhc.command_ring()->push(cmd);
 		xhc.doorbell_register_at(0)->ring(0);
 	}
+}
+
+void initialize_device(controller& xhc, uint8_t port_id, uint8_t slot_id)
+{
+	auto dev = xhc.device_manager()->find_by_slot_id(slot_id);
+	if (dev == nullptr) {
+		klogger->printf("device not found for slot id %d\n", slot_id);
+		return;
+	}
+
+	port_connection_states[port_id] = port_connection_state::INITIALIZING_DEVICE;
+	dev->start_initialize();
+}
+
+void complete_configuration(controller& xhc, uint8_t port_id, uint8_t slot_id)
+{
+	auto dev = xhc.device_manager()->find_by_slot_id(slot_id);
+	if (dev == nullptr) {
+		klogger->printf("device not found for slot id %d\n", slot_id);
+		return;
+	}
+
+	dev->on_endpoints_configured();
+
+	port_connection_states[port_id] = port_connection_state::CONFIGURED;
 }
 
 void address_device(controller& xhc, uint8_t port_id, uint8_t slot_id)
@@ -39,11 +77,23 @@ void address_device(controller& xhc, uint8_t port_id, uint8_t slot_id)
 	memset(&dev->input_context()->control, 0, sizeof(input_control_context));
 
 	const auto ep0_dci = device_context_index{ 0, false };
-	auto slot_ctx = dev->input_context()->enable_slot_context();
-	auto ep0_ctx = dev->input_context()->enable_endpoint_context(ep0_dci);
+	auto* slot_ctx = dev->input_context()->enable_slot_context();
+	auto* ep0_ctx = dev->input_context()->enable_endpoint_context(ep0_dci);
 
 	auto port = xhc.port_at(port_id);
 	initialize_slot_context(*slot_ctx, port_id, port.speed());
+
+	initialize_endpoint0_context(
+			*ep0_ctx, dev->alloc_transfer_ring(ep0_dci, 32)->buffer(),
+			determine_max_packet_size_for_control_pipe(slot_ctx->bits.speed));
+
+	xhc.device_manager()->load_dcbaa(slot_id);
+
+	port_connection_states[port_id] = port_connection_state::ADDRESSING_DEVICE;
+
+	address_device_command_trb cmd{ dev->input_context(), slot_id };
+	xhc.command_ring()->push(cmd);
+	xhc.doorbell_register_at(0)->ring(0);
 }
 
 void on_event(controller& xhc, port_status_change_event_trb& trb)
@@ -91,6 +141,54 @@ void on_event(controller& xhc, command_completion_event_trb& trb)
 			klogger->printf("port %d is not enableing slot\n", addressing_port);
 			return;
 		}
+
+		return address_device(xhc, addressing_port, slot_id);
+	} else if (issuer_type == address_device_command_trb::TYPE) {
+		auto dev = xhc.device_manager()->find_by_slot_id(slot_id);
+		if (dev == nullptr) {
+			klogger->printf("device not found for slot id %d\n", slot_id);
+			return;
+		};
+
+		auto port_id = dev->context()->slot.bits.root_hub_port_num;
+		if (port_id != addressing_port) {
+			klogger->printf("port id %d is not equal to addressing port %d\n",
+							port_id, addressing_port);
+			return;
+		}
+
+		if (port_connection_states[port_id] !=
+			port_connection_state::ADDRESSING_DEVICE) {
+			klogger->printf("port %d is not addressing device\n", port_id);
+			return;
+		}
+
+		addressing_port = 0;
+		for (int i = 0; i < port_connection_states.size(); i++) {
+			if (port_connection_states[i] ==
+				port_connection_state::WAITING_ADDRESSED) {
+				auto p = xhc.port_at(i);
+				reset_port(p);
+				break;
+			}
+		}
+
+		return initialize_device(xhc, port_id, slot_id);
+	} else if (issuer_type == configure_endpoint_command_trb::TYPE) {
+		auto dev = xhc.device_manager()->find_by_slot_id(slot_id);
+		if (dev == nullptr) {
+			klogger->printf("device not found for slot id %d\n", slot_id);
+			return;
+		}
+
+		auto port_id = dev->context()->slot.bits.root_hub_port_num;
+		if (port_connection_states[port_id] !=
+			port_connection_state::CONFIGURING_ENDPOINTS) {
+			klogger->printf("port %d is not configuring endpoints\n", port_id);
+			return;
+		}
+
+		return complete_configuration(xhc, port_id, slot_id);
 	}
 }
 
@@ -169,6 +267,7 @@ void controller::initialize()
 	const uint8_t max_scratchpad_buffers =
 			hcs_params2.bits.max_scratchpad_buffers_low |
 			(hcs_params2.bits.max_scratchpad_buffers_high << 5);
+
 	if (max_scratchpad_buffers > 0) {
 		auto* scratchpad_buf_arr =
 				alloc_array<void*>(max_scratchpad_buffers, 64, 4096);
@@ -215,6 +314,13 @@ void controller::run()
 doorbell_register* controller::doorbell_register_at(uint8_t index)
 {
 	return &doorbell_registers()[index];
+}
+
+void configure_port(controller& xhc, port& p)
+{
+	if (port_connection_states[p.number()] == port_connection_state::DISCONNECTED) {
+		reset_port(p);
+	}
 }
 
 void configure_endpoints(controller& xhc, device& dev)
@@ -297,11 +403,17 @@ void process_event(controller& xhc)
 	} else if (auto trb =
 					   trb_dynamic_cast<port_status_change_event_trb>(event_trb)) {
 		on_event(xhc, *trb);
+	} else if (auto trb =
+					   trb_dynamic_cast<command_completion_event_trb>(event_trb)) {
+		on_event(xhc, *trb);
 	} else {
-		//		klogger->printf("unknown event trb type: %d\n",
-		// event_trb.bits.trb_type);
+		klogger->printf("unknown event trb type %d\n", event_trb->bits.trb_type);
 	}
+
+	xhc.primary_event_ring()->pop();
 }
+
+controller* host_controller;
 
 void initialize()
 {
@@ -325,9 +437,27 @@ void initialize()
 
 	// TODO: MSI (Message Signaled Interrupts) support
 
-	//	const uint64_t bar = pci::read_base_address_register(*xhc_dev, 0);
-	//	const uint64_t xhc_mmio_base = bar & ~static_cast<uint64_t>(0xf);
+	const uint64_t bar = pci::read_base_address_register(*xhc_dev, 0);
+	const uint64_t xhc_mmio_base = bar & ~static_cast<uint64_t>(0xf);
+
+	host_controller = new controller(xhc_mmio_base);
+
+	controller& xhc = *host_controller;
+
+	xhc.initialize();
+
+	xhc.run();
 
 	klogger->info("xHCI initialized successfully.");
+
+	for (int i = 1; i < xhc.max_ports(); i++) {
+		auto p = xhc.port_at(i);
+
+		if (!p.is_connected()) {
+			continue;
+		}
+
+		configure_port(xhc, p);
+	}
 }
 } // namespace usb::xhci
