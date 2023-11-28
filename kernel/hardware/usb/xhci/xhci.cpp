@@ -40,7 +40,7 @@ void enable_slot(controller& xhc, port& p)
 
 void initialize_device(controller& xhc, uint8_t port_id, uint8_t slot_id)
 {
-	auto dev = xhc.device_manager()->find_by_slot_id(slot_id);
+	auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 	if (dev == nullptr) {
 		klogger->printf("device not found for slot id %d\n", slot_id);
 		return;
@@ -325,7 +325,7 @@ void configure_port(controller& xhc, port& p)
 
 void configure_endpoints(controller& xhc, device& dev)
 {
-	const auto configs = dev.endpoint_configs();
+	const auto* configs = dev.endpoint_configs();
 	const auto len = dev.num_endpoint_configs();
 
 	memset(&dev.input_context()->control, 0, sizeof(input_control_context));
@@ -458,6 +458,16 @@ void initialize()
 		}
 
 		configure_port(xhc, p);
+	}
+}
+
+void process_events()
+{
+	while (true) {
+		if (!host_controller->primary_event_ring()->has_front()) {
+			continue;
+		}
+		process_event(*host_controller);
 	}
 }
 } // namespace usb::xhci

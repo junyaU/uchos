@@ -101,8 +101,8 @@ bool kernel_timer::increment_tick()
 		}
 
 		if (!kevent_queue->queue(event)) {
-			klogger->printf("failed to queue timer event: %lu\n",
-							event.args_.timer.id);
+			//			klogger->printf("failed to queue timer event: %lu\n",
+			//							event.args_.timer.id);
 		}
 
 		if (event.args_.timer.periodical == 1) {

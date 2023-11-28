@@ -43,13 +43,11 @@ void hid_driver::on_endpoints_configured()
 								 this);
 }
 
-void hid_driver::on_control_completed(usb::endpoint_id ep_id,
-									  usb::setup_stage_data* setup_data,
+void hid_driver::on_control_completed(endpoint_id ep_id,
+									  setup_stage_data* setup_data,
 									  void* buf,
 									  int len)
 {
-	klogger->info("HID driver: on_control_completed");
-
 	if (initialized_stage_ == 1) {
 		initialized_stage_ = 2;
 
@@ -58,7 +56,7 @@ void hid_driver::on_control_completed(usb::endpoint_id ep_id,
 	}
 }
 
-void hid_driver::on_interrupt_completed(usb::endpoint_id ep_id, void* buf, int len)
+void hid_driver::on_interrupt_completed(endpoint_id ep_id, void* buf, int len)
 {
 	if (ep_id.is_in()) {
 		on_data_received();

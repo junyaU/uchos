@@ -1,4 +1,5 @@
 #include "keyboard.hpp"
+#include "../../../graphics/kernel_logger.hpp"
 #include "../memory.hpp"
 #include "hid.hpp"
 
@@ -16,5 +17,5 @@ void* keyboard_driver::operator new(size_t size)
 
 void keyboard_driver::operator delete(void* ptr) noexcept { free_memory(ptr); }
 
-void keyboard_driver::on_data_received() {}
+void keyboard_driver::on_data_received() { klogger->info("Keyboard data received"); }
 } // namespace usb
