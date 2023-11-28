@@ -132,11 +132,11 @@ uint64_t read_base_address_register(device& dev, unsigned int index)
 void initialize_pci()
 {
 	pci::load_devices();
-	for (int i = 0; i < pci::num_devices; i++) {
-		auto d = pci::devices[i];
-
-		klogger->printf(
-				"bus: %d, device: %d, function: %d, vendor_id: %d, class_code: %d\n",
-				d.bus, d.device, d.function, d.vendor_id, d.class_code.base);
-	}
+	//	for (int i = 0; i < pci::num_devices; i++) {
+	//		auto d = pci::devices[i];
+	//
+	//		klogger->printf(
+	//				"bus: %d, device: %d, function: %d, vendor_id: %d, class_code:
+	//%d\n", 				d.bus, d.device, d.function, d.vendor_id, d.class_code.base);
+	//	}
 }

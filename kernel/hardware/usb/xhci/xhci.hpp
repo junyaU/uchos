@@ -69,7 +69,7 @@ void configure_endpoints(controller& xhc, device& dev);
 
 void process_event(controller& xhc);
 
-extern controller host_controller;
+extern controller* host_controller;
 void initialize();
 void process_events();
 } // namespace usb::xhci

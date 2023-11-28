@@ -56,8 +56,6 @@ void device::on_control_completed(endpoint_id ep_id,
 								  void* buf,
 								  int len)
 {
-	klogger->info("Device: on_control_completed");
-
 	if (is_initialized_) {
 		if (auto w = event_waiters_.get(setup_data)) {
 			return w.value()->on_control_completed(ep_id, &setup_data, buf, len);
@@ -104,8 +102,6 @@ void device::initialize_stage1(const uint8_t* buf, int len)
 	config_index_ = 0;
 	initialize_stage_ = 2;
 
-	klogger->printf("Device: num_configurations = %d\n", num_configurations_);
-
 	get_descriptor(*this, DEFAULT_CONTROL_PIPE_ID, configuration_descriptor::TYPE,
 				   config_index_, buffer_.data(), buffer_.size(), true);
 }
@@ -122,7 +118,7 @@ void device::initialize_stage2(const uint8_t* buf, int len)
 
 	while (auto if_desc = config_it.next<interface_descriptor>()) {
 		class_driver = new_class_driver(this, *if_desc);
-		if (class_driver != nullptr) {
+		if (class_driver == nullptr) {
 			continue;
 		}
 

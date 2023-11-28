@@ -66,5 +66,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	usb::xhci::initialize();
 
+	usb::xhci::process_events();
+
 	handle_system_events();
 }

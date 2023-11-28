@@ -2,12 +2,12 @@
 
 namespace usb::xhci
 {
-void initialize_slot_context(slot_context* ctx, uint8_t port_id, int port_speed)
+void initialize_slot_context(slot_context& ctx, uint8_t port_id, int port_speed)
 {
-	ctx->bits.route_string = 0;
-	ctx->bits.root_hub_port_num = port_id;
-	ctx->bits.context_entries = 1;
-	ctx->bits.speed = port_speed;
+	ctx.bits.route_string = 0;
+	ctx.bits.root_hub_port_num = port_id;
+	ctx.bits.context_entries = 1;
+	ctx.bits.speed = port_speed;
 }
 
 void initialize_endpoint0_context(endpoint_context& ctx,
@@ -24,5 +24,4 @@ void initialize_endpoint0_context(endpoint_context& ctx,
 	ctx.bits.mult = 0;
 	ctx.bits.error_count = 3;
 }
-
 } // namespace usb::xhci

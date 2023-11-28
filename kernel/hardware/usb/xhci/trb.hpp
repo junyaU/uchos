@@ -234,6 +234,42 @@ union enable_slot_command_trb {
 	enable_slot_command_trb() { bits.trb_type = TYPE; }
 };
 
+union address_device_command_trb {
+	static const unsigned int TYPE = 11;
+	std::array<uint32_t, 4> data{};
+
+	struct {
+		uint64_t : 4;
+		uint64_t input_context_pointer : 60;
+
+		uint32_t : 32;
+
+		uint32_t cycle_bit : 1;
+		uint32_t : 8;
+		uint32_t block_set_address_request : 1;
+		uint32_t trb_type : 6;
+		uint32_t : 8;
+		uint32_t slot_id : 8;
+	} __attribute__((packed)) bits;
+
+	address_device_command_trb(const input_context* ctx, uint8_t slot_id)
+	{
+		bits.trb_type = TYPE;
+		bits.slot_id = slot_id;
+		set_pointer(ctx);
+	}
+
+	input_context* pointer() const
+	{
+		return reinterpret_cast<input_context*>(bits.input_context_pointer << 4);
+	}
+
+	void set_pointer(const input_context* p)
+	{
+		bits.input_context_pointer = reinterpret_cast<uint64_t>(p) >> 4;
+	}
+};
+
 union configure_endpoint_command_trb {
 	static const unsigned int TYPE = 12;
 	std::array<uint32_t, 4> data{};
