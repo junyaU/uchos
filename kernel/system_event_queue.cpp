@@ -1,5 +1,6 @@
 #include "system_event_queue.hpp"
 #include "graphics/kernel_logger.hpp"
+#include "hardware/usb/xhci/xhci.hpp"
 #include "system_event.hpp"
 
 bool kernel_event_queue::queue(SystemEvent event)
@@ -25,10 +26,10 @@ SystemEvent kernel_event_queue::dequeue()
 
 kernel_event_queue* kevent_queue;
 
+void initialize_system_event_queue() { kevent_queue = new kernel_event_queue(); }
+
 void handle_system_events()
 {
-	kevent_queue = new kernel_event_queue();
-
 	while (true) {
 		__asm__("cli");
 		if (kevent_queue->empty()) {
@@ -43,6 +44,11 @@ void handle_system_events()
 				break;
 
 			case SystemEvent::kDrawScreenTimer:
+				break;
+
+			case SystemEvent::XHCI:
+				klogger->print("XHCI\n");
+				usb::xhci::process_events();
 				break;
 
 			default:

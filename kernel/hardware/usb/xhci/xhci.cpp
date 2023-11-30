@@ -1,6 +1,7 @@
 #include "xhci.hpp"
 #include "../../../asm_utils.h"
 #include "../../../graphics/kernel_logger.hpp"
+#include "../../../interrupt/vector.hpp"
 #include "../../pci.hpp"
 #include "../memory.hpp"
 #include "context.hpp"
@@ -435,7 +436,10 @@ void initialize()
 		return;
 	}
 
-	// TODO: MSI (Message Signaled Interrupts) support
+	const uint8_t bsp_lapic_id = *reinterpret_cast<uint32_t*>(0xfee00020) >> 24;
+	pci::configure_msi_fixed_destination(
+			*xhc_dev, bsp_lapic_id, pci::msi_trigger_mode::LEVEL,
+			pci::msi_delivery_mode::FIXED, InterruptVector::kXHCI, 0);
 
 	const uint64_t bar = pci::read_base_address_register(*xhc_dev, 0);
 	const uint64_t xhc_mmio_base = bar & ~static_cast<uint64_t>(0xf);
@@ -463,10 +467,7 @@ void initialize()
 
 void process_events()
 {
-	while (true) {
-		if (!host_controller->primary_event_ring()->has_front()) {
-			continue;
-		}
+	while (host_controller->primary_event_ring()->has_front()) {
 		process_event(*host_controller);
 	}
 }

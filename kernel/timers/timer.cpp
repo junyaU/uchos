@@ -51,7 +51,6 @@ void kernel_timer::add_switch_task_event(unsigned long millisec)
 	auto event = SystemEvent{ SystemEvent::kSwitchTask };
 
 	event.args_.timer.timeout = calculate_timeout_ticks(millisec);
-
 	events_.push(event);
 }
 
@@ -99,10 +98,10 @@ bool kernel_timer::increment_tick()
 			ignore_events_.erase(it);
 			continue;
 		}
-
+		
 		if (!kevent_queue->queue(event)) {
-			//			klogger->printf("failed to queue timer event: %lu\n",
-			//							event.args_.timer.id);
+			klogger->printf("failed to queue timer event: %lu\n",
+							event.args_.timer.id);
 		}
 
 		if (event.args_.timer.periodical == 1) {

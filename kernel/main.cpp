@@ -52,6 +52,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	print_available_memory();
 
+	initialize_system_event_queue();
+
 	acpi::initialize(rsdp);
 
 	local_apic::initialize();
@@ -65,8 +67,6 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	initialize_pci();
 
 	usb::xhci::initialize();
-
-	usb::xhci::process_events();
 
 	handle_system_events();
 }

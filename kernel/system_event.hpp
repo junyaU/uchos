@@ -8,6 +8,7 @@ struct SystemEvent {
 		kTimerTimeout,
 		kDrawScreenTimer,
 		kSwitchTask,
+		XHCI,
 	} type_;
 
 	union {
