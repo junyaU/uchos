@@ -1,7 +1,8 @@
 #include "keyboard.hpp"
-#include "../../../graphics/kernel_logger.hpp"
 #include "../memory.hpp"
 #include "hid.hpp"
+
+#include <bitset>
 
 namespace usb
 {
@@ -17,5 +18,40 @@ void* keyboard_driver::operator new(size_t size)
 
 void keyboard_driver::operator delete(void* ptr) noexcept { free_memory(ptr); }
 
-void keyboard_driver::on_data_received() { klogger->info("Keyboard data received"); }
+void keyboard_driver::on_data_received()
+{
+	const int keycode_num = 256;
+
+	std::bitset<keycode_num> prev, current;
+	for (int i = 2; i < 8; i++) {
+		prev.set(prev_buffer()[i], true);
+		current.set(buffer()[i], true);
+	}
+
+	const auto changed = prev ^ current;
+	const auto pressed = changed & current;
+
+	for (int key = 1; key < keycode_num; key++) {
+		if (changed.test(key)) {
+			notify_key_push(buffer()[0], key, pressed.test(key));
+		}
+	}
+}
+
+void keyboard_driver::subscribe(std::function<observer_type> o)
+{
+	if (num_observers_ < observers_.size()) {
+		observers_[num_observers_++] = o;
+	}
+}
+
+std::function<keyboard_driver::observer_type> keyboard_driver::default_observer;
+
+void keyboard_driver::notify_key_push(uint8_t modifier, uint8_t keycode, bool press)
+{
+	for (int i = 0; i < num_observers_; i++) {
+		observers_[i](modifier, keycode, press);
+	}
+}
+
 } // namespace usb

@@ -17,7 +17,12 @@ class_driver* new_class_driver(device* dev, const interface_descriptor& if_desc)
 
 	switch (if_desc.interface_protocol) {
 		case KEYBOARD_INTERFACE_PROTOCOL:
-			return new keyboard_driver{ dev, if_desc.interface_number };
+			auto* driver = new keyboard_driver{ dev, if_desc.interface_number };
+			if (keyboard_driver::default_observer) {
+				driver->subscribe(keyboard_driver::default_observer);
+			}
+
+			return driver;
 	}
 
 	return nullptr;

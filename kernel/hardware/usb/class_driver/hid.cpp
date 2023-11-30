@@ -1,6 +1,5 @@
 #include "hid.hpp"
 
-#include "../../../graphics/kernel_logger.hpp"
 #include "../device.hpp"
 
 namespace usb

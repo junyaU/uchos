@@ -1,6 +1,7 @@
 #include "pci.hpp"
 #include "../asm_utils.h"
 #include "../graphics/kernel_logger.hpp"
+
 namespace pci
 {
 uint32_t calc_config_addr(uint8_t bus, uint8_t device, uint8_t func, uint8_t offset)
@@ -37,6 +38,20 @@ class_code read_class_code(uint8_t bus, uint8_t device, uint8_t func)
 	cc.interface = (reg >> 8) & 0xffU;
 
 	return cc;
+}
+
+uint32_t read_conf_reg(const device& dev, uint8_t reg_addr)
+{
+	write_to_io_port(CONFIG_ADDRESS_PORT,
+					 calc_config_addr(dev.bus, dev.device, dev.function, reg_addr));
+	return read_from_io_port(CONFIG_DATA_PORT);
+}
+
+void write_conf_reg(const device& dev, uint8_t reg_addr, uint32_t value)
+{
+	write_to_io_port(CONFIG_ADDRESS_PORT,
+					 calc_config_addr(dev.bus, dev.device, dev.function, reg_addr));
+	write_to_io_port(CONFIG_DATA_PORT, value);
 }
 
 bool is_single_function_device(uint8_t header_type)
@@ -127,16 +142,119 @@ uint64_t read_base_address_register(device& dev, unsigned int index)
 	return bar_low | (static_cast<uint64_t>(bar_high) << 32);
 }
 
+msi_capability read_msi_capability(const device& dev, uint8_t cap_addr)
+{
+	msi_capability msi_cap{};
+	msi_cap.header.data = read_conf_reg(dev, cap_addr);
+	msi_cap.msg_addr = read_conf_reg(dev, cap_addr + 4);
+
+	uint8_t msg_data_addr = cap_addr + 8;
+	if (msi_cap.header.bits.addr_64_capable) {
+		msi_cap.msg_upper_addr = read_conf_reg(dev, cap_addr + 8);
+		msg_data_addr = cap_addr + 12;
+	}
+
+	msi_cap.msg_data = read_conf_reg(dev, msg_data_addr);
+
+	if (msi_cap.header.bits.per_vector_mask_capable) {
+		msi_cap.mask_bits = read_conf_reg(dev, msg_data_addr + 4);
+		msi_cap.pending_bits = read_conf_reg(dev, msg_data_addr + 8);
+	}
+
+	return msi_cap;
+}
+
+void write_msi_capability(const device& dev,
+						  uint8_t cap_addr,
+						  const msi_capability& msi_cap)
+{
+	write_conf_reg(dev, cap_addr, msi_cap.header.data);
+	write_conf_reg(dev, cap_addr + 4, msi_cap.msg_addr);
+
+	uint8_t msg_data_addr = cap_addr + 8;
+	if (msi_cap.header.bits.addr_64_capable) {
+		write_conf_reg(dev, cap_addr + 8, msi_cap.msg_upper_addr);
+		msg_data_addr = cap_addr + 12;
+	}
+
+	write_conf_reg(dev, msg_data_addr, msi_cap.msg_data);
+
+	if (msi_cap.header.bits.per_vector_mask_capable) {
+		write_conf_reg(dev, msg_data_addr + 4, msi_cap.mask_bits);
+		write_conf_reg(dev, msg_data_addr + 8, msi_cap.pending_bits);
+	}
+}
+
+void configure_msi_register(const device& dev,
+							uint8_t cap_addr,
+							uint32_t msg_addr,
+							uint32_t msg_data,
+							unsigned int num_vector_exponent)
+{
+	auto msi_cap = read_msi_capability(dev, cap_addr);
+
+	if (msi_cap.header.bits.multi_msg_capable <= num_vector_exponent) {
+		msi_cap.header.bits.multi_msg_enable = msi_cap.header.bits.multi_msg_capable;
+	} else {
+		msi_cap.header.bits.multi_msg_enable = num_vector_exponent;
+	}
+
+	msi_cap.header.bits.msi_enable = 1;
+	msi_cap.msg_addr = msg_addr;
+	msi_cap.msg_data = msg_data;
+
+	write_msi_capability(dev, cap_addr, msi_cap);
+}
+
+capability_header read_capability_header(const device& dev, uint8_t addr)
+{
+	capability_header header;
+	header.data = read_conf_reg(dev, addr);
+	return header;
+}
+
+void configure_msi(const device& dev,
+				   uint32_t msg_addr,
+				   uint32_t msg_data,
+				   unsigned int num_vector_exponent)
+{
+	uint8_t cap_addr = read_conf_reg(dev, 0x34) & 0xffU;
+	uint8_t msi_cap_addr = 0, msix_cap_addr = 0;
+	while (cap_addr != 0) {
+		auto header = read_capability_header(dev, cap_addr);
+		if (header.bits.cap_id == CAP_MSI) {
+			msi_cap_addr = cap_addr;
+		} else if (header.bits.cap_id == CAP_MSIX) {
+			msix_cap_addr = cap_addr;
+		}
+
+		cap_addr = header.bits.next_ptr;
+	}
+
+	if (msi_cap_addr) {
+		return configure_msi_register(dev, msi_cap_addr, msg_addr, msg_data,
+									  num_vector_exponent);
+	} else if (msix_cap_addr) {
+		klogger->error("MSI-X is not supported");
+	}
+}
+
+void configure_msi_fixed_destination(const device& dev,
+									 uint8_t apic_id,
+									 msi_trigger_mode trigger_mode,
+									 msi_delivery_mode delivery_mode,
+									 uint8_t vector,
+									 unsigned int num_vector_exponent)
+{
+	uint32_t msg_addr = 0xfee00000U | (apic_id << 12);
+	uint32_t msg_data = (static_cast<uint32_t>(delivery_mode) << 8) | vector;
+	if (trigger_mode == msi_trigger_mode::LEVEL) {
+		msg_data |= 0xc000;
+	}
+
+	configure_msi(dev, msg_addr, msg_data, num_vector_exponent);
+}
+
 } // namespace pci
 
-void initialize_pci()
-{
-	pci::load_devices();
-	//	for (int i = 0; i < pci::num_devices; i++) {
-	//		auto d = pci::devices[i];
-	//
-	//		klogger->printf(
-	//				"bus: %d, device: %d, function: %d, vendor_id: %d, class_code:
-	//%d\n", 				d.bus, d.device, d.function, d.vendor_id, d.class_code.base);
-	//	}
-}
+void initialize_pci() { pci::load_devices(); }

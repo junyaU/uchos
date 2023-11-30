@@ -13,10 +13,12 @@ public:
 	bool empty() const { return events_.empty(); }
 
 private:
-	static const int QUEUE_SIZE = 1000;
 	std::queue<SystemEvent> events_;
+	static const int QUEUE_SIZE = 1000;
 };
 
 extern kernel_event_queue* kevent_queue;
+
+void initialize_system_event_queue();
 
 void handle_system_events();
