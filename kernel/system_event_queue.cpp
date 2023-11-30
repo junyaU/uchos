@@ -47,8 +47,13 @@ void handle_system_events()
 				break;
 
 			case SystemEvent::XHCI:
-				klogger->print("XHCI\n");
 				usb::xhci::process_events();
+				break;
+
+			case SystemEvent::KEY_PUSH:
+				if (event.args_.keyboard.press) {
+					klogger->printf("%c", event.args_.keyboard.ascii);
+				}
 				break;
 
 			default:

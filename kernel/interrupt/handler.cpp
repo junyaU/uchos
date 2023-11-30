@@ -1,5 +1,4 @@
 #include "handler.hpp"
-#include "../graphics/kernel_logger.hpp"
 #include "../system_event_queue.hpp"
 #include "../task/task_manager.hpp"
 #include "../timers/timer.hpp"
@@ -25,7 +24,6 @@ __attribute__((interrupt)) void TimerInterrupt(InterruptFrame* frame)
 
 __attribute__((interrupt)) void xhci_interrupt(InterruptFrame* frame)
 {
-	klogger->print("xhci interrupt\n");
 	kevent_queue->queue(SystemEvent{ SystemEvent::XHCI });
 	NotifyEndOfInterrupt();
 }

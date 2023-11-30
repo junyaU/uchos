@@ -1,4 +1,5 @@
 set(HARDWARE_SOURCE_FILES
+        keyboard.cpp
         pci.cpp
         )
 

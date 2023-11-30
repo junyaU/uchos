@@ -4,6 +4,7 @@ struct MemoryMap;
 #include "graphics/font.hpp"
 #include "graphics/kernel_logger.hpp"
 #include "graphics/screen.hpp"
+#include "hardware/keyboad.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/usb/xhci/xhci.hpp"
 #include "interrupt/idt.hpp"
@@ -67,6 +68,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	initialize_pci();
 
 	usb::xhci::initialize();
+
+	initialize_keyboard();
 
 	handle_system_events();
 }

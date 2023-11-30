@@ -9,6 +9,7 @@ struct SystemEvent {
 		kDrawScreenTimer,
 		kSwitchTask,
 		XHCI,
+		KEY_PUSH,
 	} type_;
 
 	union {
@@ -22,5 +23,12 @@ struct SystemEvent {
 		struct {
 			uint64_t value;
 		} draw_screen_timer;
+
+		struct {
+			uint8_t modifier;
+			uint8_t keycode;
+			uint8_t ascii;
+			int press;
+		} keyboard;
 	} args_;
 };
