@@ -4,6 +4,7 @@
 #include "buddy_system.hpp"
 #include "page.hpp"
 #include <stdio.h>
+#include <unordered_map>
 
 m_cache* get_cache_in_chain(char* name)
 {
@@ -50,7 +51,7 @@ m_slab::m_slab(void* base_addr, size_t num_objs)
 
 m_cache& m_cache_create(const char* name, size_t obj_size)
 {
-	obj_size = 1 << bit_ceil(obj_size);
+	obj_size = 1 << bit_width_ceil(obj_size);
 
 	char temp_name[20];
 	if (name == nullptr) {
@@ -154,10 +155,16 @@ void m_slab::free_object(void* addr, size_t obj_size)
 	num_in_use_--;
 }
 
-void* kmalloc(size_t size)
-{
-	size = 1 << bit_ceil(size);
+std::unordered_map<void*, void*> aligned_to_raw_addr_map;
 
+void* kmalloc(size_t size, int align)
+{
+	if (align != 1 && (align & (align - 1)) != 0) {
+		klogger->error("align must be a power of 2");
+		return nullptr;
+	}
+
+	size = 1 << bit_width_ceil(size + align - 1);
 	char name[20];
 	sprintf(name, "cache-%d", static_cast<int>(size));
 
@@ -166,12 +173,37 @@ void* kmalloc(size_t size)
 		cache = &m_cache_create(name, size);
 	}
 
-	return cache->alloc();
+	void* raw_addr = cache->alloc();
+	if (align == 1) {
+		return raw_addr;
+	}
+
+	auto* aligned_addr = reinterpret_cast<void*>(
+			align_up(reinterpret_cast<uintptr_t>(raw_addr), align));
+
+	if (aligned_addr == raw_addr) {
+		return aligned_addr;
+	}
+
+	aligned_to_raw_addr_map[aligned_addr] = raw_addr;
+
+	return aligned_addr;
 }
 
 void kfree(void* addr)
 {
+	auto it = aligned_to_raw_addr_map.find(addr);
+	if (it != aligned_to_raw_addr_map.end()) {
+		addr = it->second;
+		aligned_to_raw_addr_map.erase(it);
+	}
+
 	page* page = get_page(addr);
+	if (page == nullptr) {
+		klogger->error("kfree: invalid address");
+		return;
+	}
+
 	m_cache* cache = page->cache();
 	m_slab* slab = page->slab();
 
@@ -190,7 +222,9 @@ std::list<std::unique_ptr<m_cache>> cache_chain;
 void initialize_slab_allocator()
 {
 	klogger->info("Initializing slab allocator...");
-	
+
+	aligned_to_raw_addr_map = std::unordered_map<void*, void*>();
+
 	cache_chain.clear();
 
 	klogger->info("Initializing slab allocator successfully.");

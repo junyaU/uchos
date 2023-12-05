@@ -1,13 +1,25 @@
+/*
+ * @file system_event.hpp
+ *
+ * @brief System Event Definitions
+ *
+ * This file defines the `system_event` structure, which is used throughout the
+ * system to handle various types of events such as timers, keyboard inputs, and USB
+ * controller events. Each event type is categorized and its data encapsulated in a
+ * union, allowing easy access and manipulation of event-specific data.
+ *
+ */
+
 #pragma once
 
 #include <cstdint>
 
-struct SystemEvent {
+struct system_event {
 	enum Type {
-		kEmpty,
-		kTimerTimeout,
-		kDrawScreenTimer,
-		kSwitchTask,
+		EMPTY,
+		TIMER_TIMEOUT,
+		DRAW_SCREEN_TIMER,
+		SWITCH_TASK,
 		XHCI,
 		KEY_PUSH,
 	} type_;

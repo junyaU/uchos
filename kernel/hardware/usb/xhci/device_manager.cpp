@@ -1,6 +1,6 @@
 #include "device_manager.hpp"
 #include "../../../graphics/kernel_logger.hpp"
-#include "../memory.hpp"
+#include "../../../memory/slab.hpp"
 
 namespace usb::xhci
 {
@@ -8,15 +8,17 @@ void device_manager::initialize(size_t max_slots)
 {
 	max_slots_ = max_slots;
 
-	devices_ = alloc_array<device*>(max_slots_ + 1, 0, 0);
+	devices_ =
+			reinterpret_cast<device**>(kmalloc(sizeof(device*) * (max_slots_ + 1)));
 	if (devices_ == nullptr) {
 		klogger->error("failed to allocate memory for devices");
 		return;
 	}
 
-	contexts_ = alloc_array<device_context*>(max_slots_ + 1, 64, 4096);
+	contexts_ = reinterpret_cast<device_context**>(
+			kmalloc(sizeof(device_context*) * (max_slots_ + 1), 64));
 	if (contexts_ == nullptr) {
-		free_memory(devices_);
+		kfree(devices_);
 		klogger->error("failed to allocate memory for device contexts");
 		return;
 	}
@@ -83,7 +85,7 @@ void device_manager::allocate_device(uint8_t slot_id,
 		return;
 	}
 
-	devices_[slot_id] = alloc_array<device>(1, 64, 4096);
+	devices_[slot_id] = reinterpret_cast<device*>(kmalloc(sizeof(device), 64));
 	new (devices_[slot_id]) device(slot_id, dbreg);
 }
 
@@ -101,7 +103,7 @@ void device_manager::load_dcbaa(uint8_t slot_id)
 void device_manager::remove(uint8_t slot_id)
 {
 	contexts_[slot_id] = nullptr;
-	free_memory(devices_[slot_id]);
+	kfree(devices_[slot_id]);
 	devices_[slot_id] = nullptr;
 }
 } // namespace usb::xhci

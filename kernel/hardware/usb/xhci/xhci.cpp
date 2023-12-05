@@ -2,8 +2,8 @@
 #include "../../../asm_utils.h"
 #include "../../../graphics/kernel_logger.hpp"
 #include "../../../interrupt/vector.hpp"
+#include "../../../memory/slab.hpp"
 #include "../../pci.hpp"
-#include "../memory.hpp"
 #include "context.hpp"
 #include "speed.hpp"
 #include "trb.hpp"
@@ -270,10 +270,11 @@ void controller::initialize()
 			(hcs_params2.bits.max_scratchpad_buffers_high << 5);
 
 	if (max_scratchpad_buffers > 0) {
-		auto* scratchpad_buf_arr =
-				alloc_array<void*>(max_scratchpad_buffers, 64, 4096);
+		auto* scratchpad_buf_arr = reinterpret_cast<void**>(
+				kmalloc(sizeof(void*) * max_scratchpad_buffers, 64));
+
 		for (int i = 0; i < max_scratchpad_buffers; i++) {
-			scratchpad_buf_arr[i] = alloc_memory(4096, 4096, 4096);
+			scratchpad_buf_arr[i] = kmalloc(4096);
 		}
 
 		device_manager_.device_contexts()[0] =
@@ -306,7 +307,6 @@ void controller::run()
 	auto usb_command = op_regs_->usb_cmd.read();
 	usb_command.bits.run_stop = true;
 	op_regs_->usb_cmd.write(usb_command);
-	op_regs_->usb_cmd.read();
 
 	while (op_regs_->usb_sts.read().bits.host_controller_halted) {
 	}
@@ -452,8 +452,6 @@ void initialize()
 
 	xhc.run();
 
-	klogger->info("xHCI initialized successfully.");
-
 	for (int i = 1; i < xhc.max_ports(); i++) {
 		auto p = xhc.port_at(i);
 
@@ -463,6 +461,8 @@ void initialize()
 
 		configure_port(xhc, p);
 	}
+
+	klogger->info("xHCI initialized successfully.");
 }
 
 void process_events()

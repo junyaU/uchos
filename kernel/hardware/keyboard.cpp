@@ -54,7 +54,7 @@ void initialize_keyboard()
 		const bool shift = (modifier & (L_SHIFT | R_SHIFT)) != 0;
 		char ascii = shift ? keycode_map_shifted[keycode] : keycode_map[keycode];
 
-		SystemEvent event{ SystemEvent::KEY_PUSH };
+		system_event event{ system_event::KEY_PUSH };
 		event.args_.keyboard.press = press;
 		event.args_.keyboard.keycode = keycode;
 		event.args_.keyboard.ascii = ascii;

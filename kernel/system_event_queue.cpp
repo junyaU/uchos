@@ -3,7 +3,7 @@
 #include "hardware/usb/xhci/xhci.hpp"
 #include "system_event.hpp"
 
-bool kernel_event_queue::queue(SystemEvent event)
+bool kernel_event_queue::queue(system_event event)
 {
 	if (events_.size() >= QUEUE_SIZE) {
 		return false;
@@ -13,10 +13,10 @@ bool kernel_event_queue::queue(SystemEvent event)
 	return true;
 }
 
-SystemEvent kernel_event_queue::dequeue()
+system_event kernel_event_queue::dequeue()
 {
 	if (events_.empty()) {
-		return SystemEvent{ SystemEvent::kEmpty, { { 0 } } };
+		return system_event{ system_event::EMPTY, { { 0 } } };
 	}
 
 	auto event = events_.front();
@@ -39,18 +39,18 @@ void handle_system_events()
 
 		auto event = kevent_queue->dequeue();
 		switch (event.type_) {
-			case SystemEvent::kTimerTimeout:
+			case system_event::TIMER_TIMEOUT:
 				klogger->print("Timer timeout\n");
 				break;
 
-			case SystemEvent::kDrawScreenTimer:
+			case system_event::DRAW_SCREEN_TIMER:
 				break;
 
-			case SystemEvent::XHCI:
+			case system_event::XHCI:
 				usb::xhci::process_events();
 				break;
 
-			case SystemEvent::KEY_PUSH:
+			case system_event::KEY_PUSH:
 				if (event.args_.keyboard.press) {
 					klogger->printf("%c", event.args_.keyboard.ascii);
 				}

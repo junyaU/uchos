@@ -1,6 +1,5 @@
 #include "device.hpp"
 #include "../../../graphics/kernel_logger.hpp"
-#include "../memory.hpp"
 #include "ring.hpp"
 
 namespace usb::xhci
@@ -17,7 +16,7 @@ void device::select_for_slot_assignment() { state_ = slot_state::SLOT_ASSIGNING;
 ring* device::alloc_transfer_ring(device_context_index index, size_t buf_size)
 {
 	int i = index.value - 1;
-	auto* transfer_ring = alloc_array<ring>(1, 64, 4096);
+	auto* transfer_ring = reinterpret_cast<ring*>(malloc(64));
 	if (transfer_ring != nullptr) {
 		transfer_ring->initialize(buf_size);
 	}

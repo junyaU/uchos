@@ -132,9 +132,6 @@ void device::initialize_stage2(const uint8_t* buf, int len)
 
 				endpoint_configs_[num_endpoint_configs_++] = conf;
 				class_drivers_[conf.id.number()] = class_driver;
-			} else if (auto hid_desc = descriptor_dynamic_cast<hid_descriptor>(desc);
-					   hid_desc != nullptr) {
-				klogger->info("Device: HID descriptor found");
 			}
 		}
 

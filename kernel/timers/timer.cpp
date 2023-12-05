@@ -11,7 +11,7 @@ uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 
 uint64_t kernel_timer::add_timer_event(unsigned long millisec)
 {
-	auto event = SystemEvent{ SystemEvent::kTimerTimeout };
+	auto event = system_event{ system_event::TIMER_TIMEOUT };
 
 	event.args_.timer.id = last_id_;
 	event.args_.timer.timeout = calculate_timeout_ticks(millisec);
@@ -26,7 +26,7 @@ uint64_t kernel_timer::add_timer_event(unsigned long millisec)
 
 uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec, uint64_t id)
 {
-	auto event = SystemEvent{ SystemEvent::kTimerTimeout };
+	auto event = system_event{ system_event::TIMER_TIMEOUT };
 
 	if (id == 0) {
 		id = last_id_;
@@ -48,7 +48,7 @@ uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec, uint64_t
 
 void kernel_timer::add_switch_task_event(unsigned long millisec)
 {
-	auto event = SystemEvent{ SystemEvent::kSwitchTask };
+	auto event = system_event{ system_event::SWITCH_TASK };
 
 	event.args_.timer.timeout = calculate_timeout_ticks(millisec);
 	events_.push(event);
@@ -70,7 +70,7 @@ bool kernel_timer::increment_tick()
 
 	if (tick_ % TIMER_FREQUENCY == 0) {
 		__asm__("cli");
-		events_.push(SystemEvent{ SystemEvent::kDrawScreenTimer, { { tick_ } } });
+		events_.push(system_event{ system_event::DRAW_SCREEN_TIMER, { { tick_ } } });
 		__asm__("sti");
 	}
 
@@ -79,7 +79,7 @@ bool kernel_timer::increment_tick()
 		auto event = events_.top();
 		events_.pop();
 
-		if (event.type_ == SystemEvent::kSwitchTask) {
+		if (event.type_ == system_event::SWITCH_TASK) {
 			need_switch_task = true;
 
 			event.args_.timer.timeout =
@@ -98,7 +98,7 @@ bool kernel_timer::increment_tick()
 			ignore_events_.erase(it);
 			continue;
 		}
-		
+
 		if (!kevent_queue->queue(event)) {
 			klogger->printf("failed to queue timer event: %lu\n",
 							event.args_.timer.id);
