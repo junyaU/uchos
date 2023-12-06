@@ -1,5 +1,5 @@
 #include "keyboard.hpp"
-#include "../memory.hpp"
+#include "../../../memory/slab.hpp"
 #include "hid.hpp"
 
 #include <bitset>
@@ -13,10 +13,10 @@ keyboard_driver::keyboard_driver(usb::device* dev, int interface_index)
 
 void* keyboard_driver::operator new(size_t size)
 {
-	return alloc_memory(sizeof(keyboard_driver), 0, 0);
+	return kmalloc(sizeof(keyboard_driver));
 }
 
-void keyboard_driver::operator delete(void* ptr) noexcept { free_memory(ptr); }
+void keyboard_driver::operator delete(void* ptr) noexcept { kfree(ptr); }
 
 void keyboard_driver::on_data_received()
 {
@@ -41,7 +41,7 @@ void keyboard_driver::on_data_received()
 void keyboard_driver::subscribe(std::function<observer_type> o)
 {
 	if (num_observers_ < observers_.size()) {
-		observers_[num_observers_++] = o;
+		observers_[num_observers_++] = std::move(o);
 	}
 }
 

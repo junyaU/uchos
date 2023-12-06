@@ -7,31 +7,23 @@ namespace usb
 {
 device::~device() {}
 
-void device::control_in(endpoint_id ep_id,
-						setup_stage_data setup_data,
-						void* buf,
-						int len,
-						class_driver* driver)
+void device::control_in(const control_transfer_data& data)
 {
-	if (driver) {
-		event_waiters_.put(setup_data, driver);
+	if (data.driver != nullptr) {
+		event_waiters_.put(data.setup_data, data.driver);
 	}
 }
 
-void device::control_out(endpoint_id ep_id,
-						 setup_stage_data setup_data,
-						 const void* buf,
-						 int len,
-						 class_driver* driver)
+void device::control_out(const control_transfer_data& data)
 {
-	if (driver) {
-		event_waiters_.put(setup_data, driver);
+	if (data.driver != nullptr) {
+		event_waiters_.put(data.setup_data, data.driver);
 	}
 }
 
-void device::interrupt_in(endpoint_id ep_id, void* buf, int len) {}
+void device::interrupt_in(const interrupt_transfer_data& data) {}
 
-void device::interrupt_out(endpoint_id ep_id, const void* buf, int len) {}
+void device::interrupt_out(const interrupt_transfer_data& data) {}
 
 void device::start_initialize()
 {
@@ -51,34 +43,32 @@ void device::on_endpoints_configured()
 	}
 }
 
-void device::on_control_completed(endpoint_id ep_id,
-								  setup_stage_data setup_data,
-								  void* buf,
-								  int len)
+void device::on_control_completed(const control_transfer_data& data)
 {
 	if (is_initialized_) {
-		if (auto w = event_waiters_.get(setup_data)) {
-			return w.value()->on_control_completed(ep_id, &setup_data, buf, len);
+		if (auto w = event_waiters_.get(data.setup_data)) {
+			return w.value()->on_control_completed(data.ep_id, data.setup_data,
+												   data.buf, data.len);
 		}
 		return;
 	}
 
-	const uint8_t* buf8 = reinterpret_cast<const uint8_t*>(buf);
+	const uint8_t* buf8 = reinterpret_cast<const uint8_t*>(data.buf);
 	switch (initialize_stage_) {
 		case 1:
-			if (setup_data.request == request::GET_DESCRIPTOR &&
+			if (data.setup_data.request == request::GET_DESCRIPTOR &&
 				(descriptor_dynamic_cast<device_descriptor>(buf8) != nullptr)) {
-				return initialize_stage1(buf8, len);
+				return initialize_stage1(buf8, data.len);
 			}
 		case 2:
-			if (setup_data.request == request::GET_DESCRIPTOR &&
+			if (data.setup_data.request == request::GET_DESCRIPTOR &&
 				(descriptor_dynamic_cast<configuration_descriptor>(buf8) !=
 				 nullptr)) {
-				return initialize_stage2(buf8, len);
+				return initialize_stage2(buf8, data.len);
 			}
 		case 3:
-			if (setup_data.request == request::SET_CONFIGURATION) {
-				return initialize_stage3(buf8, len);
+			if (data.setup_data.request == request::SET_CONFIGURATION) {
+				return initialize_stage3(buf8, data.len);
 			}
 		default:
 			klogger->error("Device: on_control_completed: invalid stage");
@@ -86,10 +76,10 @@ void device::on_control_completed(endpoint_id ep_id,
 	}
 }
 
-void device::on_interrupt_completed(usb::endpoint_id ep_id, void* buf, int len)
+void device::on_interrupt_completed(const interrupt_transfer_data& data)
 {
-	if (auto w = class_drivers_[ep_id.number()]; w != nullptr) {
-		return w->on_interrupt_completed(ep_id, buf, len);
+	if (auto* w = class_drivers_[data.ep_id.number()]; w != nullptr) {
+		return w->on_interrupt_completed(data.ep_id, data.buf, data.len);
 	}
 
 	klogger->error("Device: on_interrupt_completed: invalid endpoint");
@@ -108,7 +98,7 @@ void device::initialize_stage1(const uint8_t* buf, int len)
 
 void device::initialize_stage2(const uint8_t* buf, int len)
 {
-	auto* conf_desc = descriptor_dynamic_cast<configuration_descriptor>(buf);
+	const auto* conf_desc = descriptor_dynamic_cast<configuration_descriptor>(buf);
 	if (conf_desc == nullptr) {
 		return;
 	}
@@ -116,7 +106,7 @@ void device::initialize_stage2(const uint8_t* buf, int len)
 	configuration_descriptor_iterator config_it{ buf, len };
 	class_driver* class_driver = nullptr;
 
-	while (auto if_desc = config_it.next<interface_descriptor>()) {
+	while (const auto* if_desc = config_it.next<interface_descriptor>()) {
 		class_driver = new_class_driver(this, *if_desc);
 		if (class_driver == nullptr) {
 			continue;
@@ -125,16 +115,14 @@ void device::initialize_stage2(const uint8_t* buf, int len)
 		num_endpoint_configs_ = 0;
 
 		while (num_endpoint_configs_ < if_desc->num_endpoints) {
-			auto desc = config_it.next();
-			if (auto ep_desc = descriptor_dynamic_cast<endpoint_descriptor>(desc);
+			const auto* desc = config_it.next();
+			if (const auto* ep_desc =
+						descriptor_dynamic_cast<endpoint_descriptor>(desc);
 				ep_desc != nullptr) {
 				auto conf = make_endpoint_config(*ep_desc);
 
 				endpoint_configs_[num_endpoint_configs_++] = conf;
 				class_drivers_[conf.id.number()] = class_driver;
-			} else if (auto hid_desc = descriptor_dynamic_cast<hid_descriptor>(desc);
-					   hid_desc != nullptr) {
-				klogger->info("Device: HID descriptor found");
 			}
 		}
 
@@ -162,7 +150,7 @@ void device::initialize_stage3(const uint8_t* buf, int len)
 }
 
 void get_descriptor(device& dev,
-					endpoint_id ep_id,
+					const endpoint_id& ep_id,
 					uint8_t desc_type,
 					uint8_t desc_index,
 					void* buf,
@@ -178,11 +166,11 @@ void get_descriptor(device& dev,
 	setup_data.index = 0;
 	setup_data.length = len;
 
-	dev.control_in(ep_id, setup_data, buf, len, nullptr);
+	dev.control_in({ ep_id, setup_data, buf, len, nullptr });
 }
 
 void set_configuration(device& dev,
-					   endpoint_id ep_id,
+					   const endpoint_id& ep_id,
 					   uint8_t config_value,
 					   bool debug)
 {
@@ -195,7 +183,7 @@ void set_configuration(device& dev,
 	setup_data.index = 0;
 	setup_data.length = 0;
 
-	return dev.control_out(ep_id, setup_data, nullptr, 0, nullptr);
+	return dev.control_out({ ep_id, setup_data, nullptr, 0, nullptr });
 }
 
 } // namespace usb

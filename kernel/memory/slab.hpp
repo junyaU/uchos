@@ -1,3 +1,14 @@
+/*
+ * @file memory/slab.hpp
+ *
+ * @brief slab allocator
+ *
+ * This file contains the implementation of a slab allocator for efficient
+ * memory management in a kernel environment. The slab allocator is designed to
+ * minimize fragmentation by managing memory in fixed-size blocks called slabs.
+ *
+ */
+
 #pragma once
 
 #include <cstddef>
@@ -80,7 +91,7 @@ m_cache* get_cache_in_chain(char* name);
 
 m_cache& m_cache_create(const char* name, size_t obj_size);
 
-void* kmalloc(size_t size);
+void* kmalloc(size_t size, int align = 1);
 
 void kfree(void* addr);
 

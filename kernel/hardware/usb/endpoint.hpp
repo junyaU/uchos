@@ -20,7 +20,6 @@ enum class endpoint_type {
 	ISOCHRONOUS = 1,
 	BULK = 2,
 	INTERRUPT = 3,
-
 };
 
 class endpoint_id

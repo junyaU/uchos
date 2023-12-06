@@ -1,27 +1,17 @@
 #include "ring.hpp"
 #include "../../../graphics/kernel_logger.hpp"
-#include "../memory.hpp"
+#include "../../../memory/slab.hpp"
 
 namespace usb::xhci
 {
-ring::~ring()
-{
-	if (buffer_ != nullptr) {
-		free_memory(buffer_);
-	}
-}
+ring::~ring() {}
 
 void ring::initialize(size_t buf_size)
 {
-	if (buffer_ != nullptr) {
-		free_memory(buffer_);
-	}
-
 	cycle_bit_ = true;
 	write_index_ = 0;
 	buffer_size_ = buf_size;
-
-	buffer_ = alloc_array<trb>(buffer_size_, 64, 64 * 1024);
+	buffer_ = reinterpret_cast<trb*>(kmalloc(sizeof(trb) * buffer_size_, 64));
 	if (buffer_ == nullptr) {
 		klogger->error("failed to allocate memory for ring");
 		return;
@@ -61,24 +51,21 @@ trb* ring::push(const std::array<uint32_t, 4>& data)
 void event_ring::initialize(size_t buf_size,
 							interrupter_register_set* interrupter_register)
 {
-	if (buffer_ != nullptr) {
-		free_memory(buffer_);
-	}
-
 	cycle_bit_ = true;
 	buffer_size_ = buf_size;
 	interrupter_register_ = interrupter_register;
 
-	buffer_ = alloc_array<trb>(buffer_size_, 64, 64 * 1024);
+	buffer_ = reinterpret_cast<trb*>(kmalloc(sizeof(trb) * buffer_size_, 64));
 	if (buffer_ == nullptr) {
 		klogger->error("failed to allocate memory for event ring");
 		return;
 	}
 	memset(buffer_, 0, buffer_size_ * sizeof(trb));
 
-	segment_table_ = alloc_array<event_ring_segment_table_entry>(1, 64, 64 * 1024);
+	segment_table_ = reinterpret_cast<event_ring_segment_table_entry*>(
+			kmalloc(sizeof(event_ring_segment_table_entry), 64));
 	if (segment_table_ == nullptr) {
-		free_memory(buffer_);
+		kfree(buffer_);
 		klogger->error("failed to allocate memory for event ring segment table");
 		return;
 	}

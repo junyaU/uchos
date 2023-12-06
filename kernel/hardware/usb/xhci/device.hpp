@@ -42,18 +42,10 @@ public:
 	void select_for_slot_assignment();
 	ring* alloc_transfer_ring(device_context_index index, size_t buf_size);
 
-	void control_in(endpoint_id ep_id,
-					setup_stage_data setup_data,
-					void* buf,
-					int len,
-					class_driver* driver) override;
-	void control_out(endpoint_id ep_id,
-					 setup_stage_data setup_data,
-					 const void* buf,
-					 int len,
-					 class_driver* driver) override;
-	void interrupt_in(endpoint_id ep_id, void* buf, int len) override;
-	void interrupt_out(endpoint_id ep_id, const void* buf, int len) override;
+	void control_in(const control_transfer_data& data) override;
+	void control_out(const control_transfer_data& data) override;
+	void interrupt_in(const interrupt_transfer_data& data) override;
+	void interrupt_out(const interrupt_transfer_data& data) override;
 
 	void on_transfer_event_received(const transfer_event_trb& trb);
 

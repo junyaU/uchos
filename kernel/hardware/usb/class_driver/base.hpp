@@ -28,7 +28,7 @@ public:
 	virtual void set_endpoint(const endpoint_config& config) = 0;
 	virtual void on_endpoints_configured() = 0;
 	virtual void on_control_completed(endpoint_id ep_id,
-									  setup_stage_data* setup_data,
+									  setup_stage_data setup_data,
 									  void* buf,
 									  int len) = 0;
 	virtual void on_interrupt_completed(endpoint_id ep_id, void* buf, int len) = 0;

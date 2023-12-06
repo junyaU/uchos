@@ -26,7 +26,7 @@ public:
 	void set_endpoint(const endpoint_config& config) override;
 	void on_endpoints_configured() override;
 	void on_control_completed(endpoint_id ep_id,
-							  setup_stage_data* setup_data,
+							  setup_stage_data setup_data,
 							  void* buf,
 							  int len) override;
 	void on_interrupt_completed(endpoint_id ep_id, void* buf, int len) override;

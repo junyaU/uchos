@@ -6,7 +6,7 @@
 #include <queue>
 #include <unordered_set>
 
-inline bool operator<(const SystemEvent& lhs, const SystemEvent& rhs)
+inline bool operator<(const system_event& lhs, const system_event& rhs)
 {
 	return lhs.args_.timer.timeout > rhs.args_.timer.timeout;
 }
@@ -18,7 +18,7 @@ class kernel_timer
 {
 public:
 	kernel_timer() : tick_{ 0 }, last_id_{ 1 } {}
-	
+
 	uint64_t current_tick() const { return tick_; }
 
 	float tick_to_time(uint64_t tick) const
@@ -42,7 +42,7 @@ private:
 	uint64_t tick_;
 	uint64_t last_id_;
 	std::unordered_set<uint64_t> ignore_events_;
-	std::priority_queue<SystemEvent> events_;
+	std::priority_queue<system_event> events_;
 };
 
 extern kernel_timer* ktimer;

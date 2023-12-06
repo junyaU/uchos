@@ -4,6 +4,8 @@
 #include "buddy_system.hpp"
 #include "page.hpp"
 
+#include <sys/types.h>
+
 bootstrap_allocator::bootstrap_allocator()
 	: bitmap_{}, memory_start_{ 0x0 }, memory_end_{ 0x0 }
 {

@@ -8,12 +8,12 @@ class kernel_event_queue
 public:
 	kernel_event_queue() = default;
 
-	bool queue(SystemEvent event);
-	SystemEvent dequeue();
+	bool queue(system_event event);
+	system_event dequeue();
 	bool empty() const { return events_.empty(); }
 
 private:
-	std::queue<SystemEvent> events_;
+	std::queue<system_event> events_;
 	static const int QUEUE_SIZE = 1000;
 };
 

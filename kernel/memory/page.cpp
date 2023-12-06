@@ -25,6 +25,11 @@ void initialize_pages()
 
 page* get_page(void* ptr)
 {
+	if (ptr == nullptr ||
+		pages.size() < reinterpret_cast<uintptr_t>(ptr) / PAGE_SIZE) {
+		return nullptr;
+	}
+
 	return &pages[reinterpret_cast<uintptr_t>(ptr) / PAGE_SIZE];
 }
 

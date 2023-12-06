@@ -7,7 +7,7 @@ buddy_system* memory_manager;
 
 int buddy_system::calculate_order(size_t num_pages)
 {
-	const int order = bit_ceil(num_pages);
+	const int order = bit_width_ceil(num_pages);
 
 	if (order > MAX_ORDER) {
 		return -1;
