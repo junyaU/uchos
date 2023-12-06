@@ -9,6 +9,7 @@ void device_manager::initialize(size_t max_slots)
 	max_slots_ = max_slots;
 
 	devices_ =
+			// NOLINTNEXTLINE(bugprone-sizeof-expression)
 			reinterpret_cast<device**>(kmalloc(sizeof(device*) * (max_slots_ + 1)));
 	if (devices_ == nullptr) {
 		klogger->error("failed to allocate memory for devices");
@@ -16,6 +17,7 @@ void device_manager::initialize(size_t max_slots)
 	}
 
 	contexts_ = reinterpret_cast<device_context**>(
+			// NOLINTNEXTLINE(bugprone-sizeof-expression)
 			kmalloc(sizeof(device_context*) * (max_slots_ + 1), 64));
 	if (contexts_ == nullptr) {
 		kfree(devices_);
