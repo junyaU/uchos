@@ -41,7 +41,7 @@ void keyboard_driver::on_data_received()
 void keyboard_driver::subscribe(std::function<observer_type> o)
 {
 	if (num_observers_ < observers_.size()) {
-		observers_[num_observers_++] = o;
+		observers_[num_observers_++] = std::move(o);
 	}
 }
 

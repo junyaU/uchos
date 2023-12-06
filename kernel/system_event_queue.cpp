@@ -51,7 +51,7 @@ void handle_system_events()
 				break;
 
 			case system_event::KEY_PUSH:
-				if (event.args_.keyboard.press) {
+				if (event.args_.keyboard.press != 0) {
 					klogger->printf("%c", event.args_.keyboard.ascii);
 				}
 				break;

@@ -45,7 +45,6 @@ public:
 	bool is_port_reset_changed() const;
 	int speed() const;
 	void reset();
-	device* initialize();
 
 	void clear_connect_status_changed() { CLEAR_STATUS_BIT(connect_status_change); }
 

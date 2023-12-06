@@ -52,10 +52,11 @@ void initialize_keyboard()
 	usb::keyboard_driver::default_observer = [](uint8_t modifier, uint8_t keycode,
 												bool press) {
 		const bool shift = (modifier & (L_SHIFT | R_SHIFT)) != 0;
-		char ascii = shift ? keycode_map_shifted[keycode] : keycode_map[keycode];
+		const char ascii =
+				shift ? keycode_map_shifted[keycode] : keycode_map[keycode];
 
 		system_event event{ system_event::KEY_PUSH };
-		event.args_.keyboard.press = press;
+		event.args_.keyboard.press = static_cast<int>(press);
 		event.args_.keyboard.keycode = keycode;
 		event.args_.keyboard.ascii = ascii;
 		event.args_.keyboard.modifier = modifier;

@@ -22,22 +22,28 @@ namespace usb
 {
 class class_driver;
 
+struct control_transfer_data {
+	const endpoint_id& ep_id;
+	setup_stage_data setup_data;
+	void* buf;
+	int len;
+	class_driver* driver;
+};
+
+struct interrupt_transfer_data {
+	const endpoint_id& ep_id;
+	void* buf;
+	int len;
+};
+
 class device
 {
 public:
 	virtual ~device();
-	virtual void control_in(endpoint_id ep_id,
-							setup_stage_data setup_data,
-							void* buf,
-							int len,
-							class_driver* driver) = 0;
-	virtual void control_out(endpoint_id ep_id,
-							 setup_stage_data setup_data,
-							 const void* buf,
-							 int len,
-							 class_driver* driver) = 0;
-	virtual void interrupt_in(endpoint_id ep_id, void* buf, int len) = 0;
-	virtual void interrupt_out(endpoint_id ep_id, const void* buf, int len) = 0;
+	virtual void control_in(const control_transfer_data& data) = 0;
+	virtual void control_out(const control_transfer_data& data) = 0;
+	virtual void interrupt_in(const interrupt_transfer_data& data) = 0;
+	virtual void interrupt_out(const interrupt_transfer_data& data) = 0;
 
 	void start_initialize();
 	bool is_initialized() const { return is_initialized_; }
@@ -49,11 +55,8 @@ public:
 	uint8_t* buffer() { return buffer_.data(); }
 
 protected:
-	void on_control_completed(endpoint_id ep_id,
-							  setup_stage_data setup_data,
-							  void* buf,
-							  int len);
-	void on_interrupt_completed(endpoint_id ep_id, void* buf, int len);
+	void on_control_completed(const control_transfer_data& data);
+	void on_interrupt_completed(const interrupt_transfer_data& data);
 
 private:
 	std::array<class_driver*, 16> class_drivers_{};
@@ -79,14 +82,14 @@ private:
 };
 
 void get_descriptor(device& dev,
-					endpoint_id ep_id,
+					const endpoint_id& ep_id,
 					uint8_t desc_type,
 					uint8_t desc_index,
 					void* buf,
 					int len,
 					bool debug = false);
 void set_configuration(device& dev,
-					   endpoint_id ep_id,
+					   const endpoint_id& ep_id,
 					   uint8_t config_value,
 					   bool debug = false);
 } // namespace usb

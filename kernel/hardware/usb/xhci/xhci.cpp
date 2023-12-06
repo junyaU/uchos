@@ -33,7 +33,7 @@ void enable_slot(controller& xhc, port& p)
 		p.clear_port_reset_changed();
 		port_connection_states[p.number()] = port_connection_state::ENABLEING_SLOT;
 
-		enable_slot_command_trb cmd{};
+		const enable_slot_command_trb cmd{};
 		xhc.command_ring()->push(cmd);
 		xhc.doorbell_register_at(0)->ring(0);
 	}
@@ -53,7 +53,7 @@ void initialize_device(controller& xhc, uint8_t port_id, uint8_t slot_id)
 
 void complete_configuration(controller& xhc, uint8_t port_id, uint8_t slot_id)
 {
-	auto dev = xhc.device_manager()->find_by_slot_id(slot_id);
+	auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 	if (dev == nullptr) {
 		klogger->printf("device not found for slot id %d\n", slot_id);
 		return;
@@ -92,7 +92,7 @@ void address_device(controller& xhc, uint8_t port_id, uint8_t slot_id)
 
 	port_connection_states[port_id] = port_connection_state::ADDRESSING_DEVICE;
 
-	address_device_command_trb cmd{ dev->input_context(), slot_id };
+	const address_device_command_trb cmd{ dev->input_context(), slot_id };
 	xhc.command_ring()->push(cmd);
 	xhc.doorbell_register_at(0)->ring(0);
 }
@@ -136,66 +136,71 @@ void on_event(controller& xhc, command_completion_event_trb& trb)
 {
 	const auto issuer_type = trb.pointer()->bits.trb_type;
 	const auto slot_id = trb.bits.slot_id;
-	if (issuer_type == enable_slot_command_trb::TYPE) {
-		if (port_connection_states[addressing_port] !=
-			port_connection_state::ENABLEING_SLOT) {
-			klogger->printf("port %d is not enableing slot\n", addressing_port);
-			return;
-		}
 
-		return address_device(xhc, addressing_port, slot_id);
-	} else if (issuer_type == address_device_command_trb::TYPE) {
-		auto dev = xhc.device_manager()->find_by_slot_id(slot_id);
-		if (dev == nullptr) {
-			klogger->printf("device not found for slot id %d\n", slot_id);
-			return;
-		};
-
-		auto port_id = dev->context()->slot.bits.root_hub_port_num;
-		if (port_id != addressing_port) {
-			klogger->printf("port id %d is not equal to addressing port %d\n",
-							port_id, addressing_port);
-			return;
-		}
-
-		if (port_connection_states[port_id] !=
-			port_connection_state::ADDRESSING_DEVICE) {
-			klogger->printf("port %d is not addressing device\n", port_id);
-			return;
-		}
-
-		addressing_port = 0;
-		for (int i = 0; i < port_connection_states.size(); i++) {
-			if (port_connection_states[i] ==
-				port_connection_state::WAITING_ADDRESSED) {
-				auto p = xhc.port_at(i);
-				reset_port(p);
-				break;
+	switch (issuer_type) {
+		case enable_slot_command_trb::TYPE:
+			if (port_connection_states[addressing_port] !=
+				port_connection_state::ENABLEING_SLOT) {
+				klogger->printf("port %d is not enableing slot\n", addressing_port);
+				return;
 			}
+
+			return address_device(xhc, addressing_port, slot_id);
+
+		case address_device_command_trb::TYPE: {
+			auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
+			if (dev == nullptr) {
+				klogger->printf("device not found for slot id %d\n", slot_id);
+				return;
+			};
+
+			auto port_id = dev->context()->slot.bits.root_hub_port_num;
+			if (port_id != addressing_port) {
+				klogger->printf("port id %d is not equal to addressing port %d\n",
+								port_id, addressing_port);
+				return;
+			}
+
+			if (port_connection_states[port_id] !=
+				port_connection_state::ADDRESSING_DEVICE) {
+				klogger->printf("port %d is not addressing device\n", port_id);
+				return;
+			}
+
+			addressing_port = 0;
+			for (int i = 0; i < port_connection_states.size(); i++) {
+				if (port_connection_states[i] ==
+					port_connection_state::WAITING_ADDRESSED) {
+					auto p = xhc.port_at(i);
+					reset_port(p);
+					break;
+				}
+			}
+
+			return initialize_device(xhc, port_id, slot_id);
 		}
 
-		return initialize_device(xhc, port_id, slot_id);
-	} else if (issuer_type == configure_endpoint_command_trb::TYPE) {
-		auto dev = xhc.device_manager()->find_by_slot_id(slot_id);
-		if (dev == nullptr) {
-			klogger->printf("device not found for slot id %d\n", slot_id);
-			return;
-		}
+		case configure_endpoint_command_trb::TYPE:
+			auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
+			if (dev == nullptr) {
+				klogger->printf("device not found for slot id %d\n", slot_id);
+				return;
+			}
 
-		auto port_id = dev->context()->slot.bits.root_hub_port_num;
-		if (port_connection_states[port_id] !=
-			port_connection_state::CONFIGURING_ENDPOINTS) {
-			klogger->printf("port %d is not configuring endpoints\n", port_id);
-			return;
-		}
+			auto port_id = dev->context()->slot.bits.root_hub_port_num;
+			if (port_connection_states[port_id] !=
+				port_connection_state::CONFIGURING_ENDPOINTS) {
+				klogger->printf("port %d is not configuring endpoints\n", port_id);
+				return;
+			}
 
-		return complete_configuration(xhc, port_id, slot_id);
+			return complete_configuration(xhc, port_id, slot_id);
 	}
 }
 
 void request_hc_ownership(uintptr_t mmio_base, hcc_params1_register hccp)
 {
-	extended_register_list extended_regs{ mmio_base, hccp };
+	const extended_register_list extended_regs{ mmio_base, hccp };
 
 	auto ext_usb_legacy_support =
 			std::find_if(extended_regs.begin(), extended_regs.end(), [](auto& reg) {
@@ -387,7 +392,7 @@ void configure_endpoints(controller& xhc, device& dev)
 
 	port_connection_states[port_id] = port_connection_state::CONFIGURING_ENDPOINTS;
 
-	configure_endpoint_command_trb cmd{ dev.input_context(), dev.slot_id() };
+	const configure_endpoint_command_trb cmd{ dev.input_context(), dev.slot_id() };
 	xhc.command_ring()->push(cmd);
 	xhc.doorbell_register_at(0)->ring(0);
 }
@@ -398,13 +403,13 @@ void process_event(controller& xhc)
 		return;
 	}
 
-	auto event_trb = xhc.primary_event_ring()->front();
-	if (auto trb = trb_dynamic_cast<transfer_event_trb>(event_trb)) {
+	auto* event_trb = xhc.primary_event_ring()->front();
+	if (auto* trb = trb_dynamic_cast<transfer_event_trb>(event_trb)) {
 		on_event(xhc, *trb);
-	} else if (auto trb =
+	} else if (auto* trb =
 					   trb_dynamic_cast<port_status_change_event_trb>(event_trb)) {
 		on_event(xhc, *trb);
-	} else if (auto trb =
+	} else if (auto* trb =
 					   trb_dynamic_cast<command_completion_event_trb>(event_trb)) {
 		on_event(xhc, *trb);
 	} else {

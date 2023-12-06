@@ -39,8 +39,6 @@ void port::reset()
 	}
 }
 
-device* port::initialize() { return nullptr; }
-
 void reset_port(port& p)
 {
 	const bool is_connected = p.is_connected();

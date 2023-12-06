@@ -231,10 +231,12 @@ void configure_msi(const device& dev,
 		cap_addr = header.bits.next_ptr;
 	}
 
-	if (msi_cap_addr) {
+	if (msi_cap_addr != 0) {
 		return configure_msi_register(dev, msi_cap_addr, msg_addr, msg_data,
 									  num_vector_exponent);
-	} else if (msix_cap_addr) {
+	}
+
+	if (msix_cap_addr != 0) {
 		klogger->error("MSI-X is not supported");
 	}
 }
@@ -246,7 +248,7 @@ void configure_msi_fixed_destination(const device& dev,
 									 uint8_t vector,
 									 unsigned int num_vector_exponent)
 {
-	uint32_t msg_addr = 0xfee00000U | (apic_id << 12);
+	const uint32_t msg_addr = 0xfee00000U | (apic_id << 12);
 	uint32_t msg_data = (static_cast<uint32_t>(delivery_mode) << 8) | vector;
 	if (trigger_mode == msi_trigger_mode::LEVEL) {
 		msg_data |= 0xc000;

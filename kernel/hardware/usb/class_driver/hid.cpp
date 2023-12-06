@@ -38,20 +38,20 @@ void hid_driver::on_endpoints_configured()
 	setup_data.length = 0;
 
 	initialized_stage_ = 1;
-	parent_device()->control_out(DEFAULT_CONTROL_PIPE_ID, setup_data, nullptr, 0,
-								 this);
+	parent_device()->control_out(
+			{ DEFAULT_CONTROL_PIPE_ID, setup_data, nullptr, 0, this });
 }
 
 void hid_driver::on_control_completed(endpoint_id ep_id,
-									  setup_stage_data* setup_data,
+									  setup_stage_data setup_data,
 									  void* buf,
 									  int len)
 {
 	if (initialized_stage_ == 1) {
 		initialized_stage_ = 2;
 
-		parent_device()->interrupt_in(ep_interrupt_in_, buffer_.data(),
-									  in_packet_size_);
+		parent_device()->interrupt_in(
+				{ ep_interrupt_in_, buffer_.data(), in_packet_size_ });
 	}
 }
 
@@ -62,8 +62,8 @@ void hid_driver::on_interrupt_completed(endpoint_id ep_id, void* buf, int len)
 		std::copy_n(buffer_.begin(), len, prev_buffer_.begin());
 
 		// prepare for next interrupt
-		parent_device()->interrupt_in(ep_interrupt_in_, buffer_.data(),
-									  in_packet_size_);
+		parent_device()->interrupt_in(
+				{ ep_interrupt_in_, buffer_.data(), in_packet_size_ });
 	}
 }
 } // namespace usb
