@@ -1,6 +1,6 @@
 #include "buddy_system.hpp"
 #include "../bit_utils.hpp"
-#include "../graphics/kernel_logger.hpp"
+#include "../graphics/terminal.hpp"
 #include "page.hpp"
 
 buddy_system* memory_manager;
@@ -31,7 +31,7 @@ void* buddy_system::allocate(size_t size)
 {
 	const int order = calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
 	if (order == -1) {
-		klogger->printf("invalid size: %d\n", size);
+		main_terminal->printf("invalid size: %d\n", size);
 		return nullptr;
 	}
 
@@ -45,7 +45,7 @@ void* buddy_system::allocate(size_t size)
 		}
 
 		if (next_order == -1) {
-			klogger->printf("failed to allocate memory: order=%d\n", order);
+			main_terminal->printf("failed to allocate memory: order=%d\n", order);
 			return nullptr;
 		}
 
@@ -58,7 +58,7 @@ void* buddy_system::allocate(size_t size)
 
 	auto* page = free_lists_[order].front();
 	if (page->is_used()) {
-		klogger->print("page is used\n");
+		main_terminal->print("page is used\n");
 		return nullptr;
 	}
 
@@ -75,13 +75,13 @@ void buddy_system::free(void* addr, size_t size)
 {
 	auto* start_page = &pages[reinterpret_cast<uintptr_t>(addr) / PAGE_SIZE];
 	if (start_page->is_free()) {
-		klogger->printf("double free detected at address: %p\n", addr);
+		main_terminal->printf("double free detected at address: %p\n", addr);
 		return;
 	}
 
 	int order = calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
 	if (order == -1) {
-		klogger->printf("invalid size: %d\n", size);
+		main_terminal->printf("invalid size: %d\n", size);
 		return;
 	}
 
@@ -142,13 +142,13 @@ void buddy_system::register_memory(int num_consecutive_pages, page* start_page)
 void buddy_system::print_free_lists() const
 {
 	for (int i = 0; i <= MAX_ORDER; i++) {
-		klogger->printf("%d ", free_lists_[i].size());
+		main_terminal->printf("%d ", free_lists_[i].size());
 	}
 }
 
 void initialize_memory_manager()
 {
-	klogger->info("initializing memory manager...");
+	main_terminal->info("initializing memory manager...");
 
 	memory_manager = new buddy_system();
 
@@ -178,5 +178,5 @@ void initialize_memory_manager()
 										&pages[concecutive_start_index]);
 	}
 
-	klogger->info("Memory manager initialized successfully.");
+	main_terminal->info("Memory manager initialized successfully.");
 }

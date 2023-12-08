@@ -1,5 +1,5 @@
 #include "port.hpp"
-#include "../../../graphics/kernel_logger.hpp"
+#include "../../../graphics/terminal.hpp"
 #include "registers.hpp"
 #include "xhci.hpp"
 
@@ -55,8 +55,8 @@ void reset_port(port& p)
 	const auto port_state = port_connection_states[p.number()];
 	if (port_state != port_connection_state::DISCONNECTED &&
 		port_state != port_connection_state::WAITING_ADDRESSED) {
-		klogger->printf("port %d is not disconnected or waiting addressed\n",
-						p.number());
+		main_terminal->printf("port %d is not disconnected or waiting addressed\n",
+							  p.number());
 		return;
 	}
 

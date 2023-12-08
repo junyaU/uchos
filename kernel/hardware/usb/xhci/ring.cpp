@@ -1,5 +1,5 @@
 #include "ring.hpp"
-#include "../../../graphics/kernel_logger.hpp"
+#include "../../../graphics/terminal.hpp"
 #include "../../../memory/slab.hpp"
 
 namespace usb::xhci
@@ -13,7 +13,7 @@ void ring::initialize(size_t buf_size)
 	buffer_size_ = buf_size;
 	buffer_ = reinterpret_cast<trb*>(kmalloc(sizeof(trb) * buffer_size_, 64));
 	if (buffer_ == nullptr) {
-		klogger->error("failed to allocate memory for ring");
+		main_terminal->error("failed to allocate memory for ring");
 		return;
 	}
 
@@ -57,7 +57,7 @@ void event_ring::initialize(size_t buf_size,
 
 	buffer_ = reinterpret_cast<trb*>(kmalloc(sizeof(trb) * buffer_size_, 64));
 	if (buffer_ == nullptr) {
-		klogger->error("failed to allocate memory for event ring");
+		main_terminal->error("failed to allocate memory for event ring");
 		return;
 	}
 	memset(buffer_, 0, buffer_size_ * sizeof(trb));
@@ -66,7 +66,8 @@ void event_ring::initialize(size_t buf_size,
 			kmalloc(sizeof(event_ring_segment_table_entry), 64));
 	if (segment_table_ == nullptr) {
 		kfree(buffer_);
-		klogger->error("failed to allocate memory for event ring segment table");
+		main_terminal->error(
+				"failed to allocate memory for event ring segment table");
 		return;
 	}
 	memset(segment_table_, 0, sizeof(event_ring_segment_table_entry));

@@ -1,5 +1,5 @@
 #include "task_manager.hpp"
-#include "../graphics/kernel_logger.hpp"
+#include "../graphics/terminal.hpp"
 #include "../timers/timer.hpp"
 #include "context_switch.h"
 #include "task.hpp"
@@ -53,7 +53,8 @@ void task_manager::sleep(int task_id)
 	auto it = std::find_if(tasks_.begin(), tasks_.end(),
 						   [task_id](const auto& t) { return t->ID() == task_id; });
 	if (it == tasks_.end()) {
-		klogger->printf("TaskManager::Sleep: task ID is not running: %d\n", task_id);
+		main_terminal->printf("TaskManager::Sleep: task ID is not running: %d\n",
+							  task_id);
 		return;
 	}
 
@@ -63,20 +64,20 @@ void task_manager::sleep(int task_id)
 void task_manager::wakeup(int task_id)
 {
 	if (last_task_id_ < task_id) {
-		klogger->printf("TaskManager::Wakeup: invalid task ID: %d\n", task_id);
+		main_terminal->printf("TaskManager::Wakeup: invalid task ID: %d\n", task_id);
 		return;
 	}
 
 	auto it = std::find_if(tasks_.begin(), tasks_.end(),
 						   [task_id](const auto& t) { return t->ID() == task_id; });
 	if (it == tasks_.end()) {
-		klogger->printf("TaskManager::Wakeup: no such task ID: %d\n", task_id);
+		main_terminal->printf("TaskManager::Wakeup: no such task ID: %d\n", task_id);
 		return;
 	}
 
 	if ((*it)->IsRunning()) {
-		klogger->printf("TaskManager::Wakeup: task %d is already running\n",
-						task_id);
+		main_terminal->printf("TaskManager::Wakeup: task %d is already running\n",
+							  task_id);
 		return;
 	}
 

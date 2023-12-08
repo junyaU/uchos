@@ -1,5 +1,5 @@
 #include "system_event_queue.hpp"
-#include "graphics/kernel_logger.hpp"
+#include "graphics/terminal.hpp"
 #include "hardware/usb/xhci/xhci.hpp"
 #include "system_event.hpp"
 
@@ -40,7 +40,7 @@ void handle_system_events()
 		auto event = kevent_queue->dequeue();
 		switch (event.type_) {
 			case system_event::TIMER_TIMEOUT:
-				klogger->print("Timer timeout\n");
+				main_terminal->print("Timer timeout\n");
 				break;
 
 			case system_event::DRAW_SCREEN_TIMER:
@@ -52,12 +52,12 @@ void handle_system_events()
 
 			case system_event::KEY_PUSH:
 				if (event.args_.keyboard.press != 0) {
-					klogger->printf("%c", event.args_.keyboard.ascii);
+					main_terminal->input_key(event.args_.keyboard.ascii);
 				}
 				break;
 
 			default:
-				klogger->printf("Unknown event type: %d\n", event.type_);
+				main_terminal->printf("Unknown event type: %d\n", event.type_);
 				break;
 		}
 	}

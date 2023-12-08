@@ -1,6 +1,6 @@
 #include "slab.hpp"
 #include "../bit_utils.hpp"
-#include "../graphics/kernel_logger.hpp"
+#include "../graphics/terminal.hpp"
 #include "buddy_system.hpp"
 #include "page.hpp"
 #include <stdio.h>
@@ -70,7 +70,7 @@ bool m_cache::grow()
 	size_t const bytes_per_slab = num_pages_per_slab_ * PAGE_SIZE;
 	void* addr = memory_manager->allocate(bytes_per_slab);
 	if (addr == nullptr) {
-		klogger->print("m_cache_grow: failed to allocate memory\n");
+		main_terminal->print("m_cache_grow: failed to allocate memory\n");
 		return false;
 	}
 
@@ -95,7 +95,7 @@ void* m_cache::alloc()
 {
 	if (slabs_partial_.empty()) {
 		if (slabs_free_.empty() && !grow()) {
-			klogger->print("m_cache_alloc: failed to grow\n");
+			main_terminal->print("m_cache_alloc: failed to grow\n");
 			return nullptr;
 		}
 
@@ -108,7 +108,7 @@ void* m_cache::alloc()
 	auto* current_slab = slabs_partial_.front().get();
 	void* addr = current_slab->alloc_object(object_size_);
 	if (addr == nullptr) {
-		klogger->print("m_cache_alloc: failed to allocate object\n");
+		main_terminal->print("m_cache_alloc: failed to allocate object\n");
 		return nullptr;
 	}
 
@@ -160,7 +160,7 @@ std::unordered_map<void*, void*> aligned_to_raw_addr_map;
 void* kmalloc(size_t size, int align)
 {
 	if (align != 1 && (align & (align - 1)) != 0) {
-		klogger->error("align must be a power of 2");
+		main_terminal->error("align must be a power of 2");
 		return nullptr;
 	}
 
@@ -200,7 +200,7 @@ void kfree(void* addr)
 
 	page* page = get_page(addr);
 	if (page == nullptr) {
-		klogger->error("kfree: invalid address");
+		main_terminal->error("kfree: invalid address");
 		return;
 	}
 
@@ -221,11 +221,11 @@ void kfree(void* addr)
 std::list<std::unique_ptr<m_cache>> cache_chain;
 void initialize_slab_allocator()
 {
-	klogger->info("Initializing slab allocator...");
+	main_terminal->info("Initializing slab allocator...");
 
 	aligned_to_raw_addr_map = std::unordered_map<void*, void*>();
 
 	cache_chain.clear();
 
-	klogger->info("Initializing slab allocator successfully.");
+	main_terminal->info("Initializing slab allocator successfully.");
 }
