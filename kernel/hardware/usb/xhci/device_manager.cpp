@@ -1,5 +1,5 @@
 #include "device_manager.hpp"
-#include "../../../graphics/kernel_logger.hpp"
+#include "../../../graphics/terminal.hpp"
 #include "../../../memory/slab.hpp"
 
 namespace usb::xhci
@@ -12,7 +12,7 @@ void device_manager::initialize(size_t max_slots)
 			// NOLINTNEXTLINE(bugprone-sizeof-expression)
 			reinterpret_cast<device**>(kmalloc(sizeof(device*) * (max_slots_ + 1)));
 	if (devices_ == nullptr) {
-		klogger->error("failed to allocate memory for devices");
+		main_terminal->error("failed to allocate memory for devices");
 		return;
 	}
 
@@ -21,7 +21,7 @@ void device_manager::initialize(size_t max_slots)
 			kmalloc(sizeof(device_context*) * (max_slots_ + 1), 64));
 	if (contexts_ == nullptr) {
 		kfree(devices_);
-		klogger->error("failed to allocate memory for device contexts");
+		main_terminal->error("failed to allocate memory for device contexts");
 		return;
 	}
 
@@ -78,12 +78,12 @@ void device_manager::allocate_device(uint8_t slot_id,
 									 usb::xhci::doorbell_register* dbreg)
 {
 	if (slot_id > max_slots_) {
-		klogger->printf("slot_id %d is out of range\n", slot_id);
+		main_terminal->printf("slot_id %d is out of range\n", slot_id);
 		return;
 	}
 
 	if (devices_[slot_id] != nullptr) {
-		klogger->printf("slot_id %d is already allocated\n", slot_id);
+		main_terminal->printf("slot_id %d is already allocated\n", slot_id);
 		return;
 	}
 
@@ -94,7 +94,7 @@ void device_manager::allocate_device(uint8_t slot_id,
 void device_manager::load_dcbaa(uint8_t slot_id)
 {
 	if (slot_id > max_slots_) {
-		klogger->printf("slot_id %d is out of range\n", slot_id);
+		main_terminal->printf("slot_id %d is out of range\n", slot_id);
 		return;
 	}
 

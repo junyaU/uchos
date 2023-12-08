@@ -1,5 +1,5 @@
 #include "paging.hpp"
-#include "../graphics/kernel_logger.hpp"
+#include "../graphics/terminal.hpp"
 #include "page_operations.h"
 #include <array>
 
@@ -32,8 +32,8 @@ void setup_identity_mapping()
 
 void initialize_paging()
 {
-	klogger->info("Initializing paging...");
+	main_terminal->info("Initializing paging...");
 	setup_identity_mapping();
 	set_cr3(reinterpret_cast<uint64_t>(&pml4_table));
-	klogger->info("Paging initialized successfully.");
+	main_terminal->info("Paging initialized successfully.");
 }

@@ -1,3 +1,15 @@
+/*
+ * @file memory/buddy_system.hpp
+ *
+ * @brief Buddy Memory Allocation System
+ *
+ * Implements a buddy memory allocation system, which is an efficient method
+ * for allocating and deallocating memory blocks of various sizes. The system
+ * keeps track of free memory blocks in different sizes (orders) and allows
+ * quick allocation and deallocation by splitting and merging these blocks.
+ *
+ */
+
 #pragma once
 
 #include "page.hpp"

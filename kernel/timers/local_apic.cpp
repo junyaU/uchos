@@ -1,5 +1,5 @@
 #include "local_apic.hpp"
-#include "../graphics/kernel_logger.hpp"
+#include "../graphics/terminal.hpp"
 #include "../interrupt/vector.hpp"
 #include "acpi.hpp"
 #include "timer.hpp"
@@ -19,7 +19,7 @@ const uint32_t COUNT_MAX = 0xffffffffU;
 
 void initialize()
 {
-	klogger->info("Initializing local APIC...");
+	main_terminal->info("Initializing local APIC...");
 
 	DIVIDE_CONF = 0b1011;	   // divide by 1
 	LVT_TIMER = (0b001 << 16); // mask
@@ -33,12 +33,12 @@ void initialize()
 
 	const uint32_t freq = elapsed * 10;
 
-	klogger->printf("Local APIC timer frequency: %u Hz\n", freq);
+	main_terminal->printf("Local APIC timer frequency: %u Hz\n", freq);
 
 	LVT_TIMER = (0b010 << 16) | InterruptVector::kLocalApicTimer;
 	INITIAL_COUNT = freq / TIMER_FREQUENCY;
 
-	klogger->info("Local APIC initialized successfully.");
+	main_terminal->info("Local APIC initialized successfully.");
 }
 
 } // namespace local_apic

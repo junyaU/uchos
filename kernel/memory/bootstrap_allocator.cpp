@@ -1,6 +1,6 @@
 #include "bootstrap_allocator.hpp"
 #include "../../UchLoaderPkg/memory_map.hpp"
-#include "../graphics/kernel_logger.hpp"
+#include "../graphics/terminal.hpp"
 #include "buddy_system.hpp"
 #include "page.hpp"
 
@@ -41,7 +41,7 @@ void* bootstrap_allocator::allocate(size_t size)
 		}
 	}
 
-	klogger->printf("failed to allocate %u bytes\n", size);
+	main_terminal->printf("failed to allocate %u bytes\n", size);
 
 	return nullptr;
 }
@@ -78,9 +78,9 @@ void bootstrap_allocator::show_available_memory() const
 		}
 	}
 
-	klogger->printf("available memory: %u MiB / %u MiB\n",
-					available_pages * PAGE_SIZE / 1024 / 1024,
-					(end_index() - start_index()) * PAGE_SIZE / 1024 / 1024);
+	main_terminal->printf("available memory: %u MiB / %u MiB\n",
+						  available_pages * PAGE_SIZE / 1024 / 1024,
+						  (end_index() - start_index()) * PAGE_SIZE / 1024 / 1024);
 }
 
 alignas(bootstrap_allocator) char bootstrap_allocator_buffer[sizeof(
@@ -89,7 +89,7 @@ bootstrap_allocator* boot_allocator;
 
 void initialize_bootstrap_allocator(const MemoryMap& mem_map)
 {
-	klogger->info("Initializing bootstrap allocator...");
+	main_terminal->info("Initializing bootstrap allocator...");
 	boot_allocator = new (bootstrap_allocator_buffer) bootstrap_allocator();
 
 	const auto mem_map_base = reinterpret_cast<uintptr_t>(mem_map.buffer);
@@ -109,7 +109,7 @@ void initialize_bootstrap_allocator(const MemoryMap& mem_map)
 
 	boot_allocator->show_available_memory();
 
-	klogger->info("Bootstrap allocator initialized successfully.");
+	main_terminal->info("Bootstrap allocator initialized successfully.");
 }
 
 extern "C" caddr_t program_break, program_break_end;
@@ -122,7 +122,7 @@ void initialize_heap()
 
 	auto* heap = boot_allocator->allocate(heap_size);
 	if (heap == nullptr) {
-		klogger->print("failed to allocate heap\n");
+		main_terminal->print("failed to allocate heap\n");
 		return;
 	}
 
@@ -137,5 +137,5 @@ void disable_bootstrap_allocator()
 		boot_allocator = nullptr;
 	}
 
-	klogger->info("Bootstrap allocator disabled.");
+	main_terminal->info("Bootstrap allocator disabled.");
 }

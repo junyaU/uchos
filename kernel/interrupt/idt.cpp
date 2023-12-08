@@ -1,5 +1,5 @@
 #include "idt.hpp"
-#include "../graphics/kernel_logger.hpp"
+#include "../graphics/terminal.hpp"
 #include "../memory/segment.hpp"
 #include "handler.hpp"
 #include "vector.hpp"
@@ -29,7 +29,7 @@ void load_idt(size_t size, uint64_t addr)
 
 void initialize_interrupt()
 {
-	klogger->info("Initializing interrupt...");
+	main_terminal->info("Initializing interrupt...");
 
 	auto set_entry = [](int irq, auto handler) {
 		set_idt_entry(idt[irq], reinterpret_cast<uint64_t>(handler),
@@ -61,5 +61,5 @@ void initialize_interrupt()
 
 	__asm__("sti");
 
-	klogger->info("Interrupt initialized successfully.");
+	main_terminal->info("Interrupt initialized successfully.");
 }

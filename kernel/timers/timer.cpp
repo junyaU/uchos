@@ -1,5 +1,5 @@
 #include "timer.hpp"
-#include "../graphics/kernel_logger.hpp"
+#include "../graphics/terminal.hpp"
 #include "../memory/slab.hpp"
 #include "../system_event_queue.hpp"
 #include "../task/task_manager.hpp"
@@ -32,7 +32,7 @@ uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec, uint64_t
 		id = last_id_;
 		last_id_++;
 	} else if (last_id_ < id) {
-		klogger->printf("invalid timer id: %lu\n", id);
+		main_terminal->printf("invalid timer id: %lu\n", id);
 		return 0;
 	}
 
@@ -57,7 +57,7 @@ void kernel_timer::add_switch_task_event(unsigned long millisec)
 void kernel_timer::remove_timer_event(uint64_t id)
 {
 	if (id == 0 || last_id_ < id) {
-		klogger->printf("invalid timer id: %lu\n", id);
+		main_terminal->printf("invalid timer id: %lu\n", id);
 		return;
 	}
 
@@ -100,8 +100,8 @@ bool kernel_timer::increment_tick()
 		}
 
 		if (!kevent_queue->queue(event)) {
-			klogger->printf("failed to queue timer event: %lu\n",
-							event.args_.timer.id);
+			main_terminal->printf("failed to queue timer event: %lu\n",
+								  event.args_.timer.id);
 		}
 
 		if (event.args_.timer.periodical == 1) {
@@ -120,10 +120,10 @@ bool kernel_timer::increment_tick()
 kernel_timer* ktimer;
 void initialize_timer()
 {
-	klogger->info("Initializing logical timer...");
+	main_terminal->info("Initializing logical timer...");
 
 	void* addr = kmalloc(sizeof(kernel_timer));
 	ktimer = new (addr) kernel_timer;
 
-	klogger->info("Logical timer initialized successfully.");
+	main_terminal->info("Logical timer initialized successfully.");
 }

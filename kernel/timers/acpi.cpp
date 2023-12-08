@@ -1,6 +1,6 @@
 #include "acpi.hpp"
 #include "../asm_utils.h"
-#include "../graphics/kernel_logger.hpp"
+#include "../graphics/terminal.hpp"
 #include <string.h>
 
 namespace acpi
@@ -41,10 +41,10 @@ const fixed_acpi_description_table* fadt;
 
 void initialize(const root_system_description_pointer& rsdp)
 {
-	klogger->info("Initializing ACPI...");
+	main_terminal->info("Initializing ACPI...");
 
 	if (!rsdp.is_valid()) {
-		klogger->print("acpi is invalid\n");
+		main_terminal->print("acpi is invalid\n");
 		return;
 	}
 
@@ -60,13 +60,13 @@ void initialize(const root_system_description_pointer& rsdp)
 	}
 
 	if (fadt == nullptr) {
-		klogger->print("FADT is not found\n");
+		main_terminal->print("FADT is not found\n");
 		return;
 	}
 
-	klogger->print("PM timer is available\n");
+	main_terminal->print("PM timer is available\n");
 
-	klogger->info("ACPI initialized successfully.");
+	main_terminal->info("ACPI initialized successfully.");
 }
 
 const int PM_TIMER_FREQUENCY = 3579545;

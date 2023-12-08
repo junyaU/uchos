@@ -1,6 +1,6 @@
 #include "pci.hpp"
 #include "../asm_utils.h"
-#include "../graphics/kernel_logger.hpp"
+#include "../graphics/terminal.hpp"
 
 namespace pci
 {
@@ -237,7 +237,7 @@ void configure_msi(const device& dev,
 	}
 
 	if (msix_cap_addr != 0) {
-		klogger->error("MSI-X is not supported");
+		main_terminal->error("MSI-X is not supported");
 	}
 }
 

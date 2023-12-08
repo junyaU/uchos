@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "../graphics/kernel_logger.hpp"
+#include "../graphics/terminal.hpp"
 
 struct InterruptFrame {
 	uint64_t rip;
@@ -20,7 +20,7 @@ void xhci_interrupt(InterruptFrame* frame);
 	inline __attribute__((interrupt)) void InterruptHandler##error_code(            \
 			InterruptFrame* frame, uint64_t error_code)                             \
 	{                                                                               \
-		klogger->print(#error_code);                                                \
+		main_terminal->print(#error_code);                                          \
 		while (true)                                                                \
 			__asm__("hlt");                                                         \
 	}
@@ -29,7 +29,7 @@ void xhci_interrupt(InterruptFrame* frame);
 	inline __attribute__((interrupt)) void InterruptHandler##error_code(            \
 			InterruptFrame* frame)                                                  \
 	{                                                                               \
-		klogger->print(#error_code);                                                \
+		main_terminal->print(#error_code);                                          \
 		while (1)                                                                   \
 			__asm__("hlt");                                                         \
 	}

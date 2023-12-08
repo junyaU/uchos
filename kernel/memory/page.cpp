@@ -1,5 +1,5 @@
 #include "page.hpp"
-#include "../graphics/kernel_logger.hpp"
+#include "../graphics/terminal.hpp"
 #include "bootstrap_allocator.hpp"
 
 std::vector<page> pages;
@@ -43,7 +43,7 @@ void print_available_memory()
 		}
 	}
 
-	klogger->printf("available memory: %u MiB / %u MiB\n",
-					available_pages * PAGE_SIZE / 1024 / 1024,
-					pages.size() * PAGE_SIZE / 1024 / 1024);
+	main_terminal->printf("available memory: %u MiB / %u MiB\n",
+						  available_pages * PAGE_SIZE / 1024 / 1024,
+						  pages.size() * PAGE_SIZE / 1024 / 1024);
 }
