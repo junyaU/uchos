@@ -2,7 +2,6 @@
 
 #include "../system_event.hpp"
 #include <cstdint>
-#include <memory>
 #include <queue>
 #include <unordered_set>
 
@@ -13,6 +12,7 @@ inline bool operator<(const system_event& lhs, const system_event& rhs)
 
 static const int TIMER_FREQUENCY = 100;
 static const int SWITCH_TEXT_MILLISEC = 20;
+static const int CURSOR_BLINK_MILLISEC = 500;
 
 class kernel_timer
 {
@@ -26,9 +26,11 @@ public:
 		return static_cast<float>(tick) / TIMER_FREQUENCY;
 	}
 
-	uint64_t add_timer_event(unsigned long millisec);
+	uint64_t add_timer_event(unsigned long millisec, action_type type);
 
-	uint64_t add_periodic_timer_event(unsigned long millisec, uint64_t id = 0);
+	uint64_t add_periodic_timer_event(unsigned long millisec,
+									  action_type type,
+									  uint64_t id = 0);
 
 	void add_switch_task_event(unsigned long millisec);
 

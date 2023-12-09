@@ -11,6 +11,7 @@ public:
 	const uint8_t* get_font(char c);
 	int width() const { return width_; }
 	int height() const { return height_; }
+	Point2D size() const { return { width_, height_ }; }
 
 private:
 	const uint8_t* font_data_;

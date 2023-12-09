@@ -1,7 +1,9 @@
 #include "handler.hpp"
+#include "../system_event.hpp"
 #include "../system_event_queue.hpp"
 #include "../task/task_manager.hpp"
 #include "../timers/timer.hpp"
+#include <cstdint>
 
 namespace
 {
@@ -24,6 +26,6 @@ __attribute__((interrupt)) void TimerInterrupt(InterruptFrame* frame)
 
 __attribute__((interrupt)) void xhci_interrupt(InterruptFrame* frame)
 {
-	kevent_queue->queue(system_event{ system_event::XHCI });
+	kevent_queue->queue({ system_event::XHCI });
 	NotifyEndOfInterrupt();
 }
