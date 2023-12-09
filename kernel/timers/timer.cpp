@@ -1,21 +1,24 @@
 #include "timer.hpp"
 #include "../graphics/terminal.hpp"
 #include "../memory/slab.hpp"
+#include "../system_event.hpp"
 #include "../system_event_queue.hpp"
 #include "../task/task_manager.hpp"
+#include <algorithm>
 
 uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 {
 	return tick_ + (millisec * TIMER_FREQUENCY) / 1000;
 }
 
-uint64_t kernel_timer::add_timer_event(unsigned long millisec)
+uint64_t kernel_timer::add_timer_event(unsigned long millisec, action_type type)
 {
 	auto event = system_event{ system_event::TIMER_TIMEOUT };
 
 	event.args_.timer.id = last_id_;
 	event.args_.timer.timeout = calculate_timeout_ticks(millisec);
 	event.args_.timer.period = millisec;
+	event.args_.timer.action = type;
 
 	events_.push(event);
 
@@ -24,7 +27,9 @@ uint64_t kernel_timer::add_timer_event(unsigned long millisec)
 	return event.args_.timer.id;
 }
 
-uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec, uint64_t id)
+uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
+												action_type type,
+												uint64_t id)
 {
 	auto event = system_event{ system_event::TIMER_TIMEOUT };
 
@@ -40,6 +45,7 @@ uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec, uint64_t
 	event.args_.timer.timeout = calculate_timeout_ticks(millisec);
 	event.args_.timer.period = millisec;
 	event.args_.timer.periodical = 1;
+	event.args_.timer.action = type;
 
 	events_.push(event);
 
@@ -70,7 +76,7 @@ bool kernel_timer::increment_tick()
 
 	if (tick_ % TIMER_FREQUENCY == 0) {
 		__asm__("cli");
-		events_.push(system_event{ system_event::DRAW_SCREEN_TIMER, { { tick_ } } });
+		events_.push({ system_event::DRAW_SCREEN_TIMER, { { tick_ } } });
 		__asm__("sti");
 	}
 
@@ -98,7 +104,6 @@ bool kernel_timer::increment_tick()
 			ignore_events_.erase(it);
 			continue;
 		}
-
 		if (!kevent_queue->queue(event)) {
 			main_terminal->printf("failed to queue timer event: %lu\n",
 								  event.args_.timer.id);
@@ -124,6 +129,9 @@ void initialize_timer()
 
 	void* addr = kmalloc(sizeof(kernel_timer));
 	ktimer = new (addr) kernel_timer;
+
+	ktimer->add_periodic_timer_event(CURSOR_BLINK_MILLISEC,
+									 action_type::TERMINAL_CURSOR_BLINK);
 
 	main_terminal->info("Logical timer initialized successfully.");
 }

@@ -14,8 +14,12 @@
 
 #include <cstdint>
 
+enum class action_type : uint8_t {
+	TERMINAL_CURSOR_BLINK,
+};
+
 struct system_event {
-	enum Type {
+	enum type : uint8_t {
 		EMPTY,
 		TIMER_TIMEOUT,
 		DRAW_SCREEN_TIMER,
@@ -30,6 +34,7 @@ struct system_event {
 			uint64_t timeout;
 			unsigned int period;
 			int periodical;
+			action_type action;
 		} timer;
 
 		struct {

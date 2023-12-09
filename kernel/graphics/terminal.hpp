@@ -8,7 +8,6 @@
  * operations such as printing strings, formatted text, handling user commands,
  * and displaying system messages. Also includes functionality to clear the
  * screen, scroll through the terminal history, and manage user input.
-
  *
  */
 
@@ -16,7 +15,8 @@
 
 #include "color.hpp"
 #include "font.hpp"
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 
 class terminal
 {
@@ -41,6 +41,8 @@ public:
 
 	void input_key(uint8_t c);
 
+	void cursor_blink();
+
 	void clear();
 
 private:
@@ -61,6 +63,7 @@ private:
 	Color font_color_;
 	Color user_name_color_;
 	char user_name_[16];
+	bool cursor_visible_{ false };
 };
 
 extern terminal* main_terminal;

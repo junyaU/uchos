@@ -21,4 +21,4 @@ extern kernel_event_queue* kevent_queue;
 
 void initialize_system_event_queue();
 
-void handle_system_events();
+[[noreturn]] void handle_system_events();

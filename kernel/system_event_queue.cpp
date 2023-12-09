@@ -28,7 +28,7 @@ kernel_event_queue* kevent_queue;
 
 void initialize_system_event_queue() { kevent_queue = new kernel_event_queue(); }
 
-void handle_system_events()
+[[noreturn]] void handle_system_events()
 {
 	while (true) {
 		__asm__("cli");
@@ -40,7 +40,12 @@ void handle_system_events()
 		auto event = kevent_queue->dequeue();
 		switch (event.type_) {
 			case system_event::TIMER_TIMEOUT:
-				main_terminal->print("Timer timeout\n");
+				switch (event.args_.timer.action) {
+					case action_type::TERMINAL_CURSOR_BLINK:
+						main_terminal->cursor_blink();
+						break;
+				}
+
 				break;
 
 			case system_event::DRAW_SCREEN_TIMER:
