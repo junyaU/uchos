@@ -62,9 +62,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	initialize_timer();
 
 	initialize_task_manager();
-
-	main_terminal->print("Hello, uchos\n");
-
+	
 	initialize_pci();
 
 	usb::xhci::initialize();

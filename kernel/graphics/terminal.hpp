@@ -17,6 +17,7 @@
 #include "font.hpp"
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 
 class terminal
 {
@@ -51,6 +52,8 @@ private:
 	{
 		return y * kfont->height() + START_Y + (y * LINE_SPACING);
 	}
+
+	int user_name_length() const { return strlen(user_name_) + 4; }
 
 	void next_line();
 	void scroll_lines();

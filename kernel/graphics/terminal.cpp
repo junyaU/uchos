@@ -3,7 +3,6 @@
 #include "font.hpp"
 #include "screen.hpp"
 #include <cstdint>
-#include <cstring>
 #include <new>
 
 terminal::terminal(Color font_color, const char* user_name, Color user_name_color)
@@ -12,6 +11,10 @@ terminal::terminal(Color font_color, const char* user_name, Color user_name_colo
 	memset(user_name_, '\0', sizeof(user_name_));
 	memcpy(user_name_, user_name, strlen(user_name));
 	clear();
+
+	print("Hello, uchos\n");
+
+	show_user_name();
 }
 
 void terminal::print(const char* s)
@@ -30,7 +33,8 @@ void terminal::print(const char* s)
 		}
 
 		const int current_x = cursor_x_ == 0 ? ROW_CHARS - 1 : cursor_x_ - 1;
-		const int target_x_position = adjusted_x(current_x + strlen(user_name_) + 4);
+		const int target_x_position = adjusted_x(
+				cursor_y_ == 0 ? current_x : current_x + user_name_length());
 
 		buffer_[cursor_y_][current_x] = *s;
 		kscreen->fill_rectangle({ target_x_position, adjusted_y(cursor_y_) },
@@ -73,26 +77,25 @@ void terminal::input_key(uint8_t c)
 		return;
 	}
 
-	kscreen->fill_rectangle({ adjusted_x(cursor_x_ + strlen(user_name_) + 4),
-							  adjusted_y(cursor_y_) },
-							kfont->size(), kscreen->bg_color().GetCode());
+	kscreen->fill_rectangle(
+			{ adjusted_x(cursor_x_ + user_name_length()), adjusted_y(cursor_y_) },
+			kfont->size(), kscreen->bg_color().GetCode());
 
 	--cursor_x_;
 	buffer_[cursor_y_][cursor_x_] = '\0';
 
-	kscreen->fill_rectangle({ adjusted_x(cursor_x_ + strlen(user_name_) + 4),
-							  adjusted_y(cursor_y_) },
-							{ adjusted_x(cursor_x_), adjusted_y(cursor_y_) },
-							kscreen->bg_color().GetCode());
+	kscreen->fill_rectangle(
+			{ adjusted_x(cursor_x_ + user_name_length()), adjusted_y(cursor_y_) },
+			kfont->size(), kscreen->bg_color().GetCode());
 }
 
 void terminal::cursor_blink()
 {
 	const Color cursor_color = cursor_visible_ ? kscreen->bg_color() : font_color_;
 
-	kscreen->fill_rectangle({ adjusted_x(cursor_x_ + strlen(user_name_) + 4),
-							  adjusted_y(cursor_y_) },
-							kfont->size(), cursor_color.GetCode());
+	kscreen->fill_rectangle(
+			{ adjusted_x(cursor_x_ + user_name_length()), adjusted_y(cursor_y_) },
+			kfont->size(), cursor_color.GetCode());
 
 	cursor_visible_ = !cursor_visible_;
 }
