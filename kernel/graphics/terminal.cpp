@@ -12,6 +12,10 @@ terminal::terminal(Color font_color, const char* user_name, Color user_name_colo
 	memset(user_name_, '\0', sizeof(user_name_));
 	memcpy(user_name_, user_name, strlen(user_name));
 	clear();
+
+	print("Hello, uchos\n");
+
+	show_user_name();
 }
 
 void terminal::print(const char* s)
@@ -30,7 +34,8 @@ void terminal::print(const char* s)
 		}
 
 		const int current_x = cursor_x_ == 0 ? ROW_CHARS - 1 : cursor_x_ - 1;
-		const int target_x_position = adjusted_x(current_x + strlen(user_name_) + 4);
+		const int target_x_position = adjusted_x(
+				cursor_y_ == 0 ? current_x : current_x + strlen(user_name_) + 4);
 
 		buffer_[cursor_y_][current_x] = *s;
 		kscreen->fill_rectangle({ target_x_position, adjusted_y(cursor_y_) },
