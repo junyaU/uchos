@@ -25,7 +25,8 @@ char kernel_stack[1024 * 1024];
 
 extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 					 const MemoryMap& memory_map,
-					 const acpi::root_system_description_pointer& rsdp)
+					 const acpi::root_system_description_pointer& rsdp,
+					 void* volume_image)
 {
 	initialize_screen(frame_buffer_conf, { 0, 0, 0 });
 
@@ -62,7 +63,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	initialize_timer();
 
 	initialize_task_manager();
-	
+
 	initialize_pci();
 
 	usb::xhci::initialize();
