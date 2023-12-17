@@ -79,4 +79,21 @@ struct directory_entry {
 	}
 } __attribute__((packed));
 
+static const unsigned long END_OF_CLUSTERCHAIN = 0x0FFFFFFFLU;
+
+extern bios_parameter_block* boot_volume_image;
+extern unsigned long bytes_per_cluster;
+
+uintptr_t get_cluster_addr(unsigned long cluster_id);
+
+template<class T>
+T* get_sector(unsigned long cluster_id)
+{
+	return reinterpret_cast<T*>(get_cluster_addr(cluster_id));
+}
+
+unsigned long next_cluster(unsigned long cluster_id);
+
+void initialize_fat(void* volume_image);
+
 } // namespace file_system
