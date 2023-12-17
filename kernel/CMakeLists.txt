@@ -73,7 +73,7 @@ set(SOURCE_FILES
         asm_utils.asm
         system_event_queue.cpp
         bit_utils.cpp
-        )
+)
 
 # Add subdirectories that contain their own CMakeLists.txt files.
 add_subdirectory(memory)
@@ -82,7 +82,8 @@ add_subdirectory(interrupt)
 add_subdirectory(timers)
 add_subdirectory(task)
 add_subdirectory(hardware)
+add_subdirectory(file_system)
 
 # Define the main target and link it with the necessary libraries.
 add_executable(UchosKernel ${SOURCE_FILES})
-target_link_libraries(UchosKernel c c++ c++abi m UchosGraphics UchosMemory UchosInterrupt UchosTimers UchosTask UchosHardware)
+target_link_libraries(UchosKernel c c++ c++abi m UchosGraphics UchosMemory UchosInterrupt UchosTimers UchosTask UchosHardware UchosFileSystem)

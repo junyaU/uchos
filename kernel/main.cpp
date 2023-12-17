@@ -1,6 +1,7 @@
 struct FrameBufferConf;
 struct MemoryMap;
 
+#include "file_system/fat.hpp"
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
 #include "graphics/terminal.hpp"
@@ -63,6 +64,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	initialize_timer();
 
 	initialize_task_manager();
+
+	file_system::initialize_fat(volume_image);
 
 	initialize_pci();
 
