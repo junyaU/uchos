@@ -1,9 +1,11 @@
 #include "terminal.hpp"
+#include "../command_line/controller.hpp"
 #include "color.hpp"
 #include "font.hpp"
 #include "screen.hpp"
 #include <cstdint>
-#include <new>
+#include <cstring>
+#include <memory>
 
 terminal::terminal(Color font_color, const char* user_name, Color user_name_color)
 	: font_color_{ font_color }, user_name_color_{ user_name_color }
@@ -67,6 +69,24 @@ void terminal::error(const char* s)
 void terminal::input_key(uint8_t c)
 {
 	const uint8_t delete_key = 0x08;
+
+	if (c == '\n') {
+		char command[100];
+		memcpy(command, buffer_[cursor_y_], sizeof(buffer_[cursor_y_]));
+
+		kscreen->fill_rectangle(
+				{ adjusted_x(user_name_length()), adjusted_y(cursor_y_) },
+				{ kfont->width() * (cursor_x_ + 1), kfont->height() },
+				kscreen->bg_color().GetCode());
+
+		cursor_x_ = 0;
+		memset(buffer_[cursor_y_], '\0', sizeof(buffer_[cursor_y_]));
+
+		cl_ctrl_->process_command(command, *this);
+		next_line();
+
+		return;
+	}
 
 	if (c != delete_key) {
 		printf("%c", c);
@@ -170,6 +190,11 @@ void terminal::show_user_name()
 	kscreen->draw_string(
 			{ adjusted_x(cursor_x_ + strlen(user_name_)), adjusted_y(cursor_y_) },
 			":~$ ", font_color_.GetCode());
+}
+
+void terminal::initialize_command_line()
+{
+	cl_ctrl_ = std::make_unique<command_line::controller>();
 }
 
 terminal* main_terminal;

@@ -67,6 +67,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	file_system::initialize_fat(volume_image);
 
+	main_terminal->initialize_command_line();
+
 	initialize_pci();
 
 	usb::xhci::initialize();

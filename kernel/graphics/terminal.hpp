@@ -18,6 +18,12 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <memory>
+
+namespace command_line
+{
+class controller;
+} // namespace command_line
 
 class terminal
 {
@@ -46,6 +52,8 @@ public:
 
 	void clear();
 
+	void initialize_command_line();
+
 private:
 	static int adjusted_x(int x) { return x * kfont->width() + START_X; }
 	static int adjusted_y(int y)
@@ -67,6 +75,8 @@ private:
 	Color user_name_color_;
 	char user_name_[16];
 	bool cursor_visible_{ false };
+
+	std::unique_ptr<command_line::controller> cl_ctrl_;
 };
 
 extern terminal* main_terminal;
