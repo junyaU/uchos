@@ -94,6 +94,8 @@ T* get_sector(unsigned long cluster_id)
 
 unsigned long next_cluster(unsigned long cluster_id);
 
+void read_dir_entry_name(const directory_entry& entry, char* dest);
+
 void initialize_fat(void* volume_image);
 
 } // namespace file_system

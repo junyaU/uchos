@@ -68,8 +68,6 @@ void terminal::error(const char* s)
 
 void terminal::input_key(uint8_t c)
 {
-	const uint8_t delete_key = 0x08;
-
 	if (c == '\n') {
 		char command[100];
 		memcpy(command, buffer_[cursor_y_], sizeof(buffer_[cursor_y_]));
@@ -87,6 +85,8 @@ void terminal::input_key(uint8_t c)
 
 		return;
 	}
+
+	const uint8_t delete_key = 0x08;
 
 	if (c != delete_key) {
 		printf("%c", c);
