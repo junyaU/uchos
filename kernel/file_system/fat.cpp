@@ -1,4 +1,5 @@
 #include "fat.hpp"
+#include "cstring"
 #include <cstdint>
 
 namespace file_system
@@ -40,4 +41,27 @@ unsigned long next_cluster(unsigned long cluster_id)
 
 	return next;
 }
+
+void read_dir_entry_name(const directory_entry& entry, char* dest)
+{
+	char extention[5] = ".";
+
+	memcpy(dest, &entry.name[0], 8);
+	dest[8] = 0;
+
+	for (int i = 7; i >= 0 && dest[i] == 0x20; i--) {
+		dest[i] = 0;
+	}
+
+	memcpy(extention + 1, &entry.name[8], 3);
+	extention[4] = 0;
+	for (int i = 2; i >= 0 && extention[i + 1] == 0x20; i--) {
+		extention[i + 1] = 0;
+	}
+
+	if (extention[1] != 0) {
+		strcat(dest, extention);
+	}
+}
+
 } // namespace file_system
