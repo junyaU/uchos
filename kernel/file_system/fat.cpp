@@ -60,7 +60,7 @@ void read_dir_entry_name(const directory_entry& entry, char* dest)
 	}
 
 	if (extention[1] != 0) {
-		strcat(dest, extention);
+		strlcat(dest, extention, 13);
 	}
 }
 
