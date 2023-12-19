@@ -9,6 +9,10 @@ controller::controller() { memset(histories_, '\0', sizeof(histories_)); }
 
 void controller::process_command(const char* command, terminal& term)
 {
+	memcpy(histories_[history_write_index_], command, strlen(command));
+	history_write_index_ == MAX_HISTORY - 1 ? history_write_index_
+											: history_write_index_++;
+
 	if (strcmp(command, "ls") == 0) {
 		ls(term, "/");
 	} else {

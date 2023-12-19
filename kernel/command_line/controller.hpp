@@ -26,7 +26,8 @@ private:
 	static const int MAX_HISTORY_LENGTH = 100;
 
 	char histories_[MAX_HISTORY][MAX_HISTORY_LENGTH];
-	int history_index{ 0 };
+	int history_write_index_{ 0 };
+	int history_read_index_{ 0 };
 };
 
 } // namespace command_line
