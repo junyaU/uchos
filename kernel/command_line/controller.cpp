@@ -15,6 +15,8 @@ void controller::process_command(const char* command, terminal& term)
 
 	if (strcmp(command, "ls") == 0) {
 		ls(term, "/");
+	} else if (strcmp(command, "cat") == 0) {
+		cat(term, "KERNEL.ELF");
 	} else {
 		term.printf("Command not found: %s", command);
 	}
