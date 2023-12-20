@@ -16,4 +16,6 @@ class terminal;
 namespace command_line
 {
 void ls(terminal& term, const char* path);
+
+void cat(terminal& term, const char* file_name);
 } // namespace command_line

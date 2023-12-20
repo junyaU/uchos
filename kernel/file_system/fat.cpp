@@ -7,6 +7,36 @@ namespace file_system
 bios_parameter_block* boot_volume_image;
 unsigned long bytes_per_cluster;
 
+void read_dir_entry_name(const directory_entry& entry, char* dest)
+{
+	char extention[5] = ".";
+
+	memcpy(dest, &entry.name[0], 8);
+	dest[8] = 0;
+
+	for (int i = 7; i >= 0 && dest[i] == 0x20; i--) {
+		dest[i] = 0;
+	}
+
+	memcpy(extention + 1, &entry.name[8], 3);
+	extention[4] = 0;
+	for (int i = 2; i >= 0 && extention[i + 1] == 0x20; i--) {
+		extention[i + 1] = 0;
+	}
+
+	if (extention[1] != 0) {
+		strlcat(dest, extention, 13);
+	}
+}
+
+bool entry_name_is_equal(const directory_entry& entry, const char* name)
+{
+	char entry_name[13];
+	read_dir_entry_name(entry, entry_name);
+
+	return strcmp(entry_name, name) == 0;
+}
+
 uintptr_t get_cluster_addr(unsigned long cluster_id)
 {
 	const unsigned long start_sector_num =
@@ -42,26 +72,38 @@ unsigned long next_cluster(unsigned long cluster_id)
 	return next;
 }
 
-void read_dir_entry_name(const directory_entry& entry, char* dest)
+directory_entry* find_directory_entry(const char* name, unsigned long cluster_id)
 {
-	char extention[5] = ".";
-
-	memcpy(dest, &entry.name[0], 8);
-	dest[8] = 0;
-
-	for (int i = 7; i >= 0 && dest[i] == 0x20; i--) {
-		dest[i] = 0;
+	if (cluster_id == 0) {
+		cluster_id = boot_volume_image->root_cluster;
 	}
 
-	memcpy(extention + 1, &entry.name[8], 3);
-	extention[4] = 0;
-	for (int i = 2; i >= 0 && extention[i + 1] == 0x20; i--) {
-		extention[i + 1] = 0;
-	}
+	const auto entries_per_cluster = bytes_per_cluster / sizeof(directory_entry);
 
-	if (extention[1] != 0) {
-		strlcat(dest, extention, 13);
+	while (cluster_id != END_OF_CLUSTERCHAIN) {
+		auto* dir_entry = get_sector<directory_entry>(cluster_id);
+
+		for (int i = 0; i < entries_per_cluster; i++) {
+			if (dir_entry[i].name[0] == 0x00) {
+				return nullptr;
+			}
+
+			if (dir_entry[i].name[0] == 0xE5) {
+				continue;
+			}
+
+			if (dir_entry[i].attribute == entry_attribute::LONG_NAME) {
+				continue;
+			}
+
+			if (entry_name_is_equal(dir_entry[i], name)) {
+				return &dir_entry[i];
+			}
+		}
+
+		cluster_id = next_cluster(cluster_id);
 	}
+	
+	return nullptr;
 }
-
 } // namespace file_system
