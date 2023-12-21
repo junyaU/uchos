@@ -1,4 +1,5 @@
 #include "controller.hpp"
+#include "../file_system/fat.hpp"
 #include "../graphics/terminal.hpp"
 #include "commands.hpp"
 #include <cstring>
@@ -18,6 +19,12 @@ void controller::process_command(const char* command, terminal& term)
 	} else if (strcmp(command, "cat") == 0) {
 		cat(term, "KERNEL.ELF");
 	} else {
+		auto* entry = file_system::find_directory_entry(command, 0);
+		if (entry != nullptr) {
+			file_system::execute_file(*entry);
+			return;
+		}
+
 		term.printf("Command not found: %s", command);
 	}
 }
