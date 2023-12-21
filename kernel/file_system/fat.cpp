@@ -1,6 +1,8 @@
 #include "fat.hpp"
 #include "cstring"
+#include <algorithm>
 #include <cstdint>
+#include <vector>
 
 namespace file_system
 {
@@ -103,7 +105,31 @@ directory_entry* find_directory_entry(const char* name, unsigned long cluster_id
 
 		cluster_id = next_cluster(cluster_id);
 	}
-	
+
 	return nullptr;
 }
+
+void execute_file(const directory_entry& entry)
+{
+	auto cluster_id = entry.first_cluster();
+	auto remain_bytes = static_cast<unsigned long>(entry.file_size);
+
+	std::vector<uint8_t> file_buffer(remain_bytes);
+	auto* p = file_buffer.data();
+
+	while (cluster_id != END_OF_CLUSTERCHAIN) {
+		const auto copy_bytes = std::min(bytes_per_cluster, remain_bytes);
+		memcpy(p, get_sector<uint8_t>(cluster_id), copy_bytes);
+
+		p += copy_bytes;
+		remain_bytes -= copy_bytes;
+
+		cluster_id = next_cluster(cluster_id);
+	}
+
+	using func_t = void (*)();
+	auto f = reinterpret_cast<func_t>(file_buffer.data());
+	f();
+}
+
 } // namespace file_system
