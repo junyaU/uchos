@@ -1,13 +1,46 @@
 #include "fat.hpp"
-#include "cstring"
+#include "elf.hpp"
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <vector>
 
 namespace file_system
 {
 bios_parameter_block* boot_volume_image;
 unsigned long bytes_per_cluster;
+
+std::vector<char*> make_args(char* command, char* args)
+{
+	std::vector<char*> argv;
+	argv.push_back(command);
+
+	char* p = args;
+	while (true) {
+		while (*p == ' ') {
+			++p;
+		}
+
+		if (*p == '\0') {
+			break;
+		}
+
+		argv.push_back(p);
+
+		while (*p != ' ' && *p != '\0') {
+			++p;
+		}
+
+		if (*p == '\0') {
+			break;
+		}
+
+		*p = '\0';
+		++p;
+	}
+
+	return argv;
+}
 
 void read_dir_entry_name(const directory_entry& entry, char* dest)
 {
@@ -109,7 +142,7 @@ directory_entry* find_directory_entry(const char* name, unsigned long cluster_id
 	return nullptr;
 }
 
-void execute_file(const directory_entry& entry)
+int execute_file(const directory_entry& entry, const char* args)
 {
 	auto cluster_id = entry.first_cluster();
 	auto remain_bytes = static_cast<unsigned long>(entry.file_size);
@@ -127,9 +160,25 @@ void execute_file(const directory_entry& entry)
 		cluster_id = next_cluster(cluster_id);
 	}
 
-	using func_t = void (*)();
-	auto f = reinterpret_cast<func_t>(file_buffer.data());
-	f();
-}
+	auto* elf_header = reinterpret_cast<elf64_ehdr_t*>(file_buffer.data());
+	if (memcmp(elf_header->e_ident,
+			   "\x7f"
+			   "ELF",
+			   4) != 0) {
+		using func_t = void (*)();
+		auto f = reinterpret_cast<func_t>(file_buffer.data());
+		f();
+		return 0;
+	}
 
+	char command_name[13];
+	read_dir_entry_name(entry, command_name);
+	auto argv = make_args(command_name, const_cast<char*>(args));
+
+	auto entry_addr = elf_header->e_entry;
+	entry_addr += reinterpret_cast<uintptr_t>(file_buffer.data());
+	using func_t = int (*)(int, char**);
+	auto f = reinterpret_cast<func_t>(entry_addr);
+	return f(argv.size(), argv.data());
+}
 } // namespace file_system
