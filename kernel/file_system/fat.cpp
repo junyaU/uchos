@@ -171,7 +171,7 @@ int execute_file(const directory_entry& entry, const char* args)
 		return 0;
 	}
 
-	char* command_name = nullptr;
+	char command_name[13];
 	read_dir_entry_name(entry, command_name);
 	auto argv = make_args(command_name, const_cast<char*>(args));
 
