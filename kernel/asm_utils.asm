@@ -30,8 +30,3 @@ global most_significant_bit ; int most_significant_bit(uint32_t value)
 most_significant_bit:
     bsr eax, edi
     ret
-
-global get_cr3 ; uint64_t get_cr3()
-get_cr3:
-    mov eax, cr3
-    ret

@@ -81,3 +81,5 @@ typedef struct {
 #define R_X86_64_RELATIVE 8
 
 void load_elf(elf64_ehdr_t* elf_header);
+
+uintptr_t get_first_load_addr(elf64_ehdr_t* elf_header);

@@ -18,7 +18,7 @@ void xhci_interrupt(InterruptFrame* frame);
 
 #define FaultHandlerWithError(error_code)                                           \
 	inline __attribute__((interrupt)) void InterruptHandler##error_code(            \
-			InterruptFrame* frame, uint64_t error_code)                             \
+			InterruptFrame* frame, uint64_t code)                                   \
 	{                                                                               \
 		main_terminal->print(#error_code);                                          \
 		while (true)                                                                \

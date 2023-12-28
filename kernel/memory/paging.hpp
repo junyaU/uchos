@@ -21,9 +21,9 @@ union linear_address {
 		uint64_t canonical : 16;
 	} __attribute__((packed)) bits;
 
-	int part(int page_map_level) const
+	int part(int page_table_level) const
 	{
-		switch (page_map_level) {
+		switch (page_table_level) {
 			case 0:
 				return bits.offset;
 			case 1:
@@ -39,9 +39,9 @@ union linear_address {
 		}
 	}
 
-	void set_part(int page_map_level, int value)
+	void set_part(int page_table_level, int value)
 	{
-		switch (page_map_level) {
+		switch (page_table_level) {
 			case 0:
 				bits.offset = value;
 				break;
@@ -63,7 +63,7 @@ union linear_address {
 	}
 };
 
-union page_map_entry {
+union page_table_entry {
 	uint64_t data;
 
 	struct {
@@ -82,17 +82,21 @@ union page_map_entry {
 		uint64_t no_execute : 1;
 	} __attribute__((packed)) bits;
 
-	page_map_entry* get_next_level_table() const
+	page_table_entry* get_next_level_table() const
 	{
-		return reinterpret_cast<page_map_entry*>(bits.address << 12);
+		return reinterpret_cast<page_table_entry*>(bits.address << 12);
 	}
 
-	void set_next_level_table(page_map_entry* table)
+	void set_next_level_table(page_table_entry* table)
 	{
 		bits.address = reinterpret_cast<uint64_t>(table) >> 12;
 	}
 };
 
-void setup_page_maps(linear_address addr, size_t num_pages);
+void dump_page_tables(linear_address addr);
+
+void setup_page_tables(linear_address addr, size_t num_pages);
+
+void clean_page_tables(linear_address addr);
 
 void initialize_paging();

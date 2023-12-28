@@ -112,6 +112,14 @@ void* m_cache::alloc()
 		return nullptr;
 	}
 
+	void* target_addr = reinterpret_cast<uintptr_t*>(0x80f000);
+	if (addr == target_addr) {
+		main_terminal->print(
+				"---------- m_cache_alloc: addr == target_addr ----------\n");
+	}
+
+	main_terminal->printf("m_cache_alloc: addr=%p\n", addr);
+
 	num_active_objects_++;
 	if (current_slab->is_full()) {
 		auto* full_slab = slabs_partial_.front().get();
@@ -204,7 +212,10 @@ void kfree(void* addr)
 		return;
 	}
 
+	main_terminal->printf("kfree: page=%p addr=%p\n", page, addr);
+
 	m_cache* cache = page->cache();
+	main_terminal->printf("kfree: cache=%s\n", cache->name());
 	m_slab* slab = page->slab();
 
 	slab->free_object(addr, cache->object_size());

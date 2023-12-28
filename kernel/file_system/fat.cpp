@@ -1,4 +1,6 @@
 #include "fat.hpp"
+#include "../graphics/terminal.hpp"
+#include "../memory/paging.hpp"
 #include "elf.hpp"
 #include <algorithm>
 #include <cstdint>
@@ -145,17 +147,17 @@ directory_entry* find_directory_entry(const char* name, unsigned long cluster_id
 int execute_file(const directory_entry& entry, const char* args)
 {
 	auto cluster_id = entry.first_cluster();
-	auto remain_bytes = static_cast<unsigned long>(entry.file_size);
+	auto remaining_bytes = static_cast<unsigned long>(entry.file_size);
 
-	std::vector<uint8_t> file_buffer(remain_bytes);
+	std::vector<uint8_t> file_buffer(remaining_bytes);
 	auto* p = file_buffer.data();
 
 	while (cluster_id != END_OF_CLUSTERCHAIN) {
-		const auto copy_bytes = std::min(bytes_per_cluster, remain_bytes);
+		const auto copy_bytes = std::min(bytes_per_cluster, remaining_bytes);
 		memcpy(p, get_sector<uint8_t>(cluster_id), copy_bytes);
 
 		p += copy_bytes;
-		remain_bytes -= copy_bytes;
+		remaining_bytes -= copy_bytes;
 
 		cluster_id = next_cluster(cluster_id);
 	}
@@ -175,10 +177,16 @@ int execute_file(const directory_entry& entry, const char* args)
 	read_dir_entry_name(entry, command_name);
 	auto argv = make_args(command_name, const_cast<char*>(args));
 
+	load_elf(elf_header);
+
 	auto entry_addr = elf_header->e_entry;
-	entry_addr += reinterpret_cast<uintptr_t>(file_buffer.data());
 	using func_t = int (*)(int, char**);
 	auto f = reinterpret_cast<func_t>(entry_addr);
-	return f(argv.size(), argv.data());
+	const auto ret = f(argv.size(), argv.data());
+
+	const auto addr_first = get_first_load_addr(elf_header);
+	clean_page_tables(linear_address{ addr_first });
+
+	return ret;
 }
 } // namespace file_system
