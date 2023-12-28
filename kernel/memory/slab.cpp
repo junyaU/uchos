@@ -32,11 +32,8 @@ m_cache::m_cache(char name[20], size_t object_size)
 	strncpy(name_, name, sizeof(name_) - 1);
 	name[sizeof(name_) - 1] = '\0';
 
-	if (object_size_ > 2048) {
-		num_pages_per_slab_ = 2;
-	} else {
-		num_pages_per_slab_ = 1;
-	}
+    // TODO: determine num_pages_per_slab_ from object_size_
+	num_pages_per_slab_ = 1;
 }
 
 m_slab::m_slab(void* base_addr, size_t num_objs)
@@ -111,14 +108,6 @@ void* m_cache::alloc()
 		main_terminal->print("m_cache_alloc: failed to allocate object\n");
 		return nullptr;
 	}
-
-	void* target_addr = reinterpret_cast<uintptr_t*>(0x80f000);
-	if (addr == target_addr) {
-		main_terminal->print(
-				"---------- m_cache_alloc: addr == target_addr ----------\n");
-	}
-
-	main_terminal->printf("m_cache_alloc: addr=%p\n", addr);
 
 	num_active_objects_++;
 	if (current_slab->is_full()) {
@@ -212,10 +201,7 @@ void kfree(void* addr)
 		return;
 	}
 
-	main_terminal->printf("kfree: page=%p addr=%p\n", page, addr);
-
 	m_cache* cache = page->cache();
-	main_terminal->printf("kfree: cache=%s\n", cache->name());
 	m_slab* slab = page->slab();
 
 	slab->free_object(addr, cache->object_size());

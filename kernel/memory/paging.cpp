@@ -156,9 +156,7 @@ void clean_page_table(page_table_entry* table, int page_table_level)
 			clean_page_table(entry.get_next_level_table(), page_table_level - 1);
 		}
 
-		main_terminal->printf("freeing memory: %p\n", entry.get_next_level_table());
 		kfree(entry.get_next_level_table());
-		main_terminal->print("freed\n");
 		table[i].data = 0;
 	}
 }
@@ -169,13 +167,8 @@ void clean_page_tables(linear_address addr)
 	auto* pdpt = pml4[addr.part(4)].get_next_level_table();
 	pml4[addr.part(4)].data = 0;
 
-	//	clean_page_table(pdpt, 3);
-
-	//	kfree(pdpt);
-
-	// pdpt + 0x1000 is the address of the next page table.
-	void* pdpt_addr = reinterpret_cast<uintptr_t*>(0x80f000);
-	kfree(pdpt_addr);
+    clean_page_table(pdpt, 3);
+	kfree(pdpt);
 }
 
 void initialize_paging()
