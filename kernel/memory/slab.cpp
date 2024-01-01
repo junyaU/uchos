@@ -32,11 +32,8 @@ m_cache::m_cache(char name[20], size_t object_size)
 	strncpy(name_, name, sizeof(name_) - 1);
 	name[sizeof(name_) - 1] = '\0';
 
-	if (object_size_ > 2048) {
-		num_pages_per_slab_ = 2;
-	} else {
-		num_pages_per_slab_ = 1;
-	}
+    // TODO: determine num_pages_per_slab_ from object_size_
+	num_pages_per_slab_ = 1;
 }
 
 m_slab::m_slab(void* base_addr, size_t num_objs)

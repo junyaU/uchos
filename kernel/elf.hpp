@@ -29,6 +29,12 @@ typedef struct {
 	elf64_half_t e_shstrndx;
 } elf64_ehdr_t;
 
+#define ET_NONE 0
+#define ET_REL 1
+#define ET_EXEC 2
+#define ET_DYN 3
+#define ET_CORE 4
+
 typedef struct {
 	elf64_word_t p_type;
 	elf64_word_t p_flags;
@@ -73,3 +79,7 @@ typedef struct {
 #define ELF64_R_INFO(s, t) (((s) << 32) + ((t) & 0xffffffffL))
 
 #define R_X86_64_RELATIVE 8
+
+void load_elf(elf64_ehdr_t* elf_header);
+
+uintptr_t get_first_load_addr(elf64_ehdr_t* elf_header);

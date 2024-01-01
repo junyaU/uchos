@@ -73,6 +73,7 @@ set(SOURCE_FILES
         asm_utils.asm
         system_event_queue.cpp
         bit_utils.cpp
+        elf.cpp
 )
 
 # Add subdirectories that contain their own CMakeLists.txt files.
