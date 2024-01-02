@@ -46,6 +46,8 @@ public:
 
 	void error(const char* s);
 
+	void print_interrupt_hex(uint64_t value);
+
 	void input_key(uint8_t c);
 
 	void cursor_blink();
