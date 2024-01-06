@@ -66,6 +66,21 @@ void terminal::error(const char* s)
 	print("\n");
 }
 
+void terminal::print_interrupt_hex(uint64_t value)
+{
+	print("0x");
+
+	for (int i = 0; i < 16; ++i) {
+		char buf[2] = { '0', '\0' };
+		int x = (value >> (4 * (15 - i))) & 0xfU;
+		char c = x < 10 ? '0' + x : 'a' + x - 10;
+		buf[0] = c;
+		print(buf);
+	}
+	
+	print("\n");
+}
+
 void terminal::input_key(uint8_t c)
 {
 	if (c == '\n') {
