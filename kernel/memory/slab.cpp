@@ -32,7 +32,7 @@ m_cache::m_cache(char name[20], size_t object_size)
 	strncpy(name_, name, sizeof(name_) - 1);
 	name[sizeof(name_) - 1] = '\0';
 
-    // TODO: determine num_pages_per_slab_ from object_size_
+	// TODO: determine num_pages_per_slab_ from object_size_
 	num_pages_per_slab_ = 1;
 }
 
@@ -81,6 +81,7 @@ bool m_cache::grow()
 	num_total_slabs_++;
 	num_total_objects_ += num_objs;
 
+	slab->set_status(slab_status::FREE);
 	slabs_free_.push_back(std::move(slab));
 	auto last_it = std::prev(slabs_free_.end());
 	(*last_it)->set_position_in_list(last_it);
@@ -97,12 +98,13 @@ void* m_cache::alloc()
 		}
 
 		auto* free_slab = slabs_free_.front().get();
-		free_slab->move_list(slabs_free_, slabs_partial_);
+		free_slab->move_list(*this, slab_status::PARTIAL);
 
 		num_active_slabs_++;
 	}
 
 	auto* current_slab = slabs_partial_.front().get();
+
 	void* addr = current_slab->alloc_object(object_size_);
 	if (addr == nullptr) {
 		main_terminal->print("m_cache_alloc: failed to allocate object\n");
@@ -112,30 +114,63 @@ void* m_cache::alloc()
 	num_active_objects_++;
 	if (current_slab->is_full()) {
 		auto* full_slab = slabs_partial_.front().get();
-		full_slab->move_list(slabs_partial_, slabs_full_);
+		full_slab->move_list(*this, slab_status::FULL);
 	}
 
 	return addr;
 }
 
-void m_slab::move_list(std::list<std::unique_ptr<m_slab>>& from,
-					   std::list<std::unique_ptr<m_slab>>& to)
+void m_slab::move_list(m_cache& cache, slab_status to)
 {
+	if (status_ == to) {
+		main_terminal->print("m_slab_move_list: status_ == to\n");
+		return;
+	}
+
 	auto current_slab = std::move(*position_in_list_);
-	from.erase(position_in_list_);
-	to.push_back(std::move(current_slab));
-	position_in_list_ = std::prev(to.end());
+	switch (status_) {
+		case slab_status::FREE:
+			cache.slabs_free_.erase(position_in_list_);
+			break;
+		case slab_status::PARTIAL:
+			cache.slabs_partial_.erase(position_in_list_);
+			break;
+		case slab_status::FULL:
+			cache.slabs_full_.erase(position_in_list_);
+			break;
+	}
+
+	switch (to) {
+		case slab_status::FREE:
+			cache.slabs_free_.push_back(std::move(current_slab));
+			position_in_list_ = std::prev(cache.slabs_free_.end());
+			break;
+		case slab_status::PARTIAL:
+			cache.slabs_partial_.push_back(std::move(current_slab));
+			position_in_list_ = std::prev(cache.slabs_partial_.end());
+			break;
+		case slab_status::FULL:
+			cache.slabs_full_.push_back(std::move(current_slab));
+			position_in_list_ = std::prev(cache.slabs_full_.end());
+			break;
+	}
+
+	status_ = to;
 }
 
 void* m_slab::alloc_object(size_t obj_size)
 {
 	if (free_objects_index_.empty()) {
+		main_terminal->print("m_slab_alloc_object: no free objects\n");
 		return nullptr;
 	}
 
 	size_t const obj_index = free_objects_index_.front();
+
 	free_objects_index_.pop_front();
+
 	objects_[obj_index].increase_usage_count();
+
 	num_in_use_++;
 
 	return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(base_addr_) +
@@ -144,12 +179,12 @@ void* m_slab::alloc_object(size_t obj_size)
 
 void m_slab::free_object(void* addr, size_t obj_size)
 {
-	size_t const objs_index = (reinterpret_cast<uintptr_t>(addr) -
+	const size_t objs_index = (reinterpret_cast<uintptr_t>(addr) -
 							   reinterpret_cast<uintptr_t>(base_addr_)) /
 							  obj_size;
 
 	free_objects_index_.push_back(objs_index);
-	num_in_use_--;
+	--num_in_use_;
 }
 
 std::unordered_map<void*, void*> aligned_to_raw_addr_map;
@@ -207,11 +242,13 @@ void kfree(void* addr)
 	slab->free_object(addr, cache->object_size());
 	cache->decrease_num_active_objects();
 
+	if (slab->status() == slab_status::FULL) {
+		slab->move_list(*cache, slab_status::PARTIAL);
+	}
+
 	if (slab->is_empty()) {
-		slab->move_list(cache->slabs_partial_, cache->slabs_free_);
+		slab->move_list(*cache, slab_status::FREE);
 		cache->decrease_num_active_slabs();
-	} else if (slab->was_previously_full()) {
-		slab->move_list(cache->slabs_full_, cache->slabs_partial_);
 	}
 };
 
