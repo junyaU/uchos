@@ -16,6 +16,12 @@
 #include <memory>
 #include <vector>
 
+enum class slab_status {
+	FULL,
+	PARTIAL,
+	FREE,
+};
+
 class m_object
 {
 public:
@@ -27,6 +33,8 @@ private:
 	unsigned int usage_count_;
 };
 
+class m_cache;
+
 class m_slab
 {
 public:
@@ -37,17 +45,19 @@ public:
 		position_in_list_ = it;
 	}
 
+	slab_status status() const { return status_; }
+
+	void set_status(slab_status status) { status_ = status; }
+
 	bool is_full() const { return num_in_use_ == objects_.size(); }
 
 	bool is_empty() const { return num_in_use_ == 0; }
 
-	bool was_previously_full() const { return objects_.size() - num_in_use_ == 1; }
-
-	void move_list(std::list<std::unique_ptr<m_slab>>& from,
-				   std::list<std::unique_ptr<m_slab>>& to);
-
 	void* alloc_object(size_t obj_size);
+
 	void free_object(void* addr, size_t obj_size);
+
+	void move_list(m_cache& cache, slab_status to);
 
 private:
 	std::list<std::unique_ptr<m_slab>>::iterator position_in_list_;
@@ -55,6 +65,7 @@ private:
 	void* base_addr_;
 	size_t num_in_use_;
 	std::list<size_t> free_objects_index_;
+	slab_status status_;
 };
 
 class m_cache

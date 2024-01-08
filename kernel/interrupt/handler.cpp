@@ -16,6 +16,11 @@ namespace
 
 __attribute__((interrupt)) void TimerInterrupt(InterruptFrame* frame)
 {
+	if (ktimer == nullptr) {
+		NotifyEndOfInterrupt();
+		return;
+	}
+
 	const bool need_switch_task = ktimer->increment_tick();
 	NotifyEndOfInterrupt();
 
