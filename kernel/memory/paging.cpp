@@ -96,7 +96,7 @@ size_t setup_page_table(page_table_entry* page_table,
 						size_t num_pages)
 {
 	while (num_pages > 0) {
-		const auto page_table_index = addr.part(page_table_level);
+		const int page_table_index = addr.part(page_table_level);
 		auto* child_table = set_new_page_table(page_table[page_table_index]);
 		if (child_table == nullptr) {
 			main_terminal->printf("Failed to setup page table: level=%d\n",
@@ -142,6 +142,8 @@ void setup_page_tables(linear_address addr, size_t num_pages)
 		main_terminal->error("Failed to setup page tables.");
 		return;
 	}
+
+	__asm__ volatile("invlpg (%0)" ::"r"(addr) : "memory");
 }
 
 void clean_page_table(page_table_entry* table, int page_table_level)
@@ -167,7 +169,7 @@ void clean_page_tables(linear_address addr)
 	auto* pdpt = pml4[addr.part(4)].get_next_level_table();
 	pml4[addr.part(4)].data = 0;
 
-    clean_page_table(pdpt, 3);
+	clean_page_table(pdpt, 3);
 	kfree(pdpt);
 }
 
