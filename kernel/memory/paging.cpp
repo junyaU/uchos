@@ -177,6 +177,6 @@ void initialize_paging()
 {
 	main_terminal->info("Initializing paging...");
 	setup_identity_mapping();
-	set_cr3(reinterpret_cast<uint64_t>(&pml4_table[0]));
+	set_cr3(reinterpret_cast<uint64_t>(&pml4_table));
 	main_terminal->info("Paging initialized successfully.");
 }

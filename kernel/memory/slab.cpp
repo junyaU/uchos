@@ -3,8 +3,13 @@
 #include "../graphics/terminal.hpp"
 #include "buddy_system.hpp"
 #include "page.hpp"
+#include <cstring>
+#include <iterator>
+#include <list>
+#include <memory>
 #include <stdio.h>
 #include <unordered_map>
+#include <utility>
 
 m_cache* get_cache_in_chain(char* name)
 {

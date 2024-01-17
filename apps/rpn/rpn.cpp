@@ -31,7 +31,8 @@ extern "C" int main(int argc, char** argv)
 			long a = Pop();
 			Push(a - b);
 		} else {
-			long a = atol(argv[i]);
+			char* end;
+			long a = strtol(argv[i], &end, 10);
 			Push(a);
 		}
 	}

@@ -2,6 +2,7 @@
 #include "../bit_utils.hpp"
 #include "../graphics/terminal.hpp"
 #include "page.hpp"
+#include <cstddef>
 
 buddy_system* memory_manager;
 

@@ -38,7 +38,7 @@ include_directories(
 
 # Add compile options for both C and C++.
 add_compile_options(
-        -O2
+        -Og
         -Wall
         -g
         --target=x86_64-elf
