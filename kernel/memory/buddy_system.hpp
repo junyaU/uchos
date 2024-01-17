@@ -18,6 +18,8 @@
 #include <cstddef>
 #include <list>
 
+static const auto MAX_ORDER = 18;
+
 class buddy_system
 {
 public:
@@ -60,8 +62,6 @@ public:
 	void print_free_lists() const;
 
 private:
-	static const auto MAX_ORDER = 18;
-
 	/**
 	 * \brief Splits a memory block of the given order into two smaller blocks.
 	 *
