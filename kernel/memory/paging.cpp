@@ -86,6 +86,7 @@ page_table_entry* set_new_page_table(page_table_entry& entry)
 
 	entry.set_next_level_table(child_table);
 	entry.bits.present = 1;
+	entry.bits.user_accessible = 1;
 
 	return child_table;
 }
@@ -121,7 +122,6 @@ size_t setup_page_table(page_table_entry* page_table,
 		}
 
 		if (page_table_index == 511) {
-			main_terminal->print("page_table_index == 511\n");
 			break;
 		}
 

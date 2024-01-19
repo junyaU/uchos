@@ -30,3 +30,13 @@ global most_significant_bit ; int most_significant_bit(uint32_t value)
 most_significant_bit:
     bsr eax, edi
     ret
+
+global call_userland ; void call_userland(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
+call_userland:
+    push rbp
+    mov rbp, rsp
+    push rcx ; ss
+    push r9  ; rsp
+    push rdx ; cs
+    push r8  ; rip
+    o64 retf
