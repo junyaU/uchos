@@ -1,15 +1,26 @@
+/*
+ * @file memory/segment.hpp
+ *
+ * @brief segmentation
+ *
+ * This file contains definitions and functions for managing
+ * memory segments, particularly for setting up and handling
+ * segment descriptors in a low-level system context.
+ *
+ */
+
 #pragma once
 
 #include <cstdint>
 
 enum descriptor_type {
-	kUpper8Bytes = 0,
-	kLDT = 2,
-	kTSSAvailable = 9,
-	kTSSBusy = 11,
-	kCallGate = 12,
-	kReadWrite = 2,
-	kExecuteRead = 10,
+	UPPER_8_BYTES = 0,
+	LDT = 2,
+	TSS_AVAILABLE = 9,
+	TSS_BUSY = 11,
+	CALL_GATE = 12,
+	READ_WRITE = 2,
+	EXECUTE_READ = 10,
 };
 
 union segment_descriptor {

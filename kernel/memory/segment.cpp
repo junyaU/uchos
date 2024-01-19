@@ -2,10 +2,11 @@
 #include "../graphics/terminal.hpp"
 #include "segments_operations.h"
 #include <array>
+#include <cstdint>
 
 namespace
 {
-std::array<segment_descriptor, 3> gdt;
+std::array<segment_descriptor, 5> gdt;
 } // namespace
 
 void set_code_segment(segment_descriptor& desc,
@@ -35,8 +36,10 @@ void set_data_segment(segment_descriptor& desc,
 void setup_segments()
 {
 	gdt[0].data = 0;
-	set_code_segment(gdt[1], descriptor_type::kExecuteRead, 0);
-	set_data_segment(gdt[2], descriptor_type::kReadWrite, 0);
+	set_code_segment(gdt[1], descriptor_type::EXECUTE_READ, 0);
+	set_data_segment(gdt[2], descriptor_type::READ_WRITE, 0);
+	set_code_segment(gdt[3], descriptor_type::EXECUTE_READ, 3);
+	set_data_segment(gdt[4], descriptor_type::READ_WRITE, 3);
 
 	load_gdt(sizeof(gdt) - 1, reinterpret_cast<uint64_t>(&gdt));
 }
