@@ -36,8 +36,8 @@ void controller::process_command(const char* command, terminal& term)
 
 	auto* entry = file_system::find_directory_entry(command_name, 0);
 	if (entry != nullptr) {
-		const int status = file_system::execute_file(*entry, args);
-		term.printf("Command exited with status %d", status);
+		file_system::execute_file(*entry, args);
+		term.printf("Command exited with status %d", 0);
 		return;
 	}
 

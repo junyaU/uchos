@@ -96,7 +96,7 @@ unsigned long next_cluster(unsigned long cluster_id);
 
 directory_entry* find_directory_entry(const char* name, unsigned long cluster_id);
 
-int execute_file(const directory_entry& entry, const char* args);
+void execute_file(const directory_entry& entry, const char* args);
 
 void read_dir_entry_name(const directory_entry& entry, char* dest);
 

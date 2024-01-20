@@ -7,7 +7,7 @@ class m_slab;
 #include <cstdint>
 #include <vector>
 
-const int PAGE_SIZE = 4096;
+const size_t PAGE_SIZE = 4096;
 
 class page
 {

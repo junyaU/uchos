@@ -37,8 +37,11 @@ m_cache::m_cache(char name[20], size_t object_size)
 	strncpy(name_, name, sizeof(name_) - 1);
 	name[sizeof(name_) - 1] = '\0';
 
-	// TODO: determine num_pages_per_slab_ from object_size_
-	num_pages_per_slab_ = 1;
+	if (object_size <= PAGE_SIZE) {
+		num_pages_per_slab_ = 1;
+	} else {
+		num_pages_per_slab_ = object_size / PAGE_SIZE;
+	}
 }
 
 m_slab::m_slab(void* base_addr, size_t num_objs)
@@ -72,7 +75,7 @@ bool m_cache::grow()
 	size_t const bytes_per_slab = num_pages_per_slab_ * PAGE_SIZE;
 	void* addr = memory_manager->allocate(bytes_per_slab);
 	if (addr == nullptr) {
-		main_terminal->print("m_cache_grow: failed to allocate memory\n");
+		main_terminal->error("m_cache_grow: failed to allocate memory");
 		return false;
 	}
 
@@ -83,7 +86,7 @@ bool m_cache::grow()
 	page->set_cache(this);
 	page->set_slab(slab.get());
 
-	num_total_slabs_++;
+	++num_total_slabs_;
 	num_total_objects_ += num_objs;
 
 	slab->set_status(slab_status::FREE);
@@ -98,7 +101,7 @@ void* m_cache::alloc()
 {
 	if (slabs_partial_.empty()) {
 		if (slabs_free_.empty() && !grow()) {
-			main_terminal->print("m_cache_alloc: failed to grow\n");
+			main_terminal->error("m_cache_alloc: failed to grow");
 			return nullptr;
 		}
 
@@ -112,11 +115,11 @@ void* m_cache::alloc()
 
 	void* addr = current_slab->alloc_object(object_size_);
 	if (addr == nullptr) {
-		main_terminal->print("m_cache_alloc: failed to allocate object\n");
+		main_terminal->error("m_cache_alloc: failed to allocate object");
 		return nullptr;
 	}
 
-	num_active_objects_++;
+	++num_active_objects_;
 	if (current_slab->is_full()) {
 		auto* full_slab = slabs_partial_.front().get();
 		full_slab->move_list(*this, slab_status::FULL);
@@ -128,7 +131,6 @@ void* m_cache::alloc()
 void m_slab::move_list(m_cache& cache, slab_status to)
 {
 	if (status_ == to) {
-		main_terminal->print("m_slab_move_list: status_ == to\n");
 		return;
 	}
 
@@ -166,7 +168,7 @@ void m_slab::move_list(m_cache& cache, slab_status to)
 void* m_slab::alloc_object(size_t obj_size)
 {
 	if (free_objects_index_.empty()) {
-		main_terminal->print("m_slab_alloc_object: no free objects\n");
+		main_terminal->error("m_slab_alloc_object: no free objects");
 		return nullptr;
 	}
 

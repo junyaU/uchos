@@ -46,3 +46,8 @@ load_gdt:
     mov rsp, rbp
     pop rbp
     ret
+
+global load_tr ; di = tr
+load_tr:
+    ltr di
+    ret

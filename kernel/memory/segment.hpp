@@ -53,6 +53,10 @@ void set_code_segment(segment_descriptor& desc,
 const uint16_t KERNEL_CS = 1 << 3;
 const uint16_t KERNEL_SS = 2 << 3;
 const uint16_t KERNEL_DS = 0;
+const uint16_t USER_CS = 3 << 3 | 3;
+const uint16_t USER_SS = 4 << 3 | 3;
+const uint16_t TSS = 5 << 3;
 
 void setup_segments();
 void initialize_segmentation();
+void initialize_tss();

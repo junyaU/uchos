@@ -1,6 +1,9 @@
 #include "fat.hpp"
+#include "../asm_utils.h"
 #include "../graphics/terminal.hpp"
+#include "../memory/page.hpp"
 #include "../memory/paging.hpp"
+#include "../memory/segment.hpp"
 #include "elf.hpp"
 #include <algorithm>
 #include <cstdint>
@@ -12,10 +15,32 @@ namespace file_system
 bios_parameter_block* boot_volume_image;
 unsigned long bytes_per_cluster;
 
-std::vector<char*> make_args(char* command, char* args)
+int make_args(char* command,
+			  char* args,
+			  char** argv,
+			  int argv_len,
+			  char* arg_buf,
+			  int arg_buf_len)
 {
-	std::vector<char*> argv;
-	argv.push_back(command);
+	int argc = 0;
+	int arg_buf_index = 0;
+
+	auto push_to_argv = [&](const char* s) {
+		if (argc >= argv_len || arg_buf_index >= arg_buf_len) {
+			return;
+		}
+
+		argv[argc] = &arg_buf[arg_buf_index];
+		++argc;
+		strncpy(&arg_buf[arg_buf_index], s, arg_buf_len - arg_buf_index);
+		arg_buf_index += strlen(s) + 1;
+	};
+
+	push_to_argv(command);
+
+	if (args == nullptr) {
+		return argc;
+	}
 
 	char* p = args;
 	while (true) {
@@ -23,30 +48,32 @@ std::vector<char*> make_args(char* command, char* args)
 			++p;
 		}
 
-		if (*p == '\0') {
+		if (*p == 0) {
 			break;
 		}
 
-		argv.push_back(p);
-
-		while (*p != ' ' && *p != '\0') {
+		const char* arg = p;
+		while (*p != ' ' && *p != 0) {
 			++p;
 		}
 
-		if (*p == '\0') {
+		const bool is_end = *p == 0;
+		*p = 0;
+		push_to_argv(arg);
+
+		if (is_end) {
 			break;
 		}
 
-		*p = '\0';
 		++p;
 	}
 
-	return argv;
+	return argc;
 }
 
 void read_dir_entry_name(const directory_entry& entry, char* dest)
 {
-	char extention[5] = ".";
+	char extension[5] = ".";
 
 	memcpy(dest, &entry.name[0], 8);
 	dest[8] = 0;
@@ -55,14 +82,14 @@ void read_dir_entry_name(const directory_entry& entry, char* dest)
 		dest[i] = 0;
 	}
 
-	memcpy(extention + 1, &entry.name[8], 3);
-	extention[4] = 0;
-	for (int i = 2; i >= 0 && extention[i + 1] == 0x20; i--) {
-		extention[i + 1] = 0;
+	memcpy(extension + 1, &entry.name[8], 3);
+	extension[4] = 0;
+	for (int i = 2; i >= 0 && extension[i + 1] == 0x20; i--) {
+		extension[i + 1] = 0;
 	}
 
-	if (extention[1] != 0) {
-		strlcat(dest, extention, 13);
+	if (extension[1] != 0) {
+		strlcat(dest, extension, 13);
 	}
 }
 
@@ -144,7 +171,7 @@ directory_entry* find_directory_entry(const char* name, unsigned long cluster_id
 	return nullptr;
 }
 
-int execute_file(const directory_entry& entry, const char* args)
+void execute_file(const directory_entry& entry, const char* args)
 {
 	auto cluster_id = entry.first_cluster();
 	auto remaining_bytes = static_cast<unsigned long>(entry.file_size);
@@ -170,23 +197,32 @@ int execute_file(const directory_entry& entry, const char* args)
 		using func_t = void (*)();
 		auto f = reinterpret_cast<func_t>(file_buffer.data());
 		f();
-		return 0;
+		return;
 	}
 
 	char command_name[13];
 	read_dir_entry_name(entry, command_name);
-	auto argv = make_args(command_name, const_cast<char*>(args));
 
 	load_elf(elf_header);
 
+	const linear_address argv_addr{ 0xffff'ffff'ffff'f000 };
+	setup_page_tables(argv_addr, 1);
+	auto* argv = reinterpret_cast<char**>(argv_addr.data);
+	const int arg_v_len = 32;
+	auto* arg_buf =
+			reinterpret_cast<char*>(argv_addr.data + arg_v_len * sizeof(char**));
+	const int arg_buf_len = PAGE_SIZE - arg_v_len * sizeof(char**);
+	const int argc = make_args(command_name, const_cast<char*>(args), argv,
+							   arg_v_len, arg_buf, arg_buf_len);
+
+	const linear_address stack_addr{ 0xffff'ffff'ffff'f000 };
+	setup_page_tables(stack_addr, 1);
+
 	auto entry_addr = elf_header->e_entry;
-	using func_t = int (*)(int, char**);
-	auto f = reinterpret_cast<func_t>(entry_addr);
-	const auto ret = f(argv.size(), argv.data());
+	call_userland(argc, argv, USER_CS, USER_SS, entry_addr,
+				  stack_addr.data + PAGE_SIZE - 8);
 
 	const auto addr_first = get_first_load_addr(elf_header);
 	clean_page_tables(linear_address{ addr_first });
-
-	return ret;
 }
 } // namespace file_system
