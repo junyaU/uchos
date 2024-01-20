@@ -53,6 +53,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_slab_allocator();
 
+	initialize_tss();
+	
 	print_available_memory();
 
 	initialize_system_event_queue();
