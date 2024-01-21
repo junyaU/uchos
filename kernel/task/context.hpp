@@ -3,7 +3,7 @@
 #include <array>
 #include <cstdint>
 
-struct Context {
+struct context {
 	uint64_t cr3, rip, rflags, reserved1;
 	uint64_t cs, ss, fs, gs;
 	uint64_t rax, rbx, rcx, rdx, rdi, rsi, rsp, rbp;
@@ -11,4 +11,4 @@ struct Context {
 	std::array<uint8_t, 512> fxsave_area;
 } __attribute__((packed));
 
-extern Context task_2_context, task_main_context alignas(16);
+extern context task_2_context, task_main_context alignas(16);

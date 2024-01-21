@@ -22,31 +22,28 @@ int task_manager::add_task(uint64_t task_addr, int priority, bool is_running)
 	return task->ID();
 }
 
-void task_manager::switch_task(bool current_sleep)
+void task_manager::switch_task(const context& current_ctx)
 {
 	if (tasks_.size() <= 1) {
 		return;
 	}
 
-	Task& current_task = *tasks_.front();
-
-	if (current_sleep) {
-		current_task.Sleep();
-	}
+	context& ctx = tasks_.front().get()->TaskContext();
+	memcpy(&ctx, &current_ctx, sizeof(context));
 
 	tasks_.push_back(std::move(tasks_.front()));
 	tasks_.pop_front();
 
 	Task& next_task = *tasks_.front();
-
-	ExecuteContextSwitch(&next_task.TaskContext(), &current_task.TaskContext());
+	restore_context(&next_task.TaskContext());
 }
 
 void task_manager::sleep(int task_id)
 {
 	auto task = *tasks_.front();
 	if (task.ID() == task_id) {
-		switch_task(true);
+		// TODO: sleep current task
+		//	switch_task(true);
 		return;
 	}
 
