@@ -3,6 +3,7 @@
 class Task;
 
 #include "../memory/slab.hpp"
+#include "context.hpp"
 #include <cstdint>
 #include <deque>
 #include <memory>
@@ -17,7 +18,7 @@ public:
 	void wakeup(int task_id);
 	void sleep(int task_id);
 
-	void switch_task(bool current_sleep = false);
+	void switch_task(const context& current_ctx);
 
 	int next_quantum();
 

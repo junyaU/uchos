@@ -34,6 +34,10 @@ public:
 
 	void print(const char* s);
 
+	void error(const char* s);
+
+	void info(const char* s);
+
 	template<typename... Args>
 	void printf(const char* format, Args... args)
 	{
@@ -42,9 +46,13 @@ public:
 		print(s);
 	}
 
-	void info(const char* s);
-
-	void error(const char* s);
+	template<typename... Args>
+	void errorf(const char* format, Args... args)
+	{
+		char s[1024];
+		sprintf(s, format, args...);
+		error(s);
+	}
 
 	void print_interrupt_hex(uint64_t value);
 

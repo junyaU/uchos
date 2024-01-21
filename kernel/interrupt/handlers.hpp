@@ -1,3 +1,11 @@
+/*
+ * @file interrupt/handler.hpp
+ *
+ * @brief interrupt handler
+ *
+ *
+ */
+
 #pragma once
 
 #include <cstdint>
@@ -12,9 +20,7 @@ struct InterruptFrame {
 	uint64_t ss;
 };
 
-void TimerInterrupt(InterruptFrame* frame);
-
-void xhci_interrupt(InterruptFrame* frame);
+void on_xhci_interrupt(InterruptFrame* frame);
 
 #define FaultHandlerWithError(error_code)                                           \
 	inline __attribute__((interrupt)) void InterruptHandler##error_code(            \

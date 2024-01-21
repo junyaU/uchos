@@ -1,8 +1,10 @@
 #include "idt.hpp"
 #include "../graphics/terminal.hpp"
 #include "../memory/segment.hpp"
-#include "handler.hpp"
+#include "handler.h"
+#include "handlers.hpp"
 #include "vector.hpp"
+#include <array>
 
 std::array<idt_entry, 256> idt;
 
@@ -36,8 +38,8 @@ void initialize_interrupt()
 					  type_attr{ gate_type::kInterruptGate, 0, 1 }, KERNEL_CS);
 	};
 
-	set_entry(InterruptVector::kLocalApicTimer, TimerInterrupt);
-	set_entry(InterruptVector::kXHCI, xhci_interrupt);
+	set_entry(InterruptVector::kLocalApicTimer, on_timer_interrupt);
+	set_entry(InterruptVector::kXHCI, on_xhci_interrupt);
 	set_entry(0, InterruptHandlerDE);
 	set_entry(1, InterruptHandlerDB);
 	set_entry(3, InterruptHandlerBP);

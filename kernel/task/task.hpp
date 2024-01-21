@@ -12,7 +12,7 @@ public:
 
 	int ID() const { return id_; }
 
-	Context& TaskContext() { return context_; }
+	context& TaskContext() { return context_; }
 
 	void Sleep() { is_running_ = false; }
 
@@ -27,5 +27,5 @@ private:
 	int priority_;
 	bool is_running_;
 	std::vector<uint64_t> stack_;
-	alignas(16) Context context_;
+	alignas(16) context context_;
 };
