@@ -32,7 +32,7 @@ void* buddy_system::allocate(size_t size)
 {
 	const int order = calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
 	if (order == -1) {
-		main_terminal->printf("invalid size: %d\n", size);
+		main_terminal->errorf("invalid size: %d", size);
 		return nullptr;
 	}
 
@@ -46,7 +46,7 @@ void* buddy_system::allocate(size_t size)
 		}
 
 		if (next_order == -1) {
-			main_terminal->printf("failed to allocate memory: order=%d\n", order);
+			main_terminal->errorf("failed to allocate memory: order=%d", order);
 			return nullptr;
 		}
 
@@ -55,11 +55,13 @@ void* buddy_system::allocate(size_t size)
 		}
 	}
 
+	main_terminal->printf("order: %d\n", order);
+
 	const size_t num_order_pages = 1 << order;
 
 	auto* page = free_lists_[order].front();
 	if (page->is_used()) {
-		main_terminal->print("page is used\n");
+		main_terminal->error("page is already used.");
 		return nullptr;
 	}
 
@@ -143,7 +145,8 @@ void buddy_system::register_memory(int num_consecutive_pages, page* start_page)
 void buddy_system::print_free_lists() const
 {
 	for (int i = 0; i <= MAX_ORDER; i++) {
-		main_terminal->printf("%d ", free_lists_[i].size());
+		main_terminal->printf("order-%d remaining blocks: %d\n", i,
+							  free_lists_[i].size());
 	}
 }
 
