@@ -57,9 +57,9 @@ public:
 	 * \param num_consecutive_pages The number of memory pages in the block.
 	 * \param start_page The starting address of the memory block.
 	 */
-	void register_memory(int num_consecutive_pages, page* start_page);
+	void register_memory_blocks(size_t num_total_pages, page* start_page);
 
-	void print_free_lists() const;
+	void print_free_lists(int order = -1) const;
 
 private:
 	/**
@@ -71,7 +71,7 @@ private:
 	 *
 	 * \param order The order of the memory block to be split.
 	 */
-	void split_page_block(int order);
+	void split_memory_block(int order);
 
 	/**
 	 * \brief Calculates the order of a memory block of the given size.
@@ -85,7 +85,7 @@ private:
 	 * \return The order of the memory block.
 	 */
 
-	static int calculate_order(size_t num_pages);
+	static size_t calculate_order(size_t num_pages);
 
 	std::array<std::list<page*, PoolAllocator<page*, PAGE_SIZE>>, MAX_ORDER + 1>
 			free_lists_;
