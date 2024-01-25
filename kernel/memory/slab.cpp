@@ -108,7 +108,7 @@ void* m_cache::alloc()
 		auto* free_slab = slabs_free_.front().get();
 		free_slab->move_list(*this, slab_status::PARTIAL);
 
-		num_active_slabs_++;
+		++num_active_slabs_;
 	}
 
 	auto* current_slab = slabs_partial_.front().get();

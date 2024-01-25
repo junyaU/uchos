@@ -113,7 +113,7 @@ size_t setup_page_table(page_table_entry* page_table,
 			const size_t num_remaining_pages = setup_page_table(
 					child_table, page_table_level - 1, addr, num_pages);
 			if (num_remaining_pages == -1) {
-				main_terminal->printf("Failed to setup page table: level=%d\n",
+				main_terminal->errorf("Failed to setup page table: level=%d",
 									  page_table_level);
 				return -1;
 			}

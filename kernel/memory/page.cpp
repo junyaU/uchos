@@ -11,7 +11,7 @@ void initialize_pages()
 
 	pages.resize(memory_end_index - memory_start_index);
 
-	for (size_t i = memory_start_index; i < memory_end_index; i++) {
+	for (size_t i = memory_start_index; i < memory_end_index; ++i) {
 		const size_t page_index = i - memory_start_index;
 
 		pages[page_index].set_ptr(reinterpret_cast<void*>(i * PAGE_SIZE));

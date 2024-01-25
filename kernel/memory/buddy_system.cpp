@@ -3,29 +3,34 @@
 #include "../graphics/terminal.hpp"
 #include "page.hpp"
 #include <cstddef>
+#include <cstdint>
 
 buddy_system* memory_manager;
 
-int buddy_system::calculate_order(size_t num_pages)
+size_t buddy_system::calculate_order(size_t num_pages)
 {
-	const int order = bit_width_ceil(num_pages);
+	const size_t order = bit_width_ceil(num_pages);
 
 	if (order > MAX_ORDER) {
-		return -1;
+		return MAX_ORDER;
 	}
 
 	return order;
 }
 
-void buddy_system::split_page_block(int order)
+void buddy_system::split_memory_block(int order)
 {
-	auto* page = free_lists_[order].front();
+	auto* block = free_lists_[order].front();
 	free_lists_[order].pop_front();
 
 	const int lower_order = order - 1;
+	const auto block_size = (1 << lower_order) * PAGE_SIZE;
 
-	free_lists_[lower_order].push_back(page);
-	free_lists_[lower_order].push_back(&pages[page->index() + (1 << (lower_order))]);
+	auto buddy_addr = reinterpret_cast<uintptr_t>(block->ptr()) ^ block_size;
+	auto* buddy_block = get_page(reinterpret_cast<void*>(buddy_addr));
+
+	free_lists_[lower_order].push_back(block);
+	free_lists_[lower_order].push_back(buddy_block);
 }
 
 void* buddy_system::allocate(size_t size)
@@ -38,7 +43,7 @@ void* buddy_system::allocate(size_t size)
 
 	if (free_lists_[order].empty()) {
 		int next_order = -1;
-		for (int i = order + 1; i <= MAX_ORDER; i++) {
+		for (int i = order + 1; i <= MAX_ORDER; ++i) {
 			if (!free_lists_[i].empty()) {
 				next_order = i;
 				break;
@@ -50,24 +55,24 @@ void* buddy_system::allocate(size_t size)
 			return nullptr;
 		}
 
-		for (int i = next_order; i > order; i--) {
-			split_page_block(i);
+		for (int i = next_order; i > order; --i) {
+			split_memory_block(i);
 		}
 	}
-
-	main_terminal->printf("order: %d\n", order);
 
 	const size_t num_order_pages = 1 << order;
 
 	auto* page = free_lists_[order].front();
 	if (page->is_used()) {
-		main_terminal->error("page is already used.");
+		main_terminal->errorf("order-%d : page is already used: %p", order,
+							  page->ptr());
+
 		return nullptr;
 	}
 
 	free_lists_[order].pop_front();
 
-	for (size_t i = 0; i < num_order_pages; i++) {
+	for (size_t i = 0; i < num_order_pages; ++i) {
 		pages[page->index() + i].set_used();
 	}
 
@@ -78,13 +83,13 @@ void buddy_system::free(void* addr, size_t size)
 {
 	auto* start_page = &pages[reinterpret_cast<uintptr_t>(addr) / PAGE_SIZE];
 	if (start_page->is_free()) {
-		main_terminal->printf("double free detected at address: %p\n", addr);
+		main_terminal->errorf("double free detected at address: %p", addr);
 		return;
 	}
 
 	int order = calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
 	if (order == -1) {
-		main_terminal->printf("invalid size: %d\n", size);
+		main_terminal->errorf("invalid size: %d", size);
 		return;
 	}
 
@@ -102,84 +107,126 @@ void buddy_system::free(void* addr, size_t size)
 		auto buddy_addr = reinterpret_cast<uintptr_t>(start_page->ptr()) ^
 						  (num_order_pages * PAGE_SIZE);
 
-		page* buddy_start_page = &pages[buddy_addr / PAGE_SIZE];
+		page* buddy_block = get_page(reinterpret_cast<void*>(buddy_addr));
 
 		auto it = std::find(free_lists_[order].begin(), free_lists_[order].end(),
-							buddy_start_page);
+							buddy_block);
 		if (it == free_lists_[order].end()) {
 			free_lists_[order].push_back(start_page);
 			for (size_t i = 0; i < num_order_pages; i++) {
 				pages[start_page->index() + i].set_free();
 			}
+
 			return;
 		}
 
 		free_lists_[order].erase(it);
 
-		start_page = std::min(start_page, buddy_start_page);
+		start_page = std::min(start_page, buddy_block);
 
-		order++;
+		++order;
 	}
 }
 
-void buddy_system::register_memory(int num_consecutive_pages, page* start_page)
+void buddy_system::register_memory_blocks(size_t num_total_pages, page* start_page)
 {
-	if (num_consecutive_pages <= 0) {
+	if (num_total_pages <= 0) {
 		return;
 	}
 
-	while (num_consecutive_pages > 0) {
-		const auto order =
-				std::min(calculate_order(num_consecutive_pages), MAX_ORDER);
+	auto calc_max_order_in_total_pages = [](size_t num_total_pages) -> size_t {
+		size_t order = calculate_order(num_total_pages);
+		if (num_total_pages < (1 << order)) {
+			--order;
+		}
 
+		return order;
+	};
+
+	size_t order = calc_max_order_in_total_pages(num_total_pages);
+
+	const uintptr_t alignment_size = (1 << order) * PAGE_SIZE;
+	const uintptr_t page_addr = reinterpret_cast<uintptr_t>(start_page->ptr());
+	if ((page_addr % alignment_size) != 0) {
+		const auto aligned_addr =
+				static_cast<uintptr_t>(align_up(page_addr, alignment_size));
+
+		const size_t num_rounded_up_pages = (aligned_addr - page_addr) / PAGE_SIZE;
+		if ((num_total_pages - num_rounded_up_pages) < (1 << order)) {
+			--order;
+		}
+
+		register_memory_blocks(num_rounded_up_pages, start_page);
+		num_total_pages -= num_rounded_up_pages;
+		order = calc_max_order_in_total_pages(num_total_pages);
+
+		start_page = &pages[start_page->index() + num_rounded_up_pages];
+	}
+
+	while (num_total_pages > 0) {
 		this->free_lists_[order].push_back(start_page);
+		const size_t num_pages = 1 << order;
 
-		const int num_order_pages = 1 << order;
+		start_page = &pages[start_page->index() + num_pages];
 
-		start_page = &pages[start_page->index() + num_order_pages];
+		num_total_pages -= num_pages;
 
-		num_consecutive_pages -= num_order_pages;
+		order = calc_max_order_in_total_pages(num_total_pages);
 	}
 }
 
-void buddy_system::print_free_lists() const
+void buddy_system::print_free_lists(int order) const
 {
+	if (order != -1) {
+		main_terminal->printf("order-%d remaining blocks: %d", order,
+							  free_lists_[order].size());
+		for (const auto& page : free_lists_[order]) {
+			main_terminal->printf(" %p", page->ptr());
+		}
+		main_terminal->print("\n");
+		return;
+	}
+
 	for (int i = 0; i <= MAX_ORDER; i++) {
-		main_terminal->printf("order-%d remaining blocks: %d\n", i,
+		main_terminal->printf("order-%d remaining blocks: %d", i,
 							  free_lists_[i].size());
+		for (const auto& page : free_lists_[i]) {
+			main_terminal->printf(" %p", page->ptr());
+		}
+		main_terminal->print("\n");
 	}
 }
 
 void initialize_memory_manager()
 {
-	main_terminal->info("initializing memory manager...");
+	main_terminal->info("Initializing memory manager...");
 
 	memory_manager = new buddy_system();
 
-	size_t concecutive_start_index = 0;
-	size_t num_consecutive_pages = 0;
+	size_t start_index = 0;
+	size_t num_total_pages = 0;
 
 	for (size_t i = 0; i < pages.size(); i++) {
 		if (pages[i].is_used()) {
-			if (num_consecutive_pages > 0) {
-				memory_manager->register_memory(num_consecutive_pages,
-												&pages[concecutive_start_index]);
+			if (num_total_pages > 0) {
+				memory_manager->register_memory_blocks(num_total_pages,
+													   &pages[start_index]);
 			}
 
-			num_consecutive_pages = 0;
+			num_total_pages = 0;
+
 			continue;
 		}
 
-		if (num_consecutive_pages == 0) {
-			concecutive_start_index = i;
+		if (num_total_pages == 0) {
+			start_index = i;
 		}
 
-		num_consecutive_pages++;
+		num_total_pages++;
 	}
 
-	if (num_consecutive_pages > 0) {
-		memory_manager->register_memory(num_consecutive_pages,
-										&pages[concecutive_start_index]);
+	if (num_total_pages > 0) {
+		memory_manager->register_memory_blocks(num_total_pages, &pages[start_index]);
 	}
 
 	main_terminal->info("Memory manager initialized successfully.");
