@@ -4,6 +4,7 @@
 #include "../system_event.hpp"
 #include "../system_event_queue.hpp"
 #include "../task/task_manager.hpp"
+#include "../types.hpp"
 #include <algorithm>
 
 uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
@@ -127,7 +128,7 @@ void initialize_timer()
 {
 	main_terminal->info("Initializing logical timer...");
 
-	void* addr = kmalloc(sizeof(kernel_timer));
+	void* addr = kmalloc(sizeof(kernel_timer), KMALLOC_UNINITIALIZED);
 	ktimer = new (addr) kernel_timer;
 
 	ktimer->add_periodic_timer_event(CURSOR_BLINK_MILLISEC,

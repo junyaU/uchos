@@ -1,6 +1,7 @@
 #include "paging.hpp"
 #include "../bit_utils.hpp"
 #include "../graphics/terminal.hpp"
+#include "../types.hpp"
 #include "buddy_system.hpp"
 #include "page.hpp"
 #include "page_operations.h"
@@ -62,15 +63,13 @@ void dump_page_tables(linear_address addr)
 
 page_table_entry* new_page_table()
 {
-	auto* base_addr = kmalloc(PAGE_SIZE);
+	auto* base_addr = kmalloc(PAGE_SIZE, KMALLOC_ZEROED);
 	if (base_addr == nullptr) {
 		main_terminal->error("Failed to allocate memory for page table.");
 		return nullptr;
 	}
 
-	auto* page_table = reinterpret_cast<page_table_entry*>(base_addr);
-	memset(page_table, 0, PAGE_SIZE);
-	return page_table;
+	return reinterpret_cast<page_table_entry*>(base_addr);
 }
 
 page_table_entry* set_new_page_table(page_table_entry& entry)

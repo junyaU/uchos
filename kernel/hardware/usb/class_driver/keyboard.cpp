@@ -1,5 +1,6 @@
 #include "keyboard.hpp"
 #include "../../../memory/slab.hpp"
+#include "../../../types.hpp"
 #include "hid.hpp"
 
 #include <bitset>
@@ -13,7 +14,7 @@ keyboard_driver::keyboard_driver(usb::device* dev, int interface_index)
 
 void* keyboard_driver::operator new(size_t size)
 {
-	return kmalloc(sizeof(keyboard_driver));
+	return kmalloc(sizeof(keyboard_driver), KMALLOC_UNINITIALIZED);
 }
 
 void keyboard_driver::operator delete(void* ptr) noexcept { kfree(ptr); }
