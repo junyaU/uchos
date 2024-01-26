@@ -1,5 +1,6 @@
 #include "segment.hpp"
 #include "../graphics/terminal.hpp"
+#include "../types.hpp"
 #include "page.hpp"
 #include "segments_operations.h"
 #include "slab.hpp"
@@ -81,7 +82,7 @@ void initialize_segmentation()
 void initialize_tss()
 {
 	const size_t rsp0_size = PAGE_SIZE * 8;
-	void* stack = kmalloc(rsp0_size);
+	void* stack = kmalloc(rsp0_size, KMALLOC_UNINITIALIZED);
 	if (stack == nullptr) {
 		main_terminal->error("Failed to allocate memory for TSS.");
 		return;

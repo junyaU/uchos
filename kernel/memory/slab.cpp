@@ -1,6 +1,7 @@
 #include "slab.hpp"
 #include "../bit_utils.hpp"
 #include "../graphics/terminal.hpp"
+#include "../types.hpp"
 #include "buddy_system.hpp"
 #include "page.hpp"
 #include <cstring>
@@ -196,7 +197,7 @@ void m_slab::free_object(void* addr, size_t obj_size)
 
 std::unordered_map<void*, void*> aligned_to_raw_addr_map;
 
-void* kmalloc(size_t size, int align)
+void* kmalloc(size_t size, unsigned flags, int align)
 {
 	if (align != 1 && (align & (align - 1)) != 0) {
 		main_terminal->error("align must be a power of 2");
@@ -212,21 +213,28 @@ void* kmalloc(size_t size, int align)
 		cache = &m_cache_create(name, size);
 	}
 
-	void* raw_addr = cache->alloc();
-	if (align == 1) {
-		return raw_addr;
+	void* addr = cache->alloc();
+	if (addr == nullptr) {
+		main_terminal->error("kmalloc: failed to allocate memory");
+		return nullptr;
 	}
 
-	auto* aligned_addr = reinterpret_cast<void*>(
-			align_up(reinterpret_cast<uintptr_t>(raw_addr), align));
+	if (align != 1) {
+		auto* aligned_addr = reinterpret_cast<void*>(
+				align_up(reinterpret_cast<uintptr_t>(addr), align));
 
-	if (aligned_addr == raw_addr) {
-		return aligned_addr;
+		if (aligned_addr != addr) {
+			aligned_to_raw_addr_map[aligned_addr] = addr;
+		}
+
+		addr = aligned_addr;
 	}
 
-	aligned_to_raw_addr_map[aligned_addr] = raw_addr;
+	if ((flags & KMALLOC_ZEROED) != 0) {
+		memset(addr, 0, size);
+	}
 
-	return aligned_addr;
+	return addr;
 }
 
 void kfree(void* addr)

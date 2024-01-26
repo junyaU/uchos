@@ -3,6 +3,7 @@
 #include "../../../graphics/terminal.hpp"
 #include "../../../interrupt/vector.hpp"
 #include "../../../memory/slab.hpp"
+#include "../../../types.hpp"
 #include "../../pci.hpp"
 #include "context.hpp"
 #include "speed.hpp"
@@ -279,11 +280,11 @@ void controller::initialize()
 			(hcs_params2.bits.max_scratchpad_buffers_high << 5);
 
 	if (max_scratchpad_buffers > 0) {
-		auto* scratchpad_buf_arr = reinterpret_cast<void**>(
-				kmalloc(sizeof(void*) * max_scratchpad_buffers, 64));
+		auto* scratchpad_buf_arr = reinterpret_cast<void**>(kmalloc(
+				sizeof(void*) * max_scratchpad_buffers, KMALLOC_UNINITIALIZED, 64));
 
 		for (int i = 0; i < max_scratchpad_buffers; i++) {
-			scratchpad_buf_arr[i] = kmalloc(4096);
+			scratchpad_buf_arr[i] = kmalloc(4096, KMALLOC_UNINITIALIZED);
 		}
 
 		device_manager_.device_contexts()[0] =

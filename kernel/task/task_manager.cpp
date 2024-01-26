@@ -1,6 +1,7 @@
 #include "task_manager.hpp"
 #include "../graphics/terminal.hpp"
 #include "../timers/timer.hpp"
+#include "../types.hpp"
 #include "context_switch.h"
 #include "task.hpp"
 
@@ -12,7 +13,7 @@ task_manager::task_manager() : last_task_id_{ 0 }
 
 int task_manager::add_task(uint64_t task_addr, int priority, bool is_running)
 {
-	void* addr = kmalloc(sizeof(Task));
+	void* addr = kmalloc(sizeof(Task), KMALLOC_UNINITIALIZED);
 	Task* task = new (addr) Task(last_task_id_, task_addr, is_running, priority);
 
 	tasks_.emplace_back(task);

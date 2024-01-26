@@ -1,6 +1,7 @@
 #include "device_manager.hpp"
 #include "../../../graphics/terminal.hpp"
 #include "../../../memory/slab.hpp"
+#include "../../../types.hpp"
 
 namespace usb::xhci
 {
@@ -10,7 +11,8 @@ void device_manager::initialize(size_t max_slots)
 
 	devices_ =
 			// NOLINTNEXTLINE(bugprone-sizeof-expression)
-			reinterpret_cast<device**>(kmalloc(sizeof(device*) * (max_slots_ + 1)));
+			reinterpret_cast<device**>(kmalloc(sizeof(device*) * (max_slots_ + 1),
+											   KMALLOC_UNINITIALIZED));
 	if (devices_ == nullptr) {
 		main_terminal->error("failed to allocate memory for devices");
 		return;
@@ -18,7 +20,8 @@ void device_manager::initialize(size_t max_slots)
 
 	contexts_ = reinterpret_cast<device_context**>(
 			// NOLINTNEXTLINE(bugprone-sizeof-expression)
-			kmalloc(sizeof(device_context*) * (max_slots_ + 1), 64));
+			kmalloc(sizeof(device_context*) * (max_slots_ + 1),
+					KMALLOC_UNINITIALIZED, 64));
 	if (contexts_ == nullptr) {
 		kfree(devices_);
 		main_terminal->error("failed to allocate memory for device contexts");
@@ -87,7 +90,8 @@ void device_manager::allocate_device(uint8_t slot_id,
 		return;
 	}
 
-	devices_[slot_id] = reinterpret_cast<device*>(kmalloc(sizeof(device), 64));
+	devices_[slot_id] = reinterpret_cast<device*>(
+			kmalloc(sizeof(device), KMALLOC_UNINITIALIZED, 64));
 	new (devices_[slot_id]) device(slot_id, dbreg);
 }
 
