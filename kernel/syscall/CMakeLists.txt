@@ -1,4 +1,6 @@
 set(SYSCALL_SOURCE_FILES
+        entry.asm
+        handler.cpp
         syscall.cpp
 )
 
