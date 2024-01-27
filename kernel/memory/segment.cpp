@@ -62,8 +62,8 @@ void setup_segments()
 	gdt[0].data = 0;
 	set_code_segment(gdt[1], descriptor_type::EXECUTE_READ, 0);
 	set_data_segment(gdt[2], descriptor_type::READ_WRITE, 0);
-	set_code_segment(gdt[3], descriptor_type::EXECUTE_READ, 3);
-	set_data_segment(gdt[4], descriptor_type::READ_WRITE, 3);
+	set_data_segment(gdt[3], descriptor_type::READ_WRITE, 3);
+	set_code_segment(gdt[4], descriptor_type::EXECUTE_READ, 3);
 
 	load_gdt(sizeof(gdt) - 1, reinterpret_cast<uint64_t>(&gdt));
 }

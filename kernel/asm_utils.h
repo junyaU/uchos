@@ -9,6 +9,8 @@ void write_to_io_port(uint16_t port, uint32_t value);
 
 int most_significant_bit(uint32_t value);
 
+void write_msr(uint32_t msr, uint64_t value);
+
 void call_userland(int argc,
 				   char** argv,
 				   uint16_t cs,
