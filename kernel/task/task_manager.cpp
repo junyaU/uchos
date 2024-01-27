@@ -1,5 +1,6 @@
 #include "task_manager.hpp"
 #include "../graphics/terminal.hpp"
+#include "../memory/slab.hpp"
 #include "../timers/timer.hpp"
 #include "../types.hpp"
 #include "context_switch.h"

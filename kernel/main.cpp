@@ -15,6 +15,7 @@ struct MemoryMap;
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"
 #include "memory/slab.hpp"
+#include "syscall/syscall.hpp"
 #include "system_event_queue.hpp"
 #include "task/task_manager.hpp"
 #include "timers/acpi.hpp"
@@ -64,6 +65,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	initialize_timer();
 
 	local_apic::initialize();
+
+	syscall::initialize();
 
 	initialize_task_manager();
 

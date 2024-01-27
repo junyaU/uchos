@@ -1,7 +1,6 @@
 bits 64
 section .text
 
-
 extern kernel_stack
 extern Main
 global KernelMain
@@ -29,6 +28,15 @@ write_to_io_port:
 global most_significant_bit ; int most_significant_bit(uint32_t value)
 most_significant_bit:
     bsr eax, edi
+    ret
+
+global write_msr ; void write_msr(uint32_t msr, uint64_t value)
+write_msr:
+    mov rdx, rsi
+    shr rdx, 32
+    mov eax, esi
+    mov ecx, edi
+    wrmsr
     ret
 
 global call_userland ; void call_userland(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);

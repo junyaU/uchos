@@ -38,7 +38,7 @@ include_directories(
 
 # Add compile options for both C and C++.
 add_compile_options(
-        -Og
+        -O0
         -Wall
         -g
         --target=x86_64-elf
@@ -85,7 +85,23 @@ add_subdirectory(task)
 add_subdirectory(hardware)
 add_subdirectory(file_system)
 add_subdirectory(command_line)
+add_subdirectory(syscall)
 
 # Define the main target and link it with the necessary libraries.
 add_executable(UchosKernel ${SOURCE_FILES})
-target_link_libraries(UchosKernel c c++ c++abi m UchosGraphics UchosMemory UchosInterrupt UchosTimers UchosTask UchosHardware UchosFileSystem UchosCommandLine)
+target_link_libraries(
+        UchosKernel
+        c
+        c++
+        c++abi
+        m
+        UchosGraphics
+        UchosMemory
+        UchosInterrupt
+        UchosTimers
+        UchosTask
+        UchosHardware
+        UchosFileSystem
+        UchosCommandLine
+        UchosSyscall
+)
