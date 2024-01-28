@@ -17,7 +17,6 @@ void set_idt_entry(idt_entry& entry,
 	entry.offset_middle = (offset >> 16) & 0xffffU;
 	entry.offset_high = offset >> 32;
 	entry.segment_selector = segment_selector;
-	entry.ist = 0;
 	entry.attr = attr;
 }
 
@@ -33,12 +32,12 @@ void initialize_interrupt()
 {
 	main_terminal->info("Initializing interrupt...");
 
-	auto set_entry = [](int irq, auto handler) {
+	auto set_entry = [](int irq, auto handler, uint16_t ist = 0) {
 		set_idt_entry(idt[irq], reinterpret_cast<uint64_t>(handler),
-					  type_attr{ gate_type::kInterruptGate, 0, 1 }, KERNEL_CS);
+					  type_attr{ ist, gate_type::kInterruptGate, 0, 1 }, KERNEL_CS);
 	};
 
-	set_entry(InterruptVector::kLocalApicTimer, on_timer_interrupt);
+	set_entry(InterruptVector::kLocalApicTimer, on_timer_interrupt, IST_FOR_TIMER);
 	set_entry(InterruptVector::kXHCI, on_xhci_interrupt);
 	set_entry(0, InterruptHandlerDE);
 	set_entry(1, InterruptHandlerDB);

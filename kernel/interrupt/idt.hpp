@@ -3,17 +3,24 @@
 #include <array>
 #include <cstdint>
 
-struct type_attr {
-	uint8_t type : 4;
-	uint8_t : 1;
-	uint8_t dpl : 2;
-	uint8_t present : 1;
+enum gate_type {
+	kTaskGate = 0x5,
+	kInterruptGate = 0xE,
+	kTrapGate = 0xF,
 };
+
+struct type_attr {
+	uint16_t interrupt_stack_table : 3;
+	uint16_t : 5;
+	uint16_t type : 4;
+	uint16_t : 1;
+	uint16_t dpl : 2;
+	uint16_t present : 1;
+} __attribute__((packed));
 
 struct idt_entry {
 	uint16_t offset_low;
 	uint16_t segment_selector;
-	uint8_t ist;
 	type_attr attr;
 	uint16_t offset_middle;
 	uint32_t offset_high;
@@ -27,10 +34,6 @@ struct idtr {
 	uint64_t base;
 } __attribute__((packed));
 
-enum gate_type {
-	kTaskGate = 0x5,
-	kInterruptGate = 0xE,
-	kTrapGate = 0xF,
-};
+const int IST_FOR_TIMER = 1;
 
 void initialize_interrupt();

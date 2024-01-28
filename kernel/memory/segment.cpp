@@ -1,5 +1,6 @@
 #include "segment.hpp"
 #include "../graphics/terminal.hpp"
+#include "../interrupt/idt.hpp"
 #include "../types.hpp"
 #include "page.hpp"
 #include "segments_operations.h"
@@ -79,18 +80,35 @@ void initialize_segmentation()
 	main_terminal->info("Segmentation initialized successfully.");
 }
 
+void set_tss(int index, void* addr)
+{
+	const uint64_t value = reinterpret_cast<uint64_t>(addr);
+	tss[index] = value & 0xffffffff;
+	tss[index + 1] = value >> 32;
+}
+
+void* allocate_stack(size_t size)
+{
+	void* stack = kmalloc(size, KMALLOC_UNINITIALIZED);
+	if (stack == nullptr) {
+		return nullptr;
+	}
+
+	return reinterpret_cast<void*>(reinterpret_cast<uint64_t>(stack) + size);
+}
+
 void initialize_tss()
 {
-	const size_t rsp0_size = PAGE_SIZE * 8;
-	void* stack = kmalloc(rsp0_size, KMALLOC_UNINITIALIZED);
-	if (stack == nullptr) {
-		main_terminal->error("Failed to allocate memory for TSS.");
+	const size_t stack_size = PAGE_SIZE * 8;
+	void* stack1 = allocate_stack(stack_size);
+	void* stack2 = allocate_stack(stack_size);
+	if (stack1 == nullptr || stack2 == nullptr) {
+		main_terminal->error("Failed to allocate stack for TSS.");
 		return;
 	}
 
-	const uint64_t rsp0 = reinterpret_cast<uint64_t>(stack) + rsp0_size;
-	tss[1] = rsp0 & 0xffffffff;
-	tss[2] = rsp0 >> 32;
+	set_tss(1, stack1);
+	set_tss(7 + 2 * IST_FOR_TIMER, stack2);
 
 	const uint64_t tss_addr = reinterpret_cast<uint64_t>(tss.data());
 	set_system_segment(gdt[TSS >> 3], descriptor_type::TSS_AVAILABLE, 0,
