@@ -6,6 +6,11 @@
 bits 64
 section .text
 
+global flash_tlb ; void flash_tlb(uint64_t addr);
+flash_tlb:
+    invlpg [rdi]
+    ret
+
 global set_cr3 ; rdi = addr
 set_cr3:
     mov cr3, rdi

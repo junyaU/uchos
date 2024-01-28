@@ -142,7 +142,7 @@ void setup_page_tables(linear_address addr, size_t num_pages)
 		return;
 	}
 
-	__asm__ volatile("invlpg (%0)" ::"r"(addr) : "memory");
+	flash_tlb(addr.data);
 }
 
 void clean_page_table(page_table_entry* table, int page_table_level)
