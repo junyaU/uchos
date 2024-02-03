@@ -8,7 +8,7 @@
 class Task
 {
 public:
-	Task(int id, uint64_t task_addr, bool is_runnning, int priority);
+	Task(int id, uint64_t task_addr, bool is_runnning, int priority, bool is_init);
 
 	int ID() const { return id_; }
 
@@ -29,3 +29,5 @@ private:
 	std::vector<uint64_t> stack_;
 	alignas(16) context context_;
 };
+
+void task_a();
