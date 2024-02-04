@@ -73,13 +73,7 @@ void kernel_timer::remove_timer_event(uint64_t id)
 
 bool kernel_timer::increment_tick()
 {
-	tick_++;
-
-	if (tick_ % TIMER_FREQUENCY == 0) {
-		__asm__("cli");
-		events_.push({ system_event::DRAW_SCREEN_TIMER, { { tick_ } } });
-		__asm__("sti");
-	}
+	++tick_;
 
 	bool need_switch_task = false;
 	while (!events_.empty() && events_.top().args_.timer.timeout <= tick_) {
@@ -89,12 +83,8 @@ bool kernel_timer::increment_tick()
 		if (event.type_ == system_event::SWITCH_TASK) {
 			need_switch_task = true;
 
-			event.args_.timer.timeout =
-					calculate_timeout_ticks(ktask_manager->next_quantum());
-
-			__asm__("cli");
+			event.args_.timer.timeout = calculate_timeout_ticks(20);
 			events_.push(event);
-			__asm__("sti");
 
 			continue;
 		}
@@ -105,6 +95,7 @@ bool kernel_timer::increment_tick()
 			ignore_events_.erase(it);
 			continue;
 		}
+
 		if (!kevent_queue->queue(event)) {
 			main_terminal->printf("failed to queue timer event: %lu\n",
 								  event.args_.timer.id);
@@ -114,9 +105,7 @@ bool kernel_timer::increment_tick()
 			event.args_.timer.timeout =
 					calculate_timeout_ticks(event.args_.timer.period);
 
-			__asm__("cli");
 			events_.push(event);
-			__asm__("sti");
 		}
 	}
 

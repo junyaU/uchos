@@ -13,7 +13,10 @@ class task_manager
 public:
 	task_manager();
 
-	int add_task(uint64_t task_addr, int priority, bool is_running = false);
+	int add_task(uint64_t task_addr,
+				 int priority,
+				 bool is_init,
+				 bool is_running = false);
 
 	void wakeup(int task_id);
 	void sleep(int task_id);
@@ -24,7 +27,7 @@ public:
 
 private:
 	int last_task_id_;
-	std::deque<std::unique_ptr<Task, kfree_deleter>> tasks_;
+	std::deque<std::unique_ptr<Task>> tasks_;
 };
 
 extern task_manager* ktask_manager;

@@ -8,14 +8,18 @@
 
 task_manager::task_manager() : last_task_id_{ 0 }
 {
-	tasks_.emplace_back(new Task(last_task_id_, 0, true, 2));
+	tasks_.emplace_back(new Task(last_task_id_, 0, true, 2, false));
 	++last_task_id_;
 }
 
-int task_manager::add_task(uint64_t task_addr, int priority, bool is_running)
+int task_manager::add_task(uint64_t task_addr,
+						   int priority,
+						   bool is_init,
+						   bool is_running)
 {
 	void* addr = kmalloc(sizeof(Task), KMALLOC_UNINITIALIZED);
-	Task* task = new (addr) Task(last_task_id_, task_addr, is_running, priority);
+	Task* task =
+			new (addr) Task(last_task_id_, task_addr, is_running, priority, is_init);
 
 	tasks_.emplace_back(task);
 
@@ -26,18 +30,12 @@ int task_manager::add_task(uint64_t task_addr, int priority, bool is_running)
 
 void task_manager::switch_task(const context& current_ctx)
 {
-	if (tasks_.size() <= 1) {
-		return;
-	}
-
-	context& ctx = tasks_.front().get()->TaskContext();
-	memcpy(&ctx, &current_ctx, sizeof(context));
+	memcpy(&tasks_.front().get()->TaskContext(), &current_ctx, sizeof(context));
 
 	tasks_.push_back(std::move(tasks_.front()));
 	tasks_.pop_front();
 
-	Task& next_task = *tasks_.front();
-	restore_context(&next_task.TaskContext());
+	restore_context(&tasks_.front().get()->TaskContext());
 }
 
 void task_manager::sleep(int task_id)
@@ -112,6 +110,8 @@ task_manager* ktask_manager;
 void initialize_task_manager()
 {
 	ktask_manager = new task_manager();
+
+	ktask_manager->add_task(reinterpret_cast<uint64_t>(&task_a), 2, true, true);
 
 	ktimer->add_switch_task_event(SWITCH_TEXT_MILLISEC);
 }
