@@ -2,7 +2,7 @@
 #include "../system_event.hpp"
 #include "../system_event_queue.hpp"
 #include "../task/context.hpp"
-#include "../task/task_manager.hpp"
+#include "../task/task.hpp"
 #include "../timers/timer.hpp"
 #include <cstdint>
 
@@ -27,6 +27,6 @@ extern "C" void switch_task_by_timer_interrupt(context* ctx)
 	notify_end_of_interrupt();
 
 	if (need_switch_task) {
-		ktask_manager->switch_task(*ctx);
+		switch_task(*ctx);
 	}
 }

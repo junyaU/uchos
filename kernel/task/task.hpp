@@ -1,9 +1,12 @@
 #pragma once
 
-#include <cstdint>
-#include <vector>
-
+#include "../memory/slab.hpp"
 #include "context.hpp"
+#include <cstdint>
+#include <deque>
+#include <memory>
+
+void initialize_task_manager();
 
 class Task
 {
@@ -31,3 +34,12 @@ private:
 };
 
 void task_a();
+//
+extern int last_task_id_;
+extern std::deque<std::unique_ptr<Task>> tasks_;
+
+int add_task(uint64_t task_addr,
+			 int priority,
+			 bool is_init,
+			 bool is_running = false);
+void switch_task(const context& current_ctx);
