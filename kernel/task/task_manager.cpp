@@ -30,7 +30,7 @@ int task_manager::add_task(uint64_t task_addr,
 
 void task_manager::switch_task(const context& current_ctx)
 {
-	tasks_.front().get()->TaskContext() = std::move(current_ctx);
+	memcpy(&tasks_.front().get()->TaskContext(), &current_ctx, sizeof(context));
 
 	tasks_.push_back(std::move(tasks_.front()));
 	tasks_.pop_front();

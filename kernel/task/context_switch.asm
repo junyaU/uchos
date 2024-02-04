@@ -121,7 +121,7 @@ restore_context:
 
     mov rdi, [rdi + 0x60]
 
-    o64 retf
+    o64 iret
 
 
 
