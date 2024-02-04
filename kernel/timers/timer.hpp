@@ -11,7 +11,7 @@ inline bool operator<(const system_event& lhs, const system_event& rhs)
 }
 
 static const int TIMER_FREQUENCY = 100;
-static const int SWITCH_TEXT_MILLISEC = 20;
+static const int SWITCH_TEXT_MILLISEC = 200;
 static const int CURSOR_BLINK_MILLISEC = 500;
 
 class kernel_timer
