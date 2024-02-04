@@ -74,6 +74,7 @@ set(SOURCE_FILES
         system_event_queue.cpp
         bit_utils.cpp
         elf.cpp
+        list.cpp
 )
 
 # Add subdirectories that contain their own CMakeLists.txt files.

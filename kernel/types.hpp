@@ -1,6 +1,7 @@
 #pragma once
 
 using error_t = int;
+using task_t = int;
 
 // kmalloc flags
 #define KMALLOC_UNINITIALIZED 0

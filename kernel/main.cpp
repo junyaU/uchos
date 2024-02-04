@@ -17,7 +17,7 @@ struct MemoryMap;
 #include "memory/slab.hpp"
 #include "syscall/syscall.hpp"
 #include "system_event_queue.hpp"
-#include "task/task_manager.hpp"
+#include "task/task.hpp"
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"

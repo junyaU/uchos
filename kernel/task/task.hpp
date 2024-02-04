@@ -1,33 +1,39 @@
 #pragma once
 
-#include <cstdint>
-#include <vector>
-
+#include "../list.hpp"
+#include "../memory/slab.hpp"
+#include "../types.hpp"
 #include "context.hpp"
+#include <cstdint>
+#include <deque>
+#include <memory>
 
-class Task
-{
-public:
-	Task(int id, uint64_t task_addr, bool is_runnning, int priority, bool is_init);
+void initialize_task_manager();
 
-	int ID() const { return id_; }
+struct task {
+	task_t id;
+	char name[32];
+	int priority;
+	bool is_running;
+	std::vector<uint64_t> stack;
+	alignas(16) context ctx;
+	list_elem_t run_queue_elem;
 
-	context& TaskContext() { return context_; }
-
-	void Sleep() { is_running_ = false; }
-
-	void Wakeup() { is_running_ = true; }
-
-	bool IsRunning() const { return is_running_; }
-
-	int Priority() const { return priority_; }
-
-private:
-	int id_;
-	int priority_;
-	bool is_running_;
-	std::vector<uint64_t> stack_;
-	alignas(16) context context_;
+	task(int id, uint64_t task_addr, bool is_running, int priority, bool is_init);
 };
+
+extern task* CURRENT_TASK;
+// task* IDLE_TASK = nullptr;
+
+extern int last_task_id_;
+extern list_t run_queue_list_;
+
+task* add_task(uint64_t task_addr,
+			   int priority,
+			   bool is_init,
+			   bool is_running = false);
+void switch_task(const context& current_ctx);
+
+task* get_scheduled_task();
 
 void task_a();
