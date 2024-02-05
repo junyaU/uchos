@@ -68,7 +68,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	syscall::initialize();
 
-	initialize_task_manager();
+	initialize_task();
 
 	file_system::initialize_fat(volume_image);
 

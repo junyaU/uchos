@@ -4,36 +4,45 @@
 #include "../memory/slab.hpp"
 #include "../types.hpp"
 #include "context.hpp"
+#include <array>
 #include <cstdint>
-#include <deque>
-#include <memory>
 
-void initialize_task_manager();
+void initialize_task();
+
+enum task_state : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING };
 
 struct task {
 	task_t id;
 	char name[32];
 	int priority;
-	bool is_running;
+	task_state state;
 	std::vector<uint64_t> stack;
 	alignas(16) context ctx;
 	list_elem_t run_queue_elem;
 
-	task(int id, uint64_t task_addr, bool is_running, int priority, bool is_init);
+	task(int id,
+		 const char* task_name,
+		 uint64_t task_addr,
+		 task_state state,
+		 int priority,
+		 bool is_init);
+
+	static void* operator new(size_t size) { return kmalloc(size, KMALLOC_ZEROED); }
+
+	static void operator delete(void* p) { kfree(p); }
 };
 
 extern task* CURRENT_TASK;
-// task* IDLE_TASK = nullptr;
+extern task* IDLE_TASK;
 
-extern int last_task_id_;
-extern list_t run_queue_list_;
+static constexpr int MAX_TASKS = 10;
+extern std::array<task*, MAX_TASKS> tasks;
+extern list_t run_queue;
 
-task* add_task(uint64_t task_addr,
-			   int priority,
-			   bool is_init,
-			   bool is_running = false);
+task* create_task(const char* name, uint64_t task_addr, int priority, bool is_init);
+task* get_scheduled_task();
+task_t get_available_task_id();
+void schedule_task(task_t id);
 void switch_task(const context& current_ctx);
 
-task* get_scheduled_task();
-
-void task_a();
+void task_idle();

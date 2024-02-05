@@ -1,40 +1,78 @@
 #include "task.hpp"
 #include "../graphics/terminal.hpp"
+#include "../list.hpp"
 #include "../memory/page_operations.h"
 #include "../memory/segment.hpp"
-#include "../memory/slab.hpp"
 #include "../timers/timer.hpp"
 #include "../types.hpp"
 #include "context_switch.h"
+#include <array>
+#include <cstring>
 
-int last_task_id_;
-list_t run_queue_list_;
+list_t run_queue;
+std::array<task*, MAX_TASKS> tasks;
+
 task* CURRENT_TASK = nullptr;
+task* IDLE_TASK = nullptr;
 
-task* add_task(uint64_t task_addr, int priority, bool is_init, bool is_running)
+task_t get_available_task_id()
 {
-	void* addr = kmalloc(sizeof(task), KMALLOC_UNINITIALIZED);
+	for (task_t i = 0; i < MAX_TASKS; i++) {
+		if (tasks[i] == nullptr) {
+			return i;
+		}
+	}
 
-	return new (addr)
-			task(last_task_id_++, task_addr, is_running, priority, is_init);
+	return -1;
+}
+
+task* create_task(const char* name, uint64_t task_addr, int priority, bool is_init)
+{
+	const task_t task_id = get_available_task_id();
+	if (task_id == -1) {
+		main_terminal->error("failed to allocate task id");
+		return nullptr;
+	}
+
+	tasks[task_id] =
+			new task(task_id, name, task_addr, TASK_WAITING, priority, is_init);
+
+	return tasks[task_id];
 }
 
 task* get_scheduled_task()
 {
-	if (list_is_empty(&run_queue_list_)) {
+	if (list_is_empty(&run_queue)) {
 		return nullptr;
 	}
 
-	task* scheduled_task = LIST_POP_FRONT(&run_queue_list_, task, run_queue_elem);
+	task* scheduled_task = LIST_POP_FRONT(&run_queue, task, run_queue_elem);
+	if (scheduled_task == nullptr) {
+		IDLE_TASK->state = TASK_RUNNING;
+		return IDLE_TASK;
+	}
+
+	scheduled_task->state = TASK_RUNNING;
 	CURRENT_TASK = scheduled_task;
 
 	return scheduled_task;
 }
 
+void schedule_task(task_t id)
+{
+	if (tasks[id] == nullptr) {
+		main_terminal->errorf("task %d is not found", id);
+		return;
+	}
+
+	tasks[id]->state = TASK_READY;
+	list_push_back(&run_queue, &tasks[id]->run_queue_elem);
+}
+
 void switch_task(const context& current_ctx)
 {
 	memcpy(&CURRENT_TASK->ctx, &current_ctx, sizeof(context));
-	list_push_back(&run_queue_list_, &CURRENT_TASK->run_queue_elem);
+	schedule_task(CURRENT_TASK->id);
 
 	task* scheduled_task = get_scheduled_task();
 	if (scheduled_task == nullptr) {
@@ -45,25 +83,33 @@ void switch_task(const context& current_ctx)
 	restore_context(&scheduled_task->ctx);
 }
 
-void initialize_task_manager()
+void initialize_task()
 {
-	list_init(&run_queue_list_);
+	tasks = std::array<task*, MAX_TASKS>();
+	list_init(&run_queue);
 
-	CURRENT_TASK = new task(last_task_id_, 0, true, 2, false);
+	task* main_task = create_task("main", 0, 2, false);
+	main_task->state = TASK_RUNNING;
+	CURRENT_TASK = main_task;
 
-	++last_task_id_;
-
-	auto* task_2 = add_task(reinterpret_cast<uint64_t>(&task_a), 2, true, true);
-
-	list_push_back(&run_queue_list_, &task_2->run_queue_elem);
+	IDLE_TASK = create_task("idle", reinterpret_cast<uint64_t>(&task_idle), 2, true);
+	IDLE_TASK->state = TASK_READY;
 
 	ktimer->add_switch_task_event(SWITCH_TEXT_MILLISEC);
 }
 
-task::task(int id, uint64_t task_addr, bool is_running, int priority, bool is_init)
-	: id{ id }, priority{ priority }, is_running{ is_running }, stack{ 0 }, ctx{ 0 }
+task::task(int id,
+		   const char* task_name,
+		   uint64_t task_addr,
+		   task_state state,
+		   int priority,
+		   bool is_init)
+	: id{ id }, priority{ priority }, state{ state }, stack{ 0 }, ctx{ 0 }
 {
 	list_elem_init(&run_queue_elem);
+
+	strncpy(name, task_name, sizeof(name) - 1);
+	name[sizeof(name) - 1] = '\0';
 
 	if (!is_init) {
 		return;
@@ -85,7 +131,7 @@ task::task(int id, uint64_t task_addr, bool is_running, int priority, bool is_in
 	*reinterpret_cast<uint32_t*>(&ctx.fxsave_area[24]) = 0x1f80;
 }
 
-void task_a()
+void task_idle()
 {
 	while (true) {
 		__asm__("hlt");
