@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #define NOTIFY_KEY_INPUT 1
+#define NOTIFY_XHCI 2
 
 struct message {
 	int32_t type;

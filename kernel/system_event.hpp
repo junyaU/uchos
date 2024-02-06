@@ -24,7 +24,6 @@ struct system_event {
 		TIMER_TIMEOUT,
 		DRAW_SCREEN_TIMER,
 		SWITCH_TASK,
-		XHCI,
 		KEY_PUSH,
 	} type_;
 

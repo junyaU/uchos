@@ -1,7 +1,8 @@
 set(USB_SOURCE_FILES
         device.cpp
         endpoint.cpp
-        )
+        task.cpp
+)
 
 add_library(UchosUsb ${USB_SOURCE_FILES})
 

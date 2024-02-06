@@ -51,10 +51,6 @@ void initialize_system_event_queue() { kevent_queue = new kernel_event_queue(); 
 			case system_event::DRAW_SCREEN_TIMER:
 				break;
 
-			case system_event::XHCI:
-				usb::xhci::process_events();
-				break;
-
 			case system_event::KEY_PUSH:
 				if (event.args_.keyboard.press != 0) {
 					main_terminal->input_key(event.args_.keyboard.ascii);

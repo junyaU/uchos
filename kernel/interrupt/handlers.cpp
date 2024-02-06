@@ -17,7 +17,9 @@ namespace
 
 __attribute__((interrupt)) void on_xhci_interrupt(InterruptFrame* frame)
 {
-	kevent_queue->queue({ system_event::XHCI });
+	const message m = { NOTIFY_XHCI, 0 };
+	send_message(get_task_id_by_name("usb_handler"), &m);
+
 	notify_end_of_interrupt();
 }
 
