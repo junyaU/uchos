@@ -14,3 +14,6 @@ using task_t = int;
 #define ERR_NO_MEMORY -1
 #define ERR_INVALID_ARG -2
 #define ERR_INVALID_TASK -3
+
+// task ids
+#define INTERRUPT_TASK_ID 100
