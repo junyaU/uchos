@@ -12,3 +12,5 @@ using task_t = int;
 #define IS_ERR(err) (((long)(err)) < 0)
 #define OK 0
 #define ERR_NO_MEMORY -1
+#define ERR_INVALID_ARG -2
+#define ERR_INVALID_TASK -3
