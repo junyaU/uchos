@@ -1,5 +1,6 @@
 #include "usb/class_driver/keyboard.hpp"
-#include "../system_event_queue.hpp"
+#include "../graphics/terminal.hpp"
+#include "../task/ipc.hpp"
 #include "keyboad.hpp"
 
 namespace
@@ -55,12 +56,12 @@ void initialize_keyboard()
 		const char ascii =
 				shift ? keycode_map_shifted[keycode] : keycode_map[keycode];
 
-		system_event event{ system_event::KEY_PUSH };
-		event.args_.keyboard.press = static_cast<int>(press);
-		event.args_.keyboard.keycode = keycode;
-		event.args_.keyboard.ascii = ascii;
-		event.args_.keyboard.modifier = modifier;
+		message m{ NOTIFY_KEY_INPUT, INTERRUPT_TASK_ID };
+		m.data.key_input.press = static_cast<int>(press);
+		m.data.key_input.key_code = keycode;
+		m.data.key_input.ascii = ascii;
+		m.data.key_input.modifier = modifier;
 
-		kevent_queue->queue(event);
+		send_message(main_terminal->task_id(), &m);
 	};
 }

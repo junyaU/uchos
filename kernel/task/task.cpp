@@ -108,6 +108,10 @@ void initialize_task()
 	IDLE_TASK = create_task("idle", reinterpret_cast<uint64_t>(&task_idle), 2, true);
 	IDLE_TASK->state = TASK_READY;
 
+	auto* terminal_task = create_task(
+			"terminal", reinterpret_cast<uint64_t>(&task_terminal), 2, true);
+	schedule_task(terminal_task->id);
+
 	auto* usb_task = create_task(
 			"usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), 2, true);
 	schedule_task(usb_task->id);

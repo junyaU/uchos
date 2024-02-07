@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include "../types.hpp"
 #include "color.hpp"
 #include "font.hpp"
 #include <cstdint>
@@ -54,6 +55,10 @@ public:
 		error(s);
 	}
 
+	task_t task_id() const { return task_id_; }
+
+	void set_task_id(task_t id) { task_id_ = id; }
+
 	void print_interrupt_hex(uint64_t value);
 
 	void input_key(uint8_t c);
@@ -85,9 +90,11 @@ private:
 	Color user_name_color_;
 	char user_name_[16];
 	bool cursor_visible_{ false };
+	task_t task_id_{ -1 };
 
 	std::unique_ptr<command_line::controller> cl_ctrl_;
 };
 
 extern terminal* main_terminal;
-void initialize_kernel_logger();
+void initialize_terminal();
+void task_terminal();

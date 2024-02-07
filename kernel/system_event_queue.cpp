@@ -2,6 +2,8 @@
 #include "graphics/terminal.hpp"
 #include "hardware/usb/xhci/xhci.hpp"
 #include "system_event.hpp"
+#include "task/ipc.hpp"
+#include "task/task.hpp"
 
 bool kernel_event_queue::queue(system_event event)
 {
@@ -42,19 +44,11 @@ void initialize_system_event_queue() { kevent_queue = new kernel_event_queue(); 
 			case system_event::TIMER_TIMEOUT:
 				switch (event.args_.timer.action) {
 					case action_type::TERMINAL_CURSOR_BLINK:
-						main_terminal->cursor_blink();
+						const message m = { NOTIFY_CURSOR_BLINK, CURRENT_TASK->id };
+						send_message(main_terminal->task_id(), &m);
 						break;
 				}
 
-				break;
-
-			case system_event::DRAW_SCREEN_TIMER:
-				break;
-
-			case system_event::KEY_PUSH:
-				if (event.args_.keyboard.press != 0) {
-					main_terminal->input_key(event.args_.keyboard.ascii);
-				}
 				break;
 
 			default:

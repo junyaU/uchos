@@ -1,5 +1,6 @@
 #include "terminal.hpp"
 #include "../command_line/controller.hpp"
+#include "../task/task.hpp"
 #include "color.hpp"
 #include "font.hpp"
 #include "screen.hpp"
@@ -77,7 +78,7 @@ void terminal::print_interrupt_hex(uint64_t value)
 		buf[0] = c;
 		print(buf);
 	}
-	
+
 	print("\n");
 }
 
@@ -215,8 +216,37 @@ void terminal::initialize_command_line()
 terminal* main_terminal;
 alignas(terminal) char kernel_logger_buf[sizeof(terminal)];
 
-void initialize_kernel_logger()
+void initialize_terminal()
 {
 	main_terminal = new (kernel_logger_buf)
 			terminal{ Color{ 255, 255, 255 }, "root@uchos", { 74, 246, 38 } };
+}
+
+void task_terminal()
+{
+	task* current_task = CURRENT_TASK;
+
+	main_terminal->set_task_id(current_task->id);
+
+	while (true) {
+		__asm__("cli");
+		if (current_task->messages.empty()) {
+			__asm__("sti\n\thlt");
+			continue;
+		}
+
+		const message m = current_task->messages.front();
+		current_task->messages.pop();
+
+		switch (m.type) {
+			case NOTIFY_KEY_INPUT:
+				if (m.data.key_input.press != 0) {
+					main_terminal->input_key(m.data.key_input.ascii);
+				}
+				break;
+			case NOTIFY_CURSOR_BLINK:
+				main_terminal->cursor_blink();
+				break;
+		}
+	}
 }

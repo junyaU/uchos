@@ -34,7 +34,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_font();
 
-	initialize_kernel_logger();
+	initialize_terminal();
 
 	initialize_segmentation();
 
