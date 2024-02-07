@@ -4,8 +4,10 @@
 #include "../memory/slab.hpp"
 #include "../types.hpp"
 #include "context.hpp"
+#include "ipc.hpp"
 #include <array>
 #include <cstdint>
+#include <queue>
 
 void initialize_task();
 
@@ -19,6 +21,7 @@ struct task {
 	std::vector<uint64_t> stack;
 	alignas(16) context ctx;
 	list_elem_t run_queue_elem;
+	std::queue<message> messages;
 
 	task(int id,
 		 const char* task_name,
@@ -41,6 +44,7 @@ extern list_t run_queue;
 
 task* create_task(const char* name, uint64_t task_addr, int priority, bool is_init);
 task* get_scheduled_task();
+task_t get_task_id_by_name(const char* name);
 task_t get_available_task_id();
 void schedule_task(task_t id);
 void switch_task(const context& current_ctx);

@@ -1,5 +1,6 @@
 #include "task.hpp"
 #include "../graphics/terminal.hpp"
+#include "../hardware/usb/task.hpp"
 #include "../list.hpp"
 #include "../memory/page_operations.h"
 #include "../memory/segment.hpp"
@@ -7,6 +8,7 @@
 #include "../types.hpp"
 #include "context_switch.h"
 #include <array>
+#include <cstdint>
 #include <cstring>
 
 list_t run_queue;
@@ -20,6 +22,17 @@ task_t get_available_task_id()
 	for (task_t i = 0; i < MAX_TASKS; i++) {
 		if (tasks[i] == nullptr) {
 			return i;
+		}
+	}
+
+	return -1;
+}
+
+task_t get_task_id_by_name(const char* name)
+{
+	for (task* t : tasks) {
+		if (t != nullptr && strcmp(t->name, name) == 0) {
+			return t->id;
 		}
 	}
 
@@ -95,6 +108,14 @@ void initialize_task()
 	IDLE_TASK = create_task("idle", reinterpret_cast<uint64_t>(&task_idle), 2, true);
 	IDLE_TASK->state = TASK_READY;
 
+	auto* terminal_task = create_task(
+			"terminal", reinterpret_cast<uint64_t>(&task_terminal), 2, true);
+	schedule_task(terminal_task->id);
+
+	auto* usb_task = create_task(
+			"usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), 2, true);
+	schedule_task(usb_task->id);
+
 	ktimer->add_switch_task_event(SWITCH_TEXT_MILLISEC);
 }
 
@@ -107,6 +128,8 @@ task::task(int id,
 	: id{ id }, priority{ priority }, state{ state }, stack{ 0 }, ctx{ 0 }
 {
 	list_elem_init(&run_queue_elem);
+
+	messages = std::queue<message>();
 
 	strncpy(name, task_name, sizeof(name) - 1);
 	name[sizeof(name) - 1] = '\0';

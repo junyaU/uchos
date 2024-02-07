@@ -5,7 +5,7 @@
 
 error_t send_message(task_t dst_id, const message* m)
 {
-	if (dst_id == -1 || dst_id == CURRENT_TASK->id) {
+	if (dst_id == -1 || m->sender == dst_id) {
 		main_terminal->errorf("invalid destination task id: %d", dst_id);
 		return ERR_INVALID_ARG;
 	}
@@ -15,7 +15,7 @@ error_t send_message(task_t dst_id, const message* m)
 		main_terminal->errorf("task %d is not found", dst_id);
 		return ERR_INVALID_TASK;
 	}
-	
+
 	dst->messages.push(*m);
 
 	return OK;

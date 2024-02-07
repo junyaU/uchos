@@ -22,10 +22,7 @@ struct system_event {
 	enum type : uint8_t {
 		EMPTY,
 		TIMER_TIMEOUT,
-		DRAW_SCREEN_TIMER,
 		SWITCH_TASK,
-		XHCI,
-		KEY_PUSH,
 	} type_;
 
 	union {
@@ -36,16 +33,5 @@ struct system_event {
 			int periodical;
 			action_type action;
 		} timer;
-
-		struct {
-			uint64_t value;
-		} draw_screen_timer;
-
-		struct {
-			uint8_t modifier;
-			uint8_t keycode;
-			uint8_t ascii;
-			int press;
-		} keyboard;
 	} args_;
 };
