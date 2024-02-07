@@ -3,9 +3,11 @@
 #include "../types.hpp"
 #include <cstdint>
 
-#define NOTIFY_KEY_INPUT 1
-#define NOTIFY_XHCI 2
-#define NOTIFY_CURSOR_BLINK 3
+#define NOTIFY_KEY_INPUT 0
+#define NOTIFY_XHCI 1
+#define NOTIFY_CURSOR_BLINK 2
+
+#define NUM_MESSAGE_TYPES 3
 
 struct message {
 	int32_t type;

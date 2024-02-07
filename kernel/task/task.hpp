@@ -22,6 +22,8 @@ struct task {
 	alignas(16) context ctx;
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;
+	std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>
+			message_handlers;
 
 	task(int id,
 		 const char* task_name,
@@ -48,5 +50,6 @@ task_t get_task_id_by_name(const char* name);
 task_t get_available_task_id();
 void schedule_task(task_t id);
 void switch_task(const context& current_ctx);
+void process_messages(task* t);
 
 void task_idle();

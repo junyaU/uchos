@@ -224,29 +224,19 @@ void initialize_terminal()
 
 void task_terminal()
 {
-	task* current_task = CURRENT_TASK;
+	task* t = CURRENT_TASK;
 
-	main_terminal->set_task_id(current_task->id);
+	main_terminal->set_task_id(t->id);
 
-	while (true) {
-		__asm__("cli");
-		if (current_task->messages.empty()) {
-			__asm__("sti\n\thlt");
-			continue;
+	t->message_handlers[NOTIFY_KEY_INPUT] = [](const message& m) {
+		if (m.data.key_input.press != 0) {
+			main_terminal->input_key(m.data.key_input.ascii);
 		}
+	};
 
-		const message m = current_task->messages.front();
-		current_task->messages.pop();
+	t->message_handlers[NOTIFY_CURSOR_BLINK] = [](const message& m) {
+		main_terminal->cursor_blink();
+	};
 
-		switch (m.type) {
-			case NOTIFY_KEY_INPUT:
-				if (m.data.key_input.press != 0) {
-					main_terminal->input_key(m.data.key_input.ascii);
-				}
-				break;
-			case NOTIFY_CURSOR_BLINK:
-				main_terminal->cursor_blink();
-				break;
-		}
-	}
+	process_messages(t);
 }

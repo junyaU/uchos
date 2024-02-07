@@ -96,6 +96,26 @@ void switch_task(const context& current_ctx)
 	restore_context(&scheduled_task->ctx);
 }
 
+void process_messages(task* t)
+{
+	while (true) {
+		__asm__("cli");
+		if (t->messages.empty()) {
+			__asm__("sti\n\thlt");
+			continue;
+		}
+
+		const message m = t->messages.front();
+		t->messages.pop();
+
+		if (m.type < 0 || m.type >= NUM_MESSAGE_TYPES) {
+			continue;
+		}
+
+		t->message_handlers[m.type](m);
+	}
+}
+
 void initialize_task()
 {
 	tasks = std::array<task*, MAX_TASKS>();
@@ -130,6 +150,7 @@ task::task(int id,
 	list_elem_init(&run_queue_elem);
 
 	messages = std::queue<message>();
+	message_handlers.fill([](const message&) {});
 
 	strncpy(name, task_name, sizeof(name) - 1);
 	name[sizeof(name) - 1] = '\0';

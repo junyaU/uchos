@@ -5,22 +5,11 @@
 
 void task_usb_handler()
 {
-	task* current_task = CURRENT_TASK;
+	task* t = CURRENT_TASK;
 
-	while (true) {
-		__asm__("cli");
-		if (current_task->messages.empty()) {
-			__asm__("sti\n\thlt");
-			continue;
-		}
+	t->message_handlers[NOTIFY_XHCI] = [](const message& m) {
+		usb::xhci::process_events();
+	};
 
-		const message m = current_task->messages.front();
-		current_task->messages.pop();
-
-		switch (m.type) {
-			case NOTIFY_XHCI:
-				usb::xhci::process_events();
-				break;
-		}
-	}
+	process_messages(t);
 }
