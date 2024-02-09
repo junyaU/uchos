@@ -16,11 +16,31 @@ struct MemoryMap;
 #include "memory/segment.hpp"
 #include "memory/slab.hpp"
 #include "syscall/syscall.hpp"
-#include "system_event_queue.hpp"
+#include "task/ipc.hpp"
 #include "task/task.hpp"
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"
+
+void task_main()
+{
+	task* t = CURRENT_TASK;
+
+	t->message_handlers[NOTIFY_TIMER_TIMEOUT] = [t](const message& m) {
+		switch (m.data.timer.action) {
+			case timeout_action_t::TERMINAL_CURSOR_BLINK: {
+				const message send_m = { NOTIFY_CURSOR_BLINK, t->id };
+				send_message(main_terminal->task_id(), &send_m);
+				break;
+			}
+
+			case timeout_action_t::SWITCH_TASK:
+				break;
+		}
+	};
+
+	process_messages(t);
+}
 
 // 1MiB　
 char kernel_stack[1024 * 1024];
@@ -58,8 +78,6 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	print_available_memory();
 
-	initialize_system_event_queue();
-
 	acpi::initialize(rsdp);
 
 	initialize_timer();
@@ -80,5 +98,5 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_keyboard();
 
-	handle_system_events();
+	task_main();
 }

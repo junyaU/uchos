@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../system_event.hpp"
 #include "../task/ipc.hpp"
 #include <cstdint>
 #include <queue>
@@ -20,7 +19,7 @@ inline bool operator<(const timer_event& lhs, const timer_event& rhs)
 }
 
 static const int TIMER_FREQUENCY = 100;
-static const int SWITCH_TEXT_MILLISEC = 200;
+static const int SWITCH_TASK_MILLISEC = 20;
 static const int CURSOR_BLINK_MILLISEC = 500;
 
 class kernel_timer

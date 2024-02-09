@@ -1,12 +1,7 @@
 #include "timer.hpp"
 #include "../graphics/terminal.hpp"
 #include "../memory/slab.hpp"
-#include "../system_event.hpp"
-#include "../system_event_queue.hpp"
 #include "../task/ipc.hpp"
-#include "../task/task.hpp"
-#include "../types.hpp"
-#include <algorithm>
 
 uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 {
@@ -82,7 +77,7 @@ bool kernel_timer::increment_tick()
 		if (e.action == timeout_action_t::SWITCH_TASK) {
 			need_switch_task = true;
 
-			e.timeout = calculate_timeout_ticks(20);
+			e.timeout = calculate_timeout_ticks(SWITCH_TASK_MILLISEC);
 			events_.push(e);
 
 			continue;
@@ -94,18 +89,12 @@ bool kernel_timer::increment_tick()
 			continue;
 		}
 
-		system_event se;
-		se.args_.timer.id = e.id;
-		se.args_.timer.action = action_type::TERMINAL_CURSOR_BLINK;
-		se.type_ = system_event::TIMER_TIMEOUT;
-
-		if (!kevent_queue->queue(se)) {
-			main_terminal->printf("failed to queue timer event: %lu\n", e.id);
-		}
+		message m = { NOTIFY_TIMER_TIMEOUT, INTERRUPT_TASK_ID };
+		m.data.timer.action = e.action;
+		send_message(0, &m);
 
 		if (e.periodical == 1) {
 			e.timeout = calculate_timeout_ticks(e.period);
-
 			events_.push(e);
 		}
 	}

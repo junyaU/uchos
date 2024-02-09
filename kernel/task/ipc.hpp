@@ -8,7 +8,7 @@
 #define NOTIFY_CURSOR_BLINK 2
 #define NOTIFY_TIMER_TIMEOUT 3
 
-#define NUM_MESSAGE_TYPES 3
+#define NUM_MESSAGE_TYPES 4
 
 enum class timeout_action_t : uint8_t {
 	TERMINAL_CURSOR_BLINK,
