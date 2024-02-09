@@ -1,64 +1,58 @@
 #include "timer.hpp"
 #include "../graphics/terminal.hpp"
 #include "../memory/slab.hpp"
-#include "../system_event.hpp"
-#include "../system_event_queue.hpp"
-#include "../task/task.hpp"
-#include "../types.hpp"
-#include <algorithm>
+#include "../task/ipc.hpp"
 
 uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 {
 	return tick_ + (millisec * TIMER_FREQUENCY) / 1000;
 }
 
-uint64_t kernel_timer::add_timer_event(unsigned long millisec, action_type type)
+uint64_t
+kernel_timer::add_timer_event(unsigned long millisec, timeout_action_t action)
 {
-	auto event = system_event{ system_event::TIMER_TIMEOUT };
+	auto e = timer_event{
+		.id = last_id_++,
+		.timeout = calculate_timeout_ticks(millisec),
+		.period = static_cast<unsigned int>(millisec),
+		.action = action,
+	};
 
-	event.args_.timer.id = last_id_;
-	event.args_.timer.timeout = calculate_timeout_ticks(millisec);
-	event.args_.timer.period = millisec;
-	event.args_.timer.action = type;
+	events_.push(e);
 
-	events_.push(event);
-
-	last_id_++;
-
-	return event.args_.timer.id;
+	return e.id;
 }
 
 uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
-												action_type type,
+												timeout_action_t action,
 												uint64_t id)
 {
-	auto event = system_event{ system_event::TIMER_TIMEOUT };
-
 	if (id == 0) {
-		id = last_id_;
-		last_id_++;
+		id = last_id_++;
 	} else if (last_id_ < id) {
 		main_terminal->printf("invalid timer id: %lu\n", id);
 		return 0;
 	}
 
-	event.args_.timer.id = id;
-	event.args_.timer.timeout = calculate_timeout_ticks(millisec);
-	event.args_.timer.period = millisec;
-	event.args_.timer.periodical = 1;
-	event.args_.timer.action = type;
+	auto e = timer_event{
+		.id = id,
+		.timeout = calculate_timeout_ticks(millisec),
+		.period = static_cast<unsigned int>(millisec),
+		.periodical = 1,
+		.action = action,
+	};
 
-	events_.push(event);
+	events_.push(e);
 
-	return event.args_.timer.id;
+	return e.id;
 }
 
 void kernel_timer::add_switch_task_event(unsigned long millisec)
 {
-	auto event = system_event{ system_event::SWITCH_TASK };
-
-	event.args_.timer.timeout = calculate_timeout_ticks(millisec);
-	events_.push(event);
+	auto e = timer_event{};
+	e.action = timeout_action_t::SWITCH_TASK;
+	e.timeout = calculate_timeout_ticks(millisec);
+	events_.push(e);
 }
 
 void kernel_timer::remove_timer_event(uint64_t id)
@@ -76,36 +70,32 @@ bool kernel_timer::increment_tick()
 	++tick_;
 
 	bool need_switch_task = false;
-	while (!events_.empty() && events_.top().args_.timer.timeout <= tick_) {
-		auto event = events_.top();
+	while (!events_.empty() && events_.top().timeout <= tick_) {
+		auto e = events_.top();
 		events_.pop();
 
-		if (event.type_ == system_event::SWITCH_TASK) {
+		if (e.action == timeout_action_t::SWITCH_TASK) {
 			need_switch_task = true;
 
-			event.args_.timer.timeout = calculate_timeout_ticks(20);
-			events_.push(event);
+			e.timeout = calculate_timeout_ticks(SWITCH_TASK_MILLISEC);
+			events_.push(e);
 
 			continue;
 		}
 
-		auto it = std::find(ignore_events_.begin(), ignore_events_.end(),
-							event.args_.timer.id);
+		auto it = std::find(ignore_events_.begin(), ignore_events_.end(), e.id);
 		if (it != ignore_events_.end()) {
 			ignore_events_.erase(it);
 			continue;
 		}
 
-		if (!kevent_queue->queue(event)) {
-			main_terminal->printf("failed to queue timer event: %lu\n",
-								  event.args_.timer.id);
-		}
+		message m = { NOTIFY_TIMER_TIMEOUT, INTERRUPT_TASK_ID };
+		m.data.timer.action = e.action;
+		send_message(0, &m);
 
-		if (event.args_.timer.periodical == 1) {
-			event.args_.timer.timeout =
-					calculate_timeout_ticks(event.args_.timer.period);
-
-			events_.push(event);
+		if (e.periodical == 1) {
+			e.timeout = calculate_timeout_ticks(e.period);
+			events_.push(e);
 		}
 	}
 
@@ -121,7 +111,7 @@ void initialize_timer()
 	ktimer = new (addr) kernel_timer;
 
 	ktimer->add_periodic_timer_event(CURSOR_BLINK_MILLISEC,
-									 action_type::TERMINAL_CURSOR_BLINK);
+									 timeout_action_t::TERMINAL_CURSOR_BLINK);
 
 	main_terminal->info("Logical timer initialized successfully.");
 }

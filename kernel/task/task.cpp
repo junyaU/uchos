@@ -136,7 +136,7 @@ void initialize_task()
 			"usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), 2, true);
 	schedule_task(usb_task->id);
 
-	ktimer->add_switch_task_event(SWITCH_TEXT_MILLISEC);
+	ktimer->add_switch_task_event(SWITCH_TASK_MILLISEC * 10);
 }
 
 task::task(int id,
@@ -156,6 +156,8 @@ task::task(int id,
 	name[sizeof(name) - 1] = '\0';
 
 	if (!is_init) {
+		// TODO: this is a temporary solution to avoid kernel panic
+		message_handlers.fill([](const message&) {});
 		return;
 	}
 

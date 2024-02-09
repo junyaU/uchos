@@ -6,8 +6,14 @@
 #define NOTIFY_KEY_INPUT 0
 #define NOTIFY_XHCI 1
 #define NOTIFY_CURSOR_BLINK 2
+#define NOTIFY_TIMER_TIMEOUT 3
 
-#define NUM_MESSAGE_TYPES 3
+#define NUM_MESSAGE_TYPES 4
+
+enum class timeout_action_t : uint8_t {
+	TERMINAL_CURSOR_BLINK,
+	SWITCH_TASK,
+};
 
 struct message {
 	int32_t type;
@@ -20,6 +26,10 @@ struct message {
 			uint8_t ascii;
 			int press;
 		} key_input;
+
+		struct {
+			timeout_action_t action;
+		} timer;
 	} data;
 };
 

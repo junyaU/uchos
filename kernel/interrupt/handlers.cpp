@@ -1,6 +1,4 @@
 #include "handlers.hpp"
-#include "../system_event.hpp"
-#include "../system_event_queue.hpp"
 #include "../task/context.hpp"
 #include "../task/ipc.hpp"
 #include "../task/task.hpp"

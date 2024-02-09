@@ -71,7 +71,6 @@ set(SOURCE_FILES
         newlib_support.c
         libcxx_support.cpp
         asm_utils.asm
-        system_event_queue.cpp
         bit_utils.cpp
         elf.cpp
         list.cpp
