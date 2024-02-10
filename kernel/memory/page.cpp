@@ -1,6 +1,7 @@
 #include "page.hpp"
 #include "../graphics/terminal.hpp"
 #include "bootstrap_allocator.hpp"
+#include "types.hpp"
 
 std::vector<page> pages;
 
@@ -43,7 +44,7 @@ void print_available_memory()
 		}
 	}
 
-	main_terminal->printf("available memory: %u MiB / %u MiB\n",
-						  available_pages * PAGE_SIZE / 1024 / 1024,
-						  pages.size() * PAGE_SIZE / 1024 / 1024);
+	printk(KERN_INFO, "available memory: %u MiB / %u MiB",
+		   available_pages * PAGE_SIZE / 1024 / 1024,
+		   pages.size() * PAGE_SIZE / 1024 / 1024);
 }

@@ -71,13 +71,13 @@ void setup_segments()
 
 void initialize_segmentation()
 {
-	main_terminal->info("Initializing segmentation...");
+	printk(KERN_INFO, "Initializing segmentation...");
 	setup_segments();
 
 	load_data_segment(KERNEL_DS);
 	load_code_segment(KERNEL_CS);
 	load_stack_segment(KERNEL_SS);
-	main_terminal->info("Segmentation initialized successfully.");
+	printk(KERN_INFO, "Segmentation initialized successfully.");
 }
 
 void set_tss(int index, void* addr)
@@ -103,7 +103,7 @@ void initialize_tss()
 	void* stack1 = allocate_stack(stack_size);
 	void* stack2 = allocate_stack(stack_size);
 	if (stack1 == nullptr || stack2 == nullptr) {
-		main_terminal->error("Failed to allocate stack for TSS.");
+		printk(KERN_ERROR, "Failed to allocate stack for TSS.");
 		return;
 	}
 

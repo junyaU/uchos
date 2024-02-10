@@ -50,13 +50,13 @@ void dump_page_table(page_table_entry* table,
 		dump_page_table(entry.get_next_level_table(), page_table_level - 1, addr);
 	}
 
-	main_terminal->printf("page_table_level=%d, index=%d entry=%p\n",
-						  page_table_level, page_table_index, entry.data);
+	printk(KERN_INFO, "page_table_level=%d, index=%d entry=%p", page_table_level,
+		   page_table_index, entry.data);
 }
 
 void dump_page_tables(linear_address addr)
 {
-	main_terminal->printf("dest_addr=%p\n", addr.data);
+	printk(KERN_INFO, "dest_addr=%p", addr.data);
 	auto* pml4 = reinterpret_cast<page_table_entry*>(get_cr3());
 	dump_page_table(pml4, 4, addr);
 }
@@ -65,7 +65,7 @@ page_table_entry* new_page_table()
 {
 	auto* base_addr = kmalloc(PAGE_SIZE, KMALLOC_ZEROED);
 	if (base_addr == nullptr) {
-		main_terminal->error("Failed to allocate memory for page table.");
+		printk(KERN_ERROR, "Failed to allocate memory for page table.");
 		return nullptr;
 	}
 
@@ -99,8 +99,8 @@ size_t setup_page_table(page_table_entry* page_table,
 		const int page_table_index = addr.part(page_table_level);
 		auto* child_table = set_new_page_table(page_table[page_table_index]);
 		if (child_table == nullptr) {
-			main_terminal->printf("Failed to setup page table: level=%d\n",
-								  page_table_level);
+			printk(KERN_ERROR, "Failed to setup page table: level=%d",
+				   page_table_level);
 			return -1;
 		}
 
@@ -112,8 +112,8 @@ size_t setup_page_table(page_table_entry* page_table,
 			const size_t num_remaining_pages = setup_page_table(
 					child_table, page_table_level - 1, addr, num_pages);
 			if (num_remaining_pages == -1) {
-				main_terminal->errorf("Failed to setup page table: level=%d",
-									  page_table_level);
+				printk(KERN_ERROR, "Failed to setup page table: level=%d",
+					   page_table_level);
 				return -1;
 			}
 
@@ -138,7 +138,7 @@ void setup_page_tables(linear_address addr, size_t num_pages)
 	const size_t num_remaining_pages = setup_page_table(
 			reinterpret_cast<page_table_entry*>(get_cr3()), 4, addr, num_pages);
 	if (num_remaining_pages == -1) {
-		main_terminal->error("Failed to setup page tables.");
+		printk(KERN_ERROR, "Failed to setup page tables.");
 		return;
 	}
 
@@ -174,8 +174,8 @@ void clean_page_tables(linear_address addr)
 
 void initialize_paging()
 {
-	main_terminal->info("Initializing paging...");
+	printk(KERN_INFO, "Initializing paging...");
 	setup_identity_mapping();
 	set_cr3(reinterpret_cast<uint64_t>(&pml4_table));
-	main_terminal->info("Paging initialized successfully.");
+	printk(KERN_INFO, "Paging initialized successfully.");
 }

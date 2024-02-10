@@ -14,7 +14,7 @@ void device_manager::initialize(size_t max_slots)
 			reinterpret_cast<device**>(kmalloc(sizeof(device*) * (max_slots_ + 1),
 											   KMALLOC_UNINITIALIZED));
 	if (devices_ == nullptr) {
-		main_terminal->error("failed to allocate memory for devices");
+		printk(KERN_ERROR, "failed to allocate memory for devices");
 		return;
 	}
 
@@ -24,7 +24,7 @@ void device_manager::initialize(size_t max_slots)
 					KMALLOC_UNINITIALIZED, 64));
 	if (contexts_ == nullptr) {
 		kfree(devices_);
-		main_terminal->error("failed to allocate memory for device contexts");
+		printk(KERN_ERROR, "failed to allocate memory for device contexts");
 		return;
 	}
 
@@ -81,12 +81,12 @@ void device_manager::allocate_device(uint8_t slot_id,
 									 usb::xhci::doorbell_register* dbreg)
 {
 	if (slot_id > max_slots_) {
-		main_terminal->printf("slot_id %d is out of range\n", slot_id);
+		printk(KERN_ERROR, "slot_id %d is out of range", slot_id);
 		return;
 	}
 
 	if (devices_[slot_id] != nullptr) {
-		main_terminal->printf("slot_id %d is already allocated\n", slot_id);
+		printk(KERN_ERROR, "slot_id %d is already allocated", slot_id);
 		return;
 	}
 
@@ -98,7 +98,7 @@ void device_manager::allocate_device(uint8_t slot_id,
 void device_manager::load_dcbaa(uint8_t slot_id)
 {
 	if (slot_id > max_slots_) {
-		main_terminal->printf("slot_id %d is out of range\n", slot_id);
+		printk(KERN_ERROR, "slot_id %d is out of range", slot_id);
 		return;
 	}
 

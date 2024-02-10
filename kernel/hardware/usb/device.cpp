@@ -71,7 +71,7 @@ void device::on_control_completed(const control_transfer_data& data)
 				return initialize_stage3(buf8, data.len);
 			}
 		default:
-			main_terminal->error("Device: on_control_completed: invalid stage");
+			printk(KERN_ERROR, "Device: on_control_completed: invalid stage");
 			return;
 	}
 }
@@ -82,7 +82,7 @@ void device::on_interrupt_completed(const interrupt_transfer_data& data)
 		return w->on_interrupt_completed(data.ep_id, data.buf, data.len);
 	}
 
-	main_terminal->error("Device: on_interrupt_completed: invalid endpoint");
+	printk(KERN_ERROR, "Device: on_interrupt_completed: invalid endpoint");
 }
 
 void device::initialize_stage1(const uint8_t* buf, int len)
