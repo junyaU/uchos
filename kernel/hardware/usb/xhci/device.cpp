@@ -1,6 +1,7 @@
 #include "device.hpp"
 #include "../../../graphics/terminal.hpp"
 #include "ring.hpp"
+#include "types.hpp"
 
 namespace usb::xhci
 {
@@ -31,14 +32,14 @@ void device::control_in(const control_transfer_data& data)
 	usb::device::control_in(data);
 
 	if (data.ep_id.number() < 0 || data.ep_id.number() > 15) {
-		main_terminal->error("invalid endpoint id");
+		printk(KERN_ERROR, "invalid endpoint id");
 		return;
 	}
 
 	const device_context_index dc_index{ data.ep_id };
 	ring* transfer_ring = transfer_rings_[dc_index.value - 1];
 	if (transfer_ring == nullptr) {
-		main_terminal->error("transfer ring is not allocated");
+		printk(KERN_ERROR, "transfer ring is not allocated");
 		return;
 	}
 
@@ -73,14 +74,14 @@ void device::control_out(const control_transfer_data& data)
 	usb::device::control_out(data);
 
 	if (data.ep_id.number() < 0 || data.ep_id.number() > 15) {
-		main_terminal->error("invalid endpoint id");
+		printk(KERN_ERROR, "invalid endpoint id");
 		return;
 	}
 
 	const device_context_index dc_index{ data.ep_id };
 	ring* transfer_ring = transfer_rings_[dc_index.value - 1];
 	if (transfer_ring == nullptr) {
-		main_terminal->error("transfer ring is not allocated");
+		printk(KERN_ERROR, "transfer ring is not allocated");
 		return;
 	}
 
@@ -117,7 +118,7 @@ void device::interrupt_in(const interrupt_transfer_data& data)
 	const device_context_index dc_index{ data.ep_id };
 	ring* transfer_ring = transfer_rings_[dc_index.value - 1];
 	if (transfer_ring == nullptr) {
-		main_terminal->error("transfer ring is not allocated");
+		printk(KERN_ERROR, "transfer ring is not allocated");
 		return;
 	}
 
@@ -135,8 +136,8 @@ void device::interrupt_out(const interrupt_transfer_data& data)
 {
 	usb::device::interrupt_out(data);
 
-	main_terminal->printf("interrupt_out: ep_id: %d, buf: %p, len: %d\n",
-						  data.ep_id.number(), data.buf, data.len);
+	printk(KERN_DEBUG, "interrupt_out: ep_id: %d, buf: %p, len: %d\n",
+		   data.ep_id.number(), data.buf, data.len);
 }
 
 void device::on_transfer_event_received(const transfer_event_trb& event_trb)
@@ -146,8 +147,8 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 	const bool is_success = event_trb.bits.completion_code == 1 ||
 							event_trb.bits.completion_code == 13;
 	if (!is_success) {
-		main_terminal->printf("transfer failed: completion code: %d\n",
-							  event_trb.bits.completion_code);
+		printk(KERN_DEBUG, "transfer failed: completion code: %d\n",
+			   event_trb.bits.completion_code);
 		return;
 	}
 
@@ -164,7 +165,7 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 
 	auto opt_setup_stage_trb = setup_stages_.get(issued_trb);
 	if (!opt_setup_stage_trb) {
-		main_terminal->error("setup stage trb not found");
+		printk(KERN_ERROR, "setup stage trb not found");
 		return;
 	}
 
@@ -185,7 +186,7 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 		transfer_length = data_stage->bits.trb_transfer_length - residual_length;
 	} else if (auto* status_stage = trb_dynamic_cast<status_stage_trb>(issued_trb);
 			   status_stage == nullptr) {
-		main_terminal->error("invalid trb type");
+		printk(KERN_ERROR, "invalid trb type");
 		return;
 	}
 

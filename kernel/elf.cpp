@@ -2,6 +2,7 @@
 #include "graphics/terminal.hpp"
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
+#include "types.hpp"
 #include <cstdint>
 
 elf64_phdr_t* get_program_header(elf64_ehdr_t* elf_header)
@@ -56,7 +57,7 @@ void load_elf(elf64_ehdr_t* elf_header)
 
 	const auto first_load_addr = get_first_load_addr(elf_header);
 	if (first_load_addr < 0xffff'8000'0000'0000) {
-		main_terminal->printf("invalid load address: %p\n", first_load_addr);
+		printk(KERN_ERROR, "invalid load address: %p", first_load_addr);
 		return;
 	}
 

@@ -17,3 +17,8 @@ using task_t = int;
 
 // task ids
 #define INTERRUPT_TASK_ID 100
+
+// log levels
+#define KERN_DEBUG 0
+#define KERN_ERROR 1
+#define KERN_INFO 2

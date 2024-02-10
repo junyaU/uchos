@@ -7,8 +7,9 @@
 #define NOTIFY_XHCI 1
 #define NOTIFY_CURSOR_BLINK 2
 #define NOTIFY_TIMER_TIMEOUT 3
+#define NOTIFY_WRITE 4
 
-#define NUM_MESSAGE_TYPES 4
+#define NUM_MESSAGE_TYPES 5
 
 enum class timeout_action_t : uint8_t {
 	TERMINAL_CURSOR_BLINK,
@@ -30,6 +31,11 @@ struct message {
 		struct {
 			timeout_action_t action;
 		} timer;
+
+		struct {
+			const char* s;
+			int level;
+		} write;
 	} data;
 };
 

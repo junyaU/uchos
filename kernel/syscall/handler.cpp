@@ -18,7 +18,7 @@ error_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	}
 
 	if (fd == 1) {
-		main_terminal->print(buf);
+		printk(KERN_DEBUG, buf);
 	}
 
 	return OK;
@@ -36,7 +36,7 @@ extern "C" int64_t handle_syscall(uint64_t arg1,
 			sys_write(arg1, arg2, arg3);
 			break;
 		default:
-			main_terminal->errorf("Unknown syscall number: %d\n", syscall_number);
+			printk(KERN_ERROR, "Unknown syscall number: %d", syscall_number);
 			break;
 	}
 

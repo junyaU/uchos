@@ -3,6 +3,7 @@
 #include "../interrupt/vector.hpp"
 #include "acpi.hpp"
 #include "timer.hpp"
+#include "types.hpp"
 
 namespace local_apic
 {
@@ -19,7 +20,7 @@ const uint32_t COUNT_MAX = 0xffffffffU;
 
 void initialize()
 {
-	main_terminal->info("Initializing local APIC...");
+	printk(KERN_INFO, "Initializing local APIC...");
 
 	DIVIDE_CONF = 0b1011;	   // divide by 1
 	LVT_TIMER = (0b001 << 16); // mask
@@ -33,12 +34,12 @@ void initialize()
 
 	const uint32_t freq = elapsed * 10;
 
-	main_terminal->printf("Local APIC timer frequency: %u Hz\n", freq);
+	printk(KERN_INFO, "Local APIC timer frequency: %u Hz", freq);
 
 	LVT_TIMER = (0b010 << 16) | InterruptVector::kLocalApicTimer;
 	INITIAL_COUNT = freq / TIMER_FREQUENCY;
 
-	main_terminal->info("Local APIC initialized successfully.");
+	printk(KERN_INFO, "Local APIC initialized successfully.");
 }
 
 } // namespace local_apic

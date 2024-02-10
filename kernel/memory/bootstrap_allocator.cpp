@@ -3,6 +3,7 @@
 #include "../graphics/terminal.hpp"
 #include "buddy_system.hpp"
 #include "page.hpp"
+#include "types.hpp"
 
 #include <sys/types.h>
 
@@ -41,7 +42,7 @@ void* bootstrap_allocator::allocate(size_t size)
 		}
 	}
 
-	main_terminal->printf("failed to allocate %u bytes\n", size);
+	printk(KERN_ERROR, "failed to allocate %u bytes", size);
 
 	return nullptr;
 }
@@ -78,9 +79,9 @@ void bootstrap_allocator::show_available_memory() const
 		}
 	}
 
-	main_terminal->printf("available memory: %u MiB / %u MiB\n",
-						  available_pages * PAGE_SIZE / 1024 / 1024,
-						  (end_index() - start_index()) * PAGE_SIZE / 1024 / 1024);
+	printk(KERN_INFO, "available memory: %u MiB / %u MiB",
+		   available_pages * PAGE_SIZE / 1024 / 1024,
+		   (end_index() - start_index()) * PAGE_SIZE / 1024 / 1024);
 }
 
 alignas(bootstrap_allocator) char bootstrap_allocator_buffer[sizeof(
@@ -89,7 +90,7 @@ bootstrap_allocator* boot_allocator;
 
 void initialize_bootstrap_allocator(const MemoryMap& mem_map)
 {
-	main_terminal->info("Initializing bootstrap allocator...");
+	printk(KERN_INFO, "Initializing bootstrap allocator...");
 	boot_allocator = new (bootstrap_allocator_buffer) bootstrap_allocator();
 
 	const auto mem_map_base = reinterpret_cast<uintptr_t>(mem_map.buffer);
@@ -109,7 +110,7 @@ void initialize_bootstrap_allocator(const MemoryMap& mem_map)
 
 	boot_allocator->show_available_memory();
 
-	main_terminal->info("Bootstrap allocator initialized successfully.");
+	printk(KERN_INFO, "Bootstrap allocator initialized successfully.");
 }
 
 extern "C" caddr_t program_break, program_break_end;
@@ -122,7 +123,7 @@ void initialize_heap()
 
 	auto* heap = boot_allocator->allocate(heap_size);
 	if (heap == nullptr) {
-		main_terminal->print("failed to allocate heap\n");
+		printk(KERN_ERROR, "failed to allocate heap");
 		return;
 	}
 
@@ -137,5 +138,5 @@ void disable_bootstrap_allocator()
 		boot_allocator = nullptr;
 	}
 
-	main_terminal->info("Bootstrap allocator disabled.");
+	printk(KERN_INFO, "Bootstrap allocator disabled.");
 }

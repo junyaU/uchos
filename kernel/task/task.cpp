@@ -43,7 +43,7 @@ task* create_task(const char* name, uint64_t task_addr, int priority, bool is_in
 {
 	const task_t task_id = get_available_task_id();
 	if (task_id == -1) {
-		main_terminal->error("failed to allocate task id");
+		printk(KERN_ERROR, "failed to allocate task id");
 		return nullptr;
 	}
 
@@ -70,7 +70,7 @@ task* get_scheduled_task()
 void schedule_task(task_t id)
 {
 	if (tasks[id] == nullptr) {
-		main_terminal->errorf("task %d is not found", id);
+		printk(KERN_ERROR, "task %d is not found", id);
 		return;
 	}
 
@@ -142,19 +142,25 @@ task::task(int id,
 		   task_state state,
 		   int priority,
 		   bool is_init)
-	: id{ id }, priority{ priority }, state{ state }, stack{ 0 }, ctx{ 0 }
+	: id{ id },
+	  priority{ priority },
+	  state{ state },
+	  stack{ std::vector<uint64_t>() },
+	  messages{ std::queue<message>() },
+	  message_handlers{
+		  std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>()
+	  }
 {
 	list_elem_init(&run_queue_elem);
 
-	messages = std::queue<message>();
-	message_handlers.fill([](const message&) {});
+	for (auto& handler : message_handlers) {
+		handler = [](const message&) {};
+	}
 
 	strncpy(name, task_name, sizeof(name) - 1);
 	name[sizeof(name) - 1] = '\0';
 
 	if (!is_init) {
-		// TODO: this is a temporary solution to avoid kernel panic
-		message_handlers.fill([](const message&) {});
 		return;
 	}
 

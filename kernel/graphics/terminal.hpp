@@ -98,3 +98,5 @@ private:
 extern terminal* main_terminal;
 void initialize_terminal();
 void task_terminal();
+
+void printk(int level, const char* format, ...);

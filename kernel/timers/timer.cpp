@@ -2,6 +2,7 @@
 #include "../graphics/terminal.hpp"
 #include "../memory/slab.hpp"
 #include "../task/ipc.hpp"
+#include "../types.hpp"
 
 uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 {
@@ -30,7 +31,7 @@ uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
 	if (id == 0) {
 		id = last_id_++;
 	} else if (last_id_ < id) {
-		main_terminal->printf("invalid timer id: %lu\n", id);
+		printk(KERN_ERROR, "invalid timer id: %lu", id);
 		return 0;
 	}
 
@@ -58,7 +59,7 @@ void kernel_timer::add_switch_task_event(unsigned long millisec)
 void kernel_timer::remove_timer_event(uint64_t id)
 {
 	if (id == 0 || last_id_ < id) {
-		main_terminal->printf("invalid timer id: %lu\n", id);
+		printk(KERN_ERROR, "invalid timer id: %lu", id);
 		return;
 	}
 
@@ -99,7 +100,7 @@ bool kernel_timer::increment_tick()
 kernel_timer* ktimer;
 void initialize_timer()
 {
-	main_terminal->info("Initializing logical timer...");
+	printk(KERN_INFO, "Initializing logical timer...");
 
 	void* addr = kmalloc(sizeof(kernel_timer), KMALLOC_UNINITIALIZED);
 	ktimer = new (addr) kernel_timer;
@@ -107,5 +108,5 @@ void initialize_timer()
 	ktimer->add_periodic_timer_event(CURSOR_BLINK_MILLISEC,
 									 timeout_action_t::TERMINAL_CURSOR_BLINK);
 
-	main_terminal->info("Logical timer initialized successfully.");
+	printk(KERN_INFO, "Logical timer initialized successfully.");
 }

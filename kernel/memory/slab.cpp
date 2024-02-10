@@ -76,7 +76,7 @@ bool m_cache::grow()
 	size_t const bytes_per_slab = num_pages_per_slab_ * PAGE_SIZE;
 	void* addr = memory_manager->allocate(bytes_per_slab);
 	if (addr == nullptr) {
-		main_terminal->error("m_cache_grow: failed to allocate memory");
+		printk(KERN_ERROR, "m_cache_grow: failed to allocate memory");
 		return false;
 	}
 
@@ -102,7 +102,7 @@ void* m_cache::alloc()
 {
 	if (slabs_partial_.empty()) {
 		if (slabs_free_.empty() && !grow()) {
-			main_terminal->error("m_cache_alloc: failed to grow");
+			printk(KERN_ERROR, "m_cache_alloc: failed to grow");
 			return nullptr;
 		}
 
@@ -116,7 +116,7 @@ void* m_cache::alloc()
 
 	void* addr = current_slab->alloc_object(object_size_);
 	if (addr == nullptr) {
-		main_terminal->error("m_cache_alloc: failed to allocate object");
+		printk(KERN_ERROR, "m_cache_alloc: failed to allocate object");
 		return nullptr;
 	}
 
@@ -169,7 +169,7 @@ void m_slab::move_list(m_cache& cache, slab_status to)
 void* m_slab::alloc_object(size_t obj_size)
 {
 	if (free_objects_index_.empty()) {
-		main_terminal->error("m_slab_alloc_object: no free objects");
+		printk(KERN_ERROR, "m_slab_alloc_object: no free objects");
 		return nullptr;
 	}
 
@@ -200,7 +200,7 @@ std::unordered_map<void*, void*> aligned_to_raw_addr_map;
 void* kmalloc(size_t size, unsigned flags, int align)
 {
 	if (align != 1 && (align & (align - 1)) != 0) {
-		main_terminal->error("align must be a power of 2");
+		printk(KERN_ERROR, "align must be a power of 2");
 		return nullptr;
 	}
 
@@ -215,7 +215,7 @@ void* kmalloc(size_t size, unsigned flags, int align)
 
 	void* addr = cache->alloc();
 	if (addr == nullptr) {
-		main_terminal->error("kmalloc: failed to allocate memory");
+		printk(KERN_ERROR, "kmalloc: failed to allocate memory");
 		return nullptr;
 	}
 
@@ -247,7 +247,7 @@ void kfree(void* addr)
 
 	page* page = get_page(addr);
 	if (page == nullptr) {
-		main_terminal->error("kfree: invalid address");
+		printk(KERN_ERROR, "kfree: invalid address");
 		return;
 	}
 
@@ -270,11 +270,11 @@ void kfree(void* addr)
 std::list<std::unique_ptr<m_cache>> cache_chain;
 void initialize_slab_allocator()
 {
-	main_terminal->info("Initializing slab allocator...");
+	printk(KERN_INFO, "Initializing slab allocator...");
 
 	aligned_to_raw_addr_map = std::unordered_map<void*, void*>();
 
 	cache_chain.clear();
 
-	main_terminal->info("Initializing slab allocator successfully.");
+	printk(KERN_INFO, "Initializing slab allocator successfully.");
 }

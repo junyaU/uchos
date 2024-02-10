@@ -1,10 +1,13 @@
 #include "terminal.hpp"
 #include "../command_line/controller.hpp"
+#include "../task/ipc.hpp"
 #include "../task/task.hpp"
 #include "color.hpp"
 #include "font.hpp"
 #include "screen.hpp"
+#include <cstdarg>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <memory>
 
@@ -236,5 +239,51 @@ void task_terminal()
 		main_terminal->cursor_blink();
 	};
 
+	t->message_handlers[NOTIFY_WRITE] = [](const message& m) {
+		switch (m.data.write.level) {
+			case KERN_DEBUG:
+				main_terminal->print(m.data.write.s);
+				break;
+			case KERN_ERROR:
+				main_terminal->error(m.data.write.s);
+				break;
+			case KERN_INFO:
+				main_terminal->info(m.data.write.s);
+				break;
+		}
+	};
+
 	process_messages(t);
+}
+
+void printk(int level, const char* format, ...)
+{
+	if (main_terminal == nullptr) {
+		return;
+	}
+
+	va_list args;
+	va_start(args, format);
+	char s[1024];
+	vsprintf(s, format, args);
+
+	const int task_id = main_terminal->task_id();
+	if (task_id == -1) {
+		switch (level) {
+			case KERN_DEBUG:
+				main_terminal->print(s);
+				break;
+			case KERN_ERROR:
+				main_terminal->error(s);
+				break;
+			case KERN_INFO:
+				main_terminal->info(s);
+				break;
+		}
+	} else {
+		const message m{ NOTIFY_WRITE, task_id, { .write = { s, level } } };
+		send_message(main_terminal->task_id(), &m);
+	}
+
+	va_end(args);
 }

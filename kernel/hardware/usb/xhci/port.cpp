@@ -1,6 +1,7 @@
 #include "port.hpp"
 #include "../../../graphics/terminal.hpp"
 #include "registers.hpp"
+#include "types.hpp"
 #include "xhci.hpp"
 
 namespace usb::xhci
@@ -55,8 +56,8 @@ void reset_port(port& p)
 	const auto port_state = port_connection_states[p.number()];
 	if (port_state != port_connection_state::DISCONNECTED &&
 		port_state != port_connection_state::WAITING_ADDRESSED) {
-		main_terminal->printf("port %d is not disconnected or waiting addressed\n",
-							  p.number());
+		printk(KERN_ERROR, "port %d is not disconnected or waiting addressed",
+			   p.number());
 		return;
 	}
 
