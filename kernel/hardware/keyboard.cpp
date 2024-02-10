@@ -62,6 +62,8 @@ void initialize_keyboard()
 		m.data.key_input.ascii = ascii;
 		m.data.key_input.modifier = modifier;
 
-		send_message(main_terminal->task_id(), &m);
+		if (m.data.key_input.press != 0) {
+			send_message(main_terminal->task_id(), &m);
+		}
 	};
 }

@@ -16,6 +16,10 @@ error_t send_message(task_t dst_id, const message* m)
 		return ERR_INVALID_TASK;
 	}
 
+	if (dst->state == TASK_WAITING) {
+		schedule_task(dst_id);
+	}
+
 	dst->messages.push(*m);
 
 	return OK;

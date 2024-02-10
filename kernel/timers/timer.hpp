@@ -25,7 +25,11 @@ static const int CURSOR_BLINK_MILLISEC = 500;
 class kernel_timer
 {
 public:
-	kernel_timer() : tick_{ 0 }, last_id_{ 1 } {}
+	kernel_timer() : tick_{ 0 }, last_id_{ 1 }
+	{
+		events_ = std::priority_queue<timer_event>();
+		ignore_events_ = std::unordered_set<uint64_t>();
+	}
 
 	uint64_t current_tick() const { return tick_; }
 
