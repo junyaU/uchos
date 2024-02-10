@@ -83,12 +83,6 @@ bool kernel_timer::increment_tick()
 			continue;
 		}
 
-		auto it = std::find(ignore_events_.begin(), ignore_events_.end(), e.id);
-		if (it != ignore_events_.end()) {
-			ignore_events_.erase(it);
-			continue;
-		}
-
 		message m = { NOTIFY_TIMER_TIMEOUT, INTERRUPT_TASK_ID };
 		m.data.timer.action = e.action;
 		send_message(0, &m);

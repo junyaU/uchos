@@ -6,8 +6,10 @@
 #include "context.hpp"
 #include "ipc.hpp"
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <queue>
+#include <vector>
 
 void initialize_task();
 

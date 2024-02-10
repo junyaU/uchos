@@ -13,6 +13,7 @@ void list_elem_init(list_elem_t* elem);
 void list_push_back(list_t* list, list_elem_t* elem);
 list_elem_t* list_pop_front(list_t* list);
 bool list_is_empty(list_t* list);
+bool list_contains(list_t* list, list_elem_t* elem);
 
 #define LIST_POP_FRONT(list, container, field)                                      \
 	({                                                                              \

@@ -56,15 +56,11 @@ task* create_task(const char* name, uint64_t task_addr, int priority, bool is_in
 task* get_scheduled_task()
 {
 	if (list_is_empty(&run_queue)) {
-		return nullptr;
-	}
-
-	task* scheduled_task = LIST_POP_FRONT(&run_queue, task, run_queue_elem);
-	if (scheduled_task == nullptr) {
-		IDLE_TASK->state = TASK_RUNNING;
+		CURRENT_TASK = IDLE_TASK;
 		return IDLE_TASK;
 	}
 
+	task* scheduled_task = LIST_POP_FRONT(&run_queue, task, run_queue_elem);
 	scheduled_task->state = TASK_RUNNING;
 	CURRENT_TASK = scheduled_task;
 
@@ -78,6 +74,10 @@ void schedule_task(task_t id)
 		return;
 	}
 
+	if (list_contains(&run_queue, &tasks[id]->run_queue_elem)) {
+		return;
+	}
+
 	tasks[id]->state = TASK_READY;
 	list_push_back(&run_queue, &tasks[id]->run_queue_elem);
 }
@@ -85,25 +85,23 @@ void schedule_task(task_t id)
 void switch_task(const context& current_ctx)
 {
 	memcpy(&CURRENT_TASK->ctx, &current_ctx, sizeof(context));
-	schedule_task(CURRENT_TASK->id);
 
-	task* scheduled_task = get_scheduled_task();
-	if (scheduled_task == nullptr) {
-		main_terminal->print("No task to schedule\n");
-		return;
+	if (CURRENT_TASK->state != TASK_WAITING) {
+		schedule_task(CURRENT_TASK->id);
 	}
 
-	restore_context(&scheduled_task->ctx);
+	restore_context(&get_scheduled_task()->ctx);
 }
 
 void process_messages(task* t)
 {
 	while (true) {
-		__asm__("cli");
 		if (t->messages.empty()) {
-			__asm__("sti\n\thlt");
+			t->state = TASK_WAITING;
 			continue;
 		}
+
+		t->state = TASK_RUNNING;
 
 		const message m = t->messages.front();
 		t->messages.pop();
@@ -126,7 +124,6 @@ void initialize_task()
 	CURRENT_TASK = main_task;
 
 	IDLE_TASK = create_task("idle", reinterpret_cast<uint64_t>(&task_idle), 2, true);
-	IDLE_TASK->state = TASK_READY;
 
 	auto* terminal_task = create_task(
 			"terminal", reinterpret_cast<uint64_t>(&task_terminal), 2, true);

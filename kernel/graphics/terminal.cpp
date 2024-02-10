@@ -229,9 +229,7 @@ void task_terminal()
 	main_terminal->set_task_id(t->id);
 
 	t->message_handlers[NOTIFY_KEY_INPUT] = [](const message& m) {
-		if (m.data.key_input.press != 0) {
-			main_terminal->input_key(m.data.key_input.ascii);
-		}
+		main_terminal->input_key(m.data.key_input.ascii);
 	};
 
 	t->message_handlers[NOTIFY_CURSOR_BLINK] = [](const message& m) {

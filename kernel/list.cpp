@@ -35,4 +35,18 @@ list_elem_t* list_pop_front(list_t* list)
 	return front;
 }
 
+bool list_contains(list_t* list, list_elem_t* elem)
+{
+	list_elem_t* node = list->next;
+	while (node != list) {
+		if (node == elem) {
+			return true;
+		}
+
+		node = node->next;
+	}
+
+	return false;
+}
+
 bool list_is_empty(list_t* list) { return list->next == list; }
