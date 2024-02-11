@@ -17,7 +17,7 @@ namespace
 
 __attribute__((interrupt)) void on_xhci_interrupt(InterruptFrame* frame)
 {
-	const message m = { NOTIFY_XHCI, INTERRUPT_TASK_ID };
+	const message m = { NOTIFY_XHCI, INTERRUPT_TASK_ID, {} };
 	send_message(get_task_id_by_name("usb_handler"), &m);
 
 	notify_end_of_interrupt();

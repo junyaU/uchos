@@ -56,11 +56,14 @@ void initialize_keyboard()
 		const char ascii =
 				shift ? keycode_map_shifted[keycode] : keycode_map[keycode];
 
-		message m{ NOTIFY_KEY_INPUT, INTERRUPT_TASK_ID };
-		m.data.key_input.press = static_cast<int>(press);
-		m.data.key_input.key_code = keycode;
-		m.data.key_input.ascii = ascii;
-		m.data.key_input.modifier = modifier;
+		message m{ NOTIFY_KEY_INPUT,
+				   INTERRUPT_TASK_ID,
+				   { .key_input{
+						   .key_code = keycode,
+						   .modifier = modifier,
+						   .ascii = static_cast<uint8_t>(ascii),
+						   .press = static_cast<int>(press),
+				   } } };
 
 		if (m.data.key_input.press != 0) {
 			send_message(main_terminal->task_id(), &m);
