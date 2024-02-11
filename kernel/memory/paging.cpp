@@ -26,10 +26,10 @@ alignas(PAGE_4KIB)
 void setup_identity_mapping()
 {
 	pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table) | 0x003;
-	for (int i_pdpt = 0; i_pdpt < PAGE_DIRECTORY_COUNT; i_pdpt++) {
+	for (size_t i_pdpt = 0; i_pdpt < PAGE_DIRECTORY_COUNT; i_pdpt++) {
 		pdp_table[i_pdpt] =
 				reinterpret_cast<uint64_t>(&page_directory[i_pdpt]) | 0x003;
-		for (int i_pd = 0; i_pd < 512; i_pd++) {
+		for (size_t i_pd = 0; i_pd < 512; i_pd++) {
 			page_directory[i_pdpt][i_pd] =
 					i_pdpt * PAGE_1GIB + i_pd * PAGE_2MIB | 0x083;
 		}
@@ -90,10 +90,10 @@ page_table_entry* set_new_page_table(page_table_entry& entry)
 	return child_table;
 }
 
-size_t setup_page_table(page_table_entry* page_table,
-						int page_table_level,
-						linear_address addr,
-						size_t num_pages)
+int setup_page_table(page_table_entry* page_table,
+					 int page_table_level,
+					 linear_address addr,
+					 size_t num_pages)
 {
 	while (num_pages > 0) {
 		const int page_table_index = addr.part(page_table_level);
@@ -109,7 +109,7 @@ size_t setup_page_table(page_table_entry* page_table,
 		if (page_table_level == 1) {
 			--num_pages;
 		} else {
-			const size_t num_remaining_pages = setup_page_table(
+			const int num_remaining_pages = setup_page_table(
 					child_table, page_table_level - 1, addr, num_pages);
 			if (num_remaining_pages == -1) {
 				printk(KERN_ERROR, "Failed to setup page table: level=%d",
@@ -135,7 +135,7 @@ size_t setup_page_table(page_table_entry* page_table,
 
 void setup_page_tables(linear_address addr, size_t num_pages)
 {
-	const size_t num_remaining_pages = setup_page_table(
+	const int num_remaining_pages = setup_page_table(
 			reinterpret_cast<page_table_entry*>(get_cr3()), 4, addr, num_pages);
 	if (num_remaining_pages == -1) {
 		printk(KERN_ERROR, "Failed to setup page tables.");

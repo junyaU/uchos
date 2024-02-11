@@ -26,10 +26,10 @@ void task_main()
 {
 	task* t = CURRENT_TASK;
 
-	t->message_handlers[NOTIFY_TIMER_TIMEOUT] = [t](const message& m) {
+	t->message_handlers[NOTIFY_TIMER_TIMEOUT] = +[](const message& m) {
 		switch (m.data.timer.action) {
 			case timeout_action_t::TERMINAL_CURSOR_BLINK: {
-				const message send_m = { NOTIFY_CURSOR_BLINK, t->id };
+				const message send_m = { NOTIFY_CURSOR_BLINK, 0, {} };
 				send_message(main_terminal->task_id(), &send_m);
 				break;
 			}
