@@ -44,12 +44,20 @@ write_msr:
     wrmsr
     ret
 
-global call_userland ; void call_userland(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
+global call_userland ; void call_userland(int argc, char** argv, uint16_t ss, uint64_t rip, uint64_t rsp, uint64_t* kernel_rsp)
 call_userland:
+    ; save callee-saved registers
+    push rbx
     push rbp
-    mov rbp, rsp
-    push rcx ; ss
-    push r9  ; rsp
+    push r12
+    push r13
+    push r14
+    push r15
+    mov [r9], rsp ; save kernel stack pointer
+
+    push rdx ; ss
+    push r8  ; rsp
+    add rdx, 8 ; get cs
     push rdx ; cs
-    push r8  ; rip
+    push rcx  ; rip
     o64 retf

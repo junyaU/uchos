@@ -15,6 +15,7 @@
 
 // system call number
 #define SYS_WRITE 1
+#define SYS_EXIT 60
 
 namespace syscall
 {

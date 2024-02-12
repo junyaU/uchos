@@ -4,6 +4,7 @@
 #include "../memory/page.hpp"
 #include "../memory/paging.hpp"
 #include "../memory/segment.hpp"
+#include "../task/task.hpp"
 #include "elf.hpp"
 #include <algorithm>
 #include <cstdint>
@@ -218,9 +219,11 @@ void execute_file(const directory_entry& entry, const char* args)
 	const linear_address stack_addr{ 0xffff'ffff'ffff'f000 };
 	setup_page_tables(stack_addr, 1);
 
+	task* t = CURRENT_TASK;
+
 	auto entry_addr = elf_header->e_entry;
-	call_userland(argc, argv, USER_CS, USER_SS, entry_addr,
-				  stack_addr.data + PAGE_SIZE - 8);
+	call_userland(argc, argv, USER_SS, entry_addr, stack_addr.data + PAGE_SIZE - 8,
+				  &t->kernel_stack_top);
 
 	const auto addr_first = get_first_load_addr(elf_header);
 	clean_page_tables(linear_address{ addr_first });
