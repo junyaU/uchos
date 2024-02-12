@@ -266,6 +266,7 @@ void printk(int level, const char* format, ...)
 	va_start(args, format);
 	char s[1024];
 	vsprintf(s, format, args);
+	va_end(args);
 
 	const int task_id = main_terminal->task_id();
 	if (task_id == -1) {
@@ -284,6 +285,4 @@ void printk(int level, const char* format, ...)
 		const message m{ NOTIFY_WRITE, task_id, { .write = { s, level } } };
 		send_message(main_terminal->task_id(), &m);
 	}
-
-	va_end(args);
 }

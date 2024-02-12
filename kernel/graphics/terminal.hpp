@@ -99,4 +99,7 @@ extern terminal* main_terminal;
 void initialize_terminal();
 void task_terminal();
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
 void printk(int level, const char* format, ...);
+#pragma GCC diagnostic pop
