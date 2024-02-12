@@ -5,8 +5,8 @@ cmake --build $work_path/build
 
 cp $work_path/build/UchosKernel $mount_point/kernel.elf
 
-for APP in $(ls $work_path/apps); do
-    if [ -f $work_path/apps/$APP/$APP ]; then
-        cp $work_path/apps/$APP/$APP $mount_point/
+for APP in $(ls $work_path/userland); do
+    if [ -f $work_path/userland/$APP/$APP ]; then
+        cp $work_path/userland/$APP/$APP $mount_point/
     fi
 done
