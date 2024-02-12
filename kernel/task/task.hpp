@@ -8,6 +8,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <queue>
 #include <vector>
 
@@ -21,6 +22,7 @@ struct task {
 	int priority;
 	task_state state;
 	std::vector<uint64_t> stack;
+	uint64_t kernel_stack_top;
 	alignas(16) context ctx;
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;

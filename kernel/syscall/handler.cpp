@@ -1,4 +1,5 @@
 #include "../graphics/terminal.hpp"
+#include "../task/task.hpp"
 #include "../types.hpp"
 #include "syscall.hpp"
 #include <cerrno>
@@ -24,22 +25,33 @@ error_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	return OK;
 }
 
-extern "C" int64_t handle_syscall(uint64_t arg1,
-								  uint64_t arg2,
-								  uint64_t arg3,
-								  uint64_t arg4,
-								  uint64_t arg5,
-								  uint64_t syscall_number)
+uint64_t sys_exit()
 {
+	task* t = CURRENT_TASK;
+	return t->kernel_stack_top;
+}
+
+extern "C" uint64_t handle_syscall(uint64_t arg1,
+								   uint64_t arg2,
+								   uint64_t arg3,
+								   uint64_t arg4,
+								   uint64_t arg5,
+								   uint64_t syscall_number)
+{
+	uint64_t result = 0;
+
 	switch (syscall_number) {
 		case SYS_WRITE:
 			sys_write(arg1, arg2, arg3);
+			break;
+		case SYS_EXIT:
+			result = sys_exit();
 			break;
 		default:
 			printk(KERN_ERROR, "Unknown syscall number: %d", syscall_number);
 			break;
 	}
 
-	return 0;
+	return result;
 }
 } // namespace syscall
