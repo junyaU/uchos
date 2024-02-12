@@ -18,7 +18,7 @@ error_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	}
 
 	if (fd == 1) {
-		printk(KERN_DEBUG, buf);
+		main_terminal->print(buf);
 	}
 
 	return OK;
