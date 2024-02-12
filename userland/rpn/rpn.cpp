@@ -1,3 +1,5 @@
+#include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
@@ -39,5 +41,8 @@ extern "C" int main(int argc, char** argv)
 	if (stack_ptr < 0) {
 		return 0;
 	}
-	return static_cast<int>(Pop());
+
+	printf("%ld", Pop());
+
+	exit(0);
 }
