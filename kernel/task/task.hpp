@@ -36,6 +36,8 @@ struct task {
 		 int priority,
 		 bool is_init);
 
+	~task() { kfree(reinterpret_cast<void*>(ctx.cr3)); }
+
 	static void* operator new(size_t size) { return kmalloc(size, KMALLOC_ZEROED); }
 
 	static void operator delete(void* p) { kfree(p); }

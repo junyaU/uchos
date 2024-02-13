@@ -39,4 +39,5 @@ struct message {
 	} data;
 };
 
-error_t send_message(task_t dst, const message* m);
+[[gnu::no_caller_saved_registers]] error_t
+send_message(task_t dst, const message* m);

@@ -95,6 +95,8 @@ union page_table_entry {
 
 void dump_page_tables(linear_address addr);
 
+page_table_entry* new_page_table();
+
 void setup_page_tables(linear_address addr, size_t num_pages);
 
 void clean_page_tables(linear_address addr);
