@@ -16,6 +16,7 @@
 #include "../types.hpp"
 #include "color.hpp"
 #include "font.hpp"
+#include "task/ipc.hpp"
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -99,7 +100,39 @@ extern terminal* main_terminal;
 void initialize_terminal();
 void task_terminal();
 
+template<typename... Args>
+void printk(int level, const char* format, Args... args)
+{
+	if (main_terminal == nullptr) {
+		return;
+	}
+
+	char s[1024];
+	if (sizeof...(args) == 0) {
+		strncpy(s, format, sizeof(s));
+	} else {
+		// TODO: fix this warning
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wvariadic-macros"
-void printk(int level, const char* format, ...);
+#pragma GCC diagnostic ignored "-Wformat-security"
+		sprintf(s, format, args...);
 #pragma GCC diagnostic pop
+	}
+
+	const int task_id = main_terminal->task_id();
+	if (task_id == -1) {
+		switch (level) {
+			case KERN_DEBUG:
+				main_terminal->print(s);
+				break;
+			case KERN_ERROR:
+				main_terminal->error(s);
+				break;
+			case KERN_INFO:
+				main_terminal->info(s);
+				break;
+		}
+	} else {
+		const message m{ NOTIFY_WRITE, task_id, { .write = { s, level } } };
+		send_message(main_terminal->task_id(), &m);
+	}
+}
