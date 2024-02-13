@@ -3,6 +3,7 @@
 #include "../hardware/usb/task.hpp"
 #include "../list.hpp"
 #include "../memory/page_operations.h"
+#include "../memory/paging.hpp"
 #include "../memory/segment.hpp"
 #include "../timers/timer.hpp"
 #include "../types.hpp"
@@ -10,6 +11,9 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <functional>
+#include <queue>
+#include <vector>
 
 list_t run_queue;
 std::array<task*, MAX_TASKS> tasks;
@@ -133,7 +137,7 @@ void initialize_task()
 			"usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), 2, true);
 	schedule_task(usb_task->id);
 
-	ktimer->add_switch_task_event(SWITCH_TASK_MILLISEC * 10);
+	ktimer->add_switch_task_event(200);
 }
 
 task::task(int id,
@@ -170,8 +174,13 @@ task::task(int id,
 
 	memset(&ctx, 0, sizeof(ctx));
 
+	page_table_entry* pml4 = new_page_table();
+	page_table_entry* current_pml4 = reinterpret_cast<page_table_entry*>(get_cr3());
+	// copy kernel space mapping
+	memcpy(pml4, current_pml4, 256 * sizeof(page_table_entry));
+
+	ctx.cr3 = reinterpret_cast<uint64_t>(pml4);
 	ctx.rsp = (stack_end & ~0xfLU) - 8;
-	ctx.cr3 = get_cr3();
 	ctx.rflags = 0x202;
 	ctx.rip = task_addr;
 	ctx.cs = KERNEL_CS;
