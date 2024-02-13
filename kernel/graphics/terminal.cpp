@@ -256,6 +256,8 @@ void task_terminal()
 	process_messages(t);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
 void printk(int level, const char* format, ...)
 {
 	if (main_terminal == nullptr) {
@@ -286,3 +288,4 @@ void printk(int level, const char* format, ...)
 		send_message(main_terminal->task_id(), &m);
 	}
 }
+#pragma GCC diagnostic pop
