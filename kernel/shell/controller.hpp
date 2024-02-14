@@ -1,5 +1,5 @@
 /*
- * @file command_line/controller.hpp
+ * @file shell/controller.hpp
  *
  * @brief Command line controller
  *
@@ -12,7 +12,7 @@
 
 #include "../graphics/terminal.hpp"
 
-namespace command_line
+namespace shell
 {
 class controller
 {
@@ -27,7 +27,6 @@ private:
 
 	char histories_[MAX_HISTORY][MAX_HISTORY_LENGTH];
 	int history_write_index_{ 0 };
-	int history_read_index_{ 0 };
 };
 
-} // namespace command_line
+} // namespace shell

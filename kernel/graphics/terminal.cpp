@@ -1,5 +1,5 @@
 #include "terminal.hpp"
-#include "../command_line/controller.hpp"
+#include "../shell/controller.hpp"
 #include "../task/ipc.hpp"
 #include "../task/task.hpp"
 #include "color.hpp"
@@ -75,8 +75,8 @@ void terminal::print_interrupt_hex(uint64_t value)
 
 	for (int i = 0; i < 16; ++i) {
 		char buf[2] = { '0', '\0' };
-		int x = (value >> (4 * (15 - i))) & 0xfU;
-		char c = x < 10 ? '0' + x : 'a' + x - 10;
+		const int x = (value >> (4 * (15 - i))) & 0xfU;
+		const char c = x < 10 ? '0' + x : 'a' + x - 10;
 		buf[0] = c;
 		print(buf);
 	}
@@ -98,7 +98,7 @@ void terminal::input_key(uint8_t c)
 		cursor_x_ = 0;
 		memset(buffer_[cursor_y_], '\0', sizeof(buffer_[cursor_y_]));
 
-		cl_ctrl_->process_command(command, *this);
+		shell_->process_command(command, *this);
 		next_line();
 
 		return;
@@ -212,7 +212,7 @@ void terminal::show_user_name()
 
 void terminal::initialize_command_line()
 {
-	cl_ctrl_ = std::make_unique<command_line::controller>();
+	shell_ = std::make_unique<shell::controller>();
 }
 
 terminal* main_terminal;
