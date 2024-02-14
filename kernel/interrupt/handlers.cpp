@@ -1,4 +1,5 @@
 #include "handlers.hpp"
+#include "../asm_utils.h"
 #include "../task/context.hpp"
 #include "../task/ipc.hpp"
 #include "../task/task.hpp"
@@ -32,4 +33,16 @@ extern "C" void switch_task_by_timer_interrupt(context* ctx)
 	if (need_switch_task) {
 		switch_task(*ctx);
 	}
+}
+
+void kill_userland(InterruptFrame* frame)
+{
+	auto cpl = frame->cs & 0x3;
+	if (cpl != 3) {
+		return;
+	}
+
+	__asm__("sti");
+
+	exit_userland(CURRENT_TASK->kernel_stack_top, 128);
 }

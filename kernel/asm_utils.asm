@@ -61,3 +61,18 @@ call_userland:
     push rdx ; cs
     push rcx  ; rip
     o64 retf
+
+global exit_userland ; void exit_userland(uint64_t kernel_rsp, int32_t status);
+exit_userland:
+    mov rsp, rdi
+    mov eax, esi
+
+    ; restore callee-saved registers
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbp
+    pop rbx
+
+    ret

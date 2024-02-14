@@ -17,4 +17,6 @@ void call_userland(int argc,
 				   uint64_t rip,
 				   uint64_t rsp,
 				   uint64_t* kernel_rsp);
+
+void exit_userland(uint64_t kernel_rsp, int32_t status);
 }

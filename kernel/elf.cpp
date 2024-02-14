@@ -4,6 +4,7 @@
 #include "memory/paging.hpp"
 #include "types.hpp"
 #include <cstdint>
+#include <cstring>
 
 elf64_phdr_t* get_program_header(elf64_ehdr_t* elf_header)
 {
@@ -21,6 +22,14 @@ uintptr_t get_first_load_addr(elf64_ehdr_t* elf_header)
 	}
 
 	return 0;
+}
+
+bool is_elf(elf64_ehdr_t* elf_header)
+{
+	return memcmp(elf_header->e_ident,
+				  "\x7f"
+				  "ELF",
+				  4) == 0;
 }
 
 void copy_load_segment(elf64_ehdr_t* elf_header)

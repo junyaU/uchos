@@ -22,10 +22,13 @@ struct InterruptFrame {
 
 void on_xhci_interrupt(InterruptFrame* frame);
 
+[[gnu::no_caller_saved_registers]] void kill_userland(InterruptFrame* frame);
+
 #define FaultHandlerWithError(error_code)                                           \
 	inline __attribute__((interrupt)) void InterruptHandler##error_code(            \
 			InterruptFrame* frame, uint64_t code)                                   \
 	{                                                                               \
+		kill_userland(frame);                                                       \
 		main_terminal->print(#error_code);                                          \
 		main_terminal->print("\n");                                                 \
 		main_terminal->print("RIP : ");                                             \
@@ -46,6 +49,7 @@ void on_xhci_interrupt(InterruptFrame* frame);
 	inline __attribute__((interrupt)) void InterruptHandler##error_code(            \
 			InterruptFrame* frame, uint64_t code)                                   \
 	{                                                                               \
+		kill_userland(frame);                                                       \
 		main_terminal->print(#error_code);                                          \
 		while (1)                                                                   \
 			__asm__("hlt");                                                         \

@@ -2,6 +2,7 @@
 #include "../graphics/terminal.hpp"
 #include "bootstrap_allocator.hpp"
 #include "types.hpp"
+#include <vector>
 
 std::vector<page> pages;
 

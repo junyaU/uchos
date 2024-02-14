@@ -6,6 +6,7 @@
 #include "../memory/segment.hpp"
 #include "../task/task.hpp"
 #include "elf.hpp"
+#include "types.hpp"
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
@@ -191,13 +192,8 @@ void execute_file(const directory_entry& entry, const char* args)
 	}
 
 	auto* elf_header = reinterpret_cast<elf64_ehdr_t*>(file_buffer.data());
-	if (memcmp(elf_header->e_ident,
-			   "\x7f"
-			   "ELF",
-			   4) != 0) {
-		using func_t = void (*)();
-		auto f = reinterpret_cast<func_t>(file_buffer.data());
-		f();
+	if (!is_elf(elf_header)) {
+		printk(KERN_ERROR, "Not an ELF file.");
 		return;
 	}
 
