@@ -6,9 +6,7 @@
 #include "font.hpp"
 #include "screen.hpp"
 #include "types.hpp"
-#include <cstdarg>
 #include <cstdint>
-#include <cstdio>
 #include <cstring>
 #include <memory>
 

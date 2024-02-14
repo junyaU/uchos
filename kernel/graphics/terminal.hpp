@@ -17,6 +17,7 @@
 #include "color.hpp"
 #include "font.hpp"
 #include "task/ipc.hpp"
+#include "task/task.hpp"
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -119,7 +120,7 @@ void printk(int level, const char* format, Args... args)
 	}
 
 	const int task_id = main_terminal->task_id();
-	if (task_id == -1) {
+	if (task_id == -1 || task_id == CURRENT_TASK->id) {
 		switch (level) {
 			case KERN_DEBUG:
 				main_terminal->print(s);
