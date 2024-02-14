@@ -4,7 +4,7 @@
 #include "commands.hpp"
 #include <cstring>
 
-namespace command_line
+namespace shell
 {
 controller::controller() { memset(histories_, '\0', sizeof(histories_)); }
 
@@ -43,4 +43,4 @@ void controller::process_command(const char* command, terminal& term)
 	term.printf("Command not found: %s", command_name);
 }
 
-} // namespace command_line
+} // namespace shell

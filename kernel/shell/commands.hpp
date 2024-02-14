@@ -1,5 +1,5 @@
 /*
- * @file command_line/commands.hpp
+ * @file shell/commands.hpp
  *
  * @brief Command line commands
  *
@@ -13,9 +13,9 @@
 
 class terminal;
 
-namespace command_line
+namespace shell
 {
 void ls(terminal& term, const char* path);
 
 void cat(terminal& term, const char* file_name);
-} // namespace command_line
+} // namespace shell

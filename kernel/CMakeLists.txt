@@ -84,7 +84,7 @@ add_subdirectory(timers)
 add_subdirectory(task)
 add_subdirectory(hardware)
 add_subdirectory(file_system)
-add_subdirectory(command_line)
+add_subdirectory(shell)
 add_subdirectory(syscall)
 
 # Define the main target and link it with the necessary libraries.

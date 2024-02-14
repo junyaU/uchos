@@ -2,7 +2,7 @@
 #include "../file_system/fat.hpp"
 #include "../graphics/terminal.hpp"
 
-namespace command_line
+namespace shell
 {
 void ls(terminal& term, const char* path)
 {
@@ -61,4 +61,4 @@ void cat(terminal& term, const char* file_name)
 		cluster_id = file_system::next_cluster(cluster_id);
 	}
 }
-} // namespace command_line
+} // namespace shell

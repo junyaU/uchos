@@ -23,10 +23,10 @@
 #include <cstring>
 #include <memory>
 
-namespace command_line
+namespace shell
 {
 class controller;
-} // namespace command_line
+} // namespace shell
 
 class terminal
 {
@@ -94,7 +94,7 @@ private:
 	bool cursor_visible_{ false };
 	task_t task_id_{ -1 };
 
-	std::unique_ptr<command_line::controller> cl_ctrl_;
+	std::unique_ptr<shell::controller> shell_;
 };
 
 extern terminal* main_terminal;
