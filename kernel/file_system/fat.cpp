@@ -6,6 +6,7 @@
 #include "../memory/segment.hpp"
 #include "../task/task.hpp"
 #include "elf.hpp"
+#include "string.h"
 #include "types.hpp"
 #include <algorithm>
 #include <cstdint>
@@ -16,6 +17,40 @@ namespace file_system
 {
 bios_parameter_block* boot_volume_image;
 unsigned long bytes_per_cluster;
+
+std::vector<char*> parse_path(const char* path)
+{
+	std::vector<char*> result;
+
+	if (path == nullptr) {
+		return result;
+	}
+
+	while (*path != '\0') {
+		while (*path == '/') {
+			++path;
+		}
+
+		if (*path == 0) {
+			break;
+		}
+
+		result.push_back(const_cast<char*>(path));
+
+		while (*path != '/' && *path != 0) {
+			++path;
+		}
+
+		if (*path == 0) {
+			break;
+		}
+
+		*const_cast<char*>(path) = 0;
+		++path;
+	}
+
+	return result;
+}
 
 int make_args(char* command,
 			  char* args,
@@ -171,6 +206,60 @@ directory_entry* find_directory_entry(const char* name, unsigned long cluster_id
 	}
 
 	return nullptr;
+}
+
+directory_entry* find_directory_entry_by_path(const char* path)
+{
+	auto path_list = parse_path(path);
+	auto cluster_id = boot_volume_image->root_cluster;
+	auto* entry = get_sector<directory_entry>(cluster_id);
+
+	for (const auto& path_name : path_list) {
+		entry = find_directory_entry(path_name, cluster_id);
+		if (entry == nullptr) {
+			return nullptr;
+		}
+
+		cluster_id = entry->first_cluster();
+	}
+
+	return entry;
+}
+
+std::vector<directory_entry*> list_entries_in_directory(directory_entry* entry)
+{
+	std::vector<directory_entry*> result;
+
+	auto cluster_id = entry->first_cluster();
+	if (entry->attribute == entry_attribute::VOLUME_ID) {
+		cluster_id = boot_volume_image->root_cluster;
+	}
+
+	const auto entries_per_cluster = bytes_per_cluster / sizeof(directory_entry);
+
+	while (cluster_id != END_OF_CLUSTERCHAIN) {
+		auto* dir_entry = get_sector<directory_entry>(cluster_id);
+
+		for (int i = 0; i < entries_per_cluster; ++i) {
+			if (dir_entry[i].name[0] == 0x00) {
+				return result;
+			}
+
+			if (dir_entry[i].name[0] == 0xE5) {
+				continue;
+			}
+
+			if (dir_entry[i].attribute == entry_attribute::LONG_NAME) {
+				continue;
+			}
+
+			result.push_back(&dir_entry[i]);
+		}
+
+		cluster_id = next_cluster(cluster_id);
+	}
+
+	return result;
 }
 
 void execute_file(const directory_entry& entry, const char* args)

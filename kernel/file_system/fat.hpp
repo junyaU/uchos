@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
+#include <vector>
 
 namespace file_system
 {
@@ -95,6 +95,10 @@ T* get_sector(unsigned long cluster_id)
 unsigned long next_cluster(unsigned long cluster_id);
 
 directory_entry* find_directory_entry(const char* name, unsigned long cluster_id);
+
+directory_entry* find_directory_entry_by_path(const char* path);
+
+std::vector<directory_entry*> list_entries_in_directory(directory_entry* dir_entry);
 
 void execute_file(const directory_entry& entry, const char* args);
 
