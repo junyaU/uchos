@@ -6,34 +6,22 @@ namespace shell
 {
 void ls(terminal& term, const char* path)
 {
-	const auto entries_per_cluster =
-			file_system::bytes_per_cluster / sizeof(file_system::directory_entry);
+	auto* entry = file_system::find_directory_entry_by_path(path);
+	if (entry == nullptr) {
+		term.printf("ls: %s: No such file or directory\n", path);
+		return;
+	}
 
-	uint32_t cluster_id = file_system::boot_volume_image->root_cluster;
-	while (cluster_id != file_system::END_OF_CLUSTERCHAIN) {
-		auto* dir_entry =
-				file_system::get_sector<file_system::directory_entry>(cluster_id);
+	if (entry->attribute == file_system::entry_attribute::ARCHIVE) {
+		term.printf("%s\n", path);
+		return;
+	}
 
-		for (int i = 0; i < entries_per_cluster; i++) {
-			if (dir_entry[i].name[0] == 0x00) {
-				return;
-			}
-
-			if (dir_entry[i].name[0] == 0xE5) {
-				continue;
-			}
-
-			if (dir_entry[i].attribute == file_system::entry_attribute::LONG_NAME) {
-				continue;
-			}
-
-			char name[13];
-			file_system::read_dir_entry_name(dir_entry[i], name);
-
-			term.printf("%s\n", name);
-		}
-
-		cluster_id = file_system::next_cluster(cluster_id);
+	auto entries = file_system::list_entries_in_directory(entry);
+	for (const auto* e : entries) {
+		char name[13];
+		file_system::read_dir_entry_name(*e, name);
+		term.printf("%s\n", name);
 	}
 }
 

@@ -12,7 +12,7 @@ void controller::process_command(const char* command, terminal& term)
 {
 	memcpy(histories_[history_write_index_], command, strlen(command));
 	history_write_index_ == MAX_HISTORY - 1 ? history_write_index_
-											: history_write_index_++;
+											: ++history_write_index_;
 
 	const char* args = strchr(command, ' ');
 	int command_length = strlen(command);
@@ -25,7 +25,7 @@ void controller::process_command(const char* command, terminal& term)
 	command_name[command_length] = '\0';
 
 	if (strcmp(command_name, "ls") == 0) {
-		ls(term, "/");
+		ls(term, args);
 		return;
 	}
 
