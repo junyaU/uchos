@@ -10,5 +10,7 @@ sys_%1:
     ret
 %endmacro
 
+define_syscall read, 0
 define_syscall log_string, 1
+define_syscall open, 2
 define_syscall exit, 60

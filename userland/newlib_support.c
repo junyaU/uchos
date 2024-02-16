@@ -28,16 +28,35 @@ off_t lseek(int fd, off_t offset, int whence)
 	return -1;
 }
 
+int open(const char* path, int flags)
+{
+	uint64_t res = sys_open(path, flags);
+	if (res == -1) {
+		errno = ENOENT;
+		return -1;
+	}
+
+	return res;
+}
+
 ssize_t read(int fd, void* buf, size_t count)
 {
-	errno = EBADF;
-	return -1;
+	uint64_t res = sys_read(fd, buf, count);
+	if (res == -1) {
+		errno = EBADF;
+		return -1;
+	}
+
+	return res;
 }
 
 caddr_t sbrk(int incr)
 {
-	errno = ENOMEM;
-	return (caddr_t)-1;
+	static uint8_t heap[4096];
+	static int index = 0;
+	int prev_index = index;
+	index += incr;
+	return (caddr_t)&heap[prev_index];
 }
 
 ssize_t write(int fd, const void* buf, size_t count)
