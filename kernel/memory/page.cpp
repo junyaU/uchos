@@ -1,6 +1,6 @@
-#include "page.hpp"
-#include "../graphics/terminal.hpp"
+#include "memory/page.hpp"
 #include "bootstrap_allocator.hpp"
+#include "graphics/terminal.hpp"
 #include "types.hpp"
 #include <vector>
 

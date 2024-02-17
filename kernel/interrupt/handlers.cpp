@@ -1,10 +1,10 @@
-#include "handlers.hpp"
-#include "../asm_utils.h"
-#include "../task/context.hpp"
-#include "../task/ipc.hpp"
-#include "../task/task.hpp"
-#include "../timers/timer.hpp"
-#include "../types.hpp"
+#include "interrupt/handlers.hpp"
+#include "asm_utils.h"
+#include "task/context.hpp"
+#include "task/ipc.hpp"
+#include "task/task.hpp"
+#include "timers/timer.hpp"
+#include "types.hpp"
 #include <cstdint>
 
 namespace

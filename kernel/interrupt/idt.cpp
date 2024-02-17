@@ -1,10 +1,10 @@
-#include "idt.hpp"
-#include "../graphics/terminal.hpp"
-#include "../memory/segment.hpp"
-#include "handler.h"
-#include "handlers.hpp"
+#include "interrupt/idt.hpp"
+#include "graphics/terminal.hpp"
+#include "interrupt/handler.h"
+#include "interrupt/handlers.hpp"
+#include "interrupt/vector.hpp"
+#include "memory/segment.hpp"
 #include "types.hpp"
-#include "vector.hpp"
 #include <array>
 
 std::array<idt_entry, 256> idt;

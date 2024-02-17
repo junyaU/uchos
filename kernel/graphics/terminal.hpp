@@ -13,11 +13,11 @@
 
 #pragma once
 
-#include "../types.hpp"
-#include "color.hpp"
-#include "font.hpp"
+#include "graphics/color.hpp"
+#include "graphics/font.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
+#include "types.hpp"
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
