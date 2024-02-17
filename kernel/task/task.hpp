@@ -1,14 +1,16 @@
 #pragma once
 
-#include "../list.hpp"
-#include "../memory/slab.hpp"
-#include "../types.hpp"
-#include "context.hpp"
-#include "ipc.hpp"
+#include "file_system/file_descriptor.hpp"
+#include "list.hpp"
+#include "memory/slab.hpp"
+#include "task/context.hpp"
+#include "task/ipc.hpp"
+#include "types.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <queue>
 #include <vector>
 
@@ -28,6 +30,7 @@ struct task {
 	std::queue<message> messages;
 	std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>
 			message_handlers;
+	std::array<std::unique_ptr<file_system::file_descriptor>, 10> fds;
 
 	task(int id,
 		 const char* task_name,
@@ -56,6 +59,7 @@ task_t get_task_id_by_name(const char* name);
 task_t get_available_task_id();
 void schedule_task(task_t id);
 void switch_task(const context& current_ctx);
-void process_messages(task* t);
+[[noreturn]] void process_messages(task* t);
+fd_t allocate_fd(task* t);
 
-void task_idle();
+[[noreturn]] void task_idle();

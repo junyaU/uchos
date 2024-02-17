@@ -27,9 +27,9 @@ void ls(terminal& term, const char* path)
 
 void cat(terminal& term, const char* file_name)
 {
-	auto* entry = file_system::find_directory_entry(file_name, 0);
+	auto* entry = file_system::find_directory_entry_by_path(file_name);
 	if (entry == nullptr) {
-		term.printf("File not found: %s\n", file_name);
+		term.printf("cat: %s: No such file or directory\n", file_name);
 		return;
 	}
 
@@ -41,8 +41,7 @@ void cat(terminal& term, const char* file_name)
 
 		int i = 0;
 		for (; i < file_system::bytes_per_cluster && i < remain_bytes; i++) {
-			term.printf("%c", *p);
-			++p;
+			term.printf("%c", *p++);
 		}
 
 		remain_bytes -= i;

@@ -11,10 +11,10 @@
 
 #pragma once
 
-#include <cstdint>
-
 // system call number
+#define SYS_READ 0
 #define SYS_WRITE 1
+#define SYS_OPEN 2
 #define SYS_EXIT 60
 
 namespace syscall

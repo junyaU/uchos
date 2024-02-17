@@ -2,6 +2,7 @@
 
 using error_t = int;
 using task_t = int;
+using fd_t = int;
 
 // kmalloc flags
 #define KMALLOC_UNINITIALIZED 0
@@ -22,3 +23,6 @@ using task_t = int;
 #define KERN_DEBUG 0
 #define KERN_ERROR 1
 #define KERN_INFO 2
+
+// file descriptor
+#define NO_FD -1

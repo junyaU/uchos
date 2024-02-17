@@ -1,17 +1,20 @@
-#include "task.hpp"
-#include "../graphics/terminal.hpp"
-#include "../hardware/usb/task.hpp"
-#include "../list.hpp"
-#include "../memory/page_operations.h"
-#include "../memory/paging.hpp"
-#include "../memory/segment.hpp"
-#include "../timers/timer.hpp"
-#include "../types.hpp"
-#include "context_switch.h"
+#include "task/task.hpp"
+#include "file_system/file_descriptor.hpp"
+#include "graphics/terminal.hpp"
+#include "hardware/usb/task.hpp"
+#include "ipc.hpp"
+#include "list.hpp"
+#include "memory/page_operations.h"
+#include "memory/paging.hpp"
+#include "memory/segment.hpp"
+#include "task/context_switch.h"
+#include "timers/timer.hpp"
+#include "types.hpp"
 #include <array>
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <memory>
 #include <queue>
 #include <vector>
 
@@ -97,7 +100,7 @@ void switch_task(const context& current_ctx)
 	restore_context(&get_scheduled_task()->ctx);
 }
 
-void process_messages(task* t)
+[[noreturn]] void process_messages(task* t)
 {
 	while (true) {
 		if (t->messages.empty()) {
@@ -116,6 +119,17 @@ void process_messages(task* t)
 
 		t->message_handlers[m.type](m);
 	}
+}
+
+fd_t allocate_fd(task* t)
+{
+	for (fd_t i = 0; i < t->fds.size(); i++) {
+		if (t->fds[i] == nullptr) {
+			return i;
+		}
+	}
+
+	return NO_FD;
 }
 
 void initialize_task()
@@ -153,7 +167,8 @@ task::task(int id,
 	  messages{ std::queue<message>() },
 	  message_handlers{
 		  std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>()
-	  }
+	  },
+	  fds{ std::array<std::unique_ptr<file_system::file_descriptor>, 10>() }
 {
 	list_elem_init(&run_queue_elem);
 
@@ -189,7 +204,7 @@ task::task(int id,
 	*reinterpret_cast<uint32_t*>(&ctx.fxsave_area[24]) = 0x1f80;
 }
 
-void task_idle()
+[[noreturn]] void task_idle()
 {
 	while (true) {
 		__asm__("hlt");
