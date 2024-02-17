@@ -12,11 +12,12 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <list>
 #include <memory>
 #include <vector>
 
-enum class slab_status {
+enum class slab_status : uint8_t {
 	FULL,
 	PARTIAL,
 	FREE,

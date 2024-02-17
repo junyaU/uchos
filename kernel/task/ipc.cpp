@@ -1,7 +1,7 @@
 #include "ipc.hpp"
-#include "../graphics/terminal.hpp"
-#include "../types.hpp"
+#include "graphics/terminal.hpp"
 #include "task.hpp"
+#include "types.hpp"
 
 error_t send_message(task_t dst_id, const message* m)
 {
