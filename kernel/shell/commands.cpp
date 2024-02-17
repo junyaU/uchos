@@ -1,6 +1,6 @@
-#include "commands.hpp"
-#include "../file_system/fat.hpp"
-#include "../graphics/terminal.hpp"
+#include "shell/commands.hpp"
+#include "file_system/fat.hpp"
+#include "graphics/terminal.hpp"
 
 namespace shell
 {
@@ -40,7 +40,7 @@ void cat(terminal& term, const char* file_name)
 		auto* p = file_system::get_sector<char>(cluster_id);
 
 		int i = 0;
-		for (; i < file_system::bytes_per_cluster && i < remain_bytes; i++) {
+		for (; i < file_system::bytes_per_cluster && i < remain_bytes; ++i) {
 			term.printf("%c", *p++);
 		}
 

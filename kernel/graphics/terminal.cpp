@@ -1,10 +1,10 @@
-#include "terminal.hpp"
-#include "../shell/controller.hpp"
-#include "../task/ipc.hpp"
-#include "../task/task.hpp"
-#include "color.hpp"
-#include "font.hpp"
-#include "screen.hpp"
+#include "graphics/terminal.hpp"
+#include "graphics/color.hpp"
+#include "graphics/font.hpp"
+#include "graphics/screen.hpp"
+#include "shell/controller.hpp"
+#include "task/ipc.hpp"
+#include "task/task.hpp"
 #include "types.hpp"
 #include <cstdint>
 #include <cstring>

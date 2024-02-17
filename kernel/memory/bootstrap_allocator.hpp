@@ -2,7 +2,7 @@
 
 struct MemoryMap;
 
-#include "page.hpp"
+#include "memory/page.hpp"
 #include <array>
 #include <cstdint>
 #include <stddef.h>

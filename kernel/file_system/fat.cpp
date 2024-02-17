@@ -1,16 +1,16 @@
-#include "fat.hpp"
-#include "../asm_utils.h"
-#include "../graphics/terminal.hpp"
-#include "../memory/page.hpp"
-#include "../memory/paging.hpp"
-#include "../memory/segment.hpp"
-#include "../task/task.hpp"
+#include "file_system/fat.hpp"
+#include "asm_utils.h"
 #include "elf.hpp"
-#include "string.h"
+#include "graphics/terminal.hpp"
+#include "memory/page.hpp"
+#include "memory/paging.hpp"
+#include "memory/segment.hpp"
+#include "task/task.hpp"
 #include "types.hpp"
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <string.h>
 #include <vector>
 
 namespace file_system

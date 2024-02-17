@@ -1,7 +1,7 @@
 #include "usb/class_driver/keyboard.hpp"
-#include "../graphics/terminal.hpp"
-#include "../task/ipc.hpp"
-#include "keyboad.hpp"
+#include "graphics/terminal.hpp"
+#include "hardware/keyboad.hpp"
+#include "task/ipc.hpp"
 
 namespace
 {

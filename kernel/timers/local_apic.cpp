@@ -1,8 +1,8 @@
-#include "local_apic.hpp"
-#include "../graphics/terminal.hpp"
-#include "../interrupt/vector.hpp"
-#include "acpi.hpp"
-#include "timer.hpp"
+#include "timers/local_apic.hpp"
+#include "graphics/terminal.hpp"
+#include "interrupt/vector.hpp"
+#include "timers/acpi.hpp"
+#include "timers/timer.hpp"
 #include "types.hpp"
 
 namespace local_apic

@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include "page.hpp"
-#include "pool.hpp"
+#include "memory/page.hpp"
+#include "memory/pool.hpp"
 #include <array>
 #include <cstddef>
 #include <list>

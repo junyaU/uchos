@@ -1,4 +1,4 @@
-#include "color.hpp"
+#include "graphics/color.hpp"
 
 Color::Color(uint8_t r, uint8_t g, uint8_t b) : r_(r), g_(g), b_(b) {}
 

@@ -1,6 +1,6 @@
-#include "acpi.hpp"
-#include "../asm_utils.h"
-#include "../graphics/terminal.hpp"
+#include "timers/acpi.hpp"
+#include "asm_utils.h"
+#include "graphics/terminal.hpp"
 #include "types.hpp"
 #include <string.h>
 

@@ -1,7 +1,7 @@
-#include "controller.hpp"
-#include "../file_system/fat.hpp"
-#include "../graphics/terminal.hpp"
-#include "commands.hpp"
+#include "shell/controller.hpp"
+#include "file_system/fat.hpp"
+#include "graphics/terminal.hpp"
+#include "shell/commands.hpp"
 #include <cstring>
 
 namespace shell
@@ -30,7 +30,7 @@ void controller::process_command(const char* command, terminal& term)
 	}
 
 	if (strcmp(command_name, "cat") == 0) {
-		cat(term, "KERNEL.ELF");
+		cat(term, args);
 		return;
 	}
 
