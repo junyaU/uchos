@@ -13,12 +13,12 @@
 
 #pragma once
 
+#include "file_system/file_descriptor.hpp"
 #include <cstdint>
 #include <vector>
 
 namespace file_system
 {
-
 struct bios_parameter_block {
 	uint8_t jump_boot[3];
 	char oem_name[8];
@@ -105,5 +105,22 @@ void execute_file(const directory_entry& entry, const char* args);
 void read_dir_entry_name(const directory_entry& entry, char* dest);
 
 void initialize_fat(void* volume_image);
+
+struct file_descriptor : public ::file_descriptor {
+	directory_entry& entry;
+	unsigned long current_cluster;
+	size_t current_cluster_offset;
+	size_t current_file_offset;
+
+	file_descriptor(directory_entry& e)
+		: entry(e),
+		  current_cluster(e.first_cluster()),
+		  current_cluster_offset(0),
+		  current_file_offset(0)
+	{
+	}
+
+	size_t read(void* buf, size_t len);
+};
 
 } // namespace file_system

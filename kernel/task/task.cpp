@@ -168,7 +168,7 @@ task::task(int id,
 	  message_handlers{
 		  std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>()
 	  },
-	  fds{ std::array<std::unique_ptr<file_system::file_descriptor>, 10>() }
+	  fds{ std::array<std::unique_ptr<file_descriptor>, 10>() }
 {
 	list_elem_init(&run_queue_elem);
 
