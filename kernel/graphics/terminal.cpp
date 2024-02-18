@@ -253,3 +253,28 @@ void task_terminal()
 
 	process_messages(t);
 }
+
+size_t term_file_descriptor::read(void* buf, size_t len)
+{
+	char* bufc = reinterpret_cast<char*>(buf);
+	task* t = CURRENT_TASK;
+
+	while (true) {
+		if (t->messages.empty()) {
+			t->state = TASK_WAITING;
+			continue;
+		}
+
+		t->state = TASK_RUNNING;
+
+		const message m = t->messages.front();
+		t->messages.pop();
+		if (m.type != NOTIFY_KEY_INPUT) {
+			continue;
+		}
+
+		bufc[0] = m.data.key_input.ascii;
+		main_terminal->print(bufc);
+		return 1;
+	}
+}

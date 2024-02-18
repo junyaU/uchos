@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include "file_system/file_descriptor.hpp"
 #include "graphics/color.hpp"
 #include "graphics/font.hpp"
 #include "task/ipc.hpp"
@@ -47,14 +48,6 @@ public:
 		char s[1024];
 		sprintf(s, format, args...);
 		print(s);
-	}
-
-	template<typename... Args>
-	void errorf(const char* format, Args... args)
-	{
-		char s[1024];
-		sprintf(s, format, args...);
-		error(s);
 	}
 
 	task_t task_id() const { return task_id_; }
@@ -137,3 +130,8 @@ void printk(int level, const char* format, Args... args)
 		send_message(main_terminal->task_id(), &m);
 	}
 }
+
+struct term_file_descriptor : public file_descriptor {
+	term_file_descriptor() = default;
+	size_t read(void* buf, size_t len) override;
+};

@@ -8,6 +8,7 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <fcntl.h>
 #include <memory>
 
@@ -23,8 +24,6 @@ size_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	if (fd >= t->fds.size() || t->fds[fd] == nullptr) {
 		return 0;
 	}
-
-	main_terminal->printf("sys_read: fd=%d, count=%d\n", fd, count);
 
 	return t->fds[fd]->read(buf, count);
 }
@@ -55,8 +54,11 @@ fd_t sys_open(uint64_t arg1, uint64_t arg2)
 		return NO_FD;
 	}
 
+	if (strncmp(path, "/dev/stdin", 10) == 0) {
+		return STDIN_FILENO;
+	}
+
 	if ((flags & O_ACCMODE) == O_WRONLY) {
-		main_terminal->printf("open: %s: Write-only file system\n", path);
 		return NO_FD;
 	}
 
