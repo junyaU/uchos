@@ -104,6 +104,8 @@ void execute_file(const directory_entry& entry, const char* args);
 
 void read_dir_entry_name(const directory_entry& entry, char* dest);
 
+directory_entry* create_file(const char* path);
+
 void initialize_fat(void* volume_image);
 
 struct file_descriptor : public ::file_descriptor {

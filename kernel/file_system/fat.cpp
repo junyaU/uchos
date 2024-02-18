@@ -12,6 +12,7 @@
 #include <cstring>
 #include <memory>
 #include <string.h>
+#include <utility>
 #include <vector>
 
 namespace file_system
@@ -218,6 +219,7 @@ directory_entry* find_directory_entry_by_path(const char* path)
 	for (const auto& path_name : path_list) {
 		entry = find_directory_entry(path_name, cluster_id);
 		if (entry == nullptr) {
+			main_terminal->printf("No such file or directory: %s\n", path_name);
 			return nullptr;
 		}
 
@@ -316,6 +318,48 @@ void execute_file(const directory_entry& entry, const char* args)
 
 	const auto addr_first = get_first_load_addr(elf_header);
 	clean_page_tables(linear_address{ addr_first });
+}
+
+std::pair<const char*, const char*> split_path(char* path)
+{
+	const char* last_slash = strrchr(path, '/');
+	if (last_slash == nullptr) {
+		return { nullptr, path };
+	}
+
+	if (last_slash == path) {
+		return { nullptr, last_slash + 1 };
+	}
+
+	if (last_slash[1] == '\0') {
+		return { nullptr, nullptr };
+	}
+
+	const int index = last_slash - path;
+	path[index] = '\0';
+
+	return { path, last_slash + 1 };
+}
+
+directory_entry* create_file(const char* path)
+{
+	char file_path[256];
+	memcpy(file_path, path, strlen(path) + 1);
+	auto [parent_path, file_name] = split_path(file_path);
+
+	auto parent_cluster_id = boot_volume_image->root_cluster;
+	if (parent_path != nullptr) {
+		auto* parent_entry = find_directory_entry_by_path(parent_path);
+		if (parent_entry == nullptr) {
+			return nullptr;
+		}
+
+		parent_cluster_id = parent_entry->first_cluster();
+	}
+
+	// TODO: Implement create new directory entry
+
+	return nullptr;
 }
 
 size_t file_descriptor::read(void* buf, size_t len)
