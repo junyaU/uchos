@@ -30,7 +30,7 @@ struct task {
 	std::queue<message> messages;
 	std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>
 			message_handlers;
-	std::array<std::unique_ptr<file_system::file_descriptor>, 10> fds;
+	std::array<std::unique_ptr<file_descriptor>, 10> fds;
 
 	task(int id,
 		 const char* task_name,

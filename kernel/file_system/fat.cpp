@@ -313,4 +313,29 @@ void execute_file(const directory_entry& entry, const char* args)
 	const auto addr_first = get_first_load_addr(elf_header);
 	clean_page_tables(linear_address{ addr_first });
 }
+
+size_t file_descriptor::read(void* buf, size_t len)
+{
+	uint8_t* p = reinterpret_cast<uint8_t*>(buf);
+	len = std::min(len, entry.file_size - current_file_offset);
+
+	size_t total_read = 0;
+	while (total_read < len) {
+		uint8_t* sector = get_sector<uint8_t>(current_cluster);
+		const size_t cluster_remain = bytes_per_cluster - current_cluster_offset;
+		const size_t read_len = std::min(len - total_read, cluster_remain);
+
+		memcpy(&p[total_read], &sector[current_cluster_offset], read_len);
+		total_read += read_len;
+		current_cluster_offset += read_len;
+
+		if (current_cluster_offset == bytes_per_cluster) {
+			current_cluster = next_cluster(current_cluster);
+			current_cluster_offset = 0;
+		}
+	}
+
+	current_file_offset += total_read;
+	return total_read;
+}
 } // namespace file_system
