@@ -14,3 +14,5 @@ static const int R_ALT = 0b01000000U;
 static const int R_GUI = 0b10000000U;
 
 void initialize_keyboard();
+
+bool is_EOT(uint8_t modifier, uint8_t keycode);

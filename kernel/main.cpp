@@ -5,7 +5,7 @@ struct MemoryMap;
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
 #include "graphics/terminal.hpp"
-#include "hardware/keyboad.hpp"
+#include "hardware/keyboard.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/usb/xhci/xhci.hpp"
 #include "interrupt/idt.hpp"

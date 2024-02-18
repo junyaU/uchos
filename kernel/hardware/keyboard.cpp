@@ -1,7 +1,8 @@
 #include "usb/class_driver/keyboard.hpp"
 #include "graphics/terminal.hpp"
-#include "hardware/keyboad.hpp"
+#include "hardware/keyboard.hpp"
 #include "task/ipc.hpp"
+#include "types.hpp"
 
 namespace
 {
@@ -56,17 +57,22 @@ void initialize_keyboard()
 		const char ascii =
 				shift ? keycode_map_shifted[keycode] : keycode_map[keycode];
 
-		message m{ NOTIFY_KEY_INPUT,
-				   INTERRUPT_TASK_ID,
-				   { .key_input{
-						   .key_code = keycode,
-						   .modifier = modifier,
-						   .ascii = static_cast<uint8_t>(ascii),
-						   .press = static_cast<int>(press),
-				   } } };
+		const message m{ NOTIFY_KEY_INPUT,
+						 INTERRUPT_TASK_ID,
+						 { .key_input{
+								 .key_code = keycode,
+								 .modifier = modifier,
+								 .ascii = static_cast<uint8_t>(ascii),
+								 .press = static_cast<int>(press),
+						 } } };
 
 		if (m.data.key_input.press != 0) {
 			send_message(main_terminal->task_id(), &m);
 		}
 	};
+}
+
+bool is_EOT(uint8_t modifier, uint8_t keycode)
+{
+	return ((modifier & (L_CONTROL | R_CONTROL)) != 0) && keycode == 7;
 }

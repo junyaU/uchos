@@ -2,6 +2,7 @@
 #include "graphics/color.hpp"
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
+#include "hardware/keyboard.hpp"
 #include "shell/controller.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
@@ -271,6 +272,11 @@ size_t term_file_descriptor::read(void* buf, size_t len)
 		t->messages.pop();
 		if (m.type != NOTIFY_KEY_INPUT) {
 			continue;
+		}
+
+		if (is_EOT(m.data.key_input.modifier, m.data.key_input.key_code)) {
+			main_terminal->print("^D");
+			return 0;
 		}
 
 		bufc[0] = m.data.key_input.ascii;
