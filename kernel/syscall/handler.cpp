@@ -38,8 +38,14 @@ error_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 		return E2BIG;
 	}
 
-	if (fd == 1) {
-		main_terminal->print(buf);
+	task* t = CURRENT_TASK;
+	if (fd >= t->fds.size() || t->fds[fd] == nullptr) {
+		return EBADF;
+	}
+
+	const size_t written = t->fds[fd]->write(buf, count);
+	if (written != count) {
+		return EIO;
 	}
 
 	return OK;
@@ -58,12 +64,13 @@ fd_t sys_open(uint64_t arg1, uint64_t arg2)
 		return STDIN_FILENO;
 	}
 
-	if ((flags & O_ACCMODE) == O_WRONLY) {
-		return NO_FD;
-	}
-
 	auto* entry = file_system::find_directory_entry_by_path(path);
 	if (entry == nullptr) {
+		if ((flags & O_CREAT) == 0) {
+			main_terminal->printf("open: %s: No such file or directory\n", path);
+			return NO_FD;
+		}
+
 		auto* new_entry = file_system::create_file(path);
 		if (new_entry == nullptr) {
 			main_terminal->printf("open: %s: No such file or directory\n", path);

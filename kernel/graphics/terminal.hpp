@@ -134,4 +134,5 @@ void printk(int level, const char* format, Args... args)
 struct term_file_descriptor : public file_descriptor {
 	term_file_descriptor() = default;
 	size_t read(void* buf, size_t len) override;
+	size_t write(const void* buf, size_t len) override;
 };
