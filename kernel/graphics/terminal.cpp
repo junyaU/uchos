@@ -284,3 +284,9 @@ size_t term_file_descriptor::read(void* buf, size_t len)
 		return 1;
 	}
 }
+
+size_t term_file_descriptor::write(const void* buf, size_t len)
+{
+	printk(KERN_DEBUG, reinterpret_cast<const char*>(buf));
+	return len;
+}

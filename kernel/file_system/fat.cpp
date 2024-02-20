@@ -336,13 +336,17 @@ void execute_file(const directory_entry& entry, const char* args)
 	setup_page_tables(stack_addr, 1);
 
 	task* t = CURRENT_TASK;
-	t->fds[0] = std::make_unique<term_file_descriptor>();
+	for (int i = 0; i < 3; ++i) {
+		t->fds[i] = std::make_unique<term_file_descriptor>();
+	}
 
 	auto entry_addr = elf_header->e_entry;
 	call_userland(argc, argv, USER_SS, entry_addr, stack_addr.data + PAGE_SIZE - 8,
 				  &t->kernel_stack_top);
 
-	t->fds[0].reset();
+	for (int i = 0; i < 3; ++i) {
+		t->fds[i].reset();
+	}
 
 	const auto addr_first = get_first_load_addr(elf_header);
 	clean_page_tables(linear_address{ addr_first });

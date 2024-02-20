@@ -125,6 +125,7 @@ struct file_descriptor : public ::file_descriptor {
 	}
 
 	size_t read(void* buf, size_t len) override;
+	size_t write(const void* buf, size_t len) override { return 0; }
 };
 
 } // namespace file_system
