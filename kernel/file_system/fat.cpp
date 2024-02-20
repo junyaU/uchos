@@ -447,6 +447,21 @@ directory_entry* create_file(const char* path)
 	return new_entry;
 }
 
+cluster_t allocate_cluster_chain(size_t num_clusters)
+{
+	cluster_t first_cluster = 2;
+	while (FAT_TABLE[first_cluster] != 0) {
+		++first_cluster;
+	}
+	FAT_TABLE[first_cluster] = END_OF_CLUSTER_CHAIN;
+
+	if (num_clusters > 1) {
+		extend_cluster_chain(first_cluster, num_clusters - 1);
+	}
+
+	return first_cluster;
+}
+
 size_t file_descriptor::read(void* buf, size_t len)
 {
 	uint8_t* p = reinterpret_cast<uint8_t*>(buf);
@@ -470,5 +485,46 @@ size_t file_descriptor::read(void* buf, size_t len)
 
 	current_file_offset += total_read;
 	return total_read;
+}
+
+size_t file_descriptor::write(const void* buf, size_t len)
+{
+	auto num_clusters = [](size_t size) {
+		return (size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
+	};
+
+	if (write_cluster == 0) {
+		write_cluster = allocate_cluster_chain(num_clusters(len));
+		entry.first_cluster_low = write_cluster & 0xFFFF;
+		entry.first_cluster_high = (write_cluster >> 16) & 0xFFFF;
+	}
+
+	const uint8_t* p = reinterpret_cast<const uint8_t*>(buf);
+
+	size_t total_written = 0;
+	while (total_written < len) {
+		if (write_cluster_offset == BYTES_PER_CLUSTER) {
+			const cluster_t next = next_cluster(write_cluster);
+			write_cluster =
+					next == END_OF_CLUSTER_CHAIN
+							? extend_cluster_chain(write_cluster,
+												   num_clusters(len - total_written))
+							: next;
+			write_cluster_offset = 0;
+		}
+
+		uint8_t* sector = get_sector<uint8_t>(write_cluster);
+		const size_t cluster_remain = BYTES_PER_CLUSTER - write_cluster_offset;
+		const size_t write_len = std::min(len, cluster_remain);
+		memcpy(&sector[write_cluster_offset], &p[total_written], write_len);
+
+		total_written += write_len;
+		write_cluster_offset += write_len;
+	}
+
+	file_written_bytes += total_written;
+	entry.file_size = file_written_bytes;
+
+	return total_written;
 }
 } // namespace file_system
