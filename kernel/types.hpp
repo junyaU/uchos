@@ -29,3 +29,6 @@ using fd_t = int;
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
+
+// fat
+using cluster_t = unsigned long;
