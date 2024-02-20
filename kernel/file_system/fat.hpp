@@ -14,6 +14,7 @@
 #pragma once
 
 #include "file_system/file_descriptor.hpp"
+#include "types.hpp"
 #include <cstdint>
 #include <vector>
 
@@ -79,22 +80,23 @@ struct directory_entry {
 	}
 } __attribute__((packed));
 
-static const unsigned long END_OF_CLUSTERCHAIN = 0x0FFFFFFFLU;
+static const cluster_t END_OF_CLUSTER_CHAIN = 0x0FFFFFFFLU;
 
-extern bios_parameter_block* boot_volume_image;
-extern unsigned long bytes_per_cluster;
+extern bios_parameter_block* BOOT_VOLUME_IMAGE;
+extern unsigned long BYTES_PER_CLUSTER;
+extern uint32_t* FAT_TABLE;
 
-uintptr_t get_cluster_addr(unsigned long cluster_id);
+uintptr_t get_cluster_addr(cluster_t cluster_id);
 
 template<class T>
-T* get_sector(unsigned long cluster_id)
+T* get_sector(cluster_t cluster_id)
 {
 	return reinterpret_cast<T*>(get_cluster_addr(cluster_id));
 }
 
-unsigned long next_cluster(unsigned long cluster_id);
+cluster_t next_cluster(cluster_t cluster_id);
 
-directory_entry* find_directory_entry(const char* name, unsigned long cluster_id);
+directory_entry* find_directory_entry(const char* name, cluster_t cluster_id);
 
 directory_entry* find_directory_entry_by_path(const char* path);
 

@@ -36,11 +36,11 @@ void cat(terminal& term, const char* file_name)
 	auto cluster_id = entry->first_cluster();
 	auto remain_bytes = entry->file_size;
 
-	while (cluster_id != file_system::END_OF_CLUSTERCHAIN) {
+	while (cluster_id != file_system::END_OF_CLUSTER_CHAIN) {
 		auto* p = file_system::get_sector<char>(cluster_id);
 
 		int i = 0;
-		for (; i < file_system::bytes_per_cluster && i < remain_bytes; ++i) {
+		for (; i < file_system::BYTES_PER_CLUSTER && i < remain_bytes; ++i) {
 			term.printf("%c", *p++);
 		}
 
