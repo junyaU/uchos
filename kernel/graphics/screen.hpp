@@ -19,8 +19,6 @@ public:
 
 	void put_pixel(Point2D point, uint32_t color_code);
 	void fill_rectangle(Point2D position, Point2D size, uint32_t color_code);
-	void draw_string(Point2D position, const char* s, uint32_t color_code);
-	void draw_string(Point2D position, char s, uint32_t color_code);
 
 private:
 	uint64_t pixels_per_scan_line_;

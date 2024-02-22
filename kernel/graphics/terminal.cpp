@@ -29,12 +29,12 @@ void terminal::print(const char* s)
 		if (cursor_x_ == ROW_CHARS - 1) {
 			cursor_x_ = 0;
 		} else if (cursor_x_ < ROW_CHARS - 1) {
-			cursor_x_++;
+			++cursor_x_;
 		}
 
 		if (*s == '\n') {
 			next_line();
-			s++;
+			++s;
 			continue;
 		}
 
@@ -45,14 +45,16 @@ void terminal::print(const char* s)
 		buffer_[cursor_y_][current_x] = *s;
 		kscreen->fill_rectangle({ target_x_position, adjusted_y(cursor_y_) },
 								kfont->size(), kscreen->bg_color().GetCode());
-		kscreen->draw_string({ target_x_position, adjusted_y(cursor_y_) }, *s,
-							 font_color_.GetCode());
+
+		const auto size = utf8_size(const_cast<char&>(*s));
+		write_unicode(*kscreen, { target_x_position, adjusted_y(cursor_y_) },
+					  utf8_to_unicode(s), font_color_.GetCode());
 
 		if (cursor_x_ == 0) {
 			next_line();
 		}
 
-		s++;
+		s += size;
 	}
 }
 
@@ -167,8 +169,9 @@ void terminal::next_line()
 				kscreen->bg_color().GetCode());
 
 		for (int x = 0; x < ROW_CHARS; x++) {
-			kscreen->draw_string({ adjusted_x(x), adjusted_y(cursor_y_) },
-								 buffer_[cursor_y_][x], font_color_.GetCode());
+			write_unicode(*kscreen, { adjusted_x(x), adjusted_y(cursor_y_) },
+						  utf8_to_unicode(&buffer_[cursor_y_][x]),
+						  font_color_.GetCode());
 		}
 
 		cursor_x_ = 0;
@@ -193,8 +196,8 @@ void terminal::scroll_lines()
 
 	for (int y = 0; y < terminal::COLUMN_CHARS - 1; y++) {
 		for (int x = 0; x < terminal::ROW_CHARS; x++) {
-			kscreen->draw_string({ adjusted_x(x), adjusted_y(y) }, buffer_[y][x],
-								 font_color_.GetCode());
+			write_unicode(*kscreen, { adjusted_x(x), adjusted_y(y) },
+						  utf8_to_unicode(&buffer_[y][x]), font_color_.GetCode());
 		}
 	}
 
@@ -204,9 +207,10 @@ void terminal::scroll_lines()
 
 void terminal::show_user_name()
 {
-	kscreen->draw_string({ adjusted_x(cursor_x_), adjusted_y(cursor_y_) },
-						 user_name_, user_name_color_.GetCode());
-	kscreen->draw_string(
+	write_string(*kscreen, { adjusted_x(cursor_x_), adjusted_y(cursor_y_) },
+				 user_name_, user_name_color_.GetCode());
+	write_string(
+			*kscreen,
 			{ adjusted_x(cursor_x_ + strlen(user_name_)), adjusted_y(cursor_y_) },
 			":~$ ", font_color_.GetCode());
 }

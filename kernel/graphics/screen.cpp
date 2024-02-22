@@ -2,6 +2,7 @@
 #include "../../UchLoaderPkg/frame_buffer_conf.hpp"
 #include "graphics/color.hpp"
 #include "graphics/font.hpp"
+#include <cstdint>
 #include <new>
 
 screen::screen(const FrameBufferConf& frame_buffer_conf, Color bg_color)
@@ -29,36 +30,6 @@ void screen::fill_rectangle(Point2D position,
 			put_pixel(position + Point2D{ dx, dy }, color_code);
 		}
 	}
-}
-
-void screen::draw_string(Point2D position, const char* s, uint32_t color_code)
-{
-	int font_position = 0;
-	while (*s != '\0') {
-		const uint8_t* font = kfont->get_font(*s);
-		if (font != nullptr) {
-			for (int dy = 0; dy < kfont->height(); dy++) {
-				for (int dx = 0; dx < kfont->width(); dx++) {
-					if ((font[dy] << dx & 0x80) != 0) {
-						put_pixel(
-								position +
-										Point2D{ font_position * kfont->width() + dx,
-												 dy },
-								color_code);
-					}
-				}
-			}
-		}
-
-		font_position++;
-		s++;
-	}
-}
-
-void screen::draw_string(Point2D position, char s, uint32_t color_code)
-{
-	char temp[2] = { s, '\0' };
-	draw_string(position, temp, color_code);
 }
 
 screen* kscreen;

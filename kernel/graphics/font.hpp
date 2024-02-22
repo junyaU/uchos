@@ -19,6 +19,20 @@ private:
 	int height_;
 };
 
+class screen;
+
+bool is_ascii_code(char32_t c);
+
+int utf8_size(char c);
+
+char32_t utf8_to_unicode(const char* utf8);
+
+void write_ascii(screen& scr, Point2D position, char c, uint32_t color_code);
+
+void write_unicode(screen& scr, Point2D position, char32_t c, uint32_t color_code);
+
+void write_string(screen& scr, Point2D position, const char* s, uint32_t color_code);
+
 extern bitmap_font* kfont;
 
 void initialize_font();
