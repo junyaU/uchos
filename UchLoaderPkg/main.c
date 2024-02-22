@@ -237,8 +237,8 @@ EFI_STATUS EFIAPI LoaderMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE* system_t
 
 	EFI_BLOCK_IO_MEDIA* media = block_io->Media;
 	UINTN volume_size = (UINTN)media->BlockSize * (media->LastBlock + 1);
-	if (volume_size > 16 * 1024 * 1024) {
-		volume_size = 16 * 1024 * 1024;
+	if (volume_size > 32 * 1024 * 1024) {
+		volume_size = 32 * 1024 * 1024;
 	}
 
 	status = ReadBlocks(block_io, media->MediaId, volume_size, &volume_image);
