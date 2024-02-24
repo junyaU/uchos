@@ -8,11 +8,11 @@ source edksetup.sh
 build
 
 cd $work_path
-mkdir -p $mount_point/EFI/BOOT
+sudo mkdir -p $mount_point/EFI/BOOT
 
 
-cp ~/edk2/Build/${loader_pkg_name}X64/DEBUG_CLANGPDB/X64/Loader.efi ${mount_point}/EFI/BOOT
-mv ${mount_point}/EFI/BOOT/Loader.efi ${mount_point}/EFI/BOOT/BOOTX64.EFI
+sudo cp ~/edk2/Build/${loader_pkg_name}X64/DEBUG_CLANG38/X64/UchLoaderPkg/Loader/OUTPUT/Loader.efi ${mount_point}/EFI/BOOT
+sudo mv ${mount_point}/EFI/BOOT/Loader.efi ${mount_point}/EFI/BOOT/BOOTX64.EFI
 
 
 

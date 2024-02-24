@@ -1,11 +1,15 @@
 # Set the minimum required version of CMake for this project.
 cmake_minimum_required(VERSION 3.10)
 
+# Set the target type for try_compile() to be a static library.
+set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
+
 # Define the project name and specify that it's a C++ project.
 project(UchosKernel)
 
 # Set the C++ standard to use.
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set the compiler to be used.
 set(CMAKE_CXX_COMPILER /usr/bin/clang++)

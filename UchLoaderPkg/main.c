@@ -268,7 +268,7 @@ EFI_STATUS EFIAPI LoaderMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE* system_t
 
 	UINT64 entry_addr = *(UINT64*)(kernel_buf + 24);
 
-	typedef void __attribute__((sysv_abi))
+	typedef void 
 	KernelEntryPoint(const struct FrameBufferConf* frame_buffer_conf,
 					 const struct MemoryMap* memory_map, const VOID* rsdp,
 					 VOID* volume_image);
