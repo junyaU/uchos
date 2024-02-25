@@ -2,6 +2,9 @@
 
 #include <cstdint>
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 #include "../point2d.hpp"
 
 class bitmap_font
@@ -36,3 +39,5 @@ void write_string(screen& scr, Point2D position, const char* s, uint32_t color_c
 extern bitmap_font* kfont;
 
 void initialize_font();
+
+void initialize_freetype();

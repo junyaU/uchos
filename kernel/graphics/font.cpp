@@ -1,12 +1,19 @@
 #include "font.hpp"
+#include "../file_system/fat.hpp"
 #include "../point2d.hpp"
 #include "screen.hpp"
+#include "terminal.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <new>
+#include <vector>
 
 extern const uint8_t _binary_hankaku_bin_start;
 extern const uint8_t _binary_hankaku_bin_end;
 extern const uint8_t _binary_hankaku_bin_size;
+
+FT_Library ft_library;
+std::vector<uint8_t>* nihongo_font_data;
 
 bitmap_font::bitmap_font(int width, int height)
 	: font_data_{ &_binary_hankaku_bin_start }, width_{ width }, height_{ height }
@@ -111,3 +118,30 @@ bitmap_font* kfont;
 alignas(bitmap_font) char bitmap_font_buffer[sizeof(bitmap_font)];
 
 void initialize_font() { kfont = new (bitmap_font_buffer) bitmap_font{ 8, 16 }; }
+
+void initialize_freetype()
+{
+	if (int err = FT_Init_FreeType(&ft_library)) {
+		printk(KERN_ERROR, "Failed to initialize FreeType: %d", err);
+		return;
+	}
+
+	auto* entry = file_system::find_directory_entry_by_path("/NIHONGO.TTF");
+	if (entry == nullptr) {
+		printk(KERN_ERROR, "NIHONGO.TTF not found");
+		return;
+	}
+
+	const size_t file_size = entry->file_size;
+
+	__asm__("cli");
+	nihongo_font_data = new std::vector<uint8_t>(file_size);
+	__asm__("sti");
+
+	size_t loaded_size =
+			file_system::load_file(nihongo_font_data->data(), file_size, *entry);
+	if (loaded_size != file_size) {
+		printk(KERN_ERROR, "Failed to load NIHONGO.TTF");
+		return;
+	}
+}
