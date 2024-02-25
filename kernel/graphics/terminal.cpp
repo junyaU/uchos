@@ -7,6 +7,7 @@
 #include "color.hpp"
 #include "font.hpp"
 #include "screen.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -23,38 +24,51 @@ terminal::terminal(Color font_color, const char* user_name, Color user_name_colo
 	show_user_name();
 }
 
+void terminal::put_char(char c)
+{
+	const char32_t unicode = utf8_to_unicode(&c);
+
+	if (cursor_x_ == ROW_CHARS - 1) {
+		cursor_x_ = 0;
+	} else if (cursor_x_ < ROW_CHARS - 1) {
+		++cursor_x_;
+	}
+
+	if (unicode == U'\n') {
+		next_line();
+		return;
+	}
+
+	const int current_x = cursor_x_ == 0 ? ROW_CHARS - 1 : cursor_x_ - 1;
+	const int target_x_position =
+			adjusted_x(cursor_y_ == 0 ? current_x : current_x + user_name_length());
+
+	buffer_[cursor_y_][current_x] = c;
+	kscreen->fill_rectangle({ target_x_position, adjusted_y(cursor_y_) },
+							kfont->size(), kscreen->bg_color().GetCode());
+
+	write_unicode(*kscreen, { target_x_position, adjusted_y(cursor_y_) }, unicode,
+				  font_color_.GetCode());
+
+	if (cursor_x_ == ROW_CHARS - 1) {
+		next_line();
+	}
+}
+
 void terminal::print(const char* s)
 {
 	while (*s != '\0') {
-		if (cursor_x_ == ROW_CHARS - 1) {
-			cursor_x_ = 0;
-		} else if (cursor_x_ < ROW_CHARS - 1) {
-			++cursor_x_;
-		}
+		put_char(*s);
 
-		if (*s == '\n') {
-			next_line();
-			++s;
-			continue;
-		}
+		s += utf8_size(static_cast<uint8_t>(*s));
+	}
+}
 
-		const int current_x = cursor_x_ == 0 ? ROW_CHARS - 1 : cursor_x_ - 1;
-		const int target_x_position = adjusted_x(
-				cursor_y_ == 0 ? current_x : current_x + user_name_length());
-
-		buffer_[cursor_y_][current_x] = *s;
-		kscreen->fill_rectangle({ target_x_position, adjusted_y(cursor_y_) },
-								kfont->size(), kscreen->bg_color().GetCode());
-
-		const auto size = utf8_size(const_cast<char&>(*s));
-		write_unicode(*kscreen, { target_x_position, adjusted_y(cursor_y_) },
-					  utf8_to_unicode(s), font_color_.GetCode());
-
-		if (cursor_x_ == 0) {
-			next_line();
-		}
-
-		s += size;
+void terminal::print(const char* s, size_t len)
+{
+	for (size_t i = 0; i < len; ++i) {
+		put_char(s[i]);
+		s += utf8_size(static_cast<uint8_t>(s[i]));
 	}
 }
 

@@ -39,7 +39,7 @@ void write_ascii(screen& scr, Point2D position, char c, uint32_t color_code)
 	}
 }
 
-int utf8_size(char c)
+int utf8_size(uint8_t c)
 {
 	if (c < 0x80) {
 		return 1;

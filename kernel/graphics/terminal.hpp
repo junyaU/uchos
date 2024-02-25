@@ -38,6 +38,8 @@ public:
 
 	void print(const char* s);
 
+	void print(const char* s, size_t len);
+
 	void error(const char* s);
 
 	void info(const char* s);
@@ -70,6 +72,8 @@ private:
 	{
 		return y * kfont->height() + START_Y + (y * LINE_SPACING);
 	}
+
+	void put_char(char c);
 
 	int user_name_length() const { return strlen(user_name_) + 4; }
 
