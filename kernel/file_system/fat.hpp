@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include "file_system/file_descriptor.hpp"
-#include "types.hpp"
+#include "../types.hpp"
+#include "file_descriptor.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <vector>

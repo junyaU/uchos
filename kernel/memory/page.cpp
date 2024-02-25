@@ -1,4 +1,4 @@
-#include "memory/page.hpp"
+#include "page.hpp"
 #include "bootstrap_allocator.hpp"
 #include "graphics/terminal.hpp"
 #include "types.hpp"

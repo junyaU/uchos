@@ -1,8 +1,8 @@
-#include "memory/buddy_system.hpp"
-#include "bit_utils.hpp"
-#include "graphics/terminal.hpp"
-#include "memory/page.hpp"
-#include "types.hpp"
+#include "buddy_system.hpp"
+#include "../bit_utils.hpp"
+#include "../graphics/terminal.hpp"
+#include "../types.hpp"
+#include "page.hpp"
 #include <cstddef>
 #include <cstdint>
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "file_system/file_descriptor.hpp"
-#include "list.hpp"
-#include "memory/slab.hpp"
-#include "task/context.hpp"
-#include "task/ipc.hpp"
-#include "types.hpp"
+#include "../file_system/file_descriptor.hpp"
+#include "../list.hpp"
+#include "../memory/slab.hpp"
+#include "../task/context.hpp"
+#include "../task/ipc.hpp"
+#include "../types.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>

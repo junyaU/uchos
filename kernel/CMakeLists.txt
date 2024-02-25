@@ -93,6 +93,16 @@ add_subdirectory(syscall)
 
 # Define the main target and link it with the necessary libraries.
 add_executable(UchosKernel ${SOURCE_FILES})
+
+target_include_directories(UchosKernel PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${BASEDIR}/include/c++/v1
+        ${BASEDIR}/include
+        ${BASEDIR}/include/freetype2
+        ${EDK2DIR}/MdePkg/Include
+        ${EDK2DIR}/MdePkg/Include/X64
+)
+
 target_link_libraries(
         UchosKernel
         c

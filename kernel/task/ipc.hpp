@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.hpp"
+#include "../types.hpp"
 #include <cstdint>
 
 #define NOTIFY_KEY_INPUT 0

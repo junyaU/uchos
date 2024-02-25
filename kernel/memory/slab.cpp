@@ -1,9 +1,9 @@
-#include "memory/slab.hpp"
-#include "bit_utils.hpp"
-#include "graphics/terminal.hpp"
-#include "memory/buddy_system.hpp"
-#include "memory/page.hpp"
-#include "types.hpp"
+#include "slab.hpp"
+#include "../bit_utils.hpp"
+#include "../graphics/terminal.hpp"
+#include "../types.hpp"
+#include "buddy_system.hpp"
+#include "page.hpp"
 #include <cstring>
 #include <iterator>
 #include <list>

@@ -1,9 +1,9 @@
-#include "memory/bootstrap_allocator.hpp"
+#include "bootstrap_allocator.hpp"
 #include "../../UchLoaderPkg/memory_map.hpp"
-#include "graphics/terminal.hpp"
-#include "memory/buddy_system.hpp"
-#include "memory/page.hpp"
-#include "types.hpp"
+#include "../graphics/terminal.hpp"
+#include "../types.hpp"
+#include "buddy_system.hpp"
+#include "page.hpp"
 
 #include <sys/types.h>
 

@@ -1,11 +1,11 @@
-#include "memory/paging.hpp"
-#include "bit_utils.hpp"
-#include "graphics/terminal.hpp"
-#include "memory/buddy_system.hpp"
-#include "memory/page.hpp"
-#include "memory/page_operations.h"
-#include "memory/slab.hpp"
-#include "types.hpp"
+#include "paging.hpp"
+#include "../bit_utils.hpp"
+#include "../graphics/terminal.hpp"
+#include "../types.hpp"
+#include "buddy_system.hpp"
+#include "page.hpp"
+#include "page_operations.h"
+#include "slab.hpp"
 #include <array>
 #include <cstring>
 

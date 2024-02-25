@@ -1,10 +1,10 @@
-#include "memory/segment.hpp"
-#include "graphics/terminal.hpp"
-#include "interrupt/idt.hpp"
-#include "memory/page.hpp"
-#include "memory/segments_operations.h"
-#include "memory/slab.hpp"
-#include "types.hpp"
+#include "segment.hpp"
+#include "../graphics/terminal.hpp"
+#include "../interrupt/idt.hpp"
+#include "../types.hpp"
+#include "page.hpp"
+#include "segments_operations.h"
+#include "slab.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>

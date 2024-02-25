@@ -1,7 +1,7 @@
-#include "graphics/screen.hpp"
+#include "screen.hpp"
 #include "../../UchLoaderPkg/frame_buffer_conf.hpp"
-#include "graphics/color.hpp"
-#include "graphics/font.hpp"
+#include "color.hpp"
+#include "font.hpp"
 #include <cstdint>
 #include <new>
 

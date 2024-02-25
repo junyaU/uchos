@@ -1,7 +1,6 @@
-#include "graphics/font.hpp"
-#include "graphics/screen.hpp"
-#include "point2d.hpp"
-#include "terminal.hpp"
+#include "font.hpp"
+#include "../point2d.hpp"
+#include "screen.hpp"
 #include <cstdint>
 #include <new>
 

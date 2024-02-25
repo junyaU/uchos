@@ -1,0 +1,12 @@
+OVMF_CODE.fd
+OVMF_VARS.fd
+
+/x86_64-elf
+
+/build
+
+disk.img
+
+/mnt
+
+/.vscode
