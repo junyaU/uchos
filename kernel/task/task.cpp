@@ -183,7 +183,7 @@ task::task(int id,
 		return;
 	}
 
-	const size_t stack_size = 4096 / sizeof(stack[0]);
+	const size_t stack_size = 4096 * 8 / sizeof(stack[0]);
 	stack.resize(stack_size);
 	const uint64_t stack_end = reinterpret_cast<uint64_t>(&stack[stack_size]);
 

@@ -32,6 +32,21 @@ const uint8_t* bitmap_font::get_font(char c)
 	return &font_data_[index];
 }
 
+void render_unicode(char32_t c, FT_Face face)
+{
+	const auto glyph_index = FT_Get_Char_Index(face, c);
+	if (glyph_index == 0) {
+		printk(KERN_ERROR, "Glyph not found");
+		return;
+	}
+
+	if (int err = FT_Load_Glyph(face, glyph_index,
+								FT_LOAD_RENDER | FT_LOAD_TARGET_MONO)) {
+		printk(KERN_ERROR, "Failed to load glyph: %d", err);
+		return;
+	}
+}
+
 void write_ascii(screen& scr, Point2D position, char c, uint32_t color_code)
 {
 	const uint8_t* font = kfont->get_font(c);
@@ -74,7 +89,36 @@ void write_unicode(screen& scr, Point2D position, char32_t c, uint32_t color_cod
 		return;
 	}
 
-	write_ascii(scr, position, '?', color_code);
+	auto face = new_face();
+	if (face == 0) {
+		write_ascii(scr, position, '?', color_code);
+		write_ascii(scr, position + Point2D{ kfont->width(), 0 }, '?', color_code);
+		return;
+	}
+
+	render_unicode(c, face);
+
+	FT_Bitmap& bitmap = face->glyph->bitmap;
+	const int baseline = (face->height + face->descender) *
+						 face->size->metrics.y_ppem / face->units_per_EM;
+	const auto glyph_topleft =
+			position +
+			Point2D{ face->glyph->bitmap_left, baseline - face->glyph->bitmap_top };
+
+	for (int dy = 0; dy < bitmap.rows; ++dy) {
+		unsigned char* q = &bitmap.buffer[bitmap.pitch * dy];
+		if (bitmap.pitch < 0) {
+			q -= bitmap.pitch * bitmap.rows;
+		}
+		for (int dx = 0; dx < bitmap.width; ++dx) {
+			const bool b = q[dx >> 3] & (0x80 >> (dx & 0x7));
+			if (b) {
+				kscreen->put_pixel(glyph_topleft + Point2D{ dx, dy }, color_code);
+			}
+		}
+	}
+
+	FT_Done_Face(face);
 }
 
 char32_t utf8_to_unicode(const char* utf8)
@@ -116,6 +160,24 @@ void write_string(screen& scr, Point2D position, const char* s, uint32_t color_c
 
 bitmap_font* kfont;
 alignas(bitmap_font) char bitmap_font_buffer[sizeof(bitmap_font)];
+
+FT_Face new_face()
+{
+	FT_Face face;
+
+	if (int err = FT_New_Memory_Face(ft_library, nihongo_font_data->data(),
+									 nihongo_font_data->size(), 0, &face)) {
+		printk(KERN_ERROR, "Failed to create new face: %d", err);
+		return 0;
+	}
+
+	if (int err = FT_Set_Pixel_Sizes(face, 16, 16)) {
+		printk(KERN_ERROR, "Failed to set pixel size: %d", err);
+		return 0;
+	}
+
+	return face;
+}
 
 void initialize_font() { kfont = new (bitmap_font_buffer) bitmap_font{ 8, 16 }; }
 
