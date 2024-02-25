@@ -10,3 +10,7 @@ for APP in $(ls $work_path/userland); do
         sudo cp $work_path/userland/$APP/$APP $mount_point/
     fi
 done
+
+for RESOURCE in $(ls $work_path/resource); do
+    sudo cp $work_path/resource/$RESOURCE $mount_point/
+done

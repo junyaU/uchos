@@ -23,7 +23,7 @@ class screen;
 
 bool is_ascii_code(char32_t c);
 
-int utf8_size(char c);
+int utf8_size(uint8_t c);
 
 char32_t utf8_to_unicode(const char* utf8);
 

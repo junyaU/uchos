@@ -1,8 +1,6 @@
 #include "paging.hpp"
-#include "../bit_utils.hpp"
 #include "../graphics/terminal.hpp"
 #include "../types.hpp"
-#include "buddy_system.hpp"
 #include "page.hpp"
 #include "page_operations.h"
 #include "slab.hpp"

@@ -1,7 +1,7 @@
-#include "shell/controller.hpp"
-#include "file_system/fat.hpp"
-#include "graphics/terminal.hpp"
-#include "shell/commands.hpp"
+#include "controller.hpp"
+#include "../file_system/fat.hpp"
+#include "../graphics/terminal.hpp"
+#include "commands.hpp"
 #include <cstring>
 
 namespace shell
