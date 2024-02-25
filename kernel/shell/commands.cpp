@@ -1,6 +1,7 @@
 #include "commands.hpp"
 #include "../file_system/fat.hpp"
 #include "../graphics/terminal.hpp"
+#include <cstddef>
 
 namespace shell
 {
@@ -40,9 +41,9 @@ void cat(terminal& term, const char* file_name)
 		auto* p = file_system::get_sector<char>(cluster_id);
 
 		int i = 0;
-
-		for (; i < file_system::BYTES_PER_CLUSTER && i < remain_bytes; ++i) {
-			term.print(&p[i], 1);
+		while (i < file_system::BYTES_PER_CLUSTER && i < remain_bytes) {
+			size_t len = term.print(&p[i], 1);
+			i += len;
 		}
 
 		remain_bytes -= i;

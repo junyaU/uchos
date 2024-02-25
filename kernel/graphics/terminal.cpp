@@ -24,17 +24,15 @@ terminal::terminal(Color font_color, const char* user_name, Color user_name_colo
 	show_user_name();
 }
 
-void terminal::put_char(char c)
+void terminal::put_char(char32_t c, int size)
 {
-	const char32_t unicode = utf8_to_unicode(&c);
-
 	if (cursor_x_ == ROW_CHARS - 1) {
 		cursor_x_ = 0;
 	} else if (cursor_x_ < ROW_CHARS - 1) {
 		++cursor_x_;
 	}
 
-	if (unicode == U'\n') {
+	if (c == U'\n') {
 		next_line();
 		return;
 	}
@@ -43,11 +41,11 @@ void terminal::put_char(char c)
 	const int target_x_position =
 			adjusted_x(cursor_y_ == 0 ? current_x : current_x + user_name_length());
 
-	buffer_[cursor_y_][current_x] = c;
+	buffer_[cursor_y_][current_x] = size == 1 ? static_cast<char>(c) : '?';
 	kscreen->fill_rectangle({ target_x_position, adjusted_y(cursor_y_) },
 							kfont->size(), kscreen->bg_color().GetCode());
 
-	write_unicode(*kscreen, { target_x_position, adjusted_y(cursor_y_) }, unicode,
+	write_unicode(*kscreen, { target_x_position, adjusted_y(cursor_y_) }, c,
 				  font_color_.GetCode());
 
 	if (cursor_x_ == ROW_CHARS - 1) {
@@ -55,21 +53,29 @@ void terminal::put_char(char c)
 	}
 }
 
-void terminal::print(const char* s)
+size_t terminal::print(const char* s)
 {
+	const char* start = s;
 	while (*s != '\0') {
-		put_char(*s);
+		const int size = utf8_size(static_cast<uint8_t>(*s));
+		put_char(utf8_to_unicode(s), size);
 
-		s += utf8_size(static_cast<uint8_t>(*s));
+		s += size;
 	}
+
+	return s - start;
 }
 
-void terminal::print(const char* s, size_t len)
+size_t terminal::print(const char* s, size_t len)
 {
+	const char* start = s;
 	for (size_t i = 0; i < len; ++i) {
-		put_char(s[i]);
-		s += utf8_size(static_cast<uint8_t>(s[i]));
+		const int size = utf8_size(static_cast<uint8_t>(s[i]));
+		put_char(utf8_to_unicode(&s[i]), size);
+		s += size;
 	}
+
+	return s - start;
 }
 
 void terminal::info(const char* s)
