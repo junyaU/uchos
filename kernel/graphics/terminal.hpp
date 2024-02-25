@@ -19,6 +19,7 @@
 #include "../task/ipc.hpp"
 #include "../task/task.hpp"
 #include "../types.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -36,9 +37,9 @@ public:
 					 START_X = 7, START_Y = 7;
 	terminal(Color font_color, const char* user_name, Color user_name_color);
 
-	void print(const char* s);
+	size_t print(const char* s);
 
-	void print(const char* s, size_t len);
+	size_t print(const char* s, size_t len);
 
 	void error(const char* s);
 
@@ -73,7 +74,7 @@ private:
 		return y * kfont->height() + START_Y + (y * LINE_SPACING);
 	}
 
-	void put_char(char c);
+	void put_char(char32_t c, int size);
 
 	int user_name_length() const { return strlen(user_name_) + 4; }
 

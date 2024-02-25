@@ -25,7 +25,8 @@ public:
 
 	bool is_bit_set(size_t i) const
 	{
-		return bitmap_[i / BITMAP_ENTRY_SIZE] & (1UL << (i % BITMAP_ENTRY_SIZE));
+		return (bitmap_[i / BITMAP_ENTRY_SIZE] & (1UL << (i % BITMAP_ENTRY_SIZE))) !=
+			   0U;
 	}
 
 	size_t start_index() const
