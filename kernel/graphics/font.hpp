@@ -38,6 +38,8 @@ void write_string(screen& scr, Point2D position, const char* s, uint32_t color_c
 
 extern bitmap_font* kfont;
 
+FT_Face new_face();
+
 void initialize_font();
 
 void initialize_freetype();
