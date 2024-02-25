@@ -111,6 +111,8 @@ directory_entry* create_file(const char* path);
 
 void initialize_fat(void* volume_image);
 
+size_t load_file(void* buf, size_t len, directory_entry& entry);
+
 struct file_descriptor : public ::file_descriptor {
 	directory_entry& entry;
 	cluster_t current_cluster;

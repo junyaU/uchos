@@ -9,6 +9,7 @@
 #include "../types.hpp"
 #include <algorithm>
 #include <cctype>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -527,4 +528,10 @@ size_t file_descriptor::write(const void* buf, size_t len)
 
 	return total_written;
 }
+
+size_t load_file(void* buf, size_t len, directory_entry& entry)
+{
+	return file_descriptor(entry).read(buf, len);
+}
+
 } // namespace file_system
