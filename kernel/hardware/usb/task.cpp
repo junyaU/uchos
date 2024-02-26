@@ -1,6 +1,4 @@
 #include "../../task/task.hpp"
-#include "../../graphics/terminal.hpp"
-#include "../../types.hpp"
 #include "xhci/xhci.hpp"
 
 void task_usb_handler()

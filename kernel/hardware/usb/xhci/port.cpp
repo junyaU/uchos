@@ -1,8 +1,7 @@
 #include "port.hpp"
 #include "../../../graphics/terminal.hpp"
+#include "../../../types.hpp"
 #include "registers.hpp"
-#include "types.hpp"
-#include "xhci.hpp"
 
 namespace usb::xhci
 {

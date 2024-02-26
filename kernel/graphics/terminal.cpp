@@ -29,7 +29,7 @@ void terminal::put_char(char32_t c, int size)
 	if (cursor_x_ == ROW_CHARS - 1) {
 		cursor_x_ = 0;
 	} else if (cursor_x_ < ROW_CHARS - 1) {
-		++cursor_x_;
+		cursor_x_++;
 	}
 
 	if (c == U'\n') {
@@ -41,12 +41,16 @@ void terminal::put_char(char32_t c, int size)
 	const int target_x_position =
 			adjusted_x(cursor_y_ == 0 ? current_x : current_x + user_name_length());
 
-	buffer_[cursor_y_][current_x] = size == 1 ? static_cast<char>(c) : '?';
+	buffer_[cursor_y_][current_x] = c;
 	kscreen->fill_rectangle({ target_x_position, adjusted_y(cursor_y_) },
 							kfont->size(), kscreen->bg_color().GetCode());
 
 	write_unicode(*kscreen, { target_x_position, adjusted_y(cursor_y_) }, c,
 				  font_color_.GetCode());
+
+	if (size > 1) {
+		cursor_x_++;
+	}
 
 	if (cursor_x_ == ROW_CHARS - 1) {
 		next_line();
@@ -110,8 +114,14 @@ void terminal::print_interrupt_hex(uint64_t value)
 void terminal::input_key(uint8_t c)
 {
 	if (c == '\n') {
+		char buffer[100];
+		for (int i = 0; i < 100; i++) {
+			buffer[i] = decode_utf8(buffer_[cursor_y_][i]);
+		}
+
 		char command[100];
-		memcpy(command, buffer_[cursor_y_], sizeof(buffer_[cursor_y_]));
+
+		memcpy(command, buffer, sizeof(buffer));
 
 		kscreen->fill_rectangle(
 				{ adjusted_x(user_name_length()), adjusted_y(cursor_y_) },
@@ -119,7 +129,7 @@ void terminal::input_key(uint8_t c)
 				kscreen->bg_color().GetCode());
 
 		cursor_x_ = 0;
-		memset(buffer_[cursor_y_], '\0', sizeof(buffer_[cursor_y_]));
+		memset(&buffer_[cursor_y_], '\0', sizeof(buffer_[cursor_y_]));
 
 		shell_->process_command(command, *this);
 		next_line();
@@ -164,7 +174,7 @@ void terminal::cursor_blink()
 void terminal::clear()
 {
 	for (int y = 0; y < terminal::COLUMN_CHARS; y++) {
-		memset(buffer_[y], '\0', sizeof(buffer_[y]));
+		memset(&buffer_[y], '\0', sizeof(buffer_[y]));
 	}
 
 	cursor_x_ = 0;
@@ -190,8 +200,7 @@ void terminal::next_line()
 
 		for (int x = 0; x < ROW_CHARS; x++) {
 			write_unicode(*kscreen, { adjusted_x(x), adjusted_y(cursor_y_) },
-						  utf8_to_unicode(&buffer_[cursor_y_][x]),
-						  font_color_.GetCode());
+						  buffer_[cursor_y_][x], font_color_.GetCode());
 		}
 
 		cursor_x_ = 0;
@@ -208,7 +217,7 @@ void terminal::scroll_lines()
 			Point2D{ adjusted_x(ROW_CHARS), adjusted_y(COLUMN_CHARS) },
 			kscreen->bg_color().GetCode());
 
-	memcpy(buffer_[0], buffer_[1], sizeof(buffer_) - sizeof(buffer_[0]));
+	memcpy(&buffer_, &buffer_[1], sizeof(buffer_) - sizeof(buffer_[0]));
 
 	for (int x = 0; x < terminal::ROW_CHARS; x++) {
 		buffer_[terminal::COLUMN_CHARS - 1][x] = '\0';
@@ -216,8 +225,8 @@ void terminal::scroll_lines()
 
 	for (int y = 0; y < terminal::COLUMN_CHARS - 1; y++) {
 		for (int x = 0; x < terminal::ROW_CHARS; x++) {
-			write_unicode(*kscreen, { adjusted_x(x), adjusted_y(y) },
-						  utf8_to_unicode(&buffer_[y][x]), font_color_.GetCode());
+			write_unicode(*kscreen, { adjusted_x(x), adjusted_y(y) }, buffer_[y][x],
+						  font_color_.GetCode());
 		}
 	}
 

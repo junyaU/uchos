@@ -83,7 +83,7 @@ private:
 
 	void show_user_name();
 
-	char buffer_[COLUMN_CHARS][ROW_CHARS + 1];
+	std::array<std::array<char32_t, ROW_CHARS + 1>, COLUMN_CHARS> buffer_;
 	int cursor_y_{ 0 };
 	int cursor_x_{ 0 };
 	Color font_color_;

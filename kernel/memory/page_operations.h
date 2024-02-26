@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdint.h>
-
 extern "C" {
 void flash_tlb(uint64_t addr);
 
