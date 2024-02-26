@@ -1,6 +1,3 @@
-struct FrameBufferConf;
-struct MemoryMap;
-
 #include "file_system/fat.hpp"
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
@@ -21,6 +18,9 @@ struct MemoryMap;
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"
+
+struct FrameBufferConf;
+struct MemoryMap;
 
 void task_main()
 {
@@ -77,6 +77,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	initialize_tss();
 
 	print_available_memory();
+
+	main_terminal->initialize_fds();
 
 	acpi::initialize(rsdp);
 

@@ -1,7 +1,7 @@
 #include "pci.hpp"
-#include "asm_utils.h"
-#include "graphics/terminal.hpp"
-#include "types.hpp"
+#include "../asm_utils.h"
+#include "../graphics/terminal.hpp"
+#include "../types.hpp"
 
 namespace pci
 {

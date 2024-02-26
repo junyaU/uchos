@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 3.10)
 # Set the target type for try_compile() to be a static library.
 set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 
+set(CMAKE_BUILD_TYPE Debug)
+
 # Define the project name and specify that it's a C++ project.
 project(UchosKernel)
 
@@ -108,6 +110,7 @@ target_link_libraries(
         c
         c++
         c++abi
+        freetype
         m
         UchosGraphics
         UchosMemory

@@ -5,7 +5,6 @@
 #include "terminal.hpp"
 #include <cstddef>
 #include <cstdint>
-#include <new>
 #include <vector>
 
 extern const uint8_t _binary_hankaku_bin_start;
@@ -89,8 +88,8 @@ void write_unicode(screen& scr, Point2D position, char32_t c, uint32_t color_cod
 		return;
 	}
 
-	auto face = new_face();
-	if (face == 0) {
+	auto* face = new_face();
+	if (face == nullptr) {
 		write_ascii(scr, position, '?', color_code);
 		write_ascii(scr, position + Point2D{ kfont->width(), 0 }, '?', color_code);
 		return;
@@ -111,7 +110,7 @@ void write_unicode(screen& scr, Point2D position, char32_t c, uint32_t color_cod
 			q -= bitmap.pitch * bitmap.rows;
 		}
 		for (int dx = 0; dx < bitmap.width; ++dx) {
-			const bool b = q[dx >> 3] & (0x80 >> (dx & 0x7));
+			const bool b = (q[dx >> 3] & (0x80 >> (dx & 0x7))) != 0;
 			if (b) {
 				kscreen->put_pixel(glyph_topleft + Point2D{ dx, dy }, color_code);
 			}
@@ -141,6 +140,27 @@ char32_t utf8_to_unicode(const char* utf8)
 		default:
 			return 0;
 	}
+}
+
+char decode_utf8(char32_t c)
+{
+	if (c <= 0x7F) {
+		return static_cast<char>(c);
+	}
+
+	if (c <= 0x7FF) {
+		return static_cast<char>(0xC0 | (c >> 6));
+	}
+
+	if (c <= 0xFFFF) {
+		return static_cast<char>(0xE0 | (c >> 12));
+	}
+
+	if (c <= 0x10FFFF) {
+		return static_cast<char>(0xF0 | (c >> 18));
+	}
+
+	return 0;
 }
 
 void write_string(screen& scr, Point2D position, const char* s, uint32_t color_code)

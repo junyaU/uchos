@@ -13,9 +13,7 @@
 
 #include "registers.hpp"
 #include "trb.hpp"
-
 #include <cstdint>
-#include <vector>
 
 namespace usb::xhci
 {

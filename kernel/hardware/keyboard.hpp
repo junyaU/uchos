@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 static const int L_CONTROL = 0b00000001U;
 static const int L_SHIFT = 0b00000010U;
 static const int L_ALT = 0b00000100U;

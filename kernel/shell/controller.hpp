@@ -19,7 +19,7 @@ class controller
 public:
 	controller();
 
-	void process_command(const char* command, terminal& term);
+	void process_command(char* command, terminal& term);
 
 private:
 	static const int MAX_HISTORY = 10;

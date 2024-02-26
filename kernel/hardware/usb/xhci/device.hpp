@@ -9,7 +9,6 @@
 #include "../array_map.hpp"
 #include "../class_driver/base.hpp"
 #include "../device.hpp"
-#include "../setup_stage_data.hpp"
 #include "context.hpp"
 #include "registers.hpp"
 #include "ring.hpp"

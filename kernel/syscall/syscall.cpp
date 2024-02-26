@@ -1,6 +1,5 @@
 #include "syscall.hpp"
 #include "../asm_utils.h"
-#include "../graphics/terminal.hpp"
 #include "../memory/segment.hpp"
 #include "../msr.hpp"
 #include "entry.h"
