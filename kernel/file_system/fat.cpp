@@ -338,7 +338,7 @@ void execute_file(const directory_entry& entry, const char* args)
 
 	task* t = CURRENT_TASK;
 	for (int i = 0; i < 3; ++i) {
-		t->fds[i] = std::make_unique<term_file_descriptor>();
+		t->fds[i] = main_terminal->fds_[i];
 	}
 
 	auto entry_addr = elf_header->e_entry;

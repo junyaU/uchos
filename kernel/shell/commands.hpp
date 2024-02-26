@@ -11,11 +11,19 @@
 
 #pragma once
 
+#include "../file_system/fat.hpp"
+
 class terminal;
 
 namespace shell
 {
-void ls(terminal& term, const char* path);
+void ls(terminal& term,
+		const char* path,
+		file_system::directory_entry* redirect_entry);
 
 void cat(terminal& term, const char* file_name);
+
+void echo(terminal& term,
+		  const char* s,
+		  file_system::directory_entry* redirect_entry);
 } // namespace shell

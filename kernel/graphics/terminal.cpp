@@ -24,6 +24,13 @@ terminal::terminal(Color font_color, const char* user_name, Color user_name_colo
 	show_user_name();
 }
 
+void terminal::initialize_fds()
+{
+	for (int i = 0; i < fds_.size(); i++) {
+		fds_[i] = std::make_shared<term_file_descriptor>();
+	}
+}
+
 void terminal::put_char(char32_t c, int size)
 {
 	if (cursor_x_ == ROW_CHARS - 1) {

@@ -37,6 +37,10 @@ public:
 					 START_X = 7, START_Y = 7;
 	terminal(Color font_color, const char* user_name, Color user_name_color);
 
+	std::array<std::shared_ptr<file_descriptor>, 3> fds_;
+
+	void initialize_fds();
+
 	size_t print(const char* s);
 
 	size_t print(const char* s, size_t len);

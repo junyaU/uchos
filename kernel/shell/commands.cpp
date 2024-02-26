@@ -3,9 +3,23 @@
 #include "../graphics/terminal.hpp"
 #include <cstddef>
 
+void write_fd(terminal& term,
+			  const char* s,
+			  file_system::directory_entry* redirect_entry)
+{
+	if (redirect_entry == nullptr) {
+		term.fds_[STDOUT_FILENO]->write(s, strlen(s));
+		return;
+	}
+
+	file_system::file_descriptor(*redirect_entry).write(s, strlen(s));
+}
+
 namespace shell
 {
-void ls(terminal& term, const char* path)
+void ls(terminal& term,
+		const char* path,
+		file_system::directory_entry* redirect_entry)
 {
 	auto* entry = file_system::find_directory_entry_by_path(path);
 	if (entry == nullptr) {
@@ -14,7 +28,8 @@ void ls(terminal& term, const char* path)
 	}
 
 	if (entry->attribute == file_system::entry_attribute::ARCHIVE) {
-		term.printf("%s\n", path);
+		write_fd(term, path, redirect_entry);
+		write_fd(term, "\n", redirect_entry);
 		return;
 	}
 
@@ -22,7 +37,8 @@ void ls(terminal& term, const char* path)
 	for (const auto* e : entries) {
 		char name[13];
 		file_system::read_dir_entry_name(*e, name);
-		term.printf("%s\n", name);
+		write_fd(term, name, redirect_entry);
+		write_fd(term, "\n", redirect_entry);
 	}
 }
 
@@ -49,5 +65,12 @@ void cat(terminal& term, const char* file_name)
 		remain_bytes -= i;
 		cluster_id = file_system::next_cluster(cluster_id);
 	}
+}
+
+void echo(terminal& term,
+		  const char* s,
+		  file_system::directory_entry* redirect_entry)
+{
+	write_fd(term, s, redirect_entry);
 }
 } // namespace shell

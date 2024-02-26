@@ -78,6 +78,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	print_available_memory();
 
+	main_terminal->initialize_fds();
+
 	acpi::initialize(rsdp);
 
 	initialize_timer();
