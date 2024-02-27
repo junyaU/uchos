@@ -24,7 +24,6 @@ file_system::directory_entry* parse_redirect_command(char* command)
 	}
 
 	if (*redirect == '\0') {
-		main_terminal->printf("parse_redirect_command: No redirect file\n");
 		return nullptr;
 	}
 

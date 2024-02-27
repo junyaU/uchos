@@ -33,17 +33,17 @@ class controller;
 class terminal
 {
 public:
-	static const int COLUMN_CHARS = 30, ROW_CHARS = 98, LINE_SPACING = 3,
-					 START_X = 7, START_Y = 7;
+	static constexpr int COLUMN_CHARS = 30, ROW_CHARS = 98, LINE_SPACING = 3,
+						 START_X = 7, START_Y = 7;
 	terminal(Color font_color, const char* user_name, Color user_name_color);
 
 	std::array<std::shared_ptr<file_descriptor>, 3> fds_;
 
 	void initialize_fds();
 
-	size_t print(const char* s);
+	size_t print(const char* s, Color color = WHITE);
 
-	size_t print(const char* s, size_t len);
+	size_t print(const char* s, size_t len, Color color = WHITE);
 
 	void error(const char* s);
 
@@ -78,7 +78,7 @@ private:
 		return y * kfont->height() + START_Y + (y * LINE_SPACING);
 	}
 
-	void put_char(char32_t c, int size);
+	void put_char(char32_t c, int size, Color color);
 
 	int user_name_length() const { return strlen(user_name_) + 4; }
 

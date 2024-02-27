@@ -12,10 +12,10 @@
 #pragma once
 
 // system call number
-#define SYS_READ 0
-#define SYS_WRITE 1
-#define SYS_OPEN 2
-#define SYS_EXIT 60
+constexpr int SYS_READ = 0;
+constexpr int SYS_WRITE = 1;
+constexpr int SYS_OPEN = 2;
+constexpr int SYS_EXIT = 60;
 
 namespace syscall
 {

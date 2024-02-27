@@ -102,5 +102,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_keyboard();
 
+	main_terminal->printf("White rgb: %d\n", WHITE.GetCode());
+
 	task_main();
 }

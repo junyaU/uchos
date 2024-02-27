@@ -1,7 +1,7 @@
-#include "timers/acpi.hpp"
-#include "asm_utils.h"
-#include "graphics/terminal.hpp"
-#include "types.hpp"
+#include "acpi.hpp"
+#include "../asm_utils.h"
+#include "../graphics/terminal.hpp"
+#include "../types.hpp"
 #include <string.h>
 
 namespace acpi
