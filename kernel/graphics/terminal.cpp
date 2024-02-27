@@ -147,7 +147,7 @@ void terminal::input_key(uint8_t c)
 	const uint8_t delete_key = 0x08;
 
 	if (c != delete_key) {
-		printf("%c", c);
+		print(reinterpret_cast<const char*>(&c), 1);
 		return;
 	}
 
