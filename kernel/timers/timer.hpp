@@ -18,9 +18,9 @@ inline bool operator<(const timer_event& lhs, const timer_event& rhs)
 	return lhs.timeout > rhs.timeout;
 }
 
-static const int TIMER_FREQUENCY = 100;
-static const int SWITCH_TASK_MILLISEC = 20;
-static const int CURSOR_BLINK_MILLISEC = 500;
+static constexpr int TIMER_FREQUENCY = 100;
+static constexpr int SWITCH_TASK_MILLISEC = 20;
+static constexpr int CURSOR_BLINK_MILLISEC = 500;
 
 class kernel_timer
 {

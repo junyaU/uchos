@@ -31,7 +31,7 @@ void terminal::initialize_fds()
 	}
 }
 
-void terminal::put_char(char32_t c, int size)
+void terminal::put_char(char32_t c, int size, Color color)
 {
 	if (cursor_x_ == ROW_CHARS - 1) {
 		cursor_x_ = 0;
@@ -53,7 +53,7 @@ void terminal::put_char(char32_t c, int size)
 							kfont->size(), kscreen->bg_color().GetCode());
 
 	write_unicode(*kscreen, { target_x_position, adjusted_y(cursor_y_) }, c,
-				  font_color_.GetCode());
+				  color.GetCode());
 
 	if (size > 1) {
 		cursor_x_++;
@@ -64,12 +64,12 @@ void terminal::put_char(char32_t c, int size)
 	}
 }
 
-size_t terminal::print(const char* s)
+size_t terminal::print(const char* s, Color color)
 {
 	const char* start = s;
 	while (*s != '\0') {
 		const int size = utf8_size(static_cast<uint8_t>(*s));
-		put_char(utf8_to_unicode(s), size);
+		put_char(utf8_to_unicode(s), size, color);
 
 		s += size;
 	}
@@ -77,12 +77,12 @@ size_t terminal::print(const char* s)
 	return s - start;
 }
 
-size_t terminal::print(const char* s, size_t len)
+size_t terminal::print(const char* s, size_t len, Color color)
 {
 	const char* start = s;
 	for (size_t i = 0; i < len; ++i) {
 		const int size = utf8_size(static_cast<uint8_t>(s[i]));
-		put_char(utf8_to_unicode(&s[i]), size);
+		put_char(utf8_to_unicode(&s[i]), size, color);
 		s += size;
 	}
 

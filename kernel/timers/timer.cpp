@@ -1,8 +1,8 @@
-#include "timers/timer.hpp"
-#include "graphics/terminal.hpp"
-#include "memory/slab.hpp"
-#include "task/ipc.hpp"
-#include "types.hpp"
+#include "timer.hpp"
+#include "../graphics/terminal.hpp"
+#include "../memory/slab.hpp"
+#include "../task/ipc.hpp"
+#include "../types.hpp"
 
 uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 {

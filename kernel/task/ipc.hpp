@@ -3,13 +3,13 @@
 #include "../types.hpp"
 #include <cstdint>
 
-#define NOTIFY_KEY_INPUT 0
-#define NOTIFY_XHCI 1
-#define NOTIFY_CURSOR_BLINK 2
-#define NOTIFY_TIMER_TIMEOUT 3
-#define NOTIFY_WRITE 4
+constexpr int NOTIFY_KEY_INPUT = 0;
+constexpr int NOTIFY_XHCI = 1;
+constexpr int NOTIFY_CURSOR_BLINK = 2;
+constexpr int NOTIFY_TIMER_TIMEOUT = 3;
+constexpr int NOTIFY_WRITE = 4;
 
-#define NUM_MESSAGE_TYPES 5
+constexpr int NUM_MESSAGE_TYPES = 5;
 
 enum class timeout_action_t : uint8_t {
 	TERMINAL_CURSOR_BLINK,

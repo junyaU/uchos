@@ -1,9 +1,9 @@
-#include "timers/local_apic.hpp"
-#include "graphics/terminal.hpp"
-#include "interrupt/vector.hpp"
-#include "timers/acpi.hpp"
-#include "timers/timer.hpp"
-#include "types.hpp"
+#include "local_apic.hpp"
+#include "../graphics/terminal.hpp"
+#include "../interrupt/vector.hpp"
+#include "../timers/acpi.hpp"
+#include "../timers/timer.hpp"
+#include "../types.hpp"
 
 namespace local_apic
 {
@@ -16,7 +16,7 @@ volatile uint32_t& CURRENT_COUNT = *reinterpret_cast<uint32_t*>(0xfee00390);
 // register to set the divide value of the counter
 volatile uint32_t& DIVIDE_CONF = *reinterpret_cast<uint32_t*>(0xfee003e0);
 
-const uint32_t COUNT_MAX = 0xffffffffU;
+constexpr uint32_t COUNT_MAX = 0xffffffffU;
 
 void initialize()
 {

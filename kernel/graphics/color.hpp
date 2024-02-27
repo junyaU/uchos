@@ -2,12 +2,12 @@
 
 #include <cstdint>
 
-const int kBytesPerPixel = 4;
+constexpr int kBytesPerPixel = 4;
 
 class Color
 {
 public:
-	Color(uint8_t r, uint8_t g, uint8_t b);
+	constexpr Color(uint8_t r, uint8_t g, uint8_t b) : r_{ r }, g_{ g }, b_{ b } {}
 	uint32_t GetCode() const;
 
 private:
@@ -16,11 +16,11 @@ private:
 	uint8_t b_;
 };
 
-static Color WHITE = Color(255, 255, 255);
-static Color LIGHT_GRAY = Color(192, 192, 192);
-static Color GRAY = Color(128, 128, 128);
-static Color DARK_GRAY = Color(64, 64, 64);
-static Color BLACK = Color(0, 0, 0);
-static Color RED = Color(255, 0, 0);
-static Color GREEN = Color(0, 255, 0);
-static Color BLUE = Color(0, 0, 255);
+constexpr Color WHITE = { 255, 255, 255 };
+constexpr Color LIGHT_GRAY = Color(192, 192, 192);
+constexpr Color GRAY = Color(128, 128, 128);
+constexpr Color DARK_GRAY = Color(64, 64, 64);
+constexpr Color BLACK = Color(0, 0, 0);
+constexpr Color RED = Color(255, 0, 0);
+constexpr Color GREEN = Color(0, 255, 0);
+constexpr Color BLUE = Color(0, 0, 255);

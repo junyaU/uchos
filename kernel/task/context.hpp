@@ -10,5 +10,3 @@ struct context {
 	uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
 	std::array<uint8_t, 512> fxsave_area;
 } __attribute__((packed));
-
-extern context task_2_context, task_main_context alignas(16);

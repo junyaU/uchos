@@ -1,6 +1,7 @@
 #include "font.hpp"
 #include "../file_system/fat.hpp"
 #include "../point2d.hpp"
+#include "color.hpp"
 #include "screen.hpp"
 #include "terminal.hpp"
 #include <cstddef>

@@ -9,11 +9,11 @@
 
 namespace
 {
-const uint64_t PAGE_4KIB = 4096;
-const uint64_t PAGE_2MIB = 512 * PAGE_4KIB;
-const uint64_t PAGE_1GIB = 512 * PAGE_2MIB;
+constexpr uint64_t PAGE_4KIB = 4096;
+constexpr uint64_t PAGE_2MIB = 512 * PAGE_4KIB;
+constexpr uint64_t PAGE_1GIB = 512 * PAGE_2MIB;
 
-const size_t PAGE_DIRECTORY_COUNT = 64;
+constexpr size_t PAGE_DIRECTORY_COUNT = 64;
 
 alignas(PAGE_4KIB) std::array<uint64_t, 512> pml4_table;
 alignas(PAGE_4KIB) std::array<uint64_t, 512> pdp_table;
