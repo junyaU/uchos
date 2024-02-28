@@ -38,7 +38,6 @@ file_system::directory_entry* parse_redirect_command(char* command)
 void controller::process_command(char* command, terminal& term)
 {
 	if (strlen(command) == 0) {
-		term.print("\n");
 		return;
 	}
 
@@ -73,7 +72,7 @@ void controller::process_command(char* command, terminal& term)
 		return;
 	}
 
-	auto* entry = file_system::find_directory_entry(command_name, 0);
+	auto* entry = file_system::find_directory_entry_by_path(command_name);
 	if (entry != nullptr) {
 		file_system::execute_file(*entry, args);
 		return;

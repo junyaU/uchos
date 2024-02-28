@@ -127,6 +127,18 @@ void terminal::input_key(uint8_t c)
 			command[i] = decode_utf8(buffer_[cursor_y_][i]);
 		}
 
+		auto print_user = [this, command] {
+			print(user_name_, user_name_color_);
+			printf(":~$ %s", command);
+		};
+
+		bool is_input = cursor_x_ != 0;
+		if (!is_input) {
+			print_user();
+			next_line();
+			return;
+		}
+
 		clear_input_line();
 
 		if (cursor_y_ == COLUMN_CHARS - 1) {
@@ -134,14 +146,15 @@ void terminal::input_key(uint8_t c)
 			--cursor_y_;
 		}
 
-		print(user_name_, user_name_color_);
-		printf(":~$ %s", command);
+		print_user();
 		print("\n", 1, font_color_, true);
 
 		shell_->process_command(command, *this);
 
 		if (cursor_x_ != 0) {
 			next_line();
+		} else {
+			show_user_name();
 		}
 
 		return;
@@ -217,7 +230,7 @@ void terminal::next_line(bool is_input)
 				Point2D{ adjusted_x(ROW_CHARS), adjusted_y(cursor_y_) },
 				kscreen->bg_color().GetCode());
 
-		for (int x = 0; x < ROW_CHARS; x++) {
+		for (int x = 0; x < ROW_CHARS; ++x) {
 			write_unicode(*kscreen, { adjusted_x(x), adjusted_y(cursor_y_) },
 						  buffer_[cursor_y_][x], color_buffer_[cursor_y_][x]);
 		}

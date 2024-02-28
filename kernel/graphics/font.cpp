@@ -1,9 +1,9 @@
 #include "font.hpp"
 #include "../file_system/fat.hpp"
 #include "../point2d.hpp"
-#include "color.hpp"
 #include "screen.hpp"
 #include "terminal.hpp"
+#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -176,6 +176,30 @@ void write_string(screen& scr, Point2D position, const char* s, uint32_t color_c
 
 		font_position += is_ascii_code(c) ? 1 : 2;
 		s += size;
+	}
+}
+
+void to_lower(char* s)
+{
+	if (s == nullptr) {
+		return;
+	}
+
+	while (*s != '\0') {
+		*s = std::tolower(*s);
+		++s;
+	}
+}
+
+void to_upper(char* s)
+{
+	if (s == nullptr) {
+		return;
+	}
+
+	while (*s != '\0') {
+		*s = std::toupper(static_cast<unsigned char>(*s));
+		++s;
 	}
 }
 
