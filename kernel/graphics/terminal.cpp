@@ -31,24 +31,25 @@ void terminal::initialize_fds()
 	}
 }
 
-void terminal::put_char(char32_t c, int size, Color color)
+void terminal::put_char(char32_t c, int size, Color color, bool is_input)
 {
 	if (cursor_x_ == ROW_CHARS - 1) {
 		cursor_x_ = 0;
 	} else if (cursor_x_ < ROW_CHARS - 1) {
-		cursor_x_++;
+		++cursor_x_;
 	}
 
 	if (c == U'\n') {
-		next_line();
+		next_line(is_input);
 		return;
 	}
 
 	const int current_x = cursor_x_ == 0 ? ROW_CHARS - 1 : cursor_x_ - 1;
 	const int target_x_position =
-			adjusted_x(cursor_y_ == 0 ? current_x : current_x + user_name_length());
+			adjusted_x(is_input ? current_x + user_name_length() : current_x);
 
 	buffer_[cursor_y_][current_x] = c;
+	color_buffer_[cursor_y_][current_x] = color.GetCode();
 	kscreen->fill_rectangle({ target_x_position, adjusted_y(cursor_y_) },
 							kfont->size(), kscreen->bg_color().GetCode());
 
@@ -56,7 +57,7 @@ void terminal::put_char(char32_t c, int size, Color color)
 				  color.GetCode());
 
 	if (size > 1) {
-		cursor_x_++;
+		++cursor_x_;
 	}
 
 	if (cursor_x_ == ROW_CHARS - 1) {
@@ -69,7 +70,7 @@ size_t terminal::print(const char* s, Color color)
 	const char* start = s;
 	while (*s != '\0') {
 		const int size = utf8_size(static_cast<uint8_t>(*s));
-		put_char(utf8_to_unicode(s), size, color);
+		put_char(utf8_to_unicode(s), size, color, false);
 
 		s += size;
 	}
@@ -77,12 +78,12 @@ size_t terminal::print(const char* s, Color color)
 	return s - start;
 }
 
-size_t terminal::print(const char* s, size_t len, Color color)
+size_t terminal::print(const char* s, size_t len, Color color, bool is_input)
 {
 	const char* start = s;
 	for (size_t i = 0; i < len; ++i) {
 		const int size = utf8_size(static_cast<uint8_t>(s[i]));
-		put_char(utf8_to_unicode(&s[i]), size, color);
+		put_char(utf8_to_unicode(&s[i]), size, color, is_input);
 		s += size;
 	}
 
@@ -121,25 +122,27 @@ void terminal::print_interrupt_hex(uint64_t value)
 void terminal::input_key(uint8_t c)
 {
 	if (c == '\n') {
-		char buffer[100];
-		for (int i = 0; i < 100; i++) {
-			buffer[i] = decode_utf8(buffer_[cursor_y_][i]);
+		char command[100];
+		for (int i = 0; i < 100; ++i) {
+			command[i] = decode_utf8(buffer_[cursor_y_][i]);
 		}
 
-		char command[100];
+		clear_input_line();
 
-		memcpy(command, buffer, sizeof(buffer));
+		if (cursor_y_ == COLUMN_CHARS - 1) {
+			scroll_lines();
+			--cursor_y_;
+		}
 
-		kscreen->fill_rectangle(
-				{ adjusted_x(user_name_length()), adjusted_y(cursor_y_) },
-				{ kfont->width() * (cursor_x_ + 1), kfont->height() },
-				kscreen->bg_color().GetCode());
-
-		cursor_x_ = 0;
-		memset(&buffer_[cursor_y_], '\0', sizeof(buffer_[cursor_y_]));
+		print(user_name_, user_name_color_);
+		printf(":~$ %s", command);
+		print("\n", 1, font_color_, true);
 
 		shell_->process_command(command, *this);
-		next_line();
+
+		if (cursor_x_ != 0) {
+			next_line();
+		}
 
 		return;
 	}
@@ -147,7 +150,7 @@ void terminal::input_key(uint8_t c)
 	const uint8_t delete_key = 0x08;
 
 	if (c != delete_key) {
-		print(reinterpret_cast<const char*>(&c), 1);
+		print(reinterpret_cast<const char*>(&c), 1, font_color_, true);
 		return;
 	}
 
@@ -161,6 +164,7 @@ void terminal::input_key(uint8_t c)
 
 	--cursor_x_;
 	buffer_[cursor_y_][cursor_x_] = '\0';
+	color_buffer_[cursor_y_][cursor_x_] = 0;
 
 	kscreen->fill_rectangle(
 			{ adjusted_x(cursor_x_ + user_name_length()), adjusted_y(cursor_y_) },
@@ -180,8 +184,9 @@ void terminal::cursor_blink()
 
 void terminal::clear()
 {
-	for (int y = 0; y < terminal::COLUMN_CHARS; y++) {
+	for (int y = 0; y < terminal::COLUMN_CHARS; ++y) {
 		memset(&buffer_[y], '\0', sizeof(buffer_[y]));
+		memset(&color_buffer_[y], 0, sizeof(color_buffer_[y]));
 	}
 
 	cursor_x_ = 0;
@@ -195,7 +200,14 @@ void terminal::clear()
 							kscreen->bg_color().GetCode());
 }
 
-void terminal::next_line()
+void terminal::clear_input_line()
+{
+	cursor_x_ = 0;
+	memset(&buffer_[cursor_y_], '\0', sizeof(buffer_[cursor_y_]));
+	memset(&color_buffer_[cursor_y_], 0, sizeof(color_buffer_[cursor_y_]));
+}
+
+void terminal::next_line(bool is_input)
 {
 	if (cursor_y_ == COLUMN_CHARS - 1) {
 		scroll_lines();
@@ -207,14 +219,16 @@ void terminal::next_line()
 
 		for (int x = 0; x < ROW_CHARS; x++) {
 			write_unicode(*kscreen, { adjusted_x(x), adjusted_y(cursor_y_) },
-						  buffer_[cursor_y_][x], font_color_.GetCode());
+						  buffer_[cursor_y_][x], color_buffer_[cursor_y_][x]);
 		}
 
 		cursor_x_ = 0;
-		cursor_y_++;
+		++cursor_y_;
 	}
 
-	show_user_name();
+	if (!is_input) {
+		show_user_name();
+	}
 }
 
 void terminal::scroll_lines()
@@ -225,15 +239,18 @@ void terminal::scroll_lines()
 			kscreen->bg_color().GetCode());
 
 	memcpy(&buffer_, &buffer_[1], sizeof(buffer_) - sizeof(buffer_[0]));
+	memcpy(&color_buffer_, &color_buffer_[1],
+		   sizeof(color_buffer_) - sizeof(color_buffer_[0]));
 
-	for (int x = 0; x < terminal::ROW_CHARS; x++) {
+	for (int x = 0; x < terminal::ROW_CHARS; ++x) {
 		buffer_[terminal::COLUMN_CHARS - 1][x] = '\0';
+		color_buffer_[terminal::COLUMN_CHARS - 1][x] = 0;
 	}
 
-	for (int y = 0; y < terminal::COLUMN_CHARS - 1; y++) {
-		for (int x = 0; x < terminal::ROW_CHARS; x++) {
+	for (int y = 0; y < terminal::COLUMN_CHARS - 1; ++y) {
+		for (int x = 0; x < terminal::ROW_CHARS; ++x) {
 			write_unicode(*kscreen, { adjusted_x(x), adjusted_y(y) }, buffer_[y][x],
-						  font_color_.GetCode());
+						  color_buffer_[y][x]);
 		}
 	}
 
@@ -288,6 +305,8 @@ void task_terminal()
 				break;
 			case KERN_INFO:
 				main_terminal->info(m.data.write.s);
+				break;
+			default:
 				break;
 		}
 	};

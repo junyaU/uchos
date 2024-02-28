@@ -37,6 +37,11 @@ file_system::directory_entry* parse_redirect_command(char* command)
 
 void controller::process_command(char* command, terminal& term)
 {
+	if (strlen(command) == 0) {
+		term.print("\n");
+		return;
+	}
+
 	memcpy(histories_[history_write_index_], command, strlen(command));
 	history_write_index_ == MAX_HISTORY - 1 ? history_write_index_
 											: ++history_write_index_;
@@ -74,7 +79,7 @@ void controller::process_command(char* command, terminal& term)
 		return;
 	}
 
-	term.printf("Command not found: %s", command_name);
+	term.printf("%s: command not found", command_name);
 }
 
 } // namespace shell

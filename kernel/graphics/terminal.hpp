@@ -43,7 +43,8 @@ public:
 
 	size_t print(const char* s, Color color = WHITE);
 
-	size_t print(const char* s, size_t len, Color color = WHITE);
+	size_t
+	print(const char* s, size_t len, Color color = WHITE, bool is_input = false);
 
 	void error(const char* s);
 
@@ -78,16 +79,19 @@ private:
 		return y * kfont->height() + START_Y + (y * LINE_SPACING);
 	}
 
-	void put_char(char32_t c, int size, Color color);
+	void put_char(char32_t c, int size, Color color, bool is_input);
 
 	int user_name_length() const { return strlen(user_name_) + 4; }
 
-	void next_line();
+	void next_line(bool is_input = false);
 	void scroll_lines();
+
+	void clear_input_line();
 
 	void show_user_name();
 
 	std::array<std::array<char32_t, ROW_CHARS + 1>, COLUMN_CHARS> buffer_;
+	std::array<std::array<uint32_t, ROW_CHARS>, COLUMN_CHARS> color_buffer_;
 	int cursor_y_{ 0 };
 	int cursor_x_{ 0 };
 	Color font_color_;
