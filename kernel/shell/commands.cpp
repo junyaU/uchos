@@ -1,5 +1,6 @@
 #include "commands.hpp"
 #include "../file_system/fat.hpp"
+#include "../graphics/font.hpp"
 #include "../graphics/terminal.hpp"
 #include <cstddef>
 
@@ -37,6 +38,7 @@ void ls(terminal& term,
 	for (const auto* e : entries) {
 		char name[13];
 		file_system::read_dir_entry_name(*e, name);
+		to_lower(name);
 		write_fd(term, name, redirect_entry);
 		write_fd(term, "\n", redirect_entry);
 	}

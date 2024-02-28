@@ -132,8 +132,6 @@ void read_dir_entry_name(const directory_entry& entry, char* dest)
 	if (extension[1] != 0) {
 		strlcat(dest, extension, 13);
 	}
-
-	to_lower(dest);
 }
 
 void register_file_name(const char* name, directory_entry* entry)
