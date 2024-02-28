@@ -1,6 +1,7 @@
 #include "fat.hpp"
 #include "../asm_utils.h"
 #include "../elf.hpp"
+#include "../graphics/font.hpp"
 #include "../graphics/terminal.hpp"
 #include "../memory/page.hpp"
 #include "../memory/paging.hpp"
@@ -12,7 +13,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <memory>
 #include <string.h>
 #include <utility>
 #include <vector>
@@ -241,6 +241,8 @@ directory_entry* find_directory_entry_by_path(const char* path)
 	if (path != nullptr) {
 		memcpy(path_copy, path, path_len + 1);
 	}
+
+	to_upper(path_copy);
 
 	auto path_list = parse_path(path_copy);
 	auto cluster_id = BOOT_VOLUME_IMAGE->root_cluster;

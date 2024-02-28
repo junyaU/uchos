@@ -37,6 +37,10 @@ file_system::directory_entry* parse_redirect_command(char* command)
 
 void controller::process_command(char* command, terminal& term)
 {
+	if (strlen(command) == 0) {
+		return;
+	}
+
 	memcpy(histories_[history_write_index_], command, strlen(command));
 	history_write_index_ == MAX_HISTORY - 1 ? history_write_index_
 											: ++history_write_index_;
@@ -68,13 +72,13 @@ void controller::process_command(char* command, terminal& term)
 		return;
 	}
 
-	auto* entry = file_system::find_directory_entry(command_name, 0);
+	auto* entry = file_system::find_directory_entry_by_path(command_name);
 	if (entry != nullptr) {
 		file_system::execute_file(*entry, args);
 		return;
 	}
 
-	term.printf("Command not found: %s", command_name);
+	term.printf("%s: command not found", command_name);
 }
 
 } // namespace shell

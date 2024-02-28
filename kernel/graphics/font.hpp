@@ -38,6 +38,10 @@ void write_unicode(screen& scr, Point2D position, char32_t c, uint32_t color_cod
 
 void write_string(screen& scr, Point2D position, const char* s, uint32_t color_code);
 
+void to_lower(char* s);
+
+void to_upper(char* s);
+
 extern bitmap_font* kfont;
 
 FT_Face new_face();
