@@ -19,8 +19,6 @@ terminal::terminal(Color font_color, const char* user_name, Color user_name_colo
 	memcpy(user_name_, user_name, strlen(user_name));
 	clear();
 
-	print("Hello, uchos\n");
-
 	show_user_name();
 }
 
