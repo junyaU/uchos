@@ -1,12 +1,18 @@
+/.vscode
+
 OVMF_CODE.fd
 OVMF_VARS.fd
 
 /x86_64-elf
 
 /build
-
+/mnt
 disk.img
 
-/mnt
+/libs/*/*.o
 
-/.vscode
+/userland/*/*
+!/userland/*/*.c
+!/userland/*/*.h
+!/userland/*/*.cpp
+!/userland/*/*.hpp
