@@ -13,6 +13,7 @@ void sys_exit(int exit_code);
 
 uint64_t sys_open(const char* path, int flags);
 uint64_t sys_read(int fd, void* buf, size_t count);
+uint64_t sys_draw_text(const char* text, int x, int y, uint32_t color);
 
 #ifdef __cplusplus
 }
