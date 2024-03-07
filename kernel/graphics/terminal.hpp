@@ -72,6 +72,8 @@ public:
 
 	void initialize_command_line();
 
+	void debug_mode() { is_debug_ = true; }
+
 private:
 	static int adjusted_x(int x) { return x * kfont->width() + START_X; }
 	static int adjusted_y(int y)
@@ -89,6 +91,8 @@ private:
 	void clear_input_line();
 
 	void show_user_name();
+
+	bool is_debug_{ false };
 
 	std::array<std::array<char32_t, ROW_CHARS + 1>, COLUMN_CHARS> buffer_;
 	std::array<std::array<uint32_t, ROW_CHARS>, COLUMN_CHARS> color_buffer_;

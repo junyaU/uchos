@@ -99,7 +99,8 @@ size_t sys_draw_text(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	const int y = arg3;
 	const uint32_t color = arg4;
 
-	write_string(*kscreen, Point2D{ x, y }, text, color);
+	write_string(*kscreen, Point2D{ x * kfont->width(), y * kfont->height() }, text,
+				 color);
 
 	return strlen(text);
 }

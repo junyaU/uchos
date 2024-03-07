@@ -19,8 +19,6 @@ terminal::terminal(Color font_color, const char* user_name, Color user_name_colo
 	memcpy(user_name_, user_name, strlen(user_name));
 	clear();
 
-	print("Hello, uchos\n");
-
 	show_user_name();
 }
 
@@ -92,6 +90,10 @@ size_t terminal::print(const char* s, size_t len, Color color, bool is_input)
 
 void terminal::info(const char* s)
 {
+	if (!is_debug_) {
+		return;
+	}
+
 	print("[INFO] ");
 	print(s);
 	print("\n");
