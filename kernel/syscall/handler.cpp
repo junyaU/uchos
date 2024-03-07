@@ -1,4 +1,5 @@
 #include "../file_system/fat.hpp"
+#include "../graphics/screen.hpp"
 #include "../graphics/terminal.hpp"
 #include "../task/task.hpp"
 #include "../types.hpp"
@@ -91,6 +92,18 @@ fd_t sys_open(uint64_t arg1, uint64_t arg2)
 	return fd;
 }
 
+size_t sys_draw_text(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
+{
+	const char* text = reinterpret_cast<const char*>(arg1);
+	const int x = arg2;
+	const int y = arg3;
+	const uint32_t color = arg4;
+
+	write_string(*kscreen, Point2D{ x, y }, text, color);
+
+	return strlen(text);
+}
+
 uint64_t sys_exit()
 {
 	task* t = CURRENT_TASK;
@@ -118,6 +131,9 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 			break;
 		case SYS_EXIT:
 			result = sys_exit();
+			break;
+		case SYS_DRAW_TEXT:
+			result = sys_draw_text(arg1, arg2, arg3, arg4);
 			break;
 		default:
 			printk(KERN_ERROR, "Unknown syscall number: %d", syscall_number);
