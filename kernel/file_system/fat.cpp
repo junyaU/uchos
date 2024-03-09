@@ -1,11 +1,8 @@
 #include "fat.hpp"
-#include "../asm_utils.h"
 #include "../elf.hpp"
 #include "../graphics/font.hpp"
 #include "../graphics/terminal.hpp"
-#include "../memory/page.hpp"
 #include "../memory/paging.hpp"
-#include "../memory/segment.hpp"
 #include "../task/task.hpp"
 #include "../types.hpp"
 #include <algorithm>
@@ -54,62 +51,6 @@ std::vector<char*> parse_path(const char* path)
 	}
 
 	return result;
-}
-
-int make_args(char* command,
-			  char* args,
-			  char** argv,
-			  int argv_len,
-			  char* arg_buf,
-			  int arg_buf_len)
-{
-	int argc = 0;
-	int arg_buf_index = 0;
-
-	auto push_to_argv = [&](const char* s) {
-		if (argc >= argv_len || arg_buf_index >= arg_buf_len) {
-			return;
-		}
-
-		argv[argc] = &arg_buf[arg_buf_index];
-		++argc;
-		strncpy(&arg_buf[arg_buf_index], s, arg_buf_len - arg_buf_index);
-		arg_buf_index += strlen(s) + 1;
-	};
-
-	push_to_argv(command);
-
-	if (args == nullptr) {
-		return argc;
-	}
-
-	char* p = args;
-	while (true) {
-		while (*p == ' ') {
-			++p;
-		}
-
-		if (*p == 0) {
-			break;
-		}
-
-		const char* arg = p;
-		while (*p != ' ' && *p != 0) {
-			++p;
-		}
-
-		const bool is_end = *p == 0;
-		*p = 0;
-		push_to_argv(arg);
-
-		if (is_end) {
-			break;
-		}
-
-		++p;
-	}
-
-	return argc;
 }
 
 void read_dir_entry_name(const directory_entry& entry, char* dest)
@@ -298,60 +239,26 @@ std::vector<directory_entry*> list_entries_in_directory(directory_entry* entry)
 
 void execute_file(const directory_entry& entry, const char* args)
 {
-	auto cluster_id = entry.first_cluster();
-	auto remaining_bytes = static_cast<unsigned long>(entry.file_size);
-
-	std::vector<uint8_t> file_buffer(remaining_bytes);
-	auto* p = file_buffer.data();
-
-	while (cluster_id != END_OF_CLUSTER_CHAIN) {
-		const auto copy_bytes = std::min(BYTES_PER_CLUSTER, remaining_bytes);
-		memcpy(p, get_sector<uint8_t>(cluster_id), copy_bytes);
-
-		p += copy_bytes;
-		remaining_bytes -= copy_bytes;
-
-		cluster_id = next_cluster(cluster_id);
-	}
-
-	auto* elf_header = reinterpret_cast<elf64_ehdr_t*>(file_buffer.data());
-	if (!is_elf(elf_header)) {
-		printk(KERN_ERROR, "Not an ELF file.");
-		return;
-	}
-
-	char command_name[13];
-	read_dir_entry_name(entry, command_name);
-
-	load_elf(elf_header);
-
-	const linear_address argv_addr{ 0xffff'ffff'ffff'f000 };
-	setup_page_tables(argv_addr, 1);
-	auto* argv = reinterpret_cast<char**>(argv_addr.data);
-	const int arg_v_len = 32;
-	auto* arg_buf =
-			reinterpret_cast<char*>(argv_addr.data + arg_v_len * sizeof(char**));
-	const int arg_buf_len = PAGE_SIZE - arg_v_len * sizeof(char**);
-	const int argc = make_args(command_name, const_cast<char*>(args), argv,
-							   arg_v_len, arg_buf, arg_buf_len);
-
-	const linear_address stack_addr{ 0xffff'ffff'ffff'f000 };
-	setup_page_tables(stack_addr, 1);
+	std::vector<uint8_t> file_buffer(entry.file_size);
+	load_file(file_buffer.data(), entry.file_size,
+			  const_cast<directory_entry&>(entry));
 
 	task* t = CURRENT_TASK;
 	for (int i = 0; i < 3; ++i) {
 		t->fds[i] = main_terminal->fds_[i];
 	}
 
-	auto entry_addr = elf_header->e_entry;
-	call_userland(argc, argv, USER_SS, entry_addr, stack_addr.data + PAGE_SIZE - 8,
-				  &t->kernel_stack_top);
+	char command_name[13];
+	read_dir_entry_name(entry, command_name);
+
+	exec_elf(file_buffer.data(), command_name, args);
 
 	for (int i = 0; i < 3; ++i) {
 		t->fds[i].reset();
 	}
 
-	const auto addr_first = get_first_load_addr(elf_header);
+	const auto addr_first =
+			get_first_load_addr(reinterpret_cast<elf64_ehdr_t*>(file_buffer.data()));
 	clean_page_tables(linear_address{ addr_first });
 }
 
