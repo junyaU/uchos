@@ -82,7 +82,7 @@ typedef struct {
 
 void load_elf(elf64_ehdr_t* elf_header);
 
-void exec_elf(void* buffer, char* name, const char* args);
+void exec_elf(void* buffer, const char* name, const char* args);
 
 uintptr_t get_first_load_addr(elf64_ehdr_t* elf_header);
 

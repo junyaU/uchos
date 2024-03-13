@@ -131,7 +131,7 @@ void load_elf(elf64_ehdr_t* elf_header)
 	copy_load_segment(elf_header);
 }
 
-void exec_elf(void* buffer, char* name, const char* args)
+void exec_elf(void* buffer, const char* name, const char* args)
 {
 	auto* elf_header = reinterpret_cast<elf64_ehdr_t*>(buffer);
 	if (!is_elf(elf_header)) {
@@ -149,15 +149,22 @@ void exec_elf(void* buffer, char* name, const char* args)
 	auto* arg_buf =
 			reinterpret_cast<char*>(argv_addr.data + arg_v_len * sizeof(char**));
 	const int arg_buf_len = PAGE_SIZE - arg_v_len * sizeof(char**);
-	const int argc = make_args(name, const_cast<char*>(args), argv, arg_v_len,
-							   arg_buf, arg_buf_len);
+	const int argc = make_args(const_cast<char*>(name), const_cast<char*>(args),
+							   argv, arg_v_len, arg_buf, arg_buf_len);
 
 	const linear_address stack_addr{ 0xffff'ffff'ffff'f000 };
 	setup_page_tables(stack_addr, 1);
 
 	task* t = CURRENT_TASK;
+	for (int i = 0; i < 3; ++i) {
+		t->fds[i] = main_terminal->fds_[i];
+	}
 
 	auto entry_addr = elf_header->e_entry;
 	call_userland(argc, argv, USER_SS, entry_addr, stack_addr.data + PAGE_SIZE - 8,
 				  &t->kernel_stack_top);
+
+	for (int i = 0; i < 3; ++i) {
+		t->fds[i].reset();
+	}
 }

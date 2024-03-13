@@ -1,9 +1,7 @@
 #include "fat.hpp"
 #include "../elf.hpp"
 #include "../graphics/font.hpp"
-#include "../graphics/terminal.hpp"
 #include "../memory/paging.hpp"
-#include "../task/task.hpp"
 #include "../types.hpp"
 #include <algorithm>
 #include <cctype>
@@ -243,19 +241,10 @@ void execute_file(const directory_entry& entry, const char* args)
 	load_file(file_buffer.data(), entry.file_size,
 			  const_cast<directory_entry&>(entry));
 
-	task* t = CURRENT_TASK;
-	for (int i = 0; i < 3; ++i) {
-		t->fds[i] = main_terminal->fds_[i];
-	}
-
 	char command_name[13];
 	read_dir_entry_name(entry, command_name);
 
 	exec_elf(file_buffer.data(), command_name, args);
-
-	for (int i = 0; i < 3; ++i) {
-		t->fds[i].reset();
-	}
 
 	const auto addr_first =
 			get_first_load_addr(reinterpret_cast<elf64_ehdr_t*>(file_buffer.data()));

@@ -12,4 +12,6 @@ struct terminal {
 	terminal();
 
 	void print(const char* s);
+
+	void print_user();
 };

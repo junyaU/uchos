@@ -39,7 +39,7 @@ void initialize_interrupt()
 	};
 
 	set_entry(InterruptVector::kLocalApicTimer, on_timer_interrupt, IST_FOR_TIMER);
-	set_entry(InterruptVector::kXHCI, on_xhci_interrupt);
+	set_entry(InterruptVector::kXHCI, on_xhci_interrupt, IST_FOR_XHCI);
 	set_entry(0, InterruptHandlerDE);
 	set_entry(1, InterruptHandlerDB);
 	set_entry(3, InterruptHandlerBP);

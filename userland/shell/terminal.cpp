@@ -16,9 +16,17 @@ terminal::terminal()
 	}
 }
 
+void terminal::print_user()
+{
+	print_text(cursor_x, cursor_y, user_name, 0x00ff00);
+	cursor_x += strlen(user_name);
+	print_text(cursor_x, cursor_y, ":~$ ", 0xffffff);
+	cursor_x += 4;
+}
+
 void terminal::print(const char* s)
 {
-	print_text(cursor_x, cursor_y, s, 0x00ff00);
+	print_text(cursor_x, cursor_y, s, 0xffffff);
 	cursor_x += strlen(s);
 	if (cursor_x == 98) {
 		cursor_x = 0;
