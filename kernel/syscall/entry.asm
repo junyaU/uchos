@@ -7,6 +7,7 @@ bits 64
 section .text
 
 extern handle_syscall
+extern get_current_task_stack
 
 global syscall_entry
 syscall_entry:
@@ -19,6 +20,21 @@ syscall_entry:
     mov r9, rax ; save syscall number in 6th argument
 
     mov rbp, rsp
+    and rsp, 0xfffffffffffffff0 ; align stack to 16 bytes
+
+    push rax
+    push rdx
+
+    call get_current_task_stack ; save kernel stack pointer to RAX
+
+    mov rdx, [rsp + 0] ; restore RDX
+    mov [rax - 16], rdx ; save RDX to kernel stack
+    mov rdx, [rsp + 8] ; restore RAX
+    mov [rax - 8], rdx ; save RAX to kernel stack
+
+    lea rsp, [rax - 16] ; switch to kernel stack
+    pop rdx ; restore RAX
+    pop rax ; restore syscall number
     and rsp, 0xfffffffffffffff0 ; align stack to 16 bytes
 
     call handle_syscall

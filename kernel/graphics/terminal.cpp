@@ -1,5 +1,4 @@
 #include "terminal.hpp"
-#include "../hardware/keyboard.hpp"
 #include "../shell/controller.hpp"
 #include "../task/ipc.hpp"
 #include "../task/task.hpp"
@@ -19,7 +18,7 @@ terminal::terminal(Color font_color, const char* user_name, Color user_name_colo
 	memcpy(user_name_, user_name, strlen(user_name));
 	clear();
 
-	show_user_name();
+	// show_user_name();
 }
 
 void terminal::initialize_fds()
@@ -156,7 +155,7 @@ void terminal::input_key(uint8_t c)
 		if (cursor_x_ != 0) {
 			next_line();
 		} else {
-			show_user_name();
+			// show_user_name();
 		}
 
 		return;
@@ -242,7 +241,7 @@ void terminal::next_line(bool is_input)
 	}
 
 	if (!is_input) {
-		show_user_name();
+		// show_user_name();
 	}
 }
 
@@ -334,6 +333,7 @@ size_t term_file_descriptor::read(void* buf, size_t len)
 	char* bufc = reinterpret_cast<char*>(buf);
 	task* t = CURRENT_TASK;
 
+	size_t read_len = 0;
 	while (true) {
 		if (t->messages.empty()) {
 			t->state = TASK_WAITING;
@@ -348,14 +348,11 @@ size_t term_file_descriptor::read(void* buf, size_t len)
 			continue;
 		}
 
-		if (is_EOT(m.data.key_input.modifier, m.data.key_input.key_code)) {
-			main_terminal->print("^D");
-			return 0;
-		}
+		bufc[read_len++] = m.data.key_input.ascii;
 
-		bufc[0] = m.data.key_input.ascii;
-		main_terminal->print(bufc);
-		return 1;
+		if (read_len == len) {
+			return read_len;
+		}
 	}
 }
 

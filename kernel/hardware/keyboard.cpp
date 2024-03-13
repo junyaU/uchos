@@ -1,5 +1,4 @@
 #include "usb/class_driver/keyboard.hpp"
-#include "../graphics/terminal.hpp"
 #include "../task/ipc.hpp"
 #include "../types.hpp"
 #include "keyboard.hpp"
@@ -53,6 +52,10 @@ void initialize_keyboard()
 {
 	usb::keyboard_driver::default_observer = [](uint8_t modifier, uint8_t keycode,
 												bool press) {
+		if (!press) {
+			return;
+		}
+
 		const bool shift = (modifier & (L_SHIFT | R_SHIFT)) != 0;
 		const char ascii =
 				shift ? keycode_map_shifted[keycode] : keycode_map[keycode];
@@ -66,9 +69,7 @@ void initialize_keyboard()
 								 .press = static_cast<int>(press),
 						 } } };
 
-		if (m.data.key_input.press != 0) {
-			send_message(main_terminal->task_id(), &m);
-		}
+		send_message(SHELL_TASK_ID, &m);
 	};
 }
 

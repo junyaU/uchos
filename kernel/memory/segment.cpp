@@ -102,6 +102,7 @@ void initialize_tss()
 	const size_t stack_size = PAGE_SIZE * 8;
 	void* stack1 = allocate_stack(stack_size);
 	void* stack2 = allocate_stack(stack_size);
+	void* stack3 = allocate_stack(stack_size);
 	if (stack1 == nullptr || stack2 == nullptr) {
 		printk(KERN_ERROR, "Failed to allocate stack for TSS.");
 		return;
@@ -109,6 +110,7 @@ void initialize_tss()
 
 	set_tss(1, stack1);
 	set_tss(7 + 2 * IST_FOR_TIMER, stack2);
+	set_tss(7 + 2 * IST_FOR_XHCI, stack3);
 
 	const uint64_t tss_addr = reinterpret_cast<uint64_t>(tss.data());
 	set_system_segment(gdt[TSS >> 3], descriptor_type::TSS_AVAILABLE, 0,

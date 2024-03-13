@@ -1,3 +1,4 @@
+#include "elf.hpp"
 #include "file_system/fat.hpp"
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
@@ -29,8 +30,9 @@ void task_main()
 	t->message_handlers[NOTIFY_TIMER_TIMEOUT] = +[](const message& m) {
 		switch (m.data.timer.action) {
 			case timeout_action_t::TERMINAL_CURSOR_BLINK: {
-				const message send_m = { NOTIFY_CURSOR_BLINK, 0, {} };
-				send_message(main_terminal->task_id(), &send_m);
+				// TODO: implement cursor blink for userland
+				// const message send_m = { NOTIFY_CURSOR_BLINK, 0, {} };
+				// send_message(main_terminal->task_id(), &send_m);
 				break;
 			}
 
@@ -40,6 +42,21 @@ void task_main()
 	};
 
 	process_messages(t);
+}
+
+void task_shell()
+{
+	auto* entry = file_system::find_directory_entry_by_path("/shell");
+	if (entry == nullptr) {
+		printk(KERN_ERROR, "failed to find /shell");
+		return;
+	}
+
+	std::vector<uint8_t> buf(entry->file_size);
+
+	file_system::load_file(buf.data(), entry->file_size, *entry);
+
+	exec_elf(buf.data(), "shell", nullptr);
 }
 
 // 1MiB　
@@ -101,6 +118,10 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	usb::xhci::initialize();
 
 	initialize_keyboard();
+
+	task* shell_task =
+			create_task("shell", reinterpret_cast<uint64_t>(&task_shell), 2, true);
+	schedule_task(shell_task->id);
 
 	task_main();
 }

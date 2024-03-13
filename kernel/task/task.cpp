@@ -1,4 +1,6 @@
 #include "task.hpp"
+#include "../elf.hpp"
+#include "../file_system/fat.hpp"
 #include "../file_system/file_descriptor.hpp"
 #include "../graphics/terminal.hpp"
 #include "../hardware/usb/task.hpp"
@@ -76,16 +78,17 @@ task* get_scheduled_task()
 
 void schedule_task(task_t id)
 {
-	if (tasks[id] == nullptr) {
+	if (tasks.size() <= id || tasks[id] == nullptr) {
 		printk(KERN_ERROR, "task %d is not found", id);
 		return;
 	}
+
+	tasks[id]->state = TASK_READY;
 
 	if (list_contains(&run_queue, &tasks[id]->run_queue_elem)) {
 		return;
 	}
 
-	tasks[id]->state = TASK_READY;
 	list_push_back(&run_queue, &tasks[id]->run_queue_elem);
 }
 
@@ -200,7 +203,6 @@ task::task(int id,
 	ctx.rip = task_addr;
 	ctx.cs = KERNEL_CS;
 	ctx.ss = KERNEL_SS;
-
 	*reinterpret_cast<uint32_t*>(&ctx.fxsave_area[24]) = 0x1f80;
 }
 
@@ -209,4 +211,9 @@ task::task(int id,
 	while (true) {
 		__asm__("hlt");
 	}
+}
+
+extern "C" uint64_t get_current_task_stack()
+{
+	return CURRENT_TASK->kernel_stack_top;
 }

@@ -35,5 +35,6 @@ struct idtr {
 } __attribute__((packed));
 
 const int IST_FOR_TIMER = 1;
+const int IST_FOR_XHCI = 2;
 
 void initialize_interrupt();
