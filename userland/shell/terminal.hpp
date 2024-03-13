@@ -1,17 +1,25 @@
 #pragma once
 
 #include <array>
-#include <cstdint>
+#include <cstddef>
 
 struct terminal {
 	std::array<std::array<char, 98>, 30> buffer;
 	char user_name[16];
 	int cursor_x;
 	int cursor_y;
+	char input[98];
+	int input_index;
 
 	terminal();
 
+	void new_line();
+
+	void print(char s);
+
 	void print(const char* s);
 
-	void print_user();
+	size_t print_user();
+
+	void input_char(char c);
 };

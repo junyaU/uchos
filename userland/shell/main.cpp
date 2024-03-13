@@ -12,9 +12,9 @@ extern "C" int main(int argc, char** argv)
 	term->print_user();
 
 	while (true) {
-		char buf[2];
+		char buf[1];
 		sys_read(0, buf, 1);
-		term->print(buf);
+		term->input_char(buf[0]);
 	}
 
 	exit(0);
