@@ -105,6 +105,23 @@ size_t sys_draw_text(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	return strlen(text);
 }
 
+error_t sys_fill_rect(uint64_t arg1,
+					  uint64_t arg2,
+					  uint64_t arg3,
+					  uint64_t arg4,
+					  uint64_t arg5)
+{
+	const int x = arg1;
+	const int y = arg2;
+	const int width = arg3;
+	const int height = arg4;
+	const uint32_t color = arg5;
+
+	kscreen->fill_rectangle(Point2D{ x, y }, Point2D{ width, height }, color);
+
+	return OK;
+}
+
 uint64_t sys_exit()
 {
 	task* t = CURRENT_TASK;
@@ -135,6 +152,9 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 			break;
 		case SYS_DRAW_TEXT:
 			result = sys_draw_text(arg1, arg2, arg3, arg4);
+			break;
+		case SYS_FILL_RECT:
+			result = sys_fill_rect(arg1, arg2, arg3, arg4, arg5);
 			break;
 		default:
 			printk(KERN_ERROR, "Unknown syscall number: %d", syscall_number);
