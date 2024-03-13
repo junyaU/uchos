@@ -10,6 +10,7 @@ struct terminal {
 	int cursor_y;
 	char input[98];
 	int input_index;
+	int prompt_len;
 
 	terminal();
 

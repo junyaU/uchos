@@ -30,9 +30,8 @@ size_t terminal::print_user()
 	}
 
 	print_text(cursor_x, cursor_y, ":~$ ", 0xffffff);
-	size_t prompt_len = 4;
-	cursor_x += prompt_len;
-	total += prompt_len;
+	cursor_x += 4;
+	total += 4;
 
 	for (size_t i = 0; i < prompt_len; i++) {
 		buffer[cursor_y][cursor_x + i] = ":~$ "[i];
@@ -42,6 +41,8 @@ size_t terminal::print_user()
 	input_index += user_name_len;
 	memcpy(&input[input_index], ":~$ ", 4);
 	input_index += 4;
+
+	prompt_len = total;
 
 	return total;
 }
@@ -91,14 +92,24 @@ void terminal::input_char(char c)
 		++cursor_y;
 
 		// TODO: handle input to shell
-		print("You entered: ");
-		print(input);
+		print(&input[prompt_len]);
+		print(" : command not found");
 		print("\n");
 
 		// print(input);
 		memset(input, 0, 98);
 
 		print_user();
+
+		return;
+	}
+
+	if (c == '\b') {
+		if (input_index > prompt_len) {
+			input[--input_index] = '\0';
+			delete_char(--cursor_x, cursor_y);
+			buffer[cursor_y][cursor_x] = '\0';
+		}
 
 		return;
 	}
