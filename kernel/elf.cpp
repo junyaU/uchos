@@ -152,8 +152,9 @@ void exec_elf(void* buffer, const char* name, const char* args)
 	const int argc = make_args(const_cast<char*>(name), const_cast<char*>(args),
 							   argv, arg_v_len, arg_buf, arg_buf_len);
 
-	const linear_address stack_addr{ 0xffff'ffff'ffff'f000 };
-	setup_page_tables(stack_addr, 1);
+	const int stack_size = PAGE_SIZE * 8;
+	const linear_address stack_addr{ 0xffff'ffff'ffff'f000 - stack_size };
+	setup_page_tables(stack_addr, stack_size / PAGE_SIZE);
 
 	task* t = CURRENT_TASK;
 	for (int i = 0; i < 3; ++i) {
@@ -161,7 +162,7 @@ void exec_elf(void* buffer, const char* name, const char* args)
 	}
 
 	auto entry_addr = elf_header->e_entry;
-	call_userland(argc, argv, USER_SS, entry_addr, stack_addr.data + PAGE_SIZE - 8,
+	call_userland(argc, argv, USER_SS, entry_addr, stack_addr.data + stack_size - 8,
 				  &t->kernel_stack_top);
 
 	for (int i = 0; i < 3; ++i) {

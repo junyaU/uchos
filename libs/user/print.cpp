@@ -14,3 +14,5 @@ void delete_char(int x, int y)
 	const int font_height = 16;
 	sys_fill_rect(x * font_width, y * font_height, font_width, font_height, color);
 }
+
+void clear_screen() { sys_fill_rect(0, 0, 800, 600, 0x000000); }
