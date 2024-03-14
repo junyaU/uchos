@@ -3,6 +3,9 @@
 #include <cstddef>
 #include <cstring>
 
+std::array<std::array<char, 98>, 35> terminal::buffer;
+std::array<std::array<uint32_t, 98>, 35> terminal::color_buffer;
+
 terminal::terminal()
 {
 	char user_name[16] = "root@uchos";
@@ -10,11 +13,6 @@ terminal::terminal()
 
 	cursor_x = 0;
 	cursor_y = 0;
-	for (int i = 0; i < 30; i++) {
-		for (int j = 0; j < 98; j++) {
-			buffer[i][j] = '\0';
-		}
-	}
 }
 
 size_t terminal::print_user()
@@ -38,12 +36,12 @@ void terminal::scroll()
 	clear_screen();
 	memcpy(&buffer, &buffer[1], sizeof(buffer) - sizeof(buffer[0]));
 
-	for (int i = 0; i < 34; i++) {
-		buffer[34][i] = '\0';
-	}
+	memset(&buffer[34], '\0', 98);
 
-	for (int i = 0; i < 34; i++) {
-		print_text(0, i, buffer[i].data(), 0xffffff);
+	for (int i = 0; i < 34; ++i) {
+		for (int j = 0; j < 98; ++j) {
+			print_text(j, i, &buffer[i][j], color_buffer[i][j]);
+		}
 	}
 
 	cursor_y = 34;
@@ -69,7 +67,8 @@ void terminal::print(char s, uint32_t color)
 
 	char str[2] = { s, '\0' };
 	print_text(cursor_x, cursor_y, str, color);
-	buffer[cursor_y][cursor_x++] = s;
+	buffer[cursor_y][cursor_x] = s;
+	color_buffer[cursor_y][cursor_x++] = color;
 
 	if (cursor_x == 98) {
 		cursor_x = 0;

@@ -5,7 +5,8 @@
 #include <cstdint>
 
 struct terminal {
-	std::array<std::array<char, 98>, 35> buffer;
+	static std::array<std::array<char, 98>, 35> buffer;
+	static std::array<std::array<uint32_t, 98>, 35> color_buffer;
 	char user_name[16];
 	int cursor_x;
 	int cursor_y;
