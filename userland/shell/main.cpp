@@ -1,3 +1,4 @@
+#include "shell.hpp"
 #include "terminal.hpp"
 #include <../../libs/user/print.hpp>
 #include <../../libs/user/syscall.hpp>
@@ -5,10 +6,13 @@
 #include <stdalign.h>
 
 alignas(terminal) char buffer[sizeof(terminal)];
+alignas(shell) char shell_buffer[sizeof(shell)];
 
 extern "C" int main(int argc, char** argv)
 {
-	auto* term = new (buffer) terminal();
+	auto* s = new (shell_buffer) shell();
+	auto* term = new (buffer) terminal(s);
+
 	term->print_user();
 
 	while (true) {
