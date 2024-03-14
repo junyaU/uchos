@@ -2,9 +2,10 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 
 struct terminal {
-	std::array<std::array<char, 98>, 30> buffer;
+	std::array<std::array<char, 98>, 35> buffer;
 	char user_name[16];
 	int cursor_x;
 	int cursor_y;
@@ -14,11 +15,13 @@ struct terminal {
 
 	terminal();
 
+	void scroll();
+
 	void new_line();
 
-	void print(char s);
+	void print(char s, uint32_t color = 0xffffff);
 
-	void print(const char* s);
+	void print(const char* s, uint32_t color = 0xffffff);
 
 	size_t print_user();
 
