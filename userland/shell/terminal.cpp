@@ -1,12 +1,14 @@
 #include "terminal.hpp"
+#include "shell.hpp"
 #include <../../libs/user/print.hpp>
 #include <cstddef>
 #include <cstring>
 
-std::array<std::array<char, 98>, 35> terminal::buffer;
-std::array<std::array<uint32_t, 98>, 35> terminal::color_buffer;
+std::array<std::array<char, TERMINAL_WIDTH>, TERMINAL_HEIGHT> terminal::buffer;
+std::array<std::array<uint32_t, TERMINAL_WIDTH>, TERMINAL_HEIGHT>
+		terminal::color_buffer;
 
-terminal::terminal()
+terminal::terminal(shell* s) : shell_(s)
 {
 	char user_name[16] = "root@uchos";
 	memcpy(this->user_name, user_name, 16);
@@ -35,26 +37,28 @@ void terminal::scroll()
 {
 	clear_screen();
 	memcpy(&buffer, &buffer[1], sizeof(buffer) - sizeof(buffer[0]));
+	memcpy(&color_buffer, &color_buffer[1],
+		   sizeof(color_buffer) - sizeof(color_buffer[0]));
+	memset(&buffer[TERMINAL_HEIGHT - 1], '\0', TERMINAL_WIDTH);
+	memset(&color_buffer[TERMINAL_HEIGHT - 1], 0, TERMINAL_WIDTH);
 
-	memset(&buffer[34], '\0', 98);
-
-	for (int i = 0; i < 34; ++i) {
-		for (int j = 0; j < 98; ++j) {
+	for (int i = 0; i < TERMINAL_HEIGHT - 1; ++i) {
+		for (int j = 0; j < TERMINAL_WIDTH; ++j) {
 			print_text(j, i, &buffer[i][j], color_buffer[i][j]);
 		}
 	}
 
-	cursor_y = 34;
+	cursor_y = TERMINAL_HEIGHT - 1;
 	cursor_x = 0;
 }
 
 void terminal::new_line()
 {
-	if (cursor_y == 34) {
+	if (cursor_y == TERMINAL_HEIGHT - 1) {
 		scroll();
 	} else {
 		cursor_x = 0;
-		cursor_y += 1;
+		++cursor_y;
 	}
 }
 
@@ -70,9 +74,9 @@ void terminal::print(char s, uint32_t color)
 	buffer[cursor_y][cursor_x] = s;
 	color_buffer[cursor_y][cursor_x++] = color;
 
-	if (cursor_x == 98) {
+	if (cursor_x == TERMINAL_WIDTH) {
 		cursor_x = 0;
-		cursor_y += 1;
+		++cursor_y;
 	}
 }
 
@@ -92,13 +96,9 @@ void terminal::input_char(char c)
 		input_index = 0;
 
 		new_line();
+		shell_->process_input(&input[prompt_len], *this);
 
-		// TODO: handle input to shell
-		print(&input[prompt_len]);
-		print(" : command not found");
-		print("\n");
-
-		memset(input, '\0', 98);
+		memset(input, '\0', TERMINAL_WIDTH);
 		print_user();
 
 		return;
