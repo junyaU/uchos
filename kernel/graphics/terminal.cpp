@@ -333,27 +333,24 @@ size_t term_file_descriptor::read(void* buf, size_t len)
 	char* bufc = reinterpret_cast<char*>(buf);
 	task* t = CURRENT_TASK;
 
+	if (t->messages.empty()) {
+		t->state = TASK_WAITING;
+		return 0;
+	}
+
+	t->state = TASK_RUNNING;
+
 	size_t read_len = 0;
-	while (true) {
-		if (t->messages.empty()) {
-			t->state = TASK_WAITING;
-			continue;
-		}
-
-		t->state = TASK_RUNNING;
-
+	while (!t->messages.empty() && read_len < len) {
 		const message m = t->messages.front();
 		t->messages.pop();
-		if (m.type != NOTIFY_KEY_INPUT) {
-			continue;
-		}
 
-		bufc[read_len++] = m.data.key_input.ascii;
-
-		if (read_len == len) {
-			return read_len;
+		if (m.type == NOTIFY_KEY_INPUT) {
+			bufc[read_len++] = m.data.key_input.ascii;
 		}
 	}
+
+	return read_len;
 }
 
 size_t term_file_descriptor::write(const void* buf, size_t len)

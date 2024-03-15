@@ -17,7 +17,10 @@ extern "C" int main(int argc, char** argv)
 
 	while (true) {
 		char buf[1];
-		sys_read(0, buf, 1);
+		if (sys_read(0, buf, 1) == 0) {
+			continue;
+		}
+
 		term->input_char(buf[0]);
 	}
 
