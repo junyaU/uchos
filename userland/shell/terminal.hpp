@@ -19,9 +19,12 @@ struct terminal {
 	char input[TERMINAL_WIDTH];
 	int input_index;
 	int prompt_len;
+	bool cursor_visible;
 	shell* shell_;
 
 	terminal(shell* s);
+
+	void blink_cursor();
 
 	static int adjusted_x(int x);
 

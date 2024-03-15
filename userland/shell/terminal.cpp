@@ -17,6 +17,17 @@ terminal::terminal(shell* s) : shell_(s)
 	cursor_y = 0;
 }
 
+void terminal::blink_cursor()
+{
+	if (cursor_visible) {
+		print_text(adjusted_x(cursor_x), adjusted_y(cursor_y), "_", 0xffffff);
+	} else {
+		delete_char(adjusted_x(cursor_x), adjusted_y(cursor_y));
+	}
+
+	cursor_visible = !cursor_visible;
+}
+
 int terminal::adjusted_x(int x) { return x * FONT_WIDTH + START_X; }
 
 int terminal::adjusted_y(int y)
@@ -72,6 +83,9 @@ void terminal::new_line()
 
 void terminal::print(char s, uint32_t color)
 {
+	// delete the cursor
+	delete_char(adjusted_x(cursor_x), adjusted_y(cursor_y));
+
 	if (s == '\n') {
 		new_line();
 		return;
@@ -99,8 +113,11 @@ void terminal::print(const char* s, uint32_t color)
 
 void terminal::input_char(char c)
 {
+	// delete the cursor
+	delete_char(adjusted_x(cursor_x), adjusted_y(cursor_y));
+	input[input_index] = '\0';
+
 	if (c == '\n') {
-		input[input_index] = '\0';
 		input_index = 0;
 
 		new_line();

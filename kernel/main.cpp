@@ -19,6 +19,7 @@
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"
+#include "types.hpp"
 
 struct FrameBufferConf;
 struct MemoryMap;
@@ -31,8 +32,8 @@ void task_main()
 		switch (m.data.timer.action) {
 			case timeout_action_t::TERMINAL_CURSOR_BLINK: {
 				// TODO: implement cursor blink for userland
-				// const message send_m = { NOTIFY_CURSOR_BLINK, 0, {} };
-				// send_message(main_terminal->task_id(), &send_m);
+				const message send_m = { NOTIFY_CURSOR_BLINK, 0, {} };
+				send_message(SHELL_TASK_ID, &send_m);
 				break;
 			}
 
