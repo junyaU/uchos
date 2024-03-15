@@ -17,6 +17,13 @@ terminal::terminal(shell* s) : shell_(s)
 	cursor_y = 0;
 }
 
+int terminal::adjusted_x(int x) { return x * FONT_WIDTH + START_X; }
+
+int terminal::adjusted_y(int y)
+{
+	return y * FONT_HEIGHT + START_Y + (y * LINE_SPACING);
+}
+
 size_t terminal::print_user()
 {
 	print(user_name, 0x00ff00);
@@ -42,9 +49,10 @@ void terminal::scroll()
 	memset(&buffer[TERMINAL_HEIGHT - 1], '\0', TERMINAL_WIDTH);
 	memset(&color_buffer[TERMINAL_HEIGHT - 1], 0, TERMINAL_WIDTH);
 
-	for (int i = 0; i < TERMINAL_HEIGHT - 1; ++i) {
-		for (int j = 0; j < TERMINAL_WIDTH; ++j) {
-			print_text(j, i, &buffer[i][j], color_buffer[i][j]);
+	for (int y = 0; y < TERMINAL_HEIGHT - 1; ++y) {
+		for (int x = 0; x < TERMINAL_WIDTH; ++x) {
+			print_text(adjusted_x(x), adjusted_y(y), &buffer[y][x],
+					   color_buffer[y][x]);
 		}
 	}
 
@@ -70,7 +78,7 @@ void terminal::print(char s, uint32_t color)
 	}
 
 	char str[2] = { s, '\0' };
-	print_text(cursor_x, cursor_y, str, color);
+	print_text(adjusted_x(cursor_x), adjusted_y(cursor_y), str, color);
 	buffer[cursor_y][cursor_x] = s;
 	color_buffer[cursor_y][cursor_x++] = color;
 
@@ -107,7 +115,7 @@ void terminal::input_char(char c)
 	if (c == '\b') {
 		if (input_index > prompt_len) {
 			input[--input_index] = '\0';
-			delete_char(--cursor_x, cursor_y);
+			delete_char(adjusted_x(--cursor_x), adjusted_y(cursor_y));
 			buffer[cursor_y][cursor_x] = '\0';
 		}
 

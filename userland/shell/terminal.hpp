@@ -6,8 +6,8 @@
 
 struct shell;
 
-constexpr size_t TERMINAL_WIDTH = 98;
-constexpr size_t TERMINAL_HEIGHT = 35;
+constexpr size_t TERMINAL_WIDTH = 98, TERMINAL_HEIGHT = 30;
+constexpr int LINE_SPACING = 3, START_X = 7, START_Y = 7;
 
 struct terminal {
 	static std::array<std::array<char, TERMINAL_WIDTH>, TERMINAL_HEIGHT> buffer;
@@ -22,6 +22,10 @@ struct terminal {
 	shell* shell_;
 
 	terminal(shell* s);
+
+	static int adjusted_x(int x);
+
+	static int adjusted_y(int y);
 
 	void scroll();
 
