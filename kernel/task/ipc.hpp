@@ -3,6 +3,11 @@
 #include "../types.hpp"
 #include <cstdint>
 
+// flags for sys_ipc
+constexpr int IPC_RECV = 0;
+constexpr int IPC_SEND = 1;
+
+constexpr int NO_TASK = -1;
 constexpr int NOTIFY_KEY_INPUT = 0;
 constexpr int NOTIFY_XHCI = 1;
 constexpr int NOTIFY_CURSOR_BLINK = 2;

@@ -99,7 +99,7 @@ size_t sys_draw_text(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	const int y = arg3;
 	const uint32_t color = arg4;
 
-	write_string(*kscreen, Point2D{ x, y }, text, color);
+	write_string(*kscreen, { x, y }, text, color);
 
 	return strlen(text);
 }
@@ -117,6 +117,42 @@ error_t sys_fill_rect(uint64_t arg1,
 	const uint32_t color = arg5;
 
 	kscreen->fill_rectangle(Point2D{ x, y }, Point2D{ width, height }, color);
+
+	return OK;
+}
+
+error_t sys_time(uint64_t arg1)
+{
+	const uint64_t ms = arg1;
+
+	// TODO: implement
+	write_string(*kscreen, { 500, 500 }, "Time: ", 0x00FF00);
+
+	return OK;
+}
+
+error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
+{
+	const int dest = arg1;
+	const int src = arg2;
+	message& m = *reinterpret_cast<message*>(arg3);
+	const int flags = arg4;
+
+	task* t = CURRENT_TASK;
+
+	if (flags == IPC_RECV) {
+		if (t->messages.empty()) {
+			t->state = TASK_WAITING;
+			memset(&m, 0, sizeof(m));
+			m.type = NO_TASK;
+			return OK;
+		}
+
+		t->state = TASK_RUNNING;
+
+		m = t->messages.front();
+		t->messages.pop();
+	}
 
 	return OK;
 }
@@ -154,6 +190,12 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 			break;
 		case SYS_FILL_RECT:
 			result = sys_fill_rect(arg1, arg2, arg3, arg4, arg5);
+			break;
+		case SYS_TIME:
+			result = sys_time(arg1);
+			break;
+		case SYS_IPC:
+			result = sys_ipc(arg1, arg2, arg3, arg4);
 			break;
 		default:
 			printk(KERN_ERROR, "Unknown syscall number: %d", syscall_number);
