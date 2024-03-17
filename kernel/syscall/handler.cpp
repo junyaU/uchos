@@ -152,6 +152,16 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 
 		m = t->messages.front();
 		t->messages.pop();
+
+		return OK;
+	}
+
+	if (flags == IPC_SEND) {
+		message copy_m = m;
+		copy_m.sender = t->id;
+
+		send_message(dest, &copy_m);
+		t->state = TASK_WAITING;
 	}
 
 	return OK;

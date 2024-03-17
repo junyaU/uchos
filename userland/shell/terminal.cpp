@@ -15,10 +15,16 @@ terminal::terminal(shell* s) : shell_(s)
 
 	cursor_x = 0;
 	cursor_y = 0;
+	enable_input = true;
 }
 
 void terminal::blink_cursor()
 {
+	if (!enable_input) {
+		cursor_visible = false;
+		return;
+	}
+
 	if (cursor_visible) {
 		print_text(adjusted_x(cursor_x), adjusted_y(cursor_y), "_", 0xffffff);
 	} else {
@@ -37,6 +43,10 @@ int terminal::adjusted_y(int y)
 
 size_t terminal::print_user()
 {
+	if (!enable_input) {
+		return 0;
+	}
+
 	print(user_name, 0x00ff00);
 	size_t user_len = strlen(user_name);
 	memcpy(input, user_name, user_len);
@@ -113,6 +123,10 @@ void terminal::print(const char* s, uint32_t color)
 
 void terminal::input_char(char c)
 {
+	if (!enable_input) {
+		return;
+	}
+
 	// delete the cursor
 	delete_char(adjusted_x(cursor_x), adjusted_y(cursor_y));
 	input[input_index] = '\0';

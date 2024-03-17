@@ -302,13 +302,6 @@ void task_terminal()
 
 	main_terminal->set_task_id(t->id);
 
-	t->message_handlers[NOTIFY_KEY_INPUT] = +[](const message& m) {
-		main_terminal->input_key(m.data.key_input.ascii);
-	};
-
-	t->message_handlers[NOTIFY_CURSOR_BLINK] =
-			+[](const message& m) { main_terminal->cursor_blink(); };
-
 	t->message_handlers[NOTIFY_WRITE] = +[](const message& m) {
 		switch (m.data.write.level) {
 			case KERN_DEBUG:

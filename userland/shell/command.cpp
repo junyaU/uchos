@@ -14,10 +14,16 @@ void echo(const char* input, terminal& term)
 
 void ls(char* input, terminal& term)
 {
+	term.enable_input = false;
+
 	message m;
 	m.type = IPC_FILE_SYSTEM_OPERATION;
 	m.data.fs_operation.operation = FS_OP_LIST;
-	m.data.fs_operation.path = input;
+	if (input == nullptr) {
+		memcpy(m.data.fs_operation.path, "/", 2);
+	} else {
+		memcpy(m.data.fs_operation.path, input, strlen(input));
+	}
 
 	send_message(0, &m);
 }

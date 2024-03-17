@@ -143,7 +143,8 @@ void printk(int level, const char* format, Args... args)
 				break;
 		}
 	} else {
-		const message m{ NOTIFY_WRITE, task_id, { .write = { s, level } } };
+		const message m{ NOTIFY_WRITE, task_id, { .write = { .level = level } } };
+
 		send_message(main_terminal->task_id(), &m);
 	}
 }

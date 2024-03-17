@@ -26,6 +26,15 @@ extern "C" int main(int argc, char** argv)
 			case NOTIFY_KEY_INPUT:
 				term->input_char(msg.data.key_input.ascii);
 				break;
+			case NOTIFY_WRITE:
+				// TODO: function to print to terminal
+				term->print(msg.data.write_shell.buf);
+				term->enable_input = msg.data.write_shell.is_end_of_message;
+				if (msg.data.write_shell.is_end_of_message) {
+					term->print("\n");
+					term->print_user();
+				}
+				break;
 			case NOTIFY_CURSOR_BLINK:
 				term->blink_cursor();
 				break;
