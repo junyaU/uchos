@@ -19,6 +19,7 @@
 #include "../task/ipc.hpp"
 #include "../task/task.hpp"
 #include "../types.hpp"
+#include "screen.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -107,13 +108,14 @@ extern terminal* main_terminal;
 void initialize_terminal();
 void task_terminal();
 
-template<typename... Args>
-void printk(int level, const char* format, Args... args)
-{
-	if (main_terminal == nullptr) {
-		return;
-	}
+static int kernel_cursor_x = 0;
+static int kernel_cursor_y = 5;
+static int LOG_LEVEL = KERN_ERROR;
 
+template<typename... Args>
+__attribute__((no_caller_saved_registers)) void
+printk(int level, const char* format, Args... args)
+{
 	char s[1024];
 	if (sizeof...(args) == 0) {
 		strncpy(s, format, sizeof(s));
@@ -125,24 +127,28 @@ void printk(int level, const char* format, Args... args)
 #pragma GCC diagnostic pop
 	}
 
-	const int task_id = main_terminal->task_id();
-	if (task_id == -1 || task_id == CURRENT_TASK->id) {
-		switch (level) {
-			case KERN_DEBUG:
-				main_terminal->print(s);
-				break;
-			case KERN_ERROR:
-				main_terminal->error(s);
-				break;
-			case KERN_INFO:
-				main_terminal->info(s);
-				break;
-		}
-	} else {
-		const message m{ NOTIFY_WRITE, task_id, { .write = { .level = level } } };
-
-		send_message(main_terminal->task_id(), &m);
+	if (level != LOG_LEVEL) {
+		return;
 	}
+
+	for (size_t i = 0; i < strlen(s) && s[i] != '\0'; ++i) {
+		write_ascii(*kscreen, { kernel_cursor_x++ * 8, kernel_cursor_y * 16 }, s[i],
+					0xffff00);
+
+		if (s[i] == '\n') {
+			kernel_cursor_x = 0;
+			++kernel_cursor_y;
+			continue;
+		}
+
+		if (kernel_cursor_x >= 98) {
+			kernel_cursor_x = 0;
+			++kernel_cursor_y;
+		}
+	}
+
+	kernel_cursor_x = 0;
+	++kernel_cursor_y;
 }
 
 struct term_file_descriptor : public file_descriptor {

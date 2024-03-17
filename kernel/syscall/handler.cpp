@@ -67,13 +67,13 @@ fd_t sys_open(uint64_t arg1, uint64_t arg2)
 	auto* entry = file_system::find_directory_entry_by_path(path);
 	if (entry == nullptr) {
 		if ((flags & O_CREAT) == 0) {
-			main_terminal->printf("open: %s: No such file or directory\n", path);
+			printk(KERN_ERROR, "open: %s: No such file or directory\n", path);
 			return NO_FD;
 		}
 
 		auto* new_entry = file_system::create_file(path);
 		if (new_entry == nullptr) {
-			main_terminal->printf("open: %s: No such file or directory\n", path);
+			printk(KERN_ERROR, "open: %s: No such file or directory\n", path);
 			return NO_FD;
 		}
 
@@ -83,7 +83,7 @@ fd_t sys_open(uint64_t arg1, uint64_t arg2)
 	task* t = CURRENT_TASK;
 	const fd_t fd = allocate_fd(t);
 	if (fd == NO_FD) {
-		main_terminal->printf("open: %s: Too many open files\n", path);
+		printk(KERN_ERROR, "open: %s: Too many open files\n", path);
 		return NO_FD;
 	}
 
