@@ -80,6 +80,27 @@ void task_main()
 			memcpy(send_m.data.write_shell.buf, buf, 128);
 
 			send_message(SHELL_TASK_ID, &send_m);
+		} else if (m.data.fs_operation.operation == FS_OP_READ) {
+			message send_m;
+			send_m.type = NOTIFY_WRITE;
+			send_m.data.write_shell.is_end_of_message = true;
+
+			char path[30];
+			memcpy(path, m.data.fs_operation.path, 30);
+
+			auto* entry = file_system::find_directory_entry_by_path(path);
+			if (entry == nullptr) {
+				memcpy(send_m.data.write_shell.buf, "cat: No such file or directory",
+					   30);
+				send_message(SHELL_TASK_ID, &send_m);
+				return;
+			}
+
+			file_system::load_file(send_m.data.write_shell.buf, entry->file_size,
+								   *entry);
+			send_m.data.write_shell.buf[entry->file_size] = '\0';
+
+			send_message(SHELL_TASK_ID, &send_m);
 		}
 	};
 
@@ -152,8 +173,6 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	file_system::initialize_fat(volume_image);
 
 	initialize_freetype();
-
-	main_terminal->initialize_command_line();
 
 	initialize_pci();
 

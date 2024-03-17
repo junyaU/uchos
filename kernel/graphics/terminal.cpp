@@ -1,5 +1,4 @@
 #include "terminal.hpp"
-#include "../shell/controller.hpp"
 #include "../task/ipc.hpp"
 #include "../task/task.hpp"
 #include "../types.hpp"
@@ -150,8 +149,6 @@ void terminal::input_key(uint8_t c)
 		print_user();
 		print("\n", 1, font_color_, true);
 
-		shell_->process_command(command, *this);
-
 		if (cursor_x_ != 0) {
 			next_line();
 		} else {
@@ -280,11 +277,6 @@ void terminal::show_user_name()
 			*kscreen,
 			{ adjusted_x(cursor_x_ + strlen(user_name_)), adjusted_y(cursor_y_) },
 			":~$ ", font_color_.GetCode());
-}
-
-void terminal::initialize_command_line()
-{
-	shell_ = std::make_unique<shell::controller>();
 }
 
 terminal* main_terminal;
