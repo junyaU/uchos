@@ -70,8 +70,6 @@ public:
 
 	void clear();
 
-	void initialize_command_line();
-
 	void debug_mode() { is_debug_ = true; }
 
 private:
@@ -103,8 +101,6 @@ private:
 	char user_name_[16];
 	bool cursor_visible_{ false };
 	task_t task_id_{ -1 };
-
-	std::unique_ptr<shell::controller> shell_;
 };
 
 extern terminal* main_terminal;
