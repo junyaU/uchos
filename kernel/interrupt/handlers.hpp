@@ -29,18 +29,18 @@ void on_xhci_interrupt(InterruptFrame* frame);
 			InterruptFrame* frame, uint64_t code)                                   \
 	{                                                                               \
 		kill_userland(frame);                                                       \
-		main_terminal->print(#error_code);                                          \
-		main_terminal->print("\n");                                                 \
-		main_terminal->print("RIP : ");                                             \
-		main_terminal->print_interrupt_hex(frame->rip);                             \
-		main_terminal->print("RSP : ");                                             \
-		main_terminal->print_interrupt_hex(frame->rsp);                             \
-		main_terminal->print("CS : ");                                              \
-		main_terminal->print_interrupt_hex(frame->cs);                              \
-		main_terminal->print("SS : ");                                              \
-		main_terminal->print_interrupt_hex(frame->ss);                              \
-		main_terminal->print("RFLAGS : ");                                          \
-		main_terminal->print_interrupt_hex(frame->rflags);                          \
+		printk(KERN_ERROR, reinterpret_cast<const char*>(#error_code));             \
+		printk(KERN_ERROR, "\n");                                                   \
+		printk(KERN_ERROR, "RIP : ");                                               \
+		printk(KERN_ERROR, "0x%016lx\n", frame->rip);                               \
+		printk(KERN_ERROR, "RSP : ");                                               \
+		printk(KERN_ERROR, "0x%016lx\n", frame->rsp);                               \
+		printk(KERN_ERROR, "RFLAGS : ");                                            \
+		printk(KERN_ERROR, "0x%016lx\n", frame->rflags);                            \
+		printk(KERN_ERROR, "CS : ");                                                \
+		printk(KERN_ERROR, "0x%016lx\n", frame->cs);                                \
+		printk(KERN_ERROR, "SS : ");                                                \
+		printk(KERN_ERROR, "0x%016lx\n", frame->ss);                                \
 		while (true)                                                                \
 			__asm__("hlt");                                                         \
 	}
@@ -50,7 +50,7 @@ void on_xhci_interrupt(InterruptFrame* frame);
 			InterruptFrame* frame, uint64_t code)                                   \
 	{                                                                               \
 		kill_userland(frame);                                                       \
-		main_terminal->print(#error_code);                                          \
+		printk(KERN_ERROR, reinterpret_cast<const char*>(#error_code));             \
 		while (1)                                                                   \
 			__asm__("hlt");                                                         \
 	}
