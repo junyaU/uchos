@@ -20,6 +20,7 @@ struct terminal {
 	int input_index;
 	int prompt_len;
 	bool cursor_visible;
+	bool enable_input;
 	shell* shell_;
 
 	terminal(shell* s);
