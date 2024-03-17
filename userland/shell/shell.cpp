@@ -29,6 +29,10 @@ void shell::process_input(char* input, terminal& term)
 		return ls(args, term);
 	}
 
+	if (strcmp(command_name, "cat") == 0) {
+		return cat(args, term);
+	}
+
 	term.print(input);
 	term.print(" : command not found");
 	term.print("\n");

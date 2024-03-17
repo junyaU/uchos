@@ -18,6 +18,7 @@ constexpr int IPC_FILE_SYSTEM_OPERATION = 5;
 
 // file system operations
 constexpr int FS_OP_LIST = 0;
+constexpr int FS_OP_READ = 1;
 
 constexpr int NUM_MESSAGE_TYPES = 6;
 
