@@ -2,6 +2,8 @@
 
 struct terminal;
 
+extern int SHELL_TASK_ID;
+
 struct shell {
 	char histories[10][100];
 

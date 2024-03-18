@@ -3,6 +3,8 @@
 #include "terminal.hpp"
 #include <cstring>
 
+int SHELL_TASK_ID = 0;
+
 shell::shell() { memset(histories, 0, sizeof(histories)); }
 
 void shell::process_input(char* input, terminal& term)

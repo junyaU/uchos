@@ -1,12 +1,20 @@
 #include "ipc.hpp"
 #include "syscall.hpp"
 
-void receive_message(message* msg) { sys_ipc(0, 0, msg, IPC_RECV); }
+void receive_message(message* msg)
+{
+	sys_ipc(msg->sender, msg->sender, msg, IPC_RECV);
+}
 
 void send_message(int task_id, const message* msg)
 {
-	// TODO: implement
-	int shell_task_id = 3;
+	sys_ipc(task_id, msg->sender, msg, IPC_SEND);
+}
 
-	sys_ipc(task_id, shell_task_id, msg, IPC_SEND);
+void initialize_task()
+{
+	message m;
+	m.type = IPC_INITIALIZE_TASK;
+
+	send_message(KERNEL_TASK_ID, &m);
 }

@@ -6,7 +6,8 @@
 error_t send_message(task_t dst_id, const message* m)
 {
 	if (dst_id == -1 || m->sender == dst_id) {
-		printk(KERN_ERROR, "invalid destination task id: %d", dst_id);
+		printk(KERN_ERROR, "invalid destination task id : dest = %d, sender = %d",
+			   dst_id, m->sender);
 		return ERR_INVALID_ARG;
 	}
 

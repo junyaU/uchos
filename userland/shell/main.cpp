@@ -11,6 +11,8 @@ alignas(shell) char shell_buffer[sizeof(shell)];
 
 extern "C" int main(int argc, char** argv)
 {
+	initialize_task();
+
 	auto* s = new (shell_buffer) shell();
 	auto* term = new (buffer) terminal(s);
 	term->print_user();
@@ -37,6 +39,9 @@ extern "C" int main(int argc, char** argv)
 				break;
 			case NOTIFY_CURSOR_BLINK:
 				term->blink_cursor();
+				break;
+			case IPC_INITILIZE_TASK:
+				SHELL_TASK_ID = msg.data.init.task_id;
 				break;
 			default:
 				break;

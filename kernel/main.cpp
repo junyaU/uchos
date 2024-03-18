@@ -107,6 +107,13 @@ void task_main()
 		}
 	};
 
+	t->message_handlers[IPC_INITIALIZE_TASK] = +[](const message& m) {
+		message send_m;
+		send_m.type = IPC_INITIALIZE_TASK;
+		send_m.data.init.task_id = m.sender;
+		send_message(SHELL_TASK_ID, &send_m);
+	};
+
 	process_messages(t);
 }
 
