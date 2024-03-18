@@ -36,6 +36,9 @@ void task_main()
 				send_message(SHELL_TASK_ID, &send_m);
 				break;
 			}
+
+			default:
+				break;
 		}
 	};
 
@@ -165,6 +168,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	syscall::initialize();
 
 	initialize_task();
+
 	task* shell_task =
 			create_task("shell", reinterpret_cast<uint64_t>(&task_shell), 2, true);
 	schedule_task(shell_task->id);

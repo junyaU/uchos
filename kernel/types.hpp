@@ -17,6 +17,7 @@ constexpr int ERR_INVALID_ARG = -2;
 constexpr int ERR_INVALID_TASK = -3;
 
 // task ids
+constexpr int XHCI_TASK_ID = 2;
 constexpr int SHELL_TASK_ID = 3;
 constexpr int INTERRUPT_TASK_ID = 100;
 
