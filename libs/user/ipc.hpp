@@ -8,6 +8,10 @@ struct message {
 
 	union {
 		struct {
+			int task_id;
+		} init;
+
+		struct {
 			uint8_t key_code;
 			uint8_t modifier;
 			uint8_t ascii;
@@ -48,11 +52,16 @@ constexpr int NOTIFY_CURSOR_BLINK = 2;
 constexpr int NOTIFY_TIMER_TIMEOUT = 3;
 constexpr int NOTIFY_WRITE = 4;
 constexpr int IPC_FILE_SYSTEM_OPERATION = 5;
+constexpr int IPC_INITIALIZE_TASK = 6;
 
 // file system operations
 constexpr int FS_OP_LIST = 0;
 constexpr int FS_OP_READ = 1;
 
+constexpr int KERNEL_TASK_ID = 0;
+
 void receive_message(message* msg);
 
 void send_message(int task_id, const message* msg);
+
+void initialize_task();

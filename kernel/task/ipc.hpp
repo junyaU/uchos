@@ -15,12 +15,13 @@ constexpr int NOTIFY_CURSOR_BLINK = 2;
 constexpr int NOTIFY_TIMER_TIMEOUT = 3;
 constexpr int NOTIFY_WRITE = 4;
 constexpr int IPC_FILE_SYSTEM_OPERATION = 5;
+constexpr int IPC_INITIALIZE_TASK = 6;
 
 // file system operations
 constexpr int FS_OP_LIST = 0;
 constexpr int FS_OP_READ = 1;
 
-constexpr int NUM_MESSAGE_TYPES = 6;
+constexpr int NUM_MESSAGE_TYPES = 7;
 
 enum class timeout_action_t : uint8_t {
 	TERMINAL_CURSOR_BLINK,
@@ -32,6 +33,10 @@ struct message {
 	task_t sender;
 
 	union {
+		struct {
+			int task_id;
+		} init;
+
 		struct {
 			uint8_t key_code;
 			uint8_t modifier;
