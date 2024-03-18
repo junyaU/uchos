@@ -1,5 +1,5 @@
 #include "local_apic.hpp"
-#include "../graphics/terminal.hpp"
+#include "../graphics/log.hpp"
 #include "../interrupt/vector.hpp"
 #include "../timers/acpi.hpp"
 #include "../timers/timer.hpp"
@@ -36,7 +36,10 @@ void initialize()
 
 	printk(KERN_INFO, "Local APIC timer frequency: %u Hz", freq);
 
+	DIVIDE_CONF = 0b1011; // divide by 1
+
 	LVT_TIMER = (0b010 << 16) | InterruptVector::kLocalApicTimer;
+
 	INITIAL_COUNT = freq / TIMER_FREQUENCY;
 
 	printk(KERN_INFO, "Local APIC initialized successfully.");

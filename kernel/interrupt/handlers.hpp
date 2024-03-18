@@ -10,7 +10,7 @@
 
 #include <cstdint>
 
-#include "../graphics/terminal.hpp"
+#include "../graphics/log.hpp"
 
 struct InterruptFrame {
 	uint64_t rip;

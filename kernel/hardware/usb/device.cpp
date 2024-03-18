@@ -1,5 +1,5 @@
 #include "device.hpp"
-#include "../../graphics/terminal.hpp"
+#include "../../graphics/log.hpp"
 #include "class_driver/base.hpp"
 #include "descriptor.hpp"
 

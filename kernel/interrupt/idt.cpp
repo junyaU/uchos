@@ -1,5 +1,5 @@
 #include "idt.hpp"
-#include "../graphics/terminal.hpp"
+#include "../graphics/log.hpp"
 #include "../memory/segment.hpp"
 #include "../types.hpp"
 #include "handler.h"
@@ -27,6 +27,16 @@ void load_idt(size_t size, uint64_t addr)
 	r.limit = size - 1;
 	r.base = addr;
 	__asm__("lidt %0" : : "m"(r));
+}
+
+__attribute__((interrupt)) void on_xhci_aaa(InterruptFrame* frame)
+{
+	while (true) {
+		__asm__("hlt");
+	}
+
+	auto* volatile eoi = reinterpret_cast<uint32_t*>(0xfee000b0);
+	*eoi = 0;
 }
 
 void initialize_interrupt()

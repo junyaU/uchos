@@ -1,5 +1,5 @@
 #include "timer.hpp"
-#include "../graphics/terminal.hpp"
+#include "../graphics/log.hpp"
 #include "../memory/slab.hpp"
 #include "../task/ipc.hpp"
 #include "../types.hpp"

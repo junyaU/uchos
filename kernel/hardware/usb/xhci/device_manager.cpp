@@ -1,5 +1,5 @@
 #include "device_manager.hpp"
-#include "../../../graphics/terminal.hpp"
+#include "../../../graphics/log.hpp"
 #include "../../../memory/slab.hpp"
 #include "../../../types.hpp"
 

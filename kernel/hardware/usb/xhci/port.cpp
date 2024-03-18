@@ -1,5 +1,5 @@
 #include "port.hpp"
-#include "../../../graphics/terminal.hpp"
+#include "../../../graphics/log.hpp"
 #include "../../../types.hpp"
 #include "registers.hpp"
 
