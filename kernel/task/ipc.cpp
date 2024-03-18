@@ -1,5 +1,5 @@
 #include "ipc.hpp"
-#include "../graphics/terminal.hpp"
+#include "../graphics/log.hpp"
 #include "../types.hpp"
 #include "task.hpp"
 

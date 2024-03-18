@@ -1,5 +1,5 @@
 #include "segment.hpp"
-#include "../graphics/terminal.hpp"
+#include "../graphics/log.hpp"
 #include "../interrupt/idt.hpp"
 #include "../types.hpp"
 #include "page.hpp"

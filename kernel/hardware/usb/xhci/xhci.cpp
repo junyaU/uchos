@@ -1,6 +1,6 @@
 #include "xhci.hpp"
 #include "../../../asm_utils.h"
-#include "../../../graphics/terminal.hpp"
+#include "../../../graphics/log.hpp"
 #include "../../../interrupt/vector.hpp"
 #include "../../../memory/slab.hpp"
 #include "../../../types.hpp"

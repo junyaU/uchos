@@ -1,9 +1,10 @@
 #include "elf.hpp"
 #include "asm_utils.h"
-#include "graphics/terminal.hpp"
+#include "graphics/log.hpp"
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"
+#include "task/task.hpp"
 #include "types.hpp"
 #include <cstdint>
 #include <cstring>
@@ -158,7 +159,7 @@ void exec_elf(void* buffer, const char* name, const char* args)
 
 	task* t = CURRENT_TASK;
 	for (int i = 0; i < 3; ++i) {
-		t->fds[i] = main_terminal->fds_[i];
+		t->fds[i] = std::make_unique<term_file_descriptor>();
 	}
 
 	auto entry_addr = elf_header->e_entry;

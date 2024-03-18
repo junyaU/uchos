@@ -1,6 +1,6 @@
 #include "buddy_system.hpp"
 #include "../bit_utils.hpp"
-#include "../graphics/terminal.hpp"
+#include "../graphics/log.hpp"
 #include "../types.hpp"
 #include "page.hpp"
 #include <cstddef>

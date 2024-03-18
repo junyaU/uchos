@@ -1,8 +1,8 @@
 #include "elf.hpp"
 #include "file_system/fat.hpp"
 #include "graphics/font.hpp"
+#include "graphics/log.hpp"
 #include "graphics/screen.hpp"
-#include "graphics/terminal.hpp"
 #include "hardware/keyboard.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/usb/xhci/xhci.hpp"
@@ -134,8 +134,6 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_font();
 
-	initialize_terminal();
-
 	initialize_segmentation();
 
 	initialize_paging();
@@ -158,8 +156,6 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	print_available_memory();
 
-	main_terminal->initialize_fds();
-
 	acpi::initialize(rsdp);
 
 	initialize_timer();
@@ -169,6 +165,9 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	syscall::initialize();
 
 	initialize_task();
+	task* shell_task =
+			create_task("shell", reinterpret_cast<uint64_t>(&task_shell), 2, true);
+	schedule_task(shell_task->id);
 
 	file_system::initialize_fat(volume_image);
 
@@ -179,10 +178,6 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	usb::xhci::initialize();
 
 	initialize_keyboard();
-
-	task* shell_task =
-			create_task("shell", reinterpret_cast<uint64_t>(&task_shell), 2, true);
-	schedule_task(shell_task->id);
 
 	task_main();
 }

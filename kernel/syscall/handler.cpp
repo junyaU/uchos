@@ -1,6 +1,7 @@
 #include "../file_system/fat.hpp"
+#include "../graphics/font.hpp"
+#include "../graphics/log.hpp"
 #include "../graphics/screen.hpp"
-#include "../graphics/terminal.hpp"
 #include "../task/task.hpp"
 #include "../types.hpp"
 #include "sys/_default_fcntl.h"

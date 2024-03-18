@@ -1,5 +1,5 @@
 #include "page.hpp"
-#include "../graphics/terminal.hpp"
+#include "../graphics/log.hpp"
 #include "../types.hpp"
 #include "bootstrap_allocator.hpp"
 #include <vector>

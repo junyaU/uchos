@@ -1,8 +1,6 @@
 #include "task.hpp"
-#include "../elf.hpp"
-#include "../file_system/fat.hpp"
 #include "../file_system/file_descriptor.hpp"
-#include "../graphics/terminal.hpp"
+#include "../graphics/log.hpp"
 #include "../hardware/usb/task.hpp"
 #include "../list.hpp"
 #include "../memory/page_operations.h"
@@ -145,10 +143,6 @@ void initialize_task()
 	CURRENT_TASK = main_task;
 
 	IDLE_TASK = create_task("idle", reinterpret_cast<uint64_t>(&task_idle), 2, true);
-
-	auto* terminal_task = create_task(
-			"terminal", reinterpret_cast<uint64_t>(&task_terminal), 2, true);
-	schedule_task(terminal_task->id);
 
 	auto* usb_task = create_task(
 			"usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), 2, true);

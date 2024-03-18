@@ -1,7 +1,7 @@
 set(GRAPHICS_SOURCE_FILES
         color.cpp
         font.cpp
-        terminal.cpp
+        log.cpp
         screen.cpp
         hankaku.o
         )

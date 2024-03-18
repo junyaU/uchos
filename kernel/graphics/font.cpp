@@ -1,8 +1,8 @@
 #include "font.hpp"
 #include "../file_system/fat.hpp"
 #include "../point2d.hpp"
+#include "log.hpp"
 #include "screen.hpp"
-#include "terminal.hpp"
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
