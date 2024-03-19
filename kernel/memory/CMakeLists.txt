@@ -7,6 +7,7 @@ set(MEMORY_SOURCE_FILES
     bootstrap_allocator.cpp
     segment.cpp
     buddy_system.cpp
+    user.cpp
 )
 
 add_library(UchosMemory ${MEMORY_SOURCE_FILES})

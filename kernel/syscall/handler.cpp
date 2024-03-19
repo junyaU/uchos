@@ -2,6 +2,7 @@
 #include "../graphics/font.hpp"
 #include "../graphics/log.hpp"
 #include "../graphics/screen.hpp"
+#include "../memory/user.hpp"
 #include "../task/task.hpp"
 #include "../types.hpp"
 #include "sys/_default_fcntl.h"
@@ -136,7 +137,7 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 {
 	const int dest = arg1;
 	const int src = arg2;
-	message& m = *reinterpret_cast<message*>(arg3);
+	message __user& m = *reinterpret_cast<message*>(arg3);
 	const int flags = arg4;
 
 	task* t = CURRENT_TASK;
@@ -151,14 +152,16 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 
 		t->state = TASK_RUNNING;
 
-		m = t->messages.front();
+		copy_to_user(&m, &t->messages.front(), sizeof(m));
+
 		t->messages.pop();
 
 		return OK;
 	}
 
 	if (flags == IPC_SEND) {
-		message copy_m = m;
+		message copy_m;
+		copy_from_user(&copy_m, &m, sizeof(m));
 
 		if (copy_m.type == IPC_INITIALIZE_TASK) {
 			copy_m.sender = t->id;
