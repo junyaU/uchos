@@ -35,7 +35,5 @@ void shell::process_input(char* input, terminal& term)
 		return cat(args, term);
 	}
 
-	term.print(input);
-	term.print(" : command not found");
-	term.print("\n");
+	term.printf("%s : command not found\n", input);
 }

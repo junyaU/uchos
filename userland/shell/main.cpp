@@ -40,7 +40,7 @@ extern "C" int main(int argc, char** argv)
 			case NOTIFY_CURSOR_BLINK:
 				term->blink_cursor();
 				break;
-			case IPC_INITILIZE_TASK:
+			case IPC_INITIALIZE_TASK:
 				SHELL_TASK_ID = msg.data.init.task_id;
 				break;
 			default:

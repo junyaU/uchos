@@ -1,7 +1,9 @@
 #include "terminal.hpp"
 #include "shell.hpp"
 #include <../../libs/user/print.hpp>
+#include <cstdarg>
 #include <cstddef>
+#include <cstdio>
 #include <cstring>
 
 std::array<std::array<char, TERMINAL_WIDTH>, TERMINAL_HEIGHT> terminal::buffer;
@@ -119,6 +121,17 @@ void terminal::print(const char* s, uint32_t color)
 	for (size_t i = 0; i < len; i++) {
 		print(s[i], color);
 	}
+}
+
+void terminal::printf(const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	char buffer[512];
+	vsprintf(buffer, format, args);
+	va_end(args);
+
+	print(buffer);
 }
 
 void terminal::input_char(char c)
