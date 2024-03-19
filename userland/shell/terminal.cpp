@@ -134,6 +134,16 @@ void terminal::printf(const char* format, ...)
 	print(buffer);
 }
 
+void terminal::print_message(char* s, bool is_end_of_message)
+{
+	print(s);
+	enable_input = is_end_of_message;
+	if (is_end_of_message) {
+		print("\n");
+		print_user();
+	}
+}
+
 void terminal::input_char(char c)
 {
 	if (!enable_input) {

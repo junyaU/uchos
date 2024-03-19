@@ -9,7 +9,7 @@
 alignas(terminal) char buffer[sizeof(terminal)];
 alignas(shell) char shell_buffer[sizeof(shell)];
 
-extern "C" int main(int argc, char** argv)
+extern "C" int main(void)
 {
 	initialize_task();
 
@@ -29,13 +29,8 @@ extern "C" int main(int argc, char** argv)
 				term->input_char(msg.data.key_input.ascii);
 				break;
 			case NOTIFY_WRITE:
-				// TODO: function to print to terminal
-				term->print(msg.data.write_shell.buf);
-				term->enable_input = msg.data.write_shell.is_end_of_message;
-				if (msg.data.write_shell.is_end_of_message) {
-					term->print("\n");
-					term->print_user();
-				}
+				term->print_message(msg.data.write_shell.buf,
+									msg.data.write_shell.is_end_of_message);
 				break;
 			case NOTIFY_CURSOR_BLINK:
 				term->blink_cursor();
