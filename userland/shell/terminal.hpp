@@ -39,6 +39,10 @@ struct terminal {
 
 	void print(const char* s, uint32_t color = 0xffffff);
 
+	void printf(const char* format, ...);
+
+	void print_message(char* s, bool is_end_of_message);
+
 	size_t print_user();
 
 	void input_char(char c);
