@@ -27,7 +27,7 @@ void ls(char* input, terminal& term)
 		memcpy(m.data.fs_operation.path, input, strlen(input));
 	}
 
-	send_message(KERNEL_TASK_ID, &m);
+	send_message(FS_TASK_ID, &m);
 }
 
 void cat(char* input, terminal& term)
@@ -46,5 +46,5 @@ void cat(char* input, terminal& term)
 	m.data.fs_operation.operation = FS_OP_READ;
 	memcpy(m.data.fs_operation.path, input, strlen(input));
 
-	send_message(KERNEL_TASK_ID, &m);
+	send_message(FS_TASK_ID, &m);
 }

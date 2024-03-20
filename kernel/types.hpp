@@ -19,7 +19,8 @@ constexpr int ERR_INVALID_TASK = -3;
 // task ids
 constexpr int KERNEL_TASK_ID = 0;
 constexpr int XHCI_TASK_ID = 2;
-constexpr int SHELL_TASK_ID = 3;
+constexpr int FS_TASK_ID = 3;
+constexpr int SHELL_TASK_ID = 4;
 constexpr int INTERRUPT_TASK_ID = 100;
 
 // log levels

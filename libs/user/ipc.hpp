@@ -64,6 +64,8 @@ constexpr int FS_OP_LIST = 0;
 constexpr int FS_OP_READ = 1;
 
 constexpr int KERNEL_TASK_ID = 0;
+constexpr int FS_TASK_ID = 3;
+extern int SHELL_TASK_ID;
 
 void receive_message(message* msg);
 
