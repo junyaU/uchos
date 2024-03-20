@@ -32,11 +32,18 @@ extern "C" int main(void)
 				term->print_message(msg.data.write_shell.buf,
 									msg.data.write_shell.is_end_of_message);
 				break;
-			case NOTIFY_CURSOR_BLINK:
-				term->blink_cursor();
+			case NOTIFY_TIMER_TIMEOUT:
+				switch (msg.data.timer.action) {
+					case timeout_action_t::TERMINAL_CURSOR_BLINK:
+						term->blink_cursor();
+						break;
+					default:
+						break;
+				};
 				break;
 			case IPC_INITIALIZE_TASK:
 				SHELL_TASK_ID = msg.data.init.task_id;
+				set_cursor_timer(500);
 				break;
 			default:
 				break;

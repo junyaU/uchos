@@ -7,6 +7,7 @@
 
 struct timer_event {
 	uint64_t id;
+	task_t task_id;
 	uint64_t timeout;
 	unsigned int period;
 	int periodical;
@@ -20,7 +21,6 @@ inline bool operator<(const timer_event& lhs, const timer_event& rhs)
 
 static constexpr int TIMER_FREQUENCY = 100;
 static constexpr int SWITCH_TASK_MILLISEC = 20;
-static constexpr int CURSOR_BLINK_MILLISEC = 500;
 
 class kernel_timer
 {
@@ -38,10 +38,12 @@ public:
 		return static_cast<float>(tick) / TIMER_FREQUENCY;
 	}
 
-	uint64_t add_timer_event(unsigned long millisec, timeout_action_t action);
+	uint64_t
+	add_timer_event(unsigned long millisec, timeout_action_t action, task_t task_id);
 
 	uint64_t add_periodic_timer_event(unsigned long millisec,
 									  timeout_action_t action,
+									  task_t task_id,
 									  uint64_t id = 0);
 
 	void add_switch_task_event(unsigned long millisec);

@@ -28,20 +28,6 @@ void task_main()
 {
 	task* t = CURRENT_TASK;
 
-	t->message_handlers[NOTIFY_TIMER_TIMEOUT] = +[](const message& m) {
-		switch (m.data.timer.action) {
-			case timeout_action_t::TERMINAL_CURSOR_BLINK: {
-				// TODO: implement cursor blink for userland
-				const message send_m = { NOTIFY_CURSOR_BLINK, 0, {} };
-				send_message(SHELL_TASK_ID, &send_m);
-				break;
-			}
-
-			default:
-				break;
-		}
-	};
-
 	t->message_handlers[IPC_FILE_SYSTEM_OPERATION] = +[](const message& m) {
 		if (m.data.fs_operation.operation == FS_OP_LIST) {
 			message send_m;

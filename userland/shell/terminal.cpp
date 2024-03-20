@@ -1,6 +1,8 @@
 #include "terminal.hpp"
 #include "shell.hpp"
+#include <../../libs/user/ipc.hpp>
 #include <../../libs/user/print.hpp>
+#include <../../libs/user/time.hpp>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
@@ -178,4 +180,9 @@ void terminal::input_char(char c)
 
 	input[input_index++] = c;
 	print(c);
+}
+
+void set_cursor_timer(int ms)
+{
+	set_timer(ms, true, timeout_action_t::TERMINAL_CURSOR_BLINK, SHELL_TASK_ID);
 }

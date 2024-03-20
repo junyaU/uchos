@@ -4,6 +4,7 @@
 #include "../graphics/screen.hpp"
 #include "../memory/user.hpp"
 #include "../task/task.hpp"
+#include "../timers/timer.hpp"
 #include "../types.hpp"
 #include "sys/_default_fcntl.h"
 #include "syscall.hpp"
@@ -13,6 +14,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <memory>
+#include <stdint.h>
 
 namespace syscall
 {
@@ -123,12 +125,18 @@ error_t sys_fill_rect(uint64_t arg1,
 	return OK;
 }
 
-error_t sys_time(uint64_t arg1)
+error_t sys_time(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 {
 	const uint64_t ms = arg1;
+	const int is_periodic = arg2;
+	const timeout_action_t action = static_cast<timeout_action_t>(arg3);
+	const task_t task_id = arg4;
 
-	// TODO: implement
-	write_string(*kscreen, { 500, 500 }, "Time: ", 0x00FF00);
+	if (is_periodic == 1) {
+		ktimer->add_periodic_timer_event(ms, action, task_id);
+	} else {
+		ktimer->add_timer_event(ms, action, task_id);
+	}
 
 	return OK;
 }
@@ -141,10 +149,10 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	const int flags = arg4;
 
 	task* t = CURRENT_TASK;
+	t->state = TASK_WAITING;
 
 	if (flags == IPC_RECV) {
 		if (t->messages.empty()) {
-			t->state = TASK_WAITING;
 			memset(&m, 0, sizeof(m));
 			m.type = NO_TASK;
 			return OK;
@@ -153,7 +161,6 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 		t->state = TASK_RUNNING;
 
 		copy_to_user(&m, &t->messages.front(), sizeof(m));
-
 		t->messages.pop();
 
 		return OK;
@@ -168,7 +175,6 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 		}
 
 		send_message(dest, &copy_m);
-		t->state = TASK_WAITING;
 	}
 
 	return OK;
@@ -209,7 +215,7 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 			result = sys_fill_rect(arg1, arg2, arg3, arg4, arg5);
 			break;
 		case SYS_TIME:
-			result = sys_time(arg1);
+			result = sys_time(arg1, arg2, arg3, arg4);
 			break;
 		case SYS_IPC:
 			result = sys_ipc(arg1, arg2, arg3, arg4);
