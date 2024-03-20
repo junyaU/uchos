@@ -1,5 +1,6 @@
 #include "task.hpp"
 #include "../file_system/file_descriptor.hpp"
+#include "../file_system/task.hpp"
 #include "../graphics/log.hpp"
 #include "../hardware/usb/task.hpp"
 #include "../list.hpp"
@@ -147,6 +148,10 @@ void initialize_task()
 	auto* usb_task = create_task(
 			"usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), 2, true);
 	schedule_task(usb_task->id);
+
+	task* file_system_task = create_task(
+			"file_system", reinterpret_cast<uint64_t>(&task_file_system), 2, true);
+	schedule_task(file_system_task->id);
 
 	ktimer->add_switch_task_event(200);
 }
