@@ -47,3 +47,5 @@ struct terminal {
 
 	void input_char(char c);
 };
+
+void set_cursor_timer(int ms);

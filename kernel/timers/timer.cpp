@@ -9,11 +9,13 @@ uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 	return tick_ + (millisec * TIMER_FREQUENCY) / 1000;
 }
 
-uint64_t
-kernel_timer::add_timer_event(unsigned long millisec, timeout_action_t action)
+uint64_t kernel_timer::add_timer_event(unsigned long millisec,
+									   timeout_action_t action,
+									   task_t task_id)
 {
 	auto e = timer_event{
 		.id = last_id_++,
+		.task_id = task_id,
 		.timeout = calculate_timeout_ticks(millisec),
 		.period = static_cast<unsigned int>(millisec),
 		.action = action,
@@ -26,6 +28,7 @@ kernel_timer::add_timer_event(unsigned long millisec, timeout_action_t action)
 
 uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
 												timeout_action_t action,
+												task_t task_id,
 												uint64_t id)
 {
 	if (id == 0) {
@@ -37,6 +40,7 @@ uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
 
 	auto e = timer_event{
 		.id = id,
+		.task_id = task_id,
 		.timeout = calculate_timeout_ticks(millisec),
 		.period = static_cast<unsigned int>(millisec),
 		.periodical = 1,
@@ -84,9 +88,11 @@ bool kernel_timer::increment_tick()
 			continue;
 		}
 
-		message m = { NOTIFY_TIMER_TIMEOUT, INTERRUPT_TASK_ID };
+		message m;
+		m.type = NOTIFY_TIMER_TIMEOUT;
+		m.sender = KERNEL_TASK_ID;
 		m.data.timer.action = e.action;
-		send_message(0, &m);
+		send_message(e.task_id, &m);
 
 		if (e.periodical == 1) {
 			e.timeout = calculate_timeout_ticks(e.period);
@@ -102,11 +108,13 @@ void initialize_timer()
 {
 	printk(KERN_INFO, "Initializing logical timer...");
 
-	void* addr = kmalloc(sizeof(kernel_timer), KMALLOC_UNINITIALIZED);
-	ktimer = new (addr) kernel_timer;
+	void* addr = kmalloc(sizeof(kernel_timer), KMALLOC_ZEROED);
+	if (addr == nullptr) {
+		printk(KERN_ERROR, "Failed to allocate memory for kernel timer.");
+		return;
+	}
 
-	ktimer->add_periodic_timer_event(CURSOR_BLINK_MILLISEC,
-									 timeout_action_t::TERMINAL_CURSOR_BLINK);
+	ktimer = new (addr) kernel_timer;
 
 	printk(KERN_INFO, "Logical timer initialized successfully.");
 }

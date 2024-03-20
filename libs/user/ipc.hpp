@@ -2,6 +2,11 @@
 
 #include <cstdint>
 
+enum class timeout_action_t : uint8_t {
+	TERMINAL_CURSOR_BLINK,
+	SWITCH_TASK,
+};
+
 struct message {
 	uint32_t type;
 	int sender;
@@ -19,7 +24,7 @@ struct message {
 		} key_input;
 
 		struct {
-			uint8_t action;
+			timeout_action_t action;
 		} timer;
 
 		struct {
@@ -48,11 +53,11 @@ constexpr int IPC_SEND = 1;
 constexpr int NO_TASK = -1;
 constexpr int NOTIFY_KEY_INPUT = 0;
 constexpr int NOTIFY_XHCI = 1;
-constexpr int NOTIFY_CURSOR_BLINK = 2;
 constexpr int NOTIFY_TIMER_TIMEOUT = 3;
 constexpr int NOTIFY_WRITE = 4;
 constexpr int IPC_FILE_SYSTEM_OPERATION = 5;
 constexpr int IPC_INITIALIZE_TASK = 6;
+constexpr int IPC_TIME = 7;
 
 // file system operations
 constexpr int FS_OP_LIST = 0;
