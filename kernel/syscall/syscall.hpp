@@ -20,6 +20,7 @@ constexpr int SYS_DRAW_TEXT = 4;
 constexpr int SYS_FILL_RECT = 5;
 constexpr int SYS_TIME = 6;
 constexpr int SYS_IPC = 7;
+constexpr int SYS_FORK = 57;
 constexpr int SYS_EXIT = 60;
 
 namespace syscall

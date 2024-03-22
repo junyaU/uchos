@@ -17,4 +17,5 @@ define_syscall draw_text, 4
 define_syscall fill_rect, 5
 define_syscall time, 6
 define_syscall ipc, 7
+define_syscall fork, 57
 define_syscall exit, 60
