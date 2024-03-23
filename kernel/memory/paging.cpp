@@ -199,6 +199,16 @@ void copy_page_tables(page_table_entry* dst,
 	}
 }
 
+void handle_page_fault(uint64_t error_code, uint64_t fault_addr)
+{
+	auto exist = error_code & 1;
+	auto rw = (error_code >> 1) & 1;
+	auto user = (error_code >> 2) & 1;
+
+	printk(KERN_ERROR, "Page fault: exist=%d, rw=%d, user=%d, addr=%p", exist, rw,
+		   user, fault_addr);
+}
+
 void initialize_paging()
 {
 	printk(KERN_INFO, "Initializing paging...");
