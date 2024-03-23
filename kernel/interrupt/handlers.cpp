@@ -16,7 +16,7 @@ namespace
 }
 } // namespace
 
-__attribute__((interrupt)) void on_xhci_interrupt(InterruptFrame* frame)
+__attribute__((interrupt)) void on_xhci_interrupt(interrupt_frame* frame)
 {
 	const message m = { NOTIFY_XHCI, INTERRUPT_TASK_ID, {} };
 	send_message(XHCI_TASK_ID, &m);
@@ -34,7 +34,7 @@ extern "C" void switch_task_by_timer_interrupt(context* ctx)
 	}
 }
 
-void kill_userland(InterruptFrame* frame)
+void kill_userland(interrupt_frame* frame)
 {
 	auto cpl = frame->cs & 0x3;
 	if (cpl != 3) {

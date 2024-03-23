@@ -49,7 +49,7 @@ struct task {
 extern task* CURRENT_TASK;
 extern task* IDLE_TASK;
 
-static constexpr int MAX_TASKS = 10;
+static constexpr int MAX_TASKS = 100;
 extern std::array<task*, MAX_TASKS> tasks;
 extern list_t run_queue;
 

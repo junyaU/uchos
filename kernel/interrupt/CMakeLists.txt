@@ -1,4 +1,5 @@
 set(INTERRUPT_SOURCE_FILES
+        fault.cpp
         handler.asm
         handlers.cpp
         idt.cpp

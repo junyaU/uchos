@@ -2,6 +2,7 @@
 #include "../graphics/log.hpp"
 #include "../memory/segment.hpp"
 #include "../types.hpp"
+#include "fault.hpp"
 #include "handler.h"
 #include "handlers.hpp"
 #include "vector.hpp"
@@ -29,16 +30,6 @@ void load_idt(size_t size, uint64_t addr)
 	__asm__("lidt %0" : : "m"(r));
 }
 
-__attribute__((interrupt)) void on_xhci_aaa(InterruptFrame* frame)
-{
-	while (true) {
-		__asm__("hlt");
-	}
-
-	auto* volatile eoi = reinterpret_cast<uint32_t*>(0xfee000b0);
-	*eoi = 0;
-}
-
 void initialize_interrupt()
 {
 	printk(KERN_INFO, "Initializing interrupt...");
@@ -50,24 +41,30 @@ void initialize_interrupt()
 
 	set_entry(InterruptVector::kLocalApicTimer, on_timer_interrupt, IST_FOR_TIMER);
 	set_entry(InterruptVector::kXHCI, on_xhci_interrupt, IST_FOR_XHCI);
-	set_entry(0, InterruptHandlerDE);
-	set_entry(1, InterruptHandlerDB);
-	set_entry(3, InterruptHandlerBP);
-	set_entry(4, InterruptHandlerOF);
-	set_entry(5, InterruptHandlerBR);
-	set_entry(6, InterruptHandlerUD);
-	set_entry(7, InterruptHandlerNM);
-	set_entry(8, InterruptHandlerDF);
-	set_entry(10, InterruptHandlerTS);
-	set_entry(11, InterruptHandlerNP);
-	set_entry(12, InterruptHandlerSS);
-	set_entry(13, InterruptHandlerGP);
-	set_entry(14, InterruptHandlerPF);
-	set_entry(16, InterruptHandlerMF);
-	set_entry(17, InterruptHandlerAC);
-	set_entry(18, InterruptHandlerMC);
-	set_entry(19, InterruptHandlerXM);
-	set_entry(20, InterruptHandlerVE);
+	set_entry(DIVIDE_ERROR, fault_handler<DIVIDE_ERROR, false>::handler);
+	set_entry(DEBUG, fault_handler<DEBUG, false>::handler);
+	set_entry(BREAKPOINT, fault_handler<BREAKPOINT, false>::handler);
+	set_entry(OVERFLOW, fault_handler<OVERFLOW, false>::handler);
+	set_entry(BOUND_RANGE_EXCEEDED,
+			  fault_handler<BOUND_RANGE_EXCEEDED, false>::handler);
+	set_entry(INVALID_OPCODE, fault_handler<INVALID_OPCODE, false>::handler);
+	set_entry(DEVICE_NOT_AVAILABLE,
+			  fault_handler<DEVICE_NOT_AVAILABLE, false>::handler);
+	set_entry(DOUBLE_FAULT, fault_handler<DOUBLE_FAULT, true>::handler);
+	set_entry(INVALID_TSS, fault_handler<INVALID_TSS, true>::handler);
+	set_entry(SEGMENT_NOT_PRESENT,
+			  fault_handler<SEGMENT_NOT_PRESENT, true>::handler);
+	set_entry(STACK_SEGMENT_FAULT,
+			  fault_handler<STACK_SEGMENT_FAULT, true>::handler);
+	set_entry(GENERAL_PROTECTION, fault_handler<GENERAL_PROTECTION, true>::handler);
+	set_entry(PAGE_FAULT, fault_handler<PAGE_FAULT, true>::handler);
+	set_entry(RESERVED, fault_handler<RESERVED, false>::handler);
+	set_entry(X87_FPU_ERROR, fault_handler<X87_FPU_ERROR, false>::handler);
+	set_entry(ALIGNMENT_CHECK, fault_handler<ALIGNMENT_CHECK, true>::handler);
+	set_entry(MACHINE_CHECK, fault_handler<MACHINE_CHECK, false>::handler);
+	set_entry(SIMD_FP_EXCEPTION, fault_handler<SIMD_FP_EXCEPTION, false>::handler);
+	set_entry(VIRTUALIZATION_EXCEPTION,
+			  fault_handler<VIRTUALIZATION_EXCEPTION, false>::handler);
 
 	load_idt(sizeof(idt), reinterpret_cast<uint64_t>(idt.data()));
 
