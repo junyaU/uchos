@@ -105,7 +105,7 @@ void copy_load_segment(elf64_ehdr_t* elf_header)
 		const auto num_pages =
 				(program_header[i].p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
 
-		setup_page_tables(dest_addr, num_pages);
+		setup_page_tables(dest_addr, num_pages, true);
 
 		auto* const src =
 				reinterpret_cast<uint8_t*>(elf_header) + program_header[i].p_offset;
@@ -132,6 +132,8 @@ void load_elf(elf64_ehdr_t* elf_header)
 	copy_load_segment(elf_header);
 }
 
+page_table_entry* pml44;
+
 void exec_elf(void* buffer, const char* name, const char* args)
 {
 	auto* elf_header = reinterpret_cast<elf64_ehdr_t*>(buffer);
@@ -140,10 +142,20 @@ void exec_elf(void* buffer, const char* name, const char* args)
 		return;
 	}
 
+	task* t = CURRENT_TASK;
+
+	// if (pml44 != nullptr && strcmp(name, "SANDBOX") == 0) {
+	// 	printk(KERN_ERROR, "sandbox already exists");
+	// }
+
+	// if (strcmp(name, "SANDBOX") == 0) {
+	// 	pml44 = reinterpret_cast<page_table_entry*>(get_cr3());
+	// }
+
 	load_elf(elf_header);
 
 	const linear_address argv_addr{ 0xffff'ffff'ffff'f000 };
-	setup_page_tables(argv_addr, 1);
+	setup_page_tables(argv_addr, 1, true);
 
 	auto* argv = reinterpret_cast<char**>(argv_addr.data);
 	const int arg_v_len = 32;
@@ -155,9 +167,8 @@ void exec_elf(void* buffer, const char* name, const char* args)
 
 	const int stack_size = PAGE_SIZE * 8;
 	const linear_address stack_addr{ 0xffff'ffff'ffff'f000 - stack_size };
-	setup_page_tables(stack_addr, stack_size / PAGE_SIZE);
+	setup_page_tables(stack_addr, stack_size / PAGE_SIZE, true);
 
-	task* t = CURRENT_TASK;
 	for (int i = 0; i < 3; ++i) {
 		t->fds[i] = std::make_unique<term_file_descriptor>();
 	}

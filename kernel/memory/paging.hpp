@@ -97,8 +97,13 @@ void dump_page_tables(linear_address addr);
 
 page_table_entry* new_page_table();
 
-void setup_page_tables(linear_address addr, size_t num_pages);
+void setup_page_tables(linear_address addr, size_t num_pages, bool writable);
 
 void clean_page_tables(linear_address addr);
+
+void copy_page_tables(page_table_entry* dst,
+					  page_table_entry* src,
+					  int level,
+					  bool writable);
 
 void initialize_paging();
