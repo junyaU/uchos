@@ -6,8 +6,8 @@
 bits 64
 section .text
 
-global flash_tlb ; void flash_tlb(uint64_t addr);
-flash_tlb:
+global flush_tlb ; void flash_tlb(uint64_t addr);
+flush_tlb:
     invlpg [rdi]
     ret
 

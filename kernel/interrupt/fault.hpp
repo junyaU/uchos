@@ -40,8 +40,9 @@ template<uint64_t error_code>
 struct fault_handler<error_code, false> {
 	static inline __attribute__((interrupt)) void handler(interrupt_frame* frame)
 	{
-		while (true)
+		while (true) {
 			__asm__("hlt");
+		}
 	}
 };
 
@@ -60,7 +61,8 @@ struct fault_handler<error_code, true> {
 		printk(KERN_ERROR, "CS: %016lx", frame->cs);
 		printk(KERN_ERROR, "SS: %016lx", frame->ss);
 
-		while (true)
+		while (true) {
 			__asm__("hlt");
+		}
 	}
 };

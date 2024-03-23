@@ -91,7 +91,8 @@ page_table_entry* set_new_page_table(page_table_entry& entry)
 int setup_page_table(page_table_entry* page_table,
 					 int page_table_level,
 					 linear_address addr,
-					 size_t num_pages)
+					 size_t num_pages,
+					 bool writable)
 {
 	while (num_pages > 0) {
 		const int page_table_index = addr.part(page_table_level);
@@ -102,13 +103,13 @@ int setup_page_table(page_table_entry* page_table,
 			return -1;
 		}
 
-		page_table[page_table_index].bits.writable = 1;
+		page_table[page_table_index].bits.writable = writable;
 
 		if (page_table_level == 1) {
 			--num_pages;
 		} else {
 			const int num_remaining_pages = setup_page_table(
-					child_table, page_table_level - 1, addr, num_pages);
+					child_table, page_table_level - 1, addr, num_pages, writable);
 			if (num_remaining_pages == -1) {
 				printk(KERN_ERROR, "Failed to setup page table: level=%d",
 					   page_table_level);
@@ -131,16 +132,19 @@ int setup_page_table(page_table_entry* page_table,
 	return num_pages;
 }
 
-void setup_page_tables(linear_address addr, size_t num_pages)
+void setup_page_tables(linear_address addr, size_t num_pages, bool writable)
 {
-	const int num_remaining_pages = setup_page_table(
-			reinterpret_cast<page_table_entry*>(get_cr3()), 4, addr, num_pages);
+	const int num_remaining_pages =
+			setup_page_table(reinterpret_cast<page_table_entry*>(get_cr3()), 4, addr,
+							 num_pages, writable);
 	if (num_remaining_pages == -1) {
 		printk(KERN_ERROR, "Failed to setup page tables.");
 		return;
 	}
 
-	flash_tlb(addr.data);
+	for (size_t i = 0; i < num_pages; i++) {
+		flush_tlb(addr.data + i * PAGE_SIZE);
+	}
 }
 
 void clean_page_table(page_table_entry* table, int page_table_level)
@@ -168,6 +172,30 @@ void clean_page_tables(linear_address addr)
 
 	clean_page_table(pdpt, 3);
 	kfree(pdpt);
+}
+
+void copy_page_tables(page_table_entry* dst,
+					  page_table_entry* src,
+					  int level,
+					  bool writable)
+{
+	if (level == 1) {
+		for (int i = 0; i < 512; ++i) {
+			if (src[i].bits.present) {
+				dst[i].data = src[i].data;
+				dst[i].bits.writable = writable;
+			}
+		}
+	} else {
+		for (int i = 0; i < 512; ++i) {
+			if (src[i].bits.present) {
+				auto* new_table = new_page_table();
+				dst[i].set_next_level_table(new_table);
+				copy_page_tables(new_table, src[i].get_next_level_table(), level - 1,
+								 writable);
+			}
+		}
+	}
 }
 
 void initialize_paging()
