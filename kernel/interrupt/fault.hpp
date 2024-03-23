@@ -40,6 +40,7 @@ template<uint64_t error_code>
 struct fault_handler<error_code, false> {
 	static inline __attribute__((interrupt)) void handler(interrupt_frame* frame)
 	{
+		printk(KERN_ERROR, "Unhandled exception: %d", error_code);
 		while (true) {
 			__asm__("hlt");
 		}
@@ -52,6 +53,7 @@ struct fault_handler<error_code, true> {
 	static inline __attribute__((interrupt)) void
 	handler(interrupt_frame* frame, uint64_t code)
 	{
+		kill_userland(frame);
 		char buf[30];
 		get_fault_name(error_code, buf);
 		printk(KERN_ERROR, buf);

@@ -2,7 +2,7 @@
 #include "../graphics/log.hpp"
 #include "../types.hpp"
 #include "page.hpp"
-#include "page_operations.h"
+#include "paging_utils.h"
 #include "slab.hpp"
 #include <array>
 #include <cstring>
@@ -177,22 +177,23 @@ void clean_page_tables(linear_address addr)
 void copy_page_tables(page_table_entry* dst,
 					  page_table_entry* src,
 					  int level,
-					  bool writable)
+					  bool writable,
+					  int start_index)
 {
 	if (level == 1) {
-		for (int i = 0; i < 512; ++i) {
+		for (int i = start_index; i < 512; ++i) {
 			if (src[i].bits.present) {
 				dst[i].data = src[i].data;
 				dst[i].bits.writable = writable;
 			}
 		}
 	} else {
-		for (int i = 0; i < 512; ++i) {
+		for (int i = start_index; i < 512; ++i) {
 			if (src[i].bits.present) {
 				auto* new_table = new_page_table();
 				dst[i].set_next_level_table(new_table);
 				copy_page_tables(new_table, src[i].get_next_level_table(), level - 1,
-								 writable);
+								 writable, 0);
 			}
 		}
 	}

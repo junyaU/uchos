@@ -1,8 +1,8 @@
 set(MEMORY_SOURCE_FILES
     page.cpp
     paging.cpp
-    page_operations.asm
-    segments_operations.asm
+    paging_utils.asm
+    segment_utils.asm
     slab.cpp
     bootstrap_allocator.cpp
     segment.cpp
@@ -11,5 +11,3 @@ set(MEMORY_SOURCE_FILES
 )
 
 add_library(UchosMemory ${MEMORY_SOURCE_FILES})
-
-

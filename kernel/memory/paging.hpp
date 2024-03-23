@@ -104,6 +104,7 @@ void clean_page_tables(linear_address addr);
 void copy_page_tables(page_table_entry* dst,
 					  page_table_entry* src,
 					  int level,
-					  bool writable);
+					  bool writable,
+					  int start_index);
 
 void initialize_paging();

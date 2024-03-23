@@ -3,6 +3,7 @@
 #include "graphics/log.hpp"
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
+#include "memory/paging_utils.h"
 #include "memory/segment.hpp"
 #include "task/task.hpp"
 #include "types.hpp"
@@ -144,16 +145,27 @@ void exec_elf(void* buffer, const char* name, const char* args)
 
 	task* t = CURRENT_TASK;
 
-	// if (pml44 != nullptr && strcmp(name, "SANDBOX") == 0) {
-	// 	printk(KERN_ERROR, "sandbox already exists");
-	// }
+	if (pml44 != nullptr && strcmp(name, "SANDBOX") == 0) {
+		set_cr3(reinterpret_cast<uint64_t>(pml44));
+	} else {
+		load_elf(elf_header);
+	}
 
-	// if (strcmp(name, "SANDBOX") == 0) {
-	// 	pml44 = reinterpret_cast<page_table_entry*>(get_cr3());
-	// }
+	if (strcmp(name, "SANDBOX") == 0) {
+		page_table_entry* new_pml4 = new_page_table();
+		if (new_pml4 == nullptr) {
+			printk(KERN_ERROR, "failed to create a new page table");
+			return;
+		}
 
-	load_elf(elf_header);
+		memcpy(new_pml4, reinterpret_cast<page_table_entry*>(get_cr3()),
+			   256 * sizeof(page_table_entry));
 
+		copy_page_tables(new_pml4, reinterpret_cast<page_table_entry*>(get_cr3()), 4,
+						 false, 256);
+
+		pml44 = new_pml4;
+	}
 	const linear_address argv_addr{ 0xffff'ffff'ffff'f000 };
 	setup_page_tables(argv_addr, 1, true);
 
