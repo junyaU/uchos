@@ -3,7 +3,7 @@
 #include "../interrupt/idt.hpp"
 #include "../types.hpp"
 #include "page.hpp"
-#include "segments_operations.h"
+#include "segment_utils.h"
 #include "slab.hpp"
 #include <array>
 #include <cstddef>
