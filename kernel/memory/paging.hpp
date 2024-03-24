@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "../types.hpp"
 #include <cstddef>
 #include <cstdint>
 
@@ -107,6 +108,6 @@ void copy_page_tables(page_table_entry* dst,
 					  bool writable,
 					  int start_index);
 
-void handle_page_fault(uint64_t error_code, uint64_t fault_addr);
+error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr);
 
 void initialize_paging();

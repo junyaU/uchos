@@ -5,19 +5,19 @@
 #include "paging_utils.h"
 #include "slab.hpp"
 #include <array>
+#include <cstdint>
 #include <cstring>
 
 namespace
 {
-constexpr uint64_t PAGE_4KIB = 4096;
-constexpr uint64_t PAGE_2MIB = 512 * PAGE_4KIB;
+constexpr uint64_t PAGE_2MIB = 512 * PAGE_SIZE;
 constexpr uint64_t PAGE_1GIB = 512 * PAGE_2MIB;
 
 constexpr size_t PAGE_DIRECTORY_COUNT = 64;
 
-alignas(PAGE_4KIB) std::array<uint64_t, 512> pml4_table;
-alignas(PAGE_4KIB) std::array<uint64_t, 512> pdp_table;
-alignas(PAGE_4KIB)
+alignas(PAGE_SIZE) std::array<uint64_t, 512> pml4_table;
+alignas(PAGE_SIZE) std::array<uint64_t, 512> pdp_table;
+alignas(PAGE_SIZE)
 		std::array<std::array<uint64_t, 512>, PAGE_DIRECTORY_COUNT> page_directory;
 } // namespace
 
@@ -191,6 +191,7 @@ void copy_page_tables(page_table_entry* dst,
 		for (int i = start_index; i < 512; ++i) {
 			if (src[i].bits.present) {
 				auto* new_table = new_page_table();
+				dst[i].data = src[i].data;
 				dst[i].set_next_level_table(new_table);
 				copy_page_tables(new_table, src[i].get_next_level_table(), level - 1,
 								 writable, 0);
@@ -199,14 +200,56 @@ void copy_page_tables(page_table_entry* dst,
 	}
 }
 
-void handle_page_fault(uint64_t error_code, uint64_t fault_addr)
+void set_page_table_entry(page_table_entry* table,
+						  linear_address addr,
+						  page_table_entry* entry)
+{
+	auto* pdpt = table[addr.part(4)].get_next_level_table();
+	auto* pd = pdpt[addr.part(3)].get_next_level_table();
+	auto* pt = pd[addr.part(2)].get_next_level_table();
+	const size_t pt_index = addr.part(1);
+	pt[pt_index].set_next_level_table(entry);
+	pt[pt_index].bits.writable = 1;
+	pt[pt_index].bits.present = 1;
+
+	flush_tlb(addr.data);
+}
+
+error_t copy_target_page(uint64_t addr)
+{
+	auto* page = new_page_table();
+	if (page == nullptr) {
+		printk(KERN_ERROR, "Failed to allocate memory for page table.");
+		return ERR_NO_MEMORY;
+	}
+
+	const auto aligned_addr = addr & ~0xfff;
+	memcpy(page, reinterpret_cast<void*>(aligned_addr), PAGE_SIZE);
+
+	set_page_table_entry(reinterpret_cast<page_table_entry*>(get_cr3()),
+						 linear_address{ addr }, page);
+
+	return OK;
+}
+
+error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr)
 {
 	auto exist = error_code & 1;
 	auto rw = (error_code >> 1) & 1;
 	auto user = (error_code >> 2) & 1;
 
-	printk(KERN_ERROR, "Page fault: exist=%d, rw=%d, user=%d, addr=%p", exist, rw,
-		   user, fault_addr);
+	if ((user != 0) && (rw != 0) && (exist != 0)) {
+		error_t err = copy_target_page(fault_addr);
+		if (IS_ERR(err)) {
+			printk(KERN_ERROR, "Failed to handle page fault: %d", err);
+			return err;
+		}
+	} else {
+		printk(KERN_ERROR, "Page fault: user=%d, rw=%d, exist=%d", user, rw, exist);
+		return ERR_PAGE_NOT_PRESENT;
+	}
+
+	return OK;
 }
 
 void initialize_paging()

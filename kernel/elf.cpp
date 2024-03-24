@@ -133,8 +133,6 @@ void load_elf(elf64_ehdr_t* elf_header)
 	copy_load_segment(elf_header);
 }
 
-page_table_entry* pml44;
-
 void exec_elf(void* buffer, const char* name, const char* args)
 {
 	auto* elf_header = reinterpret_cast<elf64_ehdr_t*>(buffer);
@@ -143,29 +141,8 @@ void exec_elf(void* buffer, const char* name, const char* args)
 		return;
 	}
 
-	task* t = CURRENT_TASK;
+	load_elf(elf_header);
 
-	if (pml44 != nullptr && strcmp(name, "SANDBOX") == 0) {
-		set_cr3(reinterpret_cast<uint64_t>(pml44));
-	} else {
-		load_elf(elf_header);
-	}
-
-	if (strcmp(name, "SANDBOX") == 0) {
-		page_table_entry* new_pml4 = new_page_table();
-		if (new_pml4 == nullptr) {
-			printk(KERN_ERROR, "failed to create a new page table");
-			return;
-		}
-
-		memcpy(new_pml4, reinterpret_cast<page_table_entry*>(get_cr3()),
-			   256 * sizeof(page_table_entry));
-
-		copy_page_tables(new_pml4, reinterpret_cast<page_table_entry*>(get_cr3()), 4,
-						 false, 256);
-
-		pml44 = new_pml4;
-	}
 	const linear_address argv_addr{ 0xffff'ffff'ffff'f000 };
 	setup_page_tables(argv_addr, 1, true);
 
@@ -181,6 +158,7 @@ void exec_elf(void* buffer, const char* name, const char* args)
 	const linear_address stack_addr{ 0xffff'ffff'ffff'f000 - stack_size };
 	setup_page_tables(stack_addr, stack_size / PAGE_SIZE, true);
 
+	task* t = CURRENT_TASK;
 	for (int i = 0; i < 3; ++i) {
 		t->fds[i] = std::make_unique<term_file_descriptor>();
 	}
