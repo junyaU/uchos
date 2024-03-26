@@ -78,7 +78,7 @@ task* get_scheduled_task()
 void schedule_task(task_t id)
 {
 	if (tasks.size() <= id || tasks[id] == nullptr) {
-		printk(KERN_ERROR, "task %d is not found", id);
+		printk(KERN_ERROR, "schedule_task: task %d is not found", id);
 		return;
 	}
 
@@ -98,6 +98,19 @@ void switch_task(const context& current_ctx)
 	if (CURRENT_TASK->state != TASK_WAITING) {
 		schedule_task(CURRENT_TASK->id);
 	}
+
+	restore_context(&get_scheduled_task()->ctx);
+}
+
+void exit_task(task_t id)
+{
+	if (tasks.size() <= id || tasks[id] == nullptr) {
+		printk(KERN_ERROR, "exit_task: task %d is not found", id);
+		return;
+	}
+
+	delete tasks[id];
+	tasks[id] = nullptr;
 
 	restore_context(&get_scheduled_task()->ctx);
 }
