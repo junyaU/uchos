@@ -13,7 +13,7 @@ error_t send_message(task_t dst_id, const message* m)
 
 	task* dst = tasks[dst_id];
 	if (dst == nullptr) {
-		printk(KERN_ERROR, "task %d is not found", dst_id);
+		printk(KERN_ERROR, "send_message: task %d is not found", dst_id);
 		return ERR_INVALID_TASK;
 	}
 
