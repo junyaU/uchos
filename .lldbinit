@@ -1,9 +1,12 @@
 settings set target.x86-disassembly-flavor intel
+settings set target.default-arch x86_64
+settings set frame-format "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}`${function.name-with-args}{ at ${line.file.basename}:${line.number}}\n"
+settings set stop-disassembly-count 4
+
+type format add --format hex uint64_t
+
 command alias disas disassemble --frame
 command alias locals frame variable
 command alias bt thread backtrace
 command alias regs register read
 command alias bp breakpoint list
-
-settings set frame-format "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}`${function.name-with-args}{ at ${line.file.basename}:${line.number}}\n"
-settings set stop-disassembly-count 4
