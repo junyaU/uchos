@@ -48,7 +48,7 @@ task_t get_task_id_by_name(const char* name)
 	return -1;
 }
 
-task* create_task(const char* name, uint64_t task_addr, int priority, bool is_init)
+task* create_task(const char* name, uint64_t task_addr, bool is_init)
 {
 	const task_t task_id = get_available_task_id();
 	if (task_id == -1) {
@@ -56,8 +56,7 @@ task* create_task(const char* name, uint64_t task_addr, int priority, bool is_in
 		return nullptr;
 	}
 
-	tasks[task_id] =
-			new task(task_id, name, task_addr, TASK_WAITING, priority, is_init);
+	tasks[task_id] = new task(task_id, name, task_addr, TASK_WAITING, is_init);
 
 	return tasks[task_id];
 }
@@ -73,23 +72,47 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 	stack.resize(parent_stack_size);
 	memcpy(stack.data(), parent->stack.data(), parent_stack_size * sizeof(uint64_t));
 
-	auto parent_stack_end =
+	auto end_of_parent_stack =
 			reinterpret_cast<uint64_t>(&parent->stack[parent_stack_size]);
-	uint64_t rsp_elapsed = parent_stack_end - parent_ctx.rsp;
-	uint64_t rbp_elapsed = parent_stack_end - parent_ctx.rbp;
-	uint64_t current_rsp_elapsed = parent_stack_end - parent->kernel_stack_ptr;
-	auto child_stack_end = reinterpret_cast<uint64_t>(&stack[parent_stack_size]);
+	uint64_t offset_from_rsp_to_stack_end = end_of_parent_stack - parent_ctx.rsp;
+	uint64_t offset_from_rbp_to_stack_end = end_of_parent_stack - parent_ctx.rbp;
+	auto end_of_child_stack = reinterpret_cast<uint64_t>(&stack[parent_stack_size]);
 
-	ctx.rsp = child_stack_end - rsp_elapsed;
-	ctx.rbp = child_stack_end - rbp_elapsed;
-	kernel_stack_ptr = child_stack_end - current_rsp_elapsed;
+	ctx.rsp = end_of_child_stack - offset_from_rsp_to_stack_end;
+	ctx.rbp = end_of_child_stack - offset_from_rbp_to_stack_end;
+
+	uint64_t offset_from_kernel_sp_ptr_to_stack_end =
+			end_of_parent_stack - parent->kernel_stack_ptr;
+	kernel_stack_ptr = end_of_parent_stack - offset_from_kernel_sp_ptr_to_stack_end;
+
+	return OK;
+}
+
+error_t task::copy_parent_page_table()
+{
+	task* parent = tasks[parent_id];
+	if (parent == nullptr) {
+		return ERR_NO_TASK;
+	}
+
+	page_table_entry* original_table =
+			prepare_copy_page_table(reinterpret_cast<page_table_entry*>(get_cr3()));
+	parent->original_page_table = original_table;
+
+	page_table_entry* parent_table =
+			prepare_copy_page_table(parent->original_page_table);
+	set_cr3(reinterpret_cast<uint64_t>(parent_table));
+
+	page_table_entry* child_table =
+			prepare_copy_page_table(parent->original_page_table);
+	ctx.cr3 = reinterpret_cast<uint64_t>(child_table);
 
 	return OK;
 }
 
 task* copy_task(task* parent, context* current_ctx)
 {
-	task* child = create_task("child", 0, 2, false);
+	task* child = create_task(parent->name, 0, false);
 	if (child == nullptr) {
 		return nullptr;
 	}
@@ -102,22 +125,10 @@ task* copy_task(task* parent, context* current_ctx)
 		return nullptr;
 	}
 
-	auto* table = new_page_table();
-	copy_kernel_space(table);
-	copy_page_tables(table, reinterpret_cast<page_table_entry*>(get_cr3()), 4, true,
-					 256);
-	parent->original_page_table = table;
-
-	auto* parent_table = new_page_table();
-	copy_kernel_space(parent_table);
-	copy_page_tables(parent_table, parent->original_page_table, 4, false, 256);
-	set_cr3(reinterpret_cast<uint64_t>(parent_table));
-
-	auto* child_table = new_page_table();
-	copy_kernel_space(child_table);
-	copy_page_tables(child_table, parent->original_page_table, 4, true, 256);
-
-	child->ctx.cr3 = reinterpret_cast<uint64_t>(child_table);
+	if (IS_ERR(child->copy_parent_page_table())) {
+		printk(KERN_ERROR, "Failed to copy parent page table : %s", parent->name);
+		return nullptr;
+	}
 
 	return child;
 }
@@ -210,18 +221,18 @@ void initialize_task()
 	tasks = std::array<task*, MAX_TASKS>();
 	list_init(&run_queue);
 
-	task* main_task = create_task("main", 0, 2, false);
+	task* main_task = create_task("main", 0, false);
 	main_task->state = TASK_RUNNING;
 	CURRENT_TASK = main_task;
 
-	IDLE_TASK = create_task("idle", reinterpret_cast<uint64_t>(&task_idle), 2, true);
+	IDLE_TASK = create_task("idle", reinterpret_cast<uint64_t>(&task_idle), true);
 
 	auto* usb_task = create_task(
-			"usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), 2, true);
+			"usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), true);
 	schedule_task(usb_task->id);
 
 	task* file_system_task = create_task(
-			"file_system", reinterpret_cast<uint64_t>(&task_file_system), 2, true);
+			"file_system", reinterpret_cast<uint64_t>(&task_file_system), true);
 	schedule_task(file_system_task->id);
 
 	ktimer->add_switch_task_event(200);
@@ -231,10 +242,10 @@ task::task(int id,
 		   const char* task_name,
 		   uint64_t task_addr,
 		   task_state state,
-		   int priority,
 		   bool is_init)
 	: id{ id },
-	  priority{ priority },
+	  parent_id{ -1 },
+	  priority{ 2 }, // TODO: Implement priority scheduling
 	  state{ state },
 	  stack{ std::vector<uint64_t>() },
 	  messages{ std::queue<message>() },

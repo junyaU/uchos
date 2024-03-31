@@ -238,7 +238,7 @@ void copy_kernel_space(page_table_entry* dst)
 	memcpy(dst, src, 256 * sizeof(page_table_entry));
 }
 
-page_table_entry* prepare_copy_on_write()
+page_table_entry* prepare_copy_page_table(page_table_entry* src)
 {
 	auto* table = new_page_table();
 	if (table == nullptr) {
@@ -246,10 +246,8 @@ page_table_entry* prepare_copy_on_write()
 		return nullptr;
 	}
 
-	memcpy(table, reinterpret_cast<page_table_entry*>(get_cr3()),
-		   256 * sizeof(page_table_entry));
-	copy_page_tables(table, reinterpret_cast<page_table_entry*>(get_cr3()), 4, false,
-					 256);
+	copy_kernel_space(table);
+	copy_page_tables(table, src, 4, false, 256);
 
 	return table;
 }

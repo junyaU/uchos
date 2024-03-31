@@ -191,12 +191,16 @@ task_t sys_fork(void)
 	get_current_context(&current_ctx);
 
 	task* t = CURRENT_TASK;
-	if (strcmp(t->name, "child") == 0) {
+	if (t->parent_id != -1 && strcmp(t->name, tasks[t->parent_id]->name) == 0) {
 		set_cr3(t->ctx.cr3);
 		return 0;
 	}
 
 	task* child = copy_task(t, &current_ctx);
+	if (child == nullptr) {
+		return ERR_FORK_FAILED;
+	}
+
 	schedule_task(child->id);
 
 	return child->id;

@@ -39,7 +39,6 @@ struct task {
 		 const char* task_name,
 		 uint64_t task_addr,
 		 task_state state,
-		 int priority,
 		 bool is_init);
 
 	~task() { kfree(reinterpret_cast<void*>(ctx.cr3)); }
@@ -49,6 +48,8 @@ struct task {
 	static void operator delete(void* p) { kfree(p); }
 
 	error_t copy_parent_stack(const context& parent_ctx);
+
+	error_t copy_parent_page_table();
 };
 
 extern task* CURRENT_TASK;
@@ -58,7 +59,7 @@ static constexpr int MAX_TASKS = 100;
 extern std::array<task*, MAX_TASKS> tasks;
 extern list_t run_queue;
 
-task* create_task(const char* name, uint64_t task_addr, int priority, bool is_init);
+task* create_task(const char* name, uint64_t task_addr, bool is_init);
 task* copy_task(task* parent, context* current_ctx);
 task* get_scheduled_task();
 task_t get_task_id_by_name(const char* name);

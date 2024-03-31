@@ -115,7 +115,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	initialize_task();
 
 	task* shell_task =
-			create_task("shell", reinterpret_cast<uint64_t>(&task_shell), 2, true);
+			create_task("shell", reinterpret_cast<uint64_t>(&task_shell), true);
 	schedule_task(shell_task->id);
 
 	initialize_freetype();
@@ -126,8 +126,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_keyboard();
 
-	auto* sandbox = create_task("sandbox", reinterpret_cast<uint64_t>(&task_sandbox),
-								2, true);
+	auto* sandbox =
+			create_task("sandbox", reinterpret_cast<uint64_t>(&task_sandbox), true);
 	schedule_task(sandbox->id);
 
 	task_main();
