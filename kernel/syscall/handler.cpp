@@ -2,7 +2,6 @@
 #include "../graphics/font.hpp"
 #include "../graphics/log.hpp"
 #include "../graphics/screen.hpp"
-#include "../memory/paging_utils.h"
 #include "../memory/user.hpp"
 #include "../task/context_switch.h"
 #include "../task/task.hpp"
@@ -192,7 +191,6 @@ task_t sys_fork(void)
 
 	task* t = CURRENT_TASK;
 	if (t->parent_id != -1 && strcmp(t->name, tasks[t->parent_id]->name) == 0) {
-		set_cr3(t->ctx.cr3);
 		return 0;
 	}
 
