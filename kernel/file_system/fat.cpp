@@ -246,9 +246,9 @@ void execute_file(const directory_entry& entry, const char* args)
 
 	exec_elf(file_buffer.data(), command_name, args);
 
-	const auto addr_first =
-			get_first_load_addr(reinterpret_cast<elf64_ehdr_t*>(file_buffer.data()));
-	clean_page_tables(linear_address{ addr_first });
+	// const auto addr_first =
+	// 		get_first_load_addr(reinterpret_cast<elf64_ehdr_t*>(file_buffer.data()));
+	// clean_page_tables(linear_address{ addr_first });
 }
 
 cluster_t extend_cluster_chain(cluster_t last_cluster, int num_clusters)

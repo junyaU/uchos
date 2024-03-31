@@ -165,9 +165,5 @@ void exec_elf(void* buffer, const char* name, const char* args)
 
 	auto entry_addr = elf_header->e_entry;
 	call_userland(argc, argv, USER_SS, entry_addr, stack_addr.data + stack_size - 8,
-				  &t->kernel_stack_top);
-
-	for (int i = 0; i < 3; ++i) {
-		t->fds[i].reset();
-	}
+				  &t->kernel_stack_ptr);
 }

@@ -2,7 +2,10 @@
 #include "../graphics/font.hpp"
 #include "../graphics/log.hpp"
 #include "../graphics/screen.hpp"
+#include "../memory/paging.hpp"
+#include "../memory/paging_utils.h"
 #include "../memory/user.hpp"
+#include "../task/context_switch.h"
 #include "../task/task.hpp"
 #include "../timers/timer.hpp"
 #include "../types.hpp"
@@ -37,6 +40,8 @@ error_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	const auto fd = arg1;
 	const auto* buf = reinterpret_cast<const char*>(arg2);
 	const auto count = arg3;
+
+	printk(KERN_ERROR, buf);
 
 	if (count > 1024) {
 		return E2BIG;
@@ -180,10 +185,48 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	return OK;
 }
 
+page_table_entry* original = nullptr;
+
+task_t sys_fork(void)
+{
+	context current_ctx;
+	memset(&current_ctx, 0, sizeof(context));
+	get_current_context(&current_ctx);
+
+	task* t = CURRENT_TASK;
+	if (strcmp(t->name, "child") == 0) {
+		set_cr3(t->ctx.cr3);
+		return 0;
+	}
+
+	task* child = copy_task(t, &current_ctx);
+
+	auto* table = new_page_table();
+	copy_kernel_space(table);
+	copy_page_tables(table, reinterpret_cast<page_table_entry*>(get_cr3()), 4, true,
+					 256);
+	original = table;
+
+	auto* parent_table = new_page_table();
+	copy_kernel_space(parent_table);
+	copy_page_tables(parent_table, original, 4, false, 256);
+	set_cr3(reinterpret_cast<uint64_t>(parent_table));
+
+	auto* child_table = new_page_table();
+	copy_kernel_space(child_table);
+	copy_page_tables(child_table, original, 4, true, 256);
+
+	child->ctx.cr3 = reinterpret_cast<uint64_t>(child_table);
+	child->state = TASK_READY;
+	schedule_task(child->id);
+
+	return child->id;
+}
+
 uint64_t sys_exit()
 {
 	task* t = CURRENT_TASK;
-	return t->kernel_stack_top;
+	return t->kernel_stack_ptr;
 }
 
 extern "C" uint64_t handle_syscall(uint64_t arg1,
@@ -219,6 +262,9 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 			break;
 		case SYS_IPC:
 			result = sys_ipc(arg1, arg2, arg3, arg4);
+			break;
+		case SYS_FORK:
+			result = sys_fork();
 			break;
 		default:
 			printk(KERN_ERROR, "Unknown syscall number: %d", syscall_number);

@@ -43,5 +43,5 @@ void kill_userland(interrupt_frame* frame)
 
 	__asm__("sti");
 
-	exit_userland(CURRENT_TASK->kernel_stack_top, 128);
+	exit_userland(CURRENT_TASK->kernel_stack_ptr, 128);
 }

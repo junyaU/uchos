@@ -12,6 +12,7 @@
 #include "context_switch.h"
 #include "ipc.hpp"
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <functional>
@@ -61,6 +62,35 @@ task* create_task(const char* name, uint64_t task_addr, int priority, bool is_in
 	return tasks[task_id];
 }
 
+task* copy_task(task* parent, context* current_ctx)
+{
+	task* child = create_task("child", 0, 2, false);
+	if (child == nullptr) {
+		return nullptr;
+	}
+
+	memcpy(&child->ctx, current_ctx, sizeof(context));
+
+	size_t parent_stack_size = parent->stack.size();
+	child->stack.resize(parent_stack_size);
+	memcpy(child->stack.data(), parent->stack.data(),
+		   parent_stack_size * sizeof(uint64_t));
+
+	auto parent_stack_end =
+			reinterpret_cast<uint64_t>(&parent->stack[parent_stack_size]);
+	uint64_t rsp_elapsed = parent_stack_end - current_ctx->rsp;
+	uint64_t rbp_elapsed = parent_stack_end - current_ctx->rbp;
+	uint64_t current_rsp_elapsed = parent_stack_end - parent->kernel_stack_ptr;
+	auto child_stack_end =
+			reinterpret_cast<uint64_t>(&child->stack[parent_stack_size]);
+
+	child->ctx.rsp = child_stack_end - rsp_elapsed;
+	child->ctx.rbp = child_stack_end - rbp_elapsed;
+	child->kernel_stack_ptr = child_stack_end - current_rsp_elapsed;
+
+	return child;
+}
+
 task* get_scheduled_task()
 {
 	if (list_is_empty(&run_queue)) {
@@ -93,10 +123,14 @@ void schedule_task(task_t id)
 
 void switch_task(const context& current_ctx)
 {
-	memcpy(&CURRENT_TASK->ctx, &current_ctx, sizeof(context));
-
-	if (CURRENT_TASK->state != TASK_WAITING) {
-		schedule_task(CURRENT_TASK->id);
+	if (CURRENT_TASK->state == TASK_EXITED) {
+		delete tasks[CURRENT_TASK->id];
+		tasks[CURRENT_TASK->id] = nullptr;
+	} else {
+		memcpy(&CURRENT_TASK->ctx, &current_ctx, sizeof(context));
+		if (CURRENT_TASK->state != TASK_WAITING) {
+			schedule_task(CURRENT_TASK->id);
+		}
 	}
 
 	restore_context(&get_scheduled_task()->ctx);
@@ -104,15 +138,8 @@ void switch_task(const context& current_ctx)
 
 void exit_task(task_t id)
 {
-	if (tasks.size() <= id || tasks[id] == nullptr) {
-		printk(KERN_ERROR, "exit_task: task %d is not found", id);
-		return;
-	}
-
-	delete tasks[id];
-	tasks[id] = nullptr;
-
-	restore_context(&get_scheduled_task()->ctx);
+	tasks[id]->state = TASK_EXITED;
+	switch_task(tasks[id]->ctx);
 }
 
 [[noreturn]] void process_messages(task* t)
@@ -194,6 +221,10 @@ task::task(int id,
 	strncpy(name, task_name, sizeof(name) - 1);
 	name[sizeof(name) - 1] = '\0';
 
+	for (int i = 0; i < 3; ++i) {
+		fds[i].reset();
+	}
+
 	if (!is_init) {
 		return;
 	}
@@ -227,5 +258,5 @@ task::task(int id,
 
 extern "C" uint64_t get_current_task_stack()
 {
-	return CURRENT_TASK->kernel_stack_top;
+	return CURRENT_TASK->kernel_stack_ptr;
 }

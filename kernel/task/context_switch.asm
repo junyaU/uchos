@@ -123,8 +123,43 @@ restore_context:
 
     o64 iret
 
+global get_current_context
+get_current_context:
+    pushfq
+    pop qword [rdi + 0x10] ; save RFLAGS
 
+    mov [rdi + 0x40], rax
+    mov [rdi + 0x48], rbx
+    mov [rdi + 0x50], rcx
+    mov [rdi + 0x58], rdx
+    ; mov [rdi + 0x60], rdi ; rdi is the first argument
+    mov [rdi + 0x68], rsi
+    mov [rdi + 0x70], rsp
+    mov [rdi + 0x78], rbp
+    mov [rdi + 0x80], r8
+    mov [rdi + 0x88], r9
+    mov [rdi + 0x90], r10
+    mov [rdi + 0x98], r11
+    mov [rdi + 0xa0], r12
+    mov [rdi + 0xa8], r13
+    mov [rdi + 0xb0], r14
+    mov [rdi + 0xb8], r15
+    fxsave [rsi + 0xC0] ; save FPU state
 
+    mov rax, cr3
+    mov [rdi + 0x00], rax
+    mov rax, [rsp] ; save RIP
+    mov [rdi + 0x08], rax
+    lea rax, [rsp + 8] ; save stack pointer
+    mov [rdi + 0x70], rax
+    xor rax, rax
+    mov ax, cs
+    mov [rdi + 0x20], rax
+    mov ax, ss
+    mov [rdi + 0x28], rax
+    mov ax, fs
+    mov [rdi + 0x30], rax
+    mov ax, gs
+    mov [rdi + 0x38], rax
 
-
-
+    ret

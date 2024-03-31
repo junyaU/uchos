@@ -16,15 +16,16 @@
 
 void initialize_task();
 
-enum task_state : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING };
+enum task_state : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING, TASK_EXITED };
 
 struct task {
 	task_t id;
+	task_t parent_id;
 	char name[32];
 	int priority;
 	task_state state;
 	std::vector<uint64_t> stack;
-	uint64_t kernel_stack_top;
+	uint64_t kernel_stack_ptr;
 	alignas(16) context ctx;
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;
@@ -54,6 +55,7 @@ extern std::array<task*, MAX_TASKS> tasks;
 extern list_t run_queue;
 
 task* create_task(const char* name, uint64_t task_addr, int priority, bool is_init);
+task* copy_task(task* parent, context* current_ctx);
 task* get_scheduled_task();
 task_t get_task_id_by_name(const char* name);
 task_t get_available_task_id();
