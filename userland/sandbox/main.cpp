@@ -9,9 +9,9 @@ extern "C" int main(void)
 	int pid = sys_fork();
 
 	if (pid == 0) {
-		printf("Child process");
+		printf("child process");
 	} else {
-		printf("Parent process : child pid = %d", pid);
+		printf("parent process, child pid = %d", pid);
 	}
 
 	exit(0);
