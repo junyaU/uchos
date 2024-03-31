@@ -83,7 +83,7 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 
 	uint64_t offset_from_kernel_sp_ptr_to_stack_end =
 			end_of_parent_stack - parent->kernel_stack_ptr;
-	kernel_stack_ptr = end_of_parent_stack - offset_from_kernel_sp_ptr_to_stack_end;
+	kernel_stack_ptr = end_of_child_stack - offset_from_kernel_sp_ptr_to_stack_end;
 
 	return OK;
 }
