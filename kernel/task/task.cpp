@@ -62,31 +62,62 @@ task* create_task(const char* name, uint64_t task_addr, int priority, bool is_in
 	return tasks[task_id];
 }
 
+error_t task::copy_parent_stack(const context& parent_ctx)
+{
+	task* parent = tasks[parent_id];
+	if (parent == nullptr) {
+		return ERR_NO_TASK;
+	}
+
+	size_t parent_stack_size = parent->stack.size();
+	stack.resize(parent_stack_size);
+	memcpy(stack.data(), parent->stack.data(), parent_stack_size * sizeof(uint64_t));
+
+	auto parent_stack_end =
+			reinterpret_cast<uint64_t>(&parent->stack[parent_stack_size]);
+	uint64_t rsp_elapsed = parent_stack_end - parent_ctx.rsp;
+	uint64_t rbp_elapsed = parent_stack_end - parent_ctx.rbp;
+	uint64_t current_rsp_elapsed = parent_stack_end - parent->kernel_stack_ptr;
+	auto child_stack_end = reinterpret_cast<uint64_t>(&stack[parent_stack_size]);
+
+	ctx.rsp = child_stack_end - rsp_elapsed;
+	ctx.rbp = child_stack_end - rbp_elapsed;
+	kernel_stack_ptr = child_stack_end - current_rsp_elapsed;
+
+	return OK;
+}
+
 task* copy_task(task* parent, context* current_ctx)
 {
 	task* child = create_task("child", 0, 2, false);
 	if (child == nullptr) {
 		return nullptr;
 	}
+	child->parent_id = parent->id;
 
 	memcpy(&child->ctx, current_ctx, sizeof(context));
 
-	size_t parent_stack_size = parent->stack.size();
-	child->stack.resize(parent_stack_size);
-	memcpy(child->stack.data(), parent->stack.data(),
-		   parent_stack_size * sizeof(uint64_t));
+	if (IS_ERR(child->copy_parent_stack(*current_ctx))) {
+		printk(KERN_ERROR, "Failed to copy parent stack : %s", parent->name);
+		return nullptr;
+	}
 
-	auto parent_stack_end =
-			reinterpret_cast<uint64_t>(&parent->stack[parent_stack_size]);
-	uint64_t rsp_elapsed = parent_stack_end - current_ctx->rsp;
-	uint64_t rbp_elapsed = parent_stack_end - current_ctx->rbp;
-	uint64_t current_rsp_elapsed = parent_stack_end - parent->kernel_stack_ptr;
-	auto child_stack_end =
-			reinterpret_cast<uint64_t>(&child->stack[parent_stack_size]);
+	auto* table = new_page_table();
+	copy_kernel_space(table);
+	copy_page_tables(table, reinterpret_cast<page_table_entry*>(get_cr3()), 4, true,
+					 256);
+	parent->original_page_table = table;
 
-	child->ctx.rsp = child_stack_end - rsp_elapsed;
-	child->ctx.rbp = child_stack_end - rbp_elapsed;
-	child->kernel_stack_ptr = child_stack_end - current_rsp_elapsed;
+	auto* parent_table = new_page_table();
+	copy_kernel_space(parent_table);
+	copy_page_tables(parent_table, parent->original_page_table, 4, false, 256);
+	set_cr3(reinterpret_cast<uint64_t>(parent_table));
+
+	auto* child_table = new_page_table();
+	copy_kernel_space(child_table);
+	copy_page_tables(child_table, parent->original_page_table, 4, true, 256);
+
+	child->ctx.cr3 = reinterpret_cast<uint64_t>(child_table);
 
 	return child;
 }

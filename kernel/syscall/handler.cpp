@@ -2,7 +2,6 @@
 #include "../graphics/font.hpp"
 #include "../graphics/log.hpp"
 #include "../graphics/screen.hpp"
-#include "../memory/paging.hpp"
 #include "../memory/paging_utils.h"
 #include "../memory/user.hpp"
 #include "../task/context_switch.h"
@@ -185,8 +184,6 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	return OK;
 }
 
-page_table_entry* original = nullptr;
-
 task_t sys_fork(void)
 {
 	context current_ctx;
@@ -200,24 +197,6 @@ task_t sys_fork(void)
 	}
 
 	task* child = copy_task(t, &current_ctx);
-
-	auto* table = new_page_table();
-	copy_kernel_space(table);
-	copy_page_tables(table, reinterpret_cast<page_table_entry*>(get_cr3()), 4, true,
-					 256);
-	original = table;
-
-	auto* parent_table = new_page_table();
-	copy_kernel_space(parent_table);
-	copy_page_tables(parent_table, original, 4, false, 256);
-	set_cr3(reinterpret_cast<uint64_t>(parent_table));
-
-	auto* child_table = new_page_table();
-	copy_kernel_space(child_table);
-	copy_page_tables(child_table, original, 4, true, 256);
-
-	child->ctx.cr3 = reinterpret_cast<uint64_t>(child_table);
-	child->state = TASK_READY;
 	schedule_task(child->id);
 
 	return child->id;

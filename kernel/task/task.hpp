@@ -2,6 +2,7 @@
 
 #include "../file_system/file_descriptor.hpp"
 #include "../list.hpp"
+#include "../memory/paging.hpp"
 #include "../memory/slab.hpp"
 #include "../task/context.hpp"
 #include "../task/ipc.hpp"
@@ -27,6 +28,7 @@ struct task {
 	std::vector<uint64_t> stack;
 	uint64_t kernel_stack_ptr;
 	alignas(16) context ctx;
+	page_table_entry* original_page_table;
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;
 	std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>
@@ -45,6 +47,8 @@ struct task {
 	static void* operator new(size_t size) { return kmalloc(size, KMALLOC_ZEROED); }
 
 	static void operator delete(void* p) { kfree(p); }
+
+	error_t copy_parent_stack(const context& parent_ctx);
 };
 
 extern task* CURRENT_TASK;

@@ -17,6 +17,7 @@ constexpr int ERR_INVALID_ARG = -2;
 constexpr int ERR_INVALID_TASK = -3;
 constexpr int ERR_INVALID_FD = -4;
 constexpr int ERR_PAGE_NOT_PRESENT = -5;
+constexpr int ERR_NO_TASK = -6;
 
 // task ids
 constexpr int KERNEL_TASK_ID = 0;
