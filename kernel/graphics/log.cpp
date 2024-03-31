@@ -9,7 +9,7 @@
 
 void printk(int level, const char* format, ...)
 {
-	if (level != LOG_LEVEL) {
+	if (level != CURRENT_LOG_LEVEL) {
 		return;
 	}
 

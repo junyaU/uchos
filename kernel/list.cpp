@@ -1,4 +1,5 @@
 #include "list.hpp"
+#include <cstddef>
 
 void list_init(list_t* list)
 {
@@ -50,3 +51,15 @@ bool list_contains(list_t* list, list_elem_t* elem)
 }
 
 bool list_is_empty(list_t* list) { return list->next == list; }
+
+size_t list_size(list_t* list)
+{
+	size_t size = 0;
+	list_elem_t* node = list->next;
+	while (node != list) {
+		++size;
+		node = node->next;
+	}
+
+	return size;
+}
