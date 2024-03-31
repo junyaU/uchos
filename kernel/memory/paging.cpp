@@ -48,13 +48,13 @@ void dump_page_table(page_table_entry* table,
 		dump_page_table(entry.get_next_level_table(), page_table_level - 1, addr);
 	}
 
-	printk(KERN_INFO, "page_table_level=%d, index=%d entry=%p", page_table_level,
-		   page_table_index, entry.data);
+	printk(CURRENT_LOG_LEVEL, "page_table_level=%d, index=%d entry=%p",
+		   page_table_level, page_table_index, entry.data);
 }
 
 void dump_page_tables(linear_address addr)
 {
-	printk(KERN_INFO, "dest_addr=%p", addr.data);
+	printk(CURRENT_LOG_LEVEL, "dest_addr=%p", addr.data);
 	auto* pml4 = reinterpret_cast<page_table_entry*>(get_cr3());
 	dump_page_table(pml4, 4, addr);
 }
@@ -103,11 +103,11 @@ int setup_page_table(page_table_entry* page_table,
 			return -1;
 		}
 
-		page_table[page_table_index].bits.writable = writable;
-
 		if (page_table_level == 1) {
+			page_table[page_table_index].bits.writable = writable;
 			--num_pages;
 		} else {
+			page_table[page_table_index].bits.writable = 1;
 			const int num_remaining_pages = setup_page_table(
 					child_table, page_table_level - 1, addr, num_pages, writable);
 			if (num_remaining_pages == -1) {
@@ -183,7 +183,7 @@ void copy_page_tables(page_table_entry* dst,
 	if (level == 1) {
 		for (int i = start_index; i < 512; ++i) {
 			if (src[i].bits.present) {
-				dst[i].data = src[i].data;
+				dst[i] = src[i];
 				dst[i].bits.writable = writable;
 			}
 		}
@@ -191,7 +191,7 @@ void copy_page_tables(page_table_entry* dst,
 		for (int i = start_index; i < 512; ++i) {
 			if (src[i].bits.present) {
 				auto* new_table = new_page_table();
-				dst[i].data = src[i].data;
+				dst[i] = src[i];
 				dst[i].set_next_level_table(new_table);
 				copy_page_tables(new_table, src[i].get_next_level_table(), level - 1,
 								 writable, 0);
@@ -230,6 +230,26 @@ error_t copy_target_page(uint64_t addr)
 						 linear_address{ addr }, page);
 
 	return OK;
+}
+
+void copy_kernel_space(page_table_entry* dst)
+{
+	auto* src = reinterpret_cast<page_table_entry*>(get_cr3());
+	memcpy(dst, src, 256 * sizeof(page_table_entry));
+}
+
+page_table_entry* prepare_copy_page_table(page_table_entry* src)
+{
+	auto* table = new_page_table();
+	if (table == nullptr) {
+		printk(KERN_ERROR, "Failed to allocate memory for page table.");
+		return nullptr;
+	}
+
+	copy_kernel_space(table);
+	copy_page_tables(table, src, 4, false, 256);
+
+	return table;
 }
 
 error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr)

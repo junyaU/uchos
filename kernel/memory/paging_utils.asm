@@ -11,6 +11,16 @@ flush_tlb:
     invlpg [rdi]
     ret
 
+global get_cr0
+get_cr0:
+    mov rax, cr0
+    ret
+
+global set_cr0
+set_cr0:
+    mov cr0, rdi
+    ret
+
 global set_cr3 ; rdi = addr
 set_cr3:
     mov cr3, rdi

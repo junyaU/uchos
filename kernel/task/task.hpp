@@ -2,6 +2,7 @@
 
 #include "../file_system/file_descriptor.hpp"
 #include "../list.hpp"
+#include "../memory/paging.hpp"
 #include "../memory/slab.hpp"
 #include "../task/context.hpp"
 #include "../task/ipc.hpp"
@@ -16,16 +17,18 @@
 
 void initialize_task();
 
-enum task_state : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING };
+enum task_state : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING, TASK_EXITED };
 
 struct task {
 	task_t id;
+	task_t parent_id;
 	char name[32];
 	int priority;
 	task_state state;
 	std::vector<uint64_t> stack;
-	uint64_t kernel_stack_top;
+	uint64_t kernel_stack_ptr;
 	alignas(16) context ctx;
+	page_table_entry* original_page_table;
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;
 	std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>
@@ -36,7 +39,6 @@ struct task {
 		 const char* task_name,
 		 uint64_t task_addr,
 		 task_state state,
-		 int priority,
 		 bool is_init);
 
 	~task() { kfree(reinterpret_cast<void*>(ctx.cr3)); }
@@ -44,6 +46,10 @@ struct task {
 	static void* operator new(size_t size) { return kmalloc(size, KMALLOC_ZEROED); }
 
 	static void operator delete(void* p) { kfree(p); }
+
+	error_t copy_parent_stack(const context& parent_ctx);
+
+	error_t copy_parent_page_table();
 };
 
 extern task* CURRENT_TASK;
@@ -53,7 +59,8 @@ static constexpr int MAX_TASKS = 100;
 extern std::array<task*, MAX_TASKS> tasks;
 extern list_t run_queue;
 
-task* create_task(const char* name, uint64_t task_addr, int priority, bool is_init);
+task* create_task(const char* name, uint64_t task_addr, bool is_init);
+task* copy_task(task* parent, context* current_ctx);
 task* get_scheduled_task();
 task_t get_task_id_by_name(const char* name);
 task_t get_available_task_id();

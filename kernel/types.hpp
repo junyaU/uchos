@@ -12,11 +12,13 @@ constexpr int KMALLOC_ZEROED = (1 << 0);
 #define IS_OK(err) (!IS_ERR(err))
 #define IS_ERR(err) (((long)(err)) < 0)
 constexpr int OK = 0;
+constexpr int ERR_FORK_FAILED = -1;
 constexpr int ERR_NO_MEMORY = -1;
 constexpr int ERR_INVALID_ARG = -2;
 constexpr int ERR_INVALID_TASK = -3;
 constexpr int ERR_INVALID_FD = -4;
 constexpr int ERR_PAGE_NOT_PRESENT = -5;
+constexpr int ERR_NO_TASK = -6;
 
 // task ids
 constexpr int KERNEL_TASK_ID = 0;

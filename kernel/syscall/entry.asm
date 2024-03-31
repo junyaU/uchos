@@ -52,7 +52,7 @@ syscall_entry:
 
 .exit:
     mov rsp, rax ; restore kernel stack pointer
-    mov eax, 0;
+    mov eax, 0
 
     ; restore registers
     pop r15
@@ -63,3 +63,4 @@ syscall_entry:
     pop rbx
 
     ret
+

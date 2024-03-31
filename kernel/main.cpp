@@ -53,6 +53,21 @@ void task_shell()
 	exec_elf(buf.data(), "shell", nullptr);
 }
 
+void task_sandbox()
+{
+	auto* file = file_system::find_directory_entry_by_path("/sandbox");
+	if (file == nullptr) {
+		printk(KERN_ERROR, "failed to find /sandbox");
+		return;
+	}
+
+	file_system::execute_file(*file, nullptr);
+
+	task_t id = CURRENT_TASK->id;
+
+	exit_task(id);
+}
+
 // 1MiB　
 char kernel_stack[1024 * 1024];
 
@@ -100,7 +115,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	initialize_task();
 
 	task* shell_task =
-			create_task("shell", reinterpret_cast<uint64_t>(&task_shell), 2, true);
+			create_task("shell", reinterpret_cast<uint64_t>(&task_shell), true);
 	schedule_task(shell_task->id);
 
 	initialize_freetype();
@@ -110,6 +125,10 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	usb::xhci::initialize();
 
 	initialize_keyboard();
+
+	auto* sandbox =
+			create_task("sandbox", reinterpret_cast<uint64_t>(&task_sandbox), true);
+	schedule_task(sandbox->id);
 
 	task_main();
 }

@@ -108,6 +108,10 @@ void copy_page_tables(page_table_entry* dst,
 					  bool writable,
 					  int start_index);
 
+void copy_kernel_space(page_table_entry* dst);
+
+page_table_entry* prepare_copy_page_table(page_table_entry* src);
+
 error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr);
 
 void initialize_paging();
