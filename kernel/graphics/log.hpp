@@ -21,7 +21,7 @@
 
 static int kernel_cursor_x = 0;
 static int kernel_cursor_y = 5;
-static int LOG_LEVEL = KERN_ERROR;
+static int CURRENT_LOG_LEVEL = KERN_ERROR;
 
 __attribute__((no_caller_saved_registers)) void
 printk(int level, const char* format, ...);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 struct list {
 	list* prev;
 	list* next;
@@ -14,6 +15,7 @@ void list_push_back(list_t* list, list_elem_t* elem);
 list_elem_t* list_pop_front(list_t* list);
 bool list_is_empty(list_t* list);
 bool list_contains(list_t* list, list_elem_t* elem);
+size_t list_size(list_t* list);
 
 #define LIST_POP_FRONT(list, container, field)                                      \
 	({                                                                              \
