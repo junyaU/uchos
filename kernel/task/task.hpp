@@ -60,7 +60,7 @@ extern std::array<task*, MAX_TASKS> tasks;
 extern list_t run_queue;
 
 task* create_task(const char* name, uint64_t task_addr, bool is_init);
-task* copy_task(task* parent, context* current_ctx);
+task* copy_task(task* parent, context* parent_ctx);
 task* get_scheduled_task();
 task_t get_task_id_by_name(const char* name);
 task_t get_available_task_id();

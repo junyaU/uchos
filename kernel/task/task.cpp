@@ -72,18 +72,17 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 	stack.resize(parent_stack_size);
 	memcpy(stack.data(), parent->stack.data(), parent_stack_size * sizeof(uint64_t));
 
-	auto end_of_parent_stack =
+	auto parent_stack_top =
 			reinterpret_cast<uint64_t>(&parent->stack[parent_stack_size]);
-	uint64_t offset_from_rsp_to_stack_end = end_of_parent_stack - parent_ctx.rsp;
-	uint64_t offset_from_rbp_to_stack_end = end_of_parent_stack - parent_ctx.rbp;
-	auto end_of_child_stack = reinterpret_cast<uint64_t>(&stack[parent_stack_size]);
+	auto child_stack_top = reinterpret_cast<uint64_t>(&stack[parent_stack_size]);
+	uint64_t rsp_offset = parent_stack_top - parent_ctx.rsp;
+	uint64_t rbp_offset = parent_stack_top - parent_ctx.rbp;
 
-	ctx.rsp = end_of_child_stack - offset_from_rsp_to_stack_end;
-	ctx.rbp = end_of_child_stack - offset_from_rbp_to_stack_end;
+	ctx.rsp = child_stack_top - rsp_offset;
+	ctx.rbp = child_stack_top - rbp_offset;
 
-	uint64_t offset_from_kernel_sp_ptr_to_stack_end =
-			end_of_parent_stack - parent->kernel_stack_ptr;
-	kernel_stack_ptr = end_of_child_stack - offset_from_kernel_sp_ptr_to_stack_end;
+	uint64_t kernel_sp_offset = parent_stack_top - parent->kernel_stack_ptr;
+	kernel_stack_ptr = child_stack_top - kernel_sp_offset;
 
 	return OK;
 }
