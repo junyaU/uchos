@@ -110,7 +110,7 @@ error_t task::copy_parent_page_table()
 	return OK;
 }
 
-task* copy_task(task* parent, context* current_ctx)
+task* copy_task(task* parent, context* parent_ctx)
 {
 	task* child = create_task(parent->name, 0, false);
 	if (child == nullptr) {
@@ -118,9 +118,9 @@ task* copy_task(task* parent, context* current_ctx)
 	}
 	child->parent_id = parent->id;
 
-	memcpy(&child->ctx, current_ctx, sizeof(context));
+	memcpy(&child->ctx, parent_ctx, sizeof(context));
 
-	if (IS_ERR(child->copy_parent_stack(*current_ctx))) {
+	if (IS_ERR(child->copy_parent_stack(*parent_ctx))) {
 		printk(KERN_ERROR, "Failed to copy parent stack : %s", parent->name);
 		return nullptr;
 	}
