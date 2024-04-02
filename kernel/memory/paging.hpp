@@ -10,6 +10,8 @@
 #include <cstddef>
 #include <cstdint>
 
+constexpr size_t USER_SPACE_START_INDEX = 256;
+
 union linear_address {
 	uint64_t data;
 
@@ -110,7 +112,7 @@ void copy_page_tables(page_table_entry* dst,
 
 void copy_kernel_space(page_table_entry* dst);
 
-page_table_entry* prepare_copy_page_table(page_table_entry* src);
+page_table_entry* clone_page_table(page_table_entry* src, bool writable);
 
 error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr);
 

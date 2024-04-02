@@ -94,16 +94,15 @@ error_t task::copy_parent_page_table()
 		return ERR_NO_TASK;
 	}
 
-	page_table_entry* original_table =
-			prepare_copy_page_table(reinterpret_cast<page_table_entry*>(get_cr3()));
-	parent->original_page_table = original_table;
+	parent->page_table_snapshot =
+			reinterpret_cast<page_table_entry*>(parent->ctx.cr3);
 
 	page_table_entry* parent_table =
-			prepare_copy_page_table(parent->original_page_table);
+			clone_page_table(parent->page_table_snapshot, false);
 	set_cr3(reinterpret_cast<uint64_t>(parent_table));
 
 	page_table_entry* child_table =
-			prepare_copy_page_table(parent->original_page_table);
+			clone_page_table(parent->page_table_snapshot, false);
 	ctx.cr3 = reinterpret_cast<uint64_t>(child_table);
 
 	return OK;

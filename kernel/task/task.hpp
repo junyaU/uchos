@@ -28,7 +28,7 @@ struct task {
 	std::vector<uint64_t> stack;
 	uint64_t kernel_stack_ptr;
 	alignas(16) context ctx;
-	page_table_entry* original_page_table;
+	page_table_entry* page_table_snapshot;
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;
 	std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>

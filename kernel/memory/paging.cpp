@@ -238,7 +238,7 @@ void copy_kernel_space(page_table_entry* dst)
 	memcpy(dst, src, 256 * sizeof(page_table_entry));
 }
 
-page_table_entry* prepare_copy_page_table(page_table_entry* src)
+page_table_entry* clone_page_table(page_table_entry* src, bool writable)
 {
 	auto* table = new_page_table();
 	if (table == nullptr) {
@@ -247,7 +247,7 @@ page_table_entry* prepare_copy_page_table(page_table_entry* src)
 	}
 
 	copy_kernel_space(table);
-	copy_page_tables(table, src, 4, false, 256);
+	copy_page_tables(table, src, 4, writable, USER_SPACE_START_INDEX);
 
 	return table;
 }
