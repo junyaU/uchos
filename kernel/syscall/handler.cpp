@@ -205,6 +205,14 @@ task_t sys_fork(void)
 	return child->id;
 }
 
+error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
+{
+	const char* path = reinterpret_cast<const char*>(arg1);
+	const char* args = reinterpret_cast<const char*>(arg2);
+
+	return OK;
+}
+
 uint64_t sys_exit()
 {
 	task* t = CURRENT_TASK;
@@ -247,6 +255,9 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 			break;
 		case SYS_FORK:
 			result = sys_fork();
+			break;
+		case SYS_EXEC:
+			result = sys_exec(arg1, arg2, arg3);
 			break;
 		default:
 			printk(KERN_ERROR, "Unknown syscall number: %d", syscall_number);

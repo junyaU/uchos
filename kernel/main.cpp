@@ -1,4 +1,3 @@
-#include "elf.hpp"
 #include "file_system/fat.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
