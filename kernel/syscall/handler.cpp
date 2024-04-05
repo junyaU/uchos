@@ -2,6 +2,7 @@
 #include "../graphics/font.hpp"
 #include "../graphics/log.hpp"
 #include "../graphics/screen.hpp"
+#include "../memory/paging_utils.h"
 #include "../memory/user.hpp"
 #include "../task/context_switch.h"
 #include "../task/task.hpp"
@@ -210,14 +211,27 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	const char* path = reinterpret_cast<const char*>(arg1);
 	const char* args = reinterpret_cast<const char*>(arg2);
 
+	auto* entry = file_system::find_directory_entry_by_path(path);
+	if (entry == nullptr) {
+		printk(KERN_ERROR, "exec: %s: No such file or directory", path);
+		return ERR_NO_FILE;
+	}
+
+	// TODO: Implement cleanup page table
+	page_table_entry* page_table = new_page_table();
+	if (page_table == nullptr) {
+		printk(KERN_ERROR, "Failed to allocate memory for page table.");
+		return ERR_NO_MEMORY;
+	}
+	copy_kernel_space(page_table);
+	set_cr3(reinterpret_cast<uint64_t>(page_table));
+
+	file_system::execute_file(*entry, args);
+
 	return OK;
 }
 
-uint64_t sys_exit()
-{
-	task* t = CURRENT_TASK;
-	return t->kernel_stack_ptr;
-}
+void sys_exit() { exit_task(); }
 
 extern "C" uint64_t handle_syscall(uint64_t arg1,
 								   uint64_t arg2,
@@ -239,7 +253,7 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 			result = sys_open(arg1, arg2);
 			break;
 		case SYS_EXIT:
-			result = sys_exit();
+			sys_exit();
 			break;
 		case SYS_DRAW_TEXT:
 			result = sys_draw_text(arg1, arg2, arg3, arg4);

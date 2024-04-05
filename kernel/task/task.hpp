@@ -41,7 +41,11 @@ struct task {
 		 task_state state,
 		 bool is_init);
 
-	~task() { kfree(reinterpret_cast<void*>(ctx.cr3)); }
+	~task()
+	{
+		// TODO: Implement cleanup page table
+		kfree(reinterpret_cast<void*>(ctx.cr3));
+	}
 
 	static void* operator new(size_t size) { return kmalloc(size, KMALLOC_ZEROED); }
 

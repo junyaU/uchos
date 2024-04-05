@@ -14,7 +14,6 @@ syscall_entry:
     push rbp
     push rcx ; save RIP
     push r11 ; save RFLAGS
-    push rax ; save syscall number
 
     mov rcx, r10 ; 4th argument
     mov r9, rax ; save syscall number in 6th argument
@@ -41,26 +40,9 @@ syscall_entry:
 
     mov rsp, rbp ; restore stack pointer
 
-    pop rsi ; restore syscall number
-    cmp esi, 60
-    je .exit
-
     pop r11 ; restore RFLAGS
     pop rcx ; restore RIP
     pop rbp
     o64 sysret
 
-.exit:
-    mov rsp, rax ; restore kernel stack pointer
-    mov eax, 0
-
-    ; restore registers
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbp
-    pop rbx
-
-    ret
 
