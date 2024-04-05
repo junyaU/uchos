@@ -149,7 +149,7 @@ void setup_page_tables(linear_address addr, size_t num_pages, bool writable)
 
 void clean_page_table(page_table_entry* table, int page_table_level)
 {
-	for (int i = 0; i < 512; i++) {
+	for (int i = 0; i < 512; ++i) {
 		auto entry = table[i];
 		if (!entry.bits.present) {
 			continue;

@@ -1,4 +1,3 @@
-#include "elf.hpp"
 #include "file_system/fat.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
@@ -47,8 +46,6 @@ void task_shell()
 	}
 
 	file_system::execute_file(*entry, nullptr);
-
-	exit_task();
 }
 
 void task_sandbox()
@@ -60,8 +57,6 @@ void task_sandbox()
 	}
 
 	file_system::execute_file(*file, nullptr);
-
-	exit_task();
 }
 
 // 1MiB　
