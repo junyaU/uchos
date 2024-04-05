@@ -147,6 +147,19 @@ void setup_page_tables(linear_address addr, size_t num_pages, bool writable)
 	}
 }
 
+page_table_entry* config_new_page_table()
+{
+	page_table_entry* page_table = new_page_table();
+	if (page_table == nullptr) {
+		return nullptr;
+	}
+
+	copy_kernel_space(page_table);
+	set_cr3(reinterpret_cast<uint64_t>(page_table));
+
+	return page_table;
+}
+
 void clean_page_table(page_table_entry* table, int page_table_level)
 {
 	for (int i = 0; i < 512; ++i) {
@@ -164,14 +177,20 @@ void clean_page_table(page_table_entry* table, int page_table_level)
 	}
 }
 
-void clean_page_tables(linear_address addr)
+void clean_page_tables(page_table_entry* table)
 {
-	auto* pml4 = reinterpret_cast<page_table_entry*>(get_cr3());
-	auto* pdpt = pml4[addr.part(4)].get_next_level_table();
-	pml4[addr.part(4)].data = 0;
+	for (int i = USER_SPACE_START_INDEX; i < 512; ++i) {
+		auto entry = table[i];
+		if (!entry.bits.present) {
+			continue;
+		}
 
-	clean_page_table(pdpt, 3);
-	kfree(pdpt);
+		clean_page_table(entry.get_next_level_table(), 3);
+		kfree(entry.get_next_level_table());
+		table[i].data = 0;
+	}
+
+	kfree(table);
 }
 
 void copy_page_tables(page_table_entry* dst,

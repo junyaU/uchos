@@ -217,14 +217,12 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 		return ERR_NO_FILE;
 	}
 
-	// TODO: Implement cleanup page table
-	page_table_entry* page_table = new_page_table();
+	page_table_entry* page_table = config_new_page_table();
 	if (page_table == nullptr) {
-		printk(KERN_ERROR, "Failed to allocate memory for page table.");
 		return ERR_NO_MEMORY;
 	}
-	copy_kernel_space(page_table);
-	set_cr3(reinterpret_cast<uint64_t>(page_table));
+
+	CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(page_table);
 
 	file_system::execute_file(*entry, args);
 
