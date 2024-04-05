@@ -176,10 +176,10 @@ void switch_task(const context& current_ctx)
 	restore_context(&get_scheduled_task()->ctx);
 }
 
-void exit_task(task_t id)
+void exit_task()
 {
-	tasks[id]->state = TASK_EXITED;
-	switch_task(tasks[id]->ctx);
+	CURRENT_TASK->state = TASK_EXITED;
+	switch_task(CURRENT_TASK->ctx);
 }
 
 [[noreturn]] void process_messages(task* t)
