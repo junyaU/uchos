@@ -46,11 +46,9 @@ void task_shell()
 		return;
 	}
 
-	std::vector<uint8_t> buf(entry->file_size);
+	file_system::execute_file(*entry, nullptr);
 
-	file_system::load_file(buf.data(), entry->file_size, *entry);
-
-	exec_elf(buf.data(), "shell", nullptr);
+	exit_task();
 }
 
 void task_sandbox()
@@ -63,9 +61,7 @@ void task_sandbox()
 
 	file_system::execute_file(*file, nullptr);
 
-	task_t id = CURRENT_TASK->id;
-
-	exit_task(id);
+	exit_task();
 }
 
 // 1MiB　
@@ -125,10 +121,6 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	usb::xhci::initialize();
 
 	initialize_keyboard();
-
-	auto* sandbox =
-			create_task("sandbox", reinterpret_cast<uint64_t>(&task_sandbox), true);
-	schedule_task(sandbox->id);
 
 	task_main();
 }

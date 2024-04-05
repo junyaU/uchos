@@ -66,7 +66,7 @@ task_t get_task_id_by_name(const char* name);
 task_t get_available_task_id();
 void schedule_task(task_t id);
 void switch_task(const context& current_ctx);
-void exit_task(task_t id);
+void exit_task();
 [[noreturn]] void process_messages(task* t);
 fd_t allocate_fd(task* t);
 

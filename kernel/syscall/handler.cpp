@@ -186,6 +186,7 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 task_t sys_fork(void)
 {
 	context current_ctx;
+	memset(&current_ctx, 0, sizeof(current_ctx));
 	__asm__ volatile("mov %%rdi, %0" : "=r"(current_ctx.rdi));
 	get_current_context(&current_ctx);
 
