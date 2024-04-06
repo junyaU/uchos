@@ -12,7 +12,12 @@ disk.img
 /libs/*/*.o
 
 /userland/*/*
+
 !/userland/*/*.c
 !/userland/*/*.h
 !/userland/*/*.cpp
 !/userland/*/*.hpp
+
+!/userland/*/*/
+/userland/*/*/*
+!/userland/*/*/*.cpp

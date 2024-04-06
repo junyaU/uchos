@@ -6,6 +6,7 @@
 #include "sys/_default_fcntl.h"
 #include "syscall.hpp"
 #include "task/context_switch.h"
+#include "task/ipc.hpp"
 #include "task/task.hpp"
 #include "timers/timer.hpp"
 #include <cerrno>
