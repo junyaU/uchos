@@ -16,6 +16,7 @@ constexpr int NOTIFY_WRITE = 4;
 constexpr int IPC_FILE_SYSTEM_OPERATION = 5;
 constexpr int IPC_INITIALIZE_TASK = 6;
 constexpr int IPC_TIME = 7;
+constexpr int IPC_EXIT_TASK = 8;
 
 // file system operations
 constexpr int FS_OP_LIST = 0;
@@ -62,6 +63,10 @@ struct message {
 			char buf[128];
 			bool is_end_of_message;
 		} write_shell;
+
+		struct {
+			int status;
+		} exit_task;
 
 	} data;
 };

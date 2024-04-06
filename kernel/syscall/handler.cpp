@@ -241,6 +241,34 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 void sys_exit() { exit_task(); }
 
+task_t sys_wait(uint64_t arg1)
+{
+	auto __user* status = reinterpret_cast<int*>(arg1);
+
+	task* t = CURRENT_TASK;
+
+	while (true) {
+		if (t->messages.empty()) {
+			t->state = TASK_WAITING;
+			continue;
+		}
+
+		t->state = TASK_RUNNING;
+
+		message m = t->messages.front();
+		t->messages.pop();
+
+		if (m.type != IPC_EXIT_TASK) {
+			continue;
+		}
+
+		copy_to_user(status, &m.data.exit_task.status, sizeof(int));
+		return m.sender;
+	}
+
+	return NO_TASK;
+}
+
 extern "C" uint64_t handle_syscall(uint64_t arg1,
 								   uint64_t arg2,
 								   uint64_t arg3,
@@ -280,6 +308,9 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 			break;
 		case SYS_EXEC:
 			result = sys_exec(arg1, arg2, arg3);
+			break;
+		case SYS_WAIT:
+			result = sys_wait(arg1);
 			break;
 		default:
 			printk(KERN_ERROR, "Unknown syscall number: %d", syscall_number);

@@ -19,6 +19,7 @@ uint64_t sys_time(int ms, int is_periodic, uint8_t action, int task_id);
 uint64_t sys_ipc(int dest, int src, const void* m, int flags);
 uint64_t sys_fork();
 uint64_t sys_exec(const char* path, const char* args);
+uint64_t sys_wait(int* status);
 
 #ifdef __cplusplus
 }
