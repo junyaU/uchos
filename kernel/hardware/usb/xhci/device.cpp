@@ -1,7 +1,7 @@
 #include "device.hpp"
 #include "../../../graphics/log.hpp"
 #include "ring.hpp"
-#include <../../libs/common/types.hpp>
+#include <libs/common/types.hpp>
 
 namespace usb::xhci
 {

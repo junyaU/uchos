@@ -1,7 +1,7 @@
 #include "ipc.hpp"
 #include "../graphics/log.hpp"
 #include "task.hpp"
-#include <../../libs/common/types.hpp>
+#include <libs/common/types.hpp>
 
 error_t send_message(task_t dst_id, const message* m)
 {

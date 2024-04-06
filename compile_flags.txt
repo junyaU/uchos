@@ -19,3 +19,4 @@
 -I./x86_64-elf/include/c++/v1
 -I./x86_64-elf/include
 -I./x86_64-elf/include/freetype2
+-I./

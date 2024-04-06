@@ -1,7 +1,7 @@
 #include "ring.hpp"
 #include "../../../graphics/log.hpp"
 #include "../../../memory/slab.hpp"
-#include <../../libs/common/types.hpp>
+#include <libs/common/types.hpp>
 
 namespace usb::xhci
 {

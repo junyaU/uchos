@@ -6,11 +6,11 @@
 #include "../memory/slab.hpp"
 #include "../task/context.hpp"
 #include "../task/ipc.hpp"
-#include <../../libs/common/types.hpp>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <libs/common/types.hpp>
 #include <memory>
 #include <queue>
 #include <vector>

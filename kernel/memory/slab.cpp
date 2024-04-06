@@ -3,9 +3,9 @@
 #include "../graphics/log.hpp"
 #include "buddy_system.hpp"
 #include "page.hpp"
-#include <../../libs/common/types.hpp>
 #include <cstring>
 #include <iterator>
+#include <libs/common/types.hpp>
 #include <list>
 #include <memory>
 #include <stdio.h>

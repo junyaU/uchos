@@ -14,10 +14,10 @@
 #pragma once
 
 #include "../file_system/file_descriptor.hpp"
-#include <../../libs/common/types.hpp>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <libs/common/types.hpp>
 
 static int kernel_cursor_x = 0;
 static int kernel_cursor_y = 5;

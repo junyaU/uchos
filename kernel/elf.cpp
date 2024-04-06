@@ -5,9 +5,9 @@
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"
 #include "task/task.hpp"
-#include <../../libs/common/types.hpp>
 #include <cstdint>
 #include <cstring>
+#include <libs/common/types.hpp>
 
 int make_args(char* command,
 			  char* args,

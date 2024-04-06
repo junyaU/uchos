@@ -7,7 +7,7 @@
 #include "context.hpp"
 #include "speed.hpp"
 #include "trb.hpp"
-#include <../../libs/common/types.hpp>
+#include <libs/common/types.hpp>
 
 namespace
 {

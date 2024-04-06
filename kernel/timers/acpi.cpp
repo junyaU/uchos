@@ -1,7 +1,7 @@
 #include "acpi.hpp"
 #include "../asm_utils.h"
 #include "../graphics/log.hpp"
-#include <../../libs/common/types.hpp>
+#include <libs/common/types.hpp>
 #include <string.h>
 
 namespace acpi

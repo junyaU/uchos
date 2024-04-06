@@ -3,9 +3,9 @@
 #include "../task/task.hpp"
 #include "font.hpp"
 #include "screen.hpp"
-#include <../../libs/common/types.hpp>
 #include <cstddef>
 #include <cstring>
+#include <libs/common/types.hpp>
 
 void printk(int level, const char* format, ...)
 {

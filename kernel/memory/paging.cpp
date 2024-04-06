@@ -3,10 +3,10 @@
 #include "page.hpp"
 #include "paging_utils.h"
 #include "slab.hpp"
-#include <../../libs/common/types.hpp>
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <libs/common/types.hpp>
 
 namespace
 {

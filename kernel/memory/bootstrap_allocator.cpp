@@ -3,7 +3,7 @@
 #include "../graphics/log.hpp"
 #include "buddy_system.hpp"
 #include "page.hpp"
-#include <../../libs/common/types.hpp>
+#include <libs/common/types.hpp>
 
 #include <sys/types.h>
 

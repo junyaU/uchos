@@ -2,9 +2,9 @@
 #include "../bit_utils.hpp"
 #include "../graphics/log.hpp"
 #include "page.hpp"
-#include <../../libs/common/types.hpp>
 #include <cstddef>
 #include <cstdint>
+#include <libs/common/types.hpp>
 
 buddy_system* memory_manager;
 

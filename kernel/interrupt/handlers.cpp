@@ -4,8 +4,8 @@
 #include "../task/ipc.hpp"
 #include "../task/task.hpp"
 #include "../timers/timer.hpp"
-#include <../../libs/common/types.hpp>
 #include <cstdint>
+#include <libs/common/types.hpp>
 
 namespace
 {

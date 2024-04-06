@@ -4,10 +4,10 @@
 #include "page.hpp"
 #include "segment_utils.h"
 #include "slab.hpp"
-#include <../../libs/common/types.hpp>
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <libs/common/types.hpp>
 
 namespace
 {

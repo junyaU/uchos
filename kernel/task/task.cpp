@@ -10,12 +10,12 @@
 #include "../timers/timer.hpp"
 #include "context_switch.h"
 #include "ipc.hpp"
-#include <../../libs/common/types.hpp>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <libs/common/types.hpp>
 #include <memory>
 #include <queue>
 #include <vector>
