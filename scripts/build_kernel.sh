@@ -18,9 +18,23 @@ for MKF in $(ls $work_path/userland/*/Makefile); do
     make ${MAKE_OPTS:-} -C $APP_DIR $APP
 done
 
+for MKF in $(ls $work_path/userland/commands/*/Makefile); do
+    APP_DIR=$(dirname $MKF)
+    APP=$(basename $APP_DIR)
+    make ${MAKE_OPTS:-} -C $APP_DIR $APP
+done
+
 for APP in $(ls $work_path/userland); do
     if [ -f $work_path/userland/$APP/$APP ]; then
         sudo cp $work_path/userland/$APP/$APP $mount_point/
+    fi
+done
+
+sudo mkdir -p $mount_point/commands
+
+for COMMAND in $(ls $work_path/userland/commands); do
+    if [ -f $work_path/userland/commands/$COMMAND/$COMMAND ]; then
+        sudo cp $work_path/userland/commands/$COMMAND/$COMMAND $mount_point/
     fi
 done
 

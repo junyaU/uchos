@@ -1,8 +1,6 @@
 #include "ipc.hpp"
 #include "syscall.hpp"
 
-int SHELL_TASK_ID = 0;
-
 void receive_message(message* msg)
 {
 	sys_ipc(msg->sender, msg->sender, msg, IPC_RECV);

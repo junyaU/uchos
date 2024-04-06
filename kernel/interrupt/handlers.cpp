@@ -1,9 +1,9 @@
 #include "handlers.hpp"
-#include "../asm_utils.h"
-#include "../task/context.hpp"
-#include "../task/ipc.hpp"
-#include "../task/task.hpp"
-#include "../timers/timer.hpp"
+#include "asm_utils.h"
+#include "task/context.hpp"
+#include "task/ipc.hpp"
+#include "task/task.hpp"
+#include "timers/timer.hpp"
 #include <cstdint>
 #include <libs/common/types.hpp>
 
@@ -18,7 +18,7 @@ namespace
 
 __attribute__((interrupt)) void on_xhci_interrupt(interrupt_frame* frame)
 {
-	const message m = { NOTIFY_XHCI, INTERRUPT_TASK_ID, {} };
+	const message m = { NOTIFY_XHCI, INTERRUPT_TASK, {} };
 	send_message(XHCI_TASK_ID, &m);
 
 	notify_end_of_interrupt();
