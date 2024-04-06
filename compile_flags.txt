@@ -20,3 +20,4 @@
 -I./x86_64-elf/include
 -I./x86_64-elf/include/freetype2
 -I./
+-I./kernel
