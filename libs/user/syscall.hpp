@@ -18,7 +18,7 @@ uint64_t sys_fill_rect(int x, int y, int width, int height, uint32_t color);
 uint64_t sys_time(int ms, int is_periodic, uint8_t action, int task_id);
 uint64_t sys_ipc(int dest, int src, const void* m, int flags);
 uint64_t sys_fork();
-uint64_t sys_exec(const char* path, char* const argv[]);
+uint64_t sys_exec(const char* path, const char* args);
 
 #ifdef __cplusplus
 }

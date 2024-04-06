@@ -23,7 +23,9 @@ constexpr int KERNEL_TASK_ID = 0;
 constexpr int XHCI_TASK_ID = 2;
 constexpr int FS_TASK_ID = 3;
 constexpr int SHELL_TASK_ID = 4;
-constexpr int INTERRUPT_TASK_ID = 100;
+
+constexpr int INTERRUPT_TASK = 100;
+constexpr int CHILD_TASK = 101;
 
 // log levels
 constexpr int KERN_DEBUG = 0;
