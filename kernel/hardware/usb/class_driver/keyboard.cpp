@@ -1,6 +1,6 @@
 #include "keyboard.hpp"
-#include "../../../memory/slab.hpp"
 #include "hid.hpp"
+#include "memory/slab.hpp"
 #include <libs/common/types.hpp>
 
 #include <bitset>

@@ -1,6 +1,6 @@
 #include "segment.hpp"
-#include "../graphics/log.hpp"
-#include "../interrupt/idt.hpp"
+#include "graphics/log.hpp"
+#include "interrupt/idt.hpp"
 #include "page.hpp"
 #include "segment_utils.h"
 #include "slab.hpp"

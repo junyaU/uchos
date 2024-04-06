@@ -1,7 +1,7 @@
 #include "bootstrap_allocator.hpp"
 #include "../../UchLoaderPkg/memory_map.hpp"
-#include "../graphics/log.hpp"
 #include "buddy_system.hpp"
+#include "graphics/log.hpp"
 #include "page.hpp"
 #include <libs/common/types.hpp>
 

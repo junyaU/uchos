@@ -1,5 +1,5 @@
 #include "ipc.hpp"
-#include "../graphics/log.hpp"
+#include "graphics/log.hpp"
 #include "task.hpp"
 #include <libs/common/types.hpp>
 

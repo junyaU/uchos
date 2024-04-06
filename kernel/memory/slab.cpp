@@ -1,7 +1,7 @@
 #include "slab.hpp"
-#include "../bit_utils.hpp"
-#include "../graphics/log.hpp"
+#include "bit_utils.hpp"
 #include "buddy_system.hpp"
+#include "graphics/log.hpp"
 #include "page.hpp"
 #include <cstring>
 #include <iterator>

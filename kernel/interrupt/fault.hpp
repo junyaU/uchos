@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../graphics/log.hpp"
-#include "../memory/paging.hpp"
-#include "../memory/paging_utils.h"
+#include "graphics/log.hpp"
 #include "handlers.hpp"
+#include "memory/paging.hpp"
+#include "memory/paging_utils.h"
 
 #include <cstdint>
 

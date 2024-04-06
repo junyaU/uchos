@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../task/ipc.hpp"
 #include <cstdint>
+#include <libs/common/message.hpp>
 #include <queue>
 #include <unordered_set>
 

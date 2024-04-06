@@ -1,5 +1,5 @@
 #include "port.hpp"
-#include "../../../graphics/log.hpp"
+#include "graphics/log.hpp"
 #include "registers.hpp"
 #include <libs/common/types.hpp>
 

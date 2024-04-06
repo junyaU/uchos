@@ -1,6 +1,6 @@
 #include "device_manager.hpp"
-#include "../../../graphics/log.hpp"
-#include "../../../memory/slab.hpp"
+#include "graphics/log.hpp"
+#include "memory/slab.hpp"
 #include <libs/common/types.hpp>
 
 namespace usb::xhci
