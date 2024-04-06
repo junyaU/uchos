@@ -1,6 +1,7 @@
 #include "task.hpp"
 #include "fat.hpp"
 #include "graphics/font.hpp"
+#include "task/ipc.hpp"
 #include "task/task.hpp"
 #include <cstddef>
 
