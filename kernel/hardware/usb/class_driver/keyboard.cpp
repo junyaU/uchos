@@ -1,7 +1,7 @@
 #include "keyboard.hpp"
 #include "../../../memory/slab.hpp"
-#include "../../../types.hpp"
 #include "hid.hpp"
+#include <libs/common/types.hpp>
 
 #include <bitset>
 

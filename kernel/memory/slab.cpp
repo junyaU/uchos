@@ -1,11 +1,11 @@
 #include "slab.hpp"
 #include "../bit_utils.hpp"
 #include "../graphics/log.hpp"
-#include "../types.hpp"
 #include "buddy_system.hpp"
 #include "page.hpp"
 #include <cstring>
 #include <iterator>
+#include <libs/common/types.hpp>
 #include <list>
 #include <memory>
 #include <stdio.h>

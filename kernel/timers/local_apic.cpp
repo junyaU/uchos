@@ -3,7 +3,7 @@
 #include "../interrupt/vector.hpp"
 #include "../timers/acpi.hpp"
 #include "../timers/timer.hpp"
-#include "../types.hpp"
+#include <libs/common/types.hpp>
 
 namespace local_apic
 {

@@ -8,7 +8,6 @@
 #include "../memory/paging_utils.h"
 #include "../memory/segment.hpp"
 #include "../timers/timer.hpp"
-#include "../types.hpp"
 #include "context_switch.h"
 #include "ipc.hpp"
 #include <array>
@@ -16,6 +15,7 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <libs/common/types.hpp>
 #include <memory>
 #include <queue>
 #include <vector>

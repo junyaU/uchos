@@ -6,11 +6,11 @@
 #include "../memory/slab.hpp"
 #include "../task/context.hpp"
 #include "../task/ipc.hpp"
-#include "../types.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <libs/common/types.hpp>
 #include <memory>
 #include <queue>
 #include <vector>
@@ -41,7 +41,10 @@ struct task {
 		 task_state state,
 		 bool is_init);
 
-	~task() { clean_page_tables(reinterpret_cast<page_table_entry*>(ctx.cr3)); }
+	~task()
+	{
+		// clean_page_tables(reinterpret_cast<page_table_entry*>(ctx.cr3));
+	}
 
 	static void* operator new(size_t size) { return kmalloc(size, KMALLOC_ZEROED); }
 

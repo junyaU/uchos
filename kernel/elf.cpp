@@ -3,12 +3,11 @@
 #include "graphics/log.hpp"
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
-#include "memory/paging_utils.h"
 #include "memory/segment.hpp"
 #include "task/task.hpp"
-#include "types.hpp"
 #include <cstdint>
 #include <cstring>
+#include <libs/common/types.hpp>
 
 int make_args(char* command,
 			  char* args,

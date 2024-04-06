@@ -6,9 +6,9 @@
 
 #pragma once
 
-#include "../types.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <libs/common/types.hpp>
 
 constexpr size_t USER_SPACE_START_INDEX = 256;
 

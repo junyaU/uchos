@@ -1,7 +1,7 @@
 #include "command.hpp"
 #include "shell.hpp"
 #include "terminal.hpp"
-#include <../../libs/user/ipc.hpp>
+#include <libs/user/ipc.hpp>
 
 void echo(const char* input, terminal& term)
 {
@@ -19,7 +19,7 @@ void ls(char* input, terminal& term)
 
 	message m;
 	m.type = IPC_FILE_SYSTEM_OPERATION;
-	m.sender = SHELL_TASK_ID;
+	m.sender = 4;
 	m.data.fs_operation.operation = FS_OP_LIST;
 	if (input == nullptr) {
 		memcpy(m.data.fs_operation.path, "/", 2);
@@ -27,7 +27,7 @@ void ls(char* input, terminal& term)
 		memcpy(m.data.fs_operation.path, input, strlen(input));
 	}
 
-	send_message(FS_TASK_ID, &m);
+	send_message(3, &m);
 }
 
 void cat(char* input, terminal& term)
@@ -41,10 +41,10 @@ void cat(char* input, terminal& term)
 	term.enable_input = false;
 
 	message m;
-	m.sender = SHELL_TASK_ID;
+	m.sender = 4;
 	m.type = IPC_FILE_SYSTEM_OPERATION;
 	m.data.fs_operation.operation = FS_OP_READ;
 	memcpy(m.data.fs_operation.path, input, strlen(input));
 
-	send_message(FS_TASK_ID, &m);
+	send_message(3, &m);
 }

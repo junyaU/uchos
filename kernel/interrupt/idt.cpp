@@ -1,12 +1,12 @@
 #include "idt.hpp"
 #include "../graphics/log.hpp"
 #include "../memory/segment.hpp"
-#include "../types.hpp"
 #include "fault.hpp"
 #include "handler.h"
 #include "handlers.hpp"
 #include "vector.hpp"
 #include <array>
+#include <libs/common/types.hpp>
 
 std::array<idt_entry, 256> idt;
 

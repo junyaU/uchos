@@ -1,11 +1,11 @@
 #include "log.hpp"
 #include "../task/ipc.hpp"
 #include "../task/task.hpp"
-#include "../types.hpp"
 #include "font.hpp"
 #include "screen.hpp"
 #include <cstddef>
 #include <cstring>
+#include <libs/common/types.hpp>
 
 void printk(int level, const char* format, ...)
 {

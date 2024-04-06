@@ -1,12 +1,12 @@
 #include "paging.hpp"
 #include "../graphics/log.hpp"
-#include "../types.hpp"
 #include "page.hpp"
 #include "paging_utils.h"
 #include "slab.hpp"
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <libs/common/types.hpp>
 
 namespace
 {

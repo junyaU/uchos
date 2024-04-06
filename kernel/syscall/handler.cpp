@@ -2,12 +2,10 @@
 #include "../graphics/font.hpp"
 #include "../graphics/log.hpp"
 #include "../graphics/screen.hpp"
-#include "../memory/paging_utils.h"
 #include "../memory/user.hpp"
 #include "../task/context_switch.h"
 #include "../task/task.hpp"
 #include "../timers/timer.hpp"
-#include "../types.hpp"
 #include "sys/_default_fcntl.h"
 #include "syscall.hpp"
 #include <cerrno>
@@ -15,6 +13,7 @@
 #include <cstdint>
 #include <cstring>
 #include <fcntl.h>
+#include <libs/common/types.hpp>
 #include <memory>
 #include <stdint.h>
 
@@ -208,12 +207,22 @@ task_t sys_fork(void)
 
 error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 {
-	const char* path = reinterpret_cast<const char*>(arg1);
-	const char* args = reinterpret_cast<const char*>(arg2);
+	const char __user* path = reinterpret_cast<const char*>(arg1);
+	const char __user* args = reinterpret_cast<const char*>(arg2);
 
-	auto* entry = file_system::find_directory_entry_by_path(path);
+	size_t path_len = strlen(path);
+	char copy_path[path_len + 1];
+	copy_from_user(copy_path, path, path_len);
+	copy_path[path_len] = '\0';
+
+	size_t args_len = strlen(args);
+	char copy_args[args_len + 1];
+	copy_from_user(copy_args, args, args_len);
+	copy_args[args_len] = '\0';
+
+	auto* entry = file_system::find_directory_entry_by_path(copy_path);
 	if (entry == nullptr) {
-		printk(KERN_ERROR, "exec: %s: No such file or directory", path);
+		printk(KERN_ERROR, "exec: %s: No such file or directory", copy_path);
 		return ERR_NO_FILE;
 	}
 
@@ -224,7 +233,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(page_table);
 
-	file_system::execute_file(*entry, args);
+	file_system::execute_file(*entry, copy_args);
 
 	return OK;
 }

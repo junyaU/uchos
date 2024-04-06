@@ -3,10 +3,7 @@
 using error_t = int;
 using task_t = int;
 using fd_t = int;
-
-// kmalloc flags
-constexpr int KMALLOC_UNINITIALIZED = 0;
-constexpr int KMALLOC_ZEROED = (1 << 0);
+using cluster_t = unsigned long;
 
 // error codes
 #define IS_OK(err) (!IS_ERR(err))
@@ -38,6 +35,3 @@ constexpr int NO_FD = -1;
 constexpr int STDIN_FILENO = 0;
 constexpr int STDOUT_FILENO = 1;
 constexpr int STDERR_FILENO = 2;
-
-// fat
-using cluster_t = unsigned long;

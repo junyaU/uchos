@@ -1,13 +1,12 @@
 #include "fat.hpp"
 #include "../elf.hpp"
 #include "../graphics/font.hpp"
-#include "../memory/paging.hpp"
-#include "../types.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <libs/common/types.hpp>
 #include <string.h>
 #include <utility>
 #include <vector>

@@ -1,13 +1,13 @@
 #include "segment.hpp"
 #include "../graphics/log.hpp"
 #include "../interrupt/idt.hpp"
-#include "../types.hpp"
 #include "page.hpp"
 #include "segment_utils.h"
 #include "slab.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <libs/common/types.hpp>
 
 namespace
 {

@@ -23,6 +23,7 @@ set(CMAKE_LINKER /usr/bin/ld.lld)
 # Define base directories for ease of reference.
 set(BASEDIR "../x86_64-elf")
 set(EDK2DIR "~/edk2")
+set(ROOTDIR "../")
 
 # Disable the use of rpath.
 set(CMAKE_SKIP_RPATH TRUE)
@@ -34,6 +35,7 @@ set(CMAKE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} -f elf64")
 
 # Specify the include directories for the compiler.
 include_directories(
+        ${ROOTDIR}
         ${CMAKE_SOURCE_DIR}
         ${BASEDIR}/include/c++/v1
         ${BASEDIR}/include
@@ -41,6 +43,9 @@ include_directories(
         ${EDK2DIR}/MdePkg/Include
         ${EDK2DIR}/MdePkg/Include/X64
 )
+
+message(STATUS "Including LIBDIR: ${CMAKE_SOURCE_DIR}")
+
 
 # Add compile options for both C and C++.
 add_compile_options(
@@ -94,15 +99,6 @@ add_subdirectory(syscall)
 
 # Define the main target and link it with the necessary libraries.
 add_executable(UchosKernel ${SOURCE_FILES})
-
-target_include_directories(UchosKernel PRIVATE
-        ${CMAKE_SOURCE_DIR}
-        ${BASEDIR}/include/c++/v1
-        ${BASEDIR}/include
-        ${BASEDIR}/include/freetype2
-        ${EDK2DIR}/MdePkg/Include
-        ${EDK2DIR}/MdePkg/Include/X64
-)
 
 target_link_libraries(
         UchosKernel

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../types.hpp"
 #include <cstdint>
+#include <libs/common/types.hpp>
 
 // flags for sys_ipc
 constexpr int IPC_RECV = 0;

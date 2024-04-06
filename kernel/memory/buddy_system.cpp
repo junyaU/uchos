@@ -1,10 +1,10 @@
 #include "buddy_system.hpp"
 #include "../bit_utils.hpp"
 #include "../graphics/log.hpp"
-#include "../types.hpp"
 #include "page.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <libs/common/types.hpp>
 
 buddy_system* memory_manager;
 

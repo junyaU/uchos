@@ -6,6 +6,8 @@ LDFLAGS += --entry main -z norelro --image-base 0xffff800000000000 --static -z s
 
 OBJS +=  $(wildcard ../../libs/user/*.o)
 
+INCLUDES = -I./../../
+
 .PHONY: all
 all: $(TARGET)
 
@@ -13,10 +15,10 @@ $(TARGET): $(OBJS) Makefile
 	ld.lld $(LDFLAGS) -o $@ $(OBJS) -lc -lc++ -lc++abi -lm
 
 %.o: %.c Makefile
-	clang $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	clang $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 %.o: %.cpp Makefile
-	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	clang++ $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 %.o: %.asm Makefile
 	nasm -f elf64 -o $@ $<

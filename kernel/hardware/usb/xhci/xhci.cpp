@@ -3,11 +3,11 @@
 #include "../../../graphics/log.hpp"
 #include "../../../interrupt/vector.hpp"
 #include "../../../memory/slab.hpp"
-#include "../../../types.hpp"
 #include "../../pci.hpp"
 #include "context.hpp"
 #include "speed.hpp"
 #include "trb.hpp"
+#include <libs/common/types.hpp>
 
 namespace
 {
