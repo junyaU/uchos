@@ -1,12 +1,12 @@
 #include "terminal.hpp"
 #include "shell.hpp"
-#include <../../libs/user/ipc.hpp>
-#include <../../libs/user/print.hpp>
-#include <../../libs/user/time.hpp>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <libs/user/ipc.hpp>
+#include <libs/user/print.hpp>
+#include <libs/user/time.hpp>
 
 std::array<std::array<char, TERMINAL_WIDTH>, TERMINAL_HEIGHT> terminal::buffer;
 std::array<std::array<uint32_t, TERMINAL_WIDTH>, TERMINAL_HEIGHT>
@@ -184,5 +184,5 @@ void terminal::input_char(char c)
 
 void set_cursor_timer(int ms)
 {
-	set_timer(ms, true, timeout_action_t::TERMINAL_CURSOR_BLINK, SHELL_TASK_ID);
+	set_timer(ms, true, timeout_action_t::TERMINAL_CURSOR_BLINK, 4);
 }

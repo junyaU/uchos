@@ -1,9 +1,9 @@
 #include "shell.hpp"
 #include "terminal.hpp"
-#include <../../libs/user/ipc.hpp>
-#include <../../libs/user/print.hpp>
-#include <../../libs/user/syscall.hpp>
 #include <cstdlib>
+#include <libs/user/ipc.hpp>
+#include <libs/user/print.hpp>
+#include <libs/user/syscall.hpp>
 #include <stdalign.h>
 
 alignas(terminal) char buffer[sizeof(terminal)];
@@ -42,7 +42,6 @@ extern "C" int main(void)
 				};
 				break;
 			case IPC_INITIALIZE_TASK:
-				SHELL_TASK_ID = msg.data.init.task_id;
 				set_cursor_timer(500);
 				break;
 			default:
