@@ -1,9 +1,9 @@
 #include "idt.hpp"
-#include "../graphics/log.hpp"
-#include "../memory/segment.hpp"
 #include "fault.hpp"
+#include "graphics/log.hpp"
 #include "handler.h"
 #include "handlers.hpp"
+#include "memory/segment.hpp"
 #include "vector.hpp"
 #include <array>
 #include <libs/common/types.hpp>

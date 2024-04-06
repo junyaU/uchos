@@ -1,7 +1,7 @@
 #include "task.hpp"
-#include "../graphics/font.hpp"
-#include "../task/task.hpp"
 #include "fat.hpp"
+#include "graphics/font.hpp"
+#include "task/task.hpp"
 #include <cstddef>
 
 void task_file_system()

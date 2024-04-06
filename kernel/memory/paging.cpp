@@ -1,5 +1,5 @@
 #include "paging.hpp"
-#include "../graphics/log.hpp"
+#include "graphics/log.hpp"
 #include "page.hpp"
 #include "paging_utils.h"
 #include "slab.hpp"

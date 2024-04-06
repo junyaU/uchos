@@ -2,8 +2,8 @@
 
 struct FrameBufferConf;
 
-#include "../point2d.hpp"
 #include "color.hpp"
+#include "point2d.hpp"
 #include <cstdint>
 
 class screen

@@ -1,8 +1,8 @@
 #include "syscall.hpp"
-#include "../asm_utils.h"
-#include "../memory/segment.hpp"
-#include "../msr.hpp"
+#include "asm_utils.h"
 #include "entry.h"
+#include "memory/segment.hpp"
+#include "msr.hpp"
 #include <cstdint>
 
 namespace syscall

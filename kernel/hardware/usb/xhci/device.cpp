@@ -1,5 +1,5 @@
 #include "device.hpp"
-#include "../../../graphics/log.hpp"
+#include "graphics/log.hpp"
 #include "ring.hpp"
 #include <libs/common/types.hpp>
 

@@ -1,6 +1,6 @@
 #include "fat.hpp"
-#include "../elf.hpp"
-#include "../graphics/font.hpp"
+#include "elf.hpp"
+#include "graphics/font.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
