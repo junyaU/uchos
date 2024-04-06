@@ -17,6 +17,9 @@
 #include <memory>
 #include <vector>
 
+constexpr int KMALLOC_UNINITIALIZED = 0;
+constexpr int KMALLOC_ZEROED = (1 << 0);
+
 enum class slab_status : uint8_t {
 	FULL,
 	PARTIAL,

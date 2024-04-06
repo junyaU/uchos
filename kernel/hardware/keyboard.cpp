@@ -1,7 +1,7 @@
 #include "usb/class_driver/keyboard.hpp"
 #include "../task/ipc.hpp"
-#include "../types.hpp"
 #include "keyboard.hpp"
+#include <../../libs/common/types.hpp>
 
 namespace
 {

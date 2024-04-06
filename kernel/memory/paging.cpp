@@ -1,9 +1,9 @@
 #include "paging.hpp"
 #include "../graphics/log.hpp"
-#include "../types.hpp"
 #include "page.hpp"
 #include "paging_utils.h"
 #include "slab.hpp"
+#include <../../libs/common/types.hpp>
 #include <array>
 #include <cstdint>
 #include <cstring>

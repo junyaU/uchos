@@ -1,8 +1,8 @@
 #include "buddy_system.hpp"
 #include "../bit_utils.hpp"
 #include "../graphics/log.hpp"
-#include "../types.hpp"
 #include "page.hpp"
+#include <../../libs/common/types.hpp>
 #include <cstddef>
 #include <cstdint>
 

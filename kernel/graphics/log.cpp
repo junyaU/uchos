@@ -1,9 +1,9 @@
 #include "log.hpp"
 #include "../task/ipc.hpp"
 #include "../task/task.hpp"
-#include "../types.hpp"
 #include "font.hpp"
 #include "screen.hpp"
+#include <../../libs/common/types.hpp>
 #include <cstddef>
 #include <cstring>
 

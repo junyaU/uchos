@@ -8,9 +8,9 @@
 #include "../memory/paging_utils.h"
 #include "../memory/segment.hpp"
 #include "../timers/timer.hpp"
-#include "../types.hpp"
 #include "context_switch.h"
 #include "ipc.hpp"
+#include <../../libs/common/types.hpp>
 #include <array>
 #include <cstddef>
 #include <cstdint>

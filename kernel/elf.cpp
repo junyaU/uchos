@@ -3,10 +3,9 @@
 #include "graphics/log.hpp"
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
-#include "memory/paging_utils.h"
 #include "memory/segment.hpp"
 #include "task/task.hpp"
-#include "types.hpp"
+#include <../../libs/common/types.hpp>
 #include <cstdint>
 #include <cstring>
 

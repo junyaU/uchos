@@ -1,7 +1,7 @@
 #include "page.hpp"
 #include "../graphics/log.hpp"
-#include "../types.hpp"
 #include "bootstrap_allocator.hpp"
+#include <../../libs/common/types.hpp>
 #include <vector>
 
 std::vector<page> pages;

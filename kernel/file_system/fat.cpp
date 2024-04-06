@@ -1,8 +1,7 @@
 #include "fat.hpp"
 #include "../elf.hpp"
 #include "../graphics/font.hpp"
-#include "../memory/paging.hpp"
-#include "../types.hpp"
+#include <../../libs/common/types.hpp>
 #include <algorithm>
 #include <cctype>
 #include <cstddef>

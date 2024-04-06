@@ -4,7 +4,7 @@
 #include "../task/ipc.hpp"
 #include "../task/task.hpp"
 #include "../timers/timer.hpp"
-#include "../types.hpp"
+#include <../../libs/common/types.hpp>
 #include <cstdint>
 
 namespace
