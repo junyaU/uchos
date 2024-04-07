@@ -1,3 +1,4 @@
+#include <libs/common/types.hpp>
 #ifdef __cplusplus
 #include <cstddef>
 #include <cstdint>
@@ -17,9 +18,9 @@ uint64_t sys_draw_text(const char* text, int x, int y, uint32_t color);
 uint64_t sys_fill_rect(int x, int y, int width, int height, uint32_t color);
 uint64_t sys_time(int ms, int is_periodic, uint8_t action, int task_id);
 uint64_t sys_ipc(int dest, int src, const void* m, int flags);
-uint64_t sys_fork();
+task_t sys_fork();
 uint64_t sys_exec(const char* path, const char* args);
-uint64_t sys_wait(int* status);
+task_t sys_wait(int* status);
 
 #ifdef __cplusplus
 }

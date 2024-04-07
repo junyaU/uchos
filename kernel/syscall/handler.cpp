@@ -223,7 +223,6 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	auto* entry = file_system::find_directory_entry_by_path(copy_path);
 	if (entry == nullptr) {
-		printk(KERN_ERROR, "exec: %s: No such file or directory", copy_path);
 		return ERR_NO_FILE;
 	}
 
@@ -239,7 +238,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	return OK;
 }
 
-void sys_exit() { exit_task(); }
+void sys_exit(uint64_t arg1) { exit_task(arg1); }
 
 task_t sys_wait(uint64_t arg1)
 {
@@ -259,6 +258,7 @@ task_t sys_wait(uint64_t arg1)
 		t->messages.pop();
 
 		if (m.type != IPC_EXIT_TASK) {
+			t->messages.push(m);
 			continue;
 		}
 
@@ -289,7 +289,7 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 			result = sys_open(arg1, arg2);
 			break;
 		case SYS_EXIT:
-			sys_exit();
+			sys_exit(arg1);
 			break;
 		case SYS_DRAW_TEXT:
 			result = sys_draw_text(arg1, arg2, arg3, arg4);

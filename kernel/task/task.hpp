@@ -53,6 +53,8 @@ struct task {
 	error_t copy_parent_stack(const context& parent_ctx);
 
 	error_t copy_parent_page_table();
+
+	bool has_parent() const { return parent_id != -1; }
 };
 
 extern task* CURRENT_TASK;
@@ -69,7 +71,7 @@ task_t get_task_id_by_name(const char* name);
 task_t get_available_task_id();
 void schedule_task(task_t id);
 void switch_task(const context& current_ctx);
-void exit_task();
+void exit_task(int status);
 [[noreturn]] void process_messages(task* t);
 fd_t allocate_fd(task* t);
 
