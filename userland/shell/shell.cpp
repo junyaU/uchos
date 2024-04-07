@@ -1,5 +1,4 @@
 #include "shell.hpp"
-#include "command.hpp"
 #include "libs/common/types.hpp"
 #include "terminal.hpp"
 #include <cstring>
@@ -9,8 +8,9 @@ shell::shell() { memset(histories, 0, sizeof(histories)); }
 
 void shell::process_input(char* input, terminal& term)
 {
+	term.enable_input = true;
+
 	if (strlen(input) == 0) {
-		term.enable_input = true;
 		return;
 	}
 
@@ -38,7 +38,6 @@ void shell::process_input(char* input, terminal& term)
 
 	if (child_status != 0) {
 		term.printf("%s : command not found\n", command_name);
-		term.enable_input = true;
 		return;
 	}
 
