@@ -1,12 +1,12 @@
 #include "task/task.hpp"
 #include "file_system/file_descriptor.hpp"
-#include "file_system/task.hpp"
 #include "graphics/log.hpp"
-#include "hardware/usb/task.hpp"
 #include "list.hpp"
+#include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/paging_utils.h"
 #include "memory/segment.hpp"
+#include "task/builtin.hpp"
 #include "task/context_switch.h"
 #include "task/ipc.hpp"
 #include "timers/timer.hpp"
@@ -241,6 +241,10 @@ void initialize_task()
 			"file_system", reinterpret_cast<uint64_t>(&task_file_system), true);
 	schedule_task(file_system_task->id);
 
+	task* shell_task =
+			create_task("shell", reinterpret_cast<uint64_t>(&task_shell), true);
+	schedule_task(shell_task->id);
+
 	ktimer->add_switch_task_event(200);
 }
 
@@ -277,31 +281,22 @@ task::task(int id,
 		return;
 	}
 
-	const size_t stack_size = 4096 * 8 / sizeof(stack[0]);
+	const size_t stack_size = PAGE_SIZE * 8 / sizeof(stack[0]);
 	stack.resize(stack_size);
 	const uint64_t stack_end = reinterpret_cast<uint64_t>(&stack[stack_size]);
 
 	memset(&ctx, 0, sizeof(ctx));
 
-	page_table_entry* pml4 = new_page_table();
-	page_table_entry* current_pml4 = reinterpret_cast<page_table_entry*>(get_cr3());
-	// copy kernel space mapping
-	memcpy(pml4, current_pml4, 256 * sizeof(page_table_entry));
+	page_table_entry* page_table = new_page_table();
+	copy_kernel_space(page_table);
 
-	ctx.cr3 = reinterpret_cast<uint64_t>(pml4);
+	ctx.cr3 = reinterpret_cast<uint64_t>(page_table);
 	ctx.rsp = (stack_end & ~0xfLU) - 8;
 	ctx.rflags = 0x202;
 	ctx.rip = task_addr;
 	ctx.cs = KERNEL_CS;
 	ctx.ss = KERNEL_SS;
 	*reinterpret_cast<uint32_t*>(&ctx.fxsave_area[24]) = 0x1f80;
-}
-
-[[noreturn]] void task_idle()
-{
-	while (true) {
-		__asm__("hlt");
-	}
 }
 
 extern "C" uint64_t get_current_task_stack()

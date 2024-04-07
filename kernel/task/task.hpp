@@ -71,5 +71,3 @@ void switch_task(const context& current_ctx);
 void exit_task(int status);
 [[noreturn]] void process_messages(task* t);
 fd_t allocate_fd(task* t);
-
-[[noreturn]] void task_idle();

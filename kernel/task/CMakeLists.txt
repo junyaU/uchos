@@ -1,4 +1,5 @@
 set(TASK_SOURCE_FILES
+        builtin.cpp
         context_switch.asm
         task.cpp
         ipc.cpp

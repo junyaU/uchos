@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstddef>
-#include <new>
 
 template<typename T, std::size_t pool_size>
 class PoolAllocator
