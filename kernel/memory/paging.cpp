@@ -172,6 +172,11 @@ void clean_page_table(page_table_entry* table, int page_table_level)
 			clean_page_table(entry.get_next_level_table(), page_table_level - 1);
 		}
 
+		// skip CoW pages
+		if (!table[i].bits.writable && page_table_level == 1) {
+			continue;
+		}
+
 		kfree(entry.get_next_level_table());
 		table[i].data = 0;
 	}

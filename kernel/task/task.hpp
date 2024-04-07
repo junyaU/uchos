@@ -41,10 +41,7 @@ struct task {
 		 task_state state,
 		 bool is_init);
 
-	~task()
-	{
-		// clean_page_tables(reinterpret_cast<page_table_entry*>(ctx.cr3));
-	}
+	~task() { clean_page_tables(reinterpret_cast<page_table_entry*>(ctx.cr3)); }
 
 	static void* operator new(size_t size) { return kmalloc(size, KMALLOC_ZEROED); }
 

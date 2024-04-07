@@ -2,6 +2,8 @@
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
 #include "graphics/screen.hpp"
+#include "memory/paging.hpp"
+#include "memory/paging_utils.h"
 #include "memory/user.hpp"
 #include "sys/_default_fcntl.h"
 #include "syscall.hpp"
@@ -226,12 +228,16 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 		return ERR_NO_FILE;
 	}
 
-	page_table_entry* page_table = config_new_page_table();
-	if (page_table == nullptr) {
+	page_table_entry* current_page_table =
+			reinterpret_cast<page_table_entry*>(get_cr3());
+	clean_page_tables(current_page_table);
+
+	page_table_entry* new_page_table = config_new_page_table();
+	if (new_page_table == nullptr) {
 		return ERR_NO_MEMORY;
 	}
 
-	CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(page_table);
+	CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(new_page_table);
 
 	file_system::execute_file(*entry, copy_args);
 
@@ -258,7 +264,9 @@ task_t sys_wait(uint64_t arg1)
 		t->messages.pop();
 
 		if (m.type != IPC_EXIT_TASK) {
+			__asm__("cli");
 			t->messages.push(m);
+			__asm__("sti");
 			continue;
 		}
 
