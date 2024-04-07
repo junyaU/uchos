@@ -1,9 +1,42 @@
-#include "task.hpp"
-#include "fat.hpp"
+#include "task/builtin.hpp"
+#include "file_system/fat.hpp"
 #include "graphics/font.hpp"
+#include "graphics/log.hpp"
+#include "hardware/usb/xhci/xhci.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
-#include <cstddef>
+
+void task_idle()
+{
+	while (true) {
+		__asm__("hlt");
+	}
+}
+
+void task_kernel()
+{
+	task* t = CURRENT_TASK;
+
+	t->message_handlers[IPC_INITIALIZE_TASK] = +[](const message& m) {
+		message send_m;
+		send_m.type = IPC_INITIALIZE_TASK;
+		send_m.data.init.task_id = m.sender;
+		send_message(SHELL_TASK_ID, &send_m);
+	};
+
+	process_messages(t);
+}
+
+void task_shell()
+{
+	auto* entry = file_system::find_directory_entry_by_path("/shell");
+	if (entry == nullptr) {
+		printk(KERN_ERROR, "failed to find /shell");
+		return;
+	}
+
+	file_system::execute_file(*entry, nullptr);
+}
 
 void task_file_system()
 {
@@ -91,6 +124,16 @@ void task_file_system()
 				break;
 		}
 	};
+
+	process_messages(t);
+}
+
+void task_usb_handler()
+{
+	task* t = CURRENT_TASK;
+
+	t->message_handlers[NOTIFY_XHCI] =
+			+[](const message& m) { usb::xhci::process_events(); };
 
 	process_messages(t);
 }
