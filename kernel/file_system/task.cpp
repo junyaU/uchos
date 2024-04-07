@@ -36,6 +36,7 @@ void task_file_system()
 				}
 
 				char buf[128];
+				memset(buf, 0, 128);
 				int buf_index = 0;
 				size_t entry_count = 0;
 				auto entries = file_system::list_entries_in_directory(entry);
