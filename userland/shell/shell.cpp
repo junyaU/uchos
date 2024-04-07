@@ -19,6 +19,8 @@ void shell::process_input(char* input, terminal& term)
 	if (args != nullptr) {
 		command_length = args - input;
 		++args;
+	} else {
+		args = "";
 	}
 
 	char command_name[command_length + 1];

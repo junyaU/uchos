@@ -7,13 +7,13 @@
 
 extern "C" int main(int argc, char** argv)
 {
-	message m = { .type = IPC_FILE_SYSTEM_OPERATION, .sender = CHILD_TASK };
-	m.data.fs_operation.operation = FS_OP_LIST;
-
 	char* input = argv[1];
+	message m = { .type = IPC_FILE_SYSTEM_OPERATION, .sender = CHILD_TASK };
+	m.data.fs_operation.operation = FS_OP_READ;
 
 	if (input == nullptr) {
-		memcpy(m.data.fs_operation.path, "/", 2);
+		const char* msg = "cat: missing file operand\n";
+		memcpy(m.data.fs_operation.path, msg, strlen(msg));
 	} else {
 		memcpy(m.data.fs_operation.path, input, strlen(input));
 	}
