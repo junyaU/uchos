@@ -23,6 +23,7 @@ constexpr int SYS_IPC = 7;
 constexpr int SYS_FORK = 57;
 constexpr int SYS_EXEC = 59;
 constexpr int SYS_EXIT = 60;
+constexpr int SYS_WAIT = 61;
 
 namespace syscall
 {

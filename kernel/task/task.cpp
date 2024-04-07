@@ -1,5 +1,4 @@
-#include "task.hpp"
-#include "context_switch.h"
+#include "task/task.hpp"
 #include "file_system/file_descriptor.hpp"
 #include "file_system/task.hpp"
 #include "graphics/log.hpp"
@@ -8,6 +7,8 @@
 #include "memory/paging.hpp"
 #include "memory/paging_utils.h"
 #include "memory/segment.hpp"
+#include "task/context_switch.h"
+#include "task/ipc.hpp"
 #include "timers/timer.hpp"
 #include <array>
 #include <cstddef>
@@ -175,10 +176,18 @@ void switch_task(const context& current_ctx)
 	restore_context(&get_scheduled_task()->ctx);
 }
 
-void exit_task()
+void exit_task(int status)
 {
-	CURRENT_TASK->state = TASK_EXITED;
-	switch_task(CURRENT_TASK->ctx);
+	task* t = CURRENT_TASK;
+
+	if (t->has_parent()) {
+		message m = { .type = IPC_EXIT_TASK, .sender = t->id };
+		m.data.exit_task.status = status;
+		send_message(t->parent_id, &m);
+	}
+
+	t->state = TASK_EXITED;
+	switch_task(t->ctx);
 }
 
 [[noreturn]] void process_messages(task* t)
