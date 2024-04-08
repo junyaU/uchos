@@ -27,7 +27,7 @@ void shell::process_input(char* input, terminal& term)
 	memcpy(command_name, input, command_length);
 	command_name[command_length] = '\0';
 
-	task_t pid = sys_fork();
+	pid_t pid = sys_fork();
 	if (pid == 0) {
 		error_t status = sys_exec(command_name, args);
 		exit(status);

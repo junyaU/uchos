@@ -35,7 +35,7 @@ page* get_page(void* ptr)
 	return &pages[reinterpret_cast<uintptr_t>(ptr) / PAGE_SIZE];
 }
 
-void print_available_memory()
+void get_memory_usage(size_t* total_mem, size_t* used_mem)
 {
 	size_t available_pages = 0;
 
@@ -45,7 +45,6 @@ void print_available_memory()
 		}
 	}
 
-	printk(KERN_INFO, "available memory: %u MiB / %u MiB",
-		   available_pages * PAGE_SIZE / 1024 / 1024,
-		   pages.size() * PAGE_SIZE / 1024 / 1024);
+	*used_mem = (pages.size() - available_pages) * PAGE_SIZE;
+	*total_mem = pages.size() * PAGE_SIZE;
 }

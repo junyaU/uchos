@@ -21,3 +21,5 @@ define_syscall fork, 57
 define_syscall exec, 59
 define_syscall exit, 60
 define_syscall wait, 61
+define_syscall getpid, 39
+define_syscall getppid, 110

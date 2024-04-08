@@ -26,9 +26,9 @@ std::array<task*, MAX_TASKS> tasks;
 task* CURRENT_TASK = nullptr;
 task* IDLE_TASK = nullptr;
 
-task_t get_available_task_id()
+pid_t get_available_task_id()
 {
-	for (task_t i = 0; i < MAX_TASKS; i++) {
+	for (pid_t i = 0; i < MAX_TASKS; i++) {
 		if (tasks[i] == nullptr) {
 			return i;
 		}
@@ -37,7 +37,7 @@ task_t get_available_task_id()
 	return -1;
 }
 
-task_t get_task_id_by_name(const char* name)
+pid_t get_task_id_by_name(const char* name)
 {
 	for (task* t : tasks) {
 		if (t != nullptr && strcmp(t->name, name) == 0) {
@@ -50,7 +50,7 @@ task_t get_task_id_by_name(const char* name)
 
 task* create_task(const char* name, uint64_t task_addr, bool is_init)
 {
-	const task_t task_id = get_available_task_id();
+	const pid_t task_id = get_available_task_id();
 	if (task_id == -1) {
 		printk(KERN_ERROR, "failed to allocate task id");
 		return nullptr;
@@ -145,7 +145,7 @@ task* get_scheduled_task()
 	return scheduled_task;
 }
 
-void schedule_task(task_t id)
+void schedule_task(pid_t id)
 {
 	if (tasks.size() <= id || tasks[id] == nullptr) {
 		printk(KERN_ERROR, "schedule_task: task %d is not found", id);

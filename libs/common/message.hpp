@@ -17,12 +17,13 @@ constexpr int IPC_FILE_SYSTEM_OPERATION = 5;
 constexpr int IPC_INITIALIZE_TASK = 6;
 constexpr int IPC_TIME = 7;
 constexpr int IPC_EXIT_TASK = 8;
+constexpr int IPC_MEMORY_USAGE = 9;
 
 // file system operations
 constexpr int FS_OP_LIST = 0;
 constexpr int FS_OP_READ = 1;
 
-constexpr int NUM_MESSAGE_TYPES = 7;
+constexpr int NUM_MESSAGE_TYPES = 15;
 
 enum class timeout_action_t : uint8_t {
 	TERMINAL_CURSOR_BLINK,
@@ -31,7 +32,7 @@ enum class timeout_action_t : uint8_t {
 
 struct message {
 	int32_t type;
-	task_t sender;
+	pid_t sender;
 
 	union {
 		struct {
@@ -67,6 +68,11 @@ struct message {
 		struct {
 			int status;
 		} exit_task;
+
+		struct {
+			unsigned int total;
+			unsigned int used;
+		} memory_usage;
 
 	} data;
 };

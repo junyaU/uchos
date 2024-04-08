@@ -6,8 +6,9 @@
 
 extern "C" int main(int argc, char** argv)
 {
+	pid_t pid = sys_getpid();
 	message m;
-	m.sender = CHILD_TASK;
+	m.sender = pid;
 	m.type = NOTIFY_WRITE;
 	m.data.write_shell.is_end_of_message = true;
 

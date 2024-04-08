@@ -11,7 +11,7 @@ uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 
 uint64_t kernel_timer::add_timer_event(unsigned long millisec,
 									   timeout_action_t action,
-									   task_t task_id)
+									   pid_t task_id)
 {
 	auto e = timer_event{
 		.id = last_id_++,
@@ -28,7 +28,7 @@ uint64_t kernel_timer::add_timer_event(unsigned long millisec,
 
 uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
 												timeout_action_t action,
-												task_t task_id,
+												pid_t task_id,
 												uint64_t id)
 {
 	if (id == 0) {

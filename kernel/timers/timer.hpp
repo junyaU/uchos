@@ -7,7 +7,7 @@
 
 struct timer_event {
 	uint64_t id;
-	task_t task_id;
+	pid_t task_id;
 	uint64_t timeout;
 	unsigned int period;
 	int periodical;
@@ -39,11 +39,11 @@ public:
 	}
 
 	uint64_t
-	add_timer_event(unsigned long millisec, timeout_action_t action, task_t task_id);
+	add_timer_event(unsigned long millisec, timeout_action_t action, pid_t task_id);
 
 	uint64_t add_periodic_timer_event(unsigned long millisec,
 									  timeout_action_t action,
-									  task_t task_id,
+									  pid_t task_id,
 									  uint64_t id = 0);
 
 	void add_switch_task_event(unsigned long millisec);
