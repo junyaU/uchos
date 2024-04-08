@@ -3,8 +3,12 @@
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
 #include "hardware/usb/xhci/xhci.hpp"
+#include "libs/common/message.hpp"
+#include "libs/common/types.hpp"
+#include "memory/page.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
+#include <cstddef>
 
 void task_idle()
 {
@@ -18,10 +22,23 @@ void task_kernel()
 	task* t = CURRENT_TASK;
 
 	t->message_handlers[IPC_INITIALIZE_TASK] = +[](const message& m) {
-		message send_m;
-		send_m.type = IPC_INITIALIZE_TASK;
+		message send_m = { .type = IPC_INITIALIZE_TASK, .sender = KERNEL_TASK_ID };
 		send_m.data.init.task_id = m.sender;
 		send_message(SHELL_TASK_ID, &send_m);
+	};
+
+	t->message_handlers[IPC_MEMORY_USAGE] = +[](const message& m) {
+		message send_m = { .type = IPC_MEMORY_USAGE, .sender = KERNEL_TASK_ID };
+
+		size_t used_mem = 0;
+		size_t total_mem = 0;
+
+		get_memory_usage(&total_mem, &used_mem);
+
+		send_m.data.memory_usage.total = total_mem;
+		send_m.data.memory_usage.used = used_mem;
+
+		send_message(m.sender, &send_m);
 	};
 
 	process_messages(t);

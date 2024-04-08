@@ -45,4 +45,4 @@ void initialize_pages();
 
 page* get_page(void* ptr);
 
-void print_available_memory();
+void get_memory_usage(size_t* total_mem, size_t* used_mem);
