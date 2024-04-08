@@ -136,7 +136,7 @@ error_t sys_time(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	const uint64_t ms = arg1;
 	const int is_periodic = arg2;
 	const timeout_action_t action = static_cast<timeout_action_t>(arg3);
-	const  task_id = arg4;
+	const pid_t  task_id = arg4;
 
 	if (is_periodic == 1) {
 		ktimer->add_periodic_timer_event(ms, action, task_id);
