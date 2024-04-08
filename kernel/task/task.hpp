@@ -20,8 +20,8 @@ void initialize_task();
 enum task_state : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING, TASK_EXITED };
 
 struct task {
-	task_t id;
-	task_t parent_id;
+	pid_t id;
+	pid_t parent_id;
 	char name[32];
 	int priority;
 	task_state state;
@@ -64,9 +64,9 @@ extern list_t run_queue;
 task* create_task(const char* name, uint64_t task_addr, bool is_init);
 task* copy_task(task* parent, context* parent_ctx);
 task* get_scheduled_task();
-task_t get_task_id_by_name(const char* name);
-task_t get_available_task_id();
-void schedule_task(task_t id);
+pid_t get_task_id_by_name(const char* name);
+pid_t get_available_task_id();
+void schedule_task(pid_t id);
 void switch_task(const context& current_ctx);
 void exit_task(int status);
 [[noreturn]] void process_messages(task* t);

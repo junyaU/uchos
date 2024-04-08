@@ -20,6 +20,8 @@ uint64_t sys_ipc(int dest, int src, const void* m, int flags);
 uint64_t sys_fork();
 uint64_t sys_exec(const char* path, const char* args);
 uint64_t sys_wait(int* status);
+uint64_t sys_getpid();
+uint64_t sys_getppid();
 
 #ifdef __cplusplus
 }

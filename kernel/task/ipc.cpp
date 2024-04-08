@@ -3,7 +3,7 @@
 #include "task.hpp"
 #include <libs/common/types.hpp>
 
-error_t send_message(task_t dst_id, const message* m)
+error_t send_message(pid_t dst_id, const message* m)
 {
 	if (dst_id == -1 || m->sender == dst_id) {
 		printk(KERN_ERROR, "invalid destination task id : dest = %d, sender = %d",

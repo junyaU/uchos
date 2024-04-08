@@ -7,7 +7,8 @@
 
 extern "C" int main(int argc, char** argv)
 {
-	message m = { .type = IPC_FILE_SYSTEM_OPERATION, .sender = CHILD_TASK };
+	pid_t pid = sys_getpid();
+	message m = { .type = IPC_FILE_SYSTEM_OPERATION, .sender = pid };
 	m.data.fs_operation.operation = FS_OP_LIST;
 
 	char* input = argv[1];

@@ -1,7 +1,7 @@
 #pragma once
 
 using error_t = int;
-using task_t = int;
+using pid_t = int;
 using fd_t = int;
 using cluster_t = unsigned long;
 
@@ -25,7 +25,6 @@ constexpr int FS_TASK_ID = 3;
 constexpr int SHELL_TASK_ID = 4;
 
 constexpr int INTERRUPT_TASK = 100;
-constexpr int CHILD_TASK = 101;
 
 // log levels
 constexpr int KERN_DEBUG = 0;
