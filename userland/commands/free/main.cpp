@@ -26,7 +26,6 @@ extern "C" int main(int argc, char** argv)
 		}
 
 		message send_m = { .type = NOTIFY_WRITE, .sender = pid };
-		send_m.type = NOTIFY_WRITE;
 
 		char buf[100];
 		sprintf(buf, "Used memory: %u MiB\nTotal memory: %u MiB",

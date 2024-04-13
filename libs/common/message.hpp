@@ -78,7 +78,7 @@ struct message {
 		struct {
 			unsigned int device_id;
 			unsigned int vendor_id;
-			unsigned int bus;
+			char bus_address[8];
 		} pci;
 
 	} data;
