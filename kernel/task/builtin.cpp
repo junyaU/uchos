@@ -66,7 +66,6 @@ void task_file_system()
 		switch (m.data.fs_operation.operation) {
 			case FS_OP_LIST: {
 				send_m.type = NOTIFY_WRITE;
-				send_m.data.write_shell.is_end_of_message = true;
 
 				char path[30];
 				memcpy(path, m.data.fs_operation.path, 30);
@@ -116,7 +115,6 @@ void task_file_system()
 
 			case FS_OP_READ: {
 				send_m.type = NOTIFY_WRITE;
-				send_m.data.write_shell.is_end_of_message = true;
 
 				char path[30];
 				memcpy(path, m.data.fs_operation.path, 30);

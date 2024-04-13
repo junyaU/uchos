@@ -18,6 +18,7 @@ constexpr int IPC_INITIALIZE_TASK = 6;
 constexpr int IPC_TIME = 7;
 constexpr int IPC_EXIT_TASK = 8;
 constexpr int IPC_MEMORY_USAGE = 9;
+constexpr int IPC_PCI = 10;
 
 // file system operations
 constexpr int FS_OP_LIST = 0;
@@ -33,6 +34,7 @@ enum class timeout_action_t : uint8_t {
 struct message {
 	int32_t type;
 	pid_t sender;
+	bool is_end_of_message = true;
 
 	union {
 		struct {
@@ -62,7 +64,6 @@ struct message {
 
 		struct {
 			char buf[128];
-			bool is_end_of_message;
 		} write_shell;
 
 		struct {
@@ -73,6 +74,12 @@ struct message {
 			unsigned int total;
 			unsigned int used;
 		} memory_usage;
+
+		struct {
+			unsigned int device_id;
+			unsigned int vendor_id;
+			unsigned int bus;
+		} pci;
 
 	} data;
 };

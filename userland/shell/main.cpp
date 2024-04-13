@@ -29,8 +29,7 @@ extern "C" int main(void)
 				term->input_char(msg.data.key_input.ascii);
 				break;
 			case NOTIFY_WRITE:
-				term->print_message(msg.data.write_shell.buf,
-									msg.data.write_shell.is_end_of_message);
+				term->print_message(msg.data.write_shell.buf, msg.is_end_of_message);
 				break;
 			case NOTIFY_TIMER_TIMEOUT:
 				switch (msg.data.timer.action) {
