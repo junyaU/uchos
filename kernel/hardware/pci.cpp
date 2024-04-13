@@ -72,9 +72,10 @@ void read_function(uint8_t bus, uint8_t dev, uint8_t func)
 	d.header_type = header_type;
 	d.class_code = class_code;
 	d.vendor_id = read_vendor_id(bus, dev, func);
+	d.device_id = read_device_id(bus, dev, func);
 
 	devices[dev] = d;
-	num_devices++;
+	++num_devices;
 }
 
 void read_device(uint8_t bus, uint8_t device)

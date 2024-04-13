@@ -2,13 +2,14 @@
 #include "file_system/fat.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
+#include "hardware/pci.hpp"
 #include "hardware/usb/xhci/xhci.hpp"
-#include "libs/common/message.hpp"
-#include "libs/common/types.hpp"
 #include "memory/page.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 #include <cstddef>
+#include <libs/common/message.hpp>
+#include <libs/common/types.hpp>
 
 void task_idle()
 {
@@ -41,6 +42,25 @@ void task_kernel()
 		send_message(m.sender, &send_m);
 	};
 
+	t->message_handlers[IPC_PCI] = +[](const message& m) {
+		message send_m = { .type = IPC_PCI,
+						   .sender = KERNEL_TASK_ID,
+						   .is_end_of_message = false };
+
+		for (size_t i = 0; i < pci::num_devices; ++i) {
+			auto& device = pci::devices[i];
+			send_m.data.pci.vendor_id = device.vendor_id;
+			send_m.data.pci.device_id = device.device_id;
+			device.address(send_m.data.pci.bus_address, 8);
+
+			if (i == pci::num_devices - 1) {
+				send_m.is_end_of_message = true;
+			}
+
+			send_message(m.sender, &send_m);
+		}
+	};
+
 	process_messages(t);
 }
 
@@ -66,7 +86,6 @@ void task_file_system()
 		switch (m.data.fs_operation.operation) {
 			case FS_OP_LIST: {
 				send_m.type = NOTIFY_WRITE;
-				send_m.data.write_shell.is_end_of_message = true;
 
 				char path[30];
 				memcpy(path, m.data.fs_operation.path, 30);
@@ -116,7 +135,6 @@ void task_file_system()
 
 			case FS_OP_READ: {
 				send_m.type = NOTIFY_WRITE;
-				send_m.data.write_shell.is_end_of_message = true;
 
 				char path[30];
 				memcpy(path, m.data.fs_operation.path, 30);

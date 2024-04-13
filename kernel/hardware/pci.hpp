@@ -14,6 +14,7 @@
 
 #include <array>
 #include <cstdint>
+#include <stdio.h>
 
 namespace pci
 {
@@ -35,10 +36,16 @@ struct device {
 	uint8_t bus, device, function, header_type;
 	class_code class_code;
 	uint16_t vendor_id;
+	uint16_t device_id;
 
 	bool is_xhci() const { return class_code.match(0x0cU, 0x03U, 0x30U); }
 
 	bool is_intel() const { return vendor_id == 0x8086; }
+
+	void address(char* buf, size_t len) const
+	{
+		snprintf(buf, len, "%02x:%02x.%d", bus, device, function);
+	}
 };
 
 uint64_t read_base_address_register(device& dev, unsigned int index);

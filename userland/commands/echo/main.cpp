@@ -10,7 +10,6 @@ extern "C" int main(int argc, char** argv)
 	message m;
 	m.sender = pid;
 	m.type = NOTIFY_WRITE;
-	m.data.write_shell.is_end_of_message = true;
 
 	if (argv[1] != nullptr) {
 		memcpy(m.data.write_shell.buf, argv[1], strlen(argv[1]));
