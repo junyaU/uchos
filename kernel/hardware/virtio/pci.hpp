@@ -28,4 +28,39 @@ struct virtio_pci_cap {
 	uint8_t padding[2]; /* Pad to full dword. */
 	uint32_t offset;	/* Offset within bar. */
 	uint32_t length;	/* Length of the structure, in bytes. */
-};
+} __attribute__((packed));
+
+// https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-1240004
+struct virtio_pci_common_cfg {
+	/* About the whole device. */
+	uint32_t device_feature_select; /* read-write */
+	uint32_t device_feature;		/* read-only */
+	uint32_t driver_feature_select; /* write */
+	uint32_t driver_feature;		/* write */
+	uint16_t msix_config;			/* read-write */
+	uint16_t num_queues;			/* read-only */
+	uint8_t device_status;			/* read-write */
+	uint8_t config_generation;		/* read-only */
+
+	/* About a specific virtqueue. */
+	uint16_t queue_select;		/* write */
+	uint16_t queue_size;		/* write */
+	uint16_t queue_msix_vector; /* write */
+	uint16_t queue_enable;		/* write */
+	uint16_t queue_notify_off;	/* read-only */
+	uint64_t queue_desc;		/* read-write */
+	uint64_t queue_avail;		/* read-write */
+	uint64_t queue_used;		/* read-write */
+} __attribute__((packed));
+
+// https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-1240004
+struct virtio_pci_notify_cap {
+	struct virtio_pci_cap cap;
+	uint32_t notify_off_multiplier; /* Multiplier for queue_notify_off. */
+} __attribute__((packed));
+
+// https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-1240004
+struct virtio_pci_cfg_cap {
+	struct virtio_pci_cap cap;
+	uint8_t pci_cfg_data[4]; /* Offset within bar. */
+} __attribute__((packed));
