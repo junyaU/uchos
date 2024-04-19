@@ -38,7 +38,7 @@ void initialize()
 
 	DIVIDE_CONF = 0b1011; // divide by 1
 
-	LVT_TIMER = (0b010 << 16) | InterruptVector::kLocalApicTimer;
+	LVT_TIMER = (0b010 << 16) | interrupt_vector::LOCAL_APIC_TIMER;
 
 	INITIAL_COUNT = freq / TIMER_FREQUENCY;
 
