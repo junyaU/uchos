@@ -42,6 +42,8 @@ struct device {
 
 	bool is_intel() const { return vendor_id == 0x8086; }
 
+	bool is_vertio() const { return vendor_id == 0x1af4; }
+
 	void address(char* buf, size_t len) const
 	{
 		snprintf(buf, len, "%02x:%02x.%d", bus, device, function);
