@@ -124,7 +124,7 @@ void load_devices()
 	}
 }
 
-uint64_t read_base_address_register(device& dev, unsigned int index)
+uint64_t read_base_address_register(const device& dev, unsigned int index)
 {
 	const auto base_addr_index = 0x10 + index * 4;
 	write_to_io_port(
@@ -201,6 +201,24 @@ void write_msi_capability(const device& dev,
 	}
 }
 
+void write_msi_x_capability(const device& dev,
+							const msi_x_capability& msix_cap,
+							uint64_t msg_addr,
+							uint32_t msg_data)
+{
+	uint64_t table_bar = read_base_address_register(dev, msix_cap.table_bar);
+
+	auto* msix_table =
+			reinterpret_cast<msix_table_entry*>(table_bar + msix_cap.table_offset);
+
+	msix_table->msg_addr = msg_addr & 0xffffffffU;
+	msix_table->msg_upper_addr = msg_addr >> 32;
+	msix_table->msg_data = msg_data;
+
+	// Memory barrier to ensure writes are not reordered
+	asm volatile("mfence" ::: "memory");
+}
+
 void configure_msi_register(const device& dev,
 							uint8_t cap_addr,
 							uint32_t msg_addr,
@@ -224,13 +242,15 @@ void configure_msi_register(const device& dev,
 
 void configure_msi_x_register(const device& dev,
 							  uint8_t cap_addr,
-							  uint32_t msg_addr,
+							  uint64_t msg_addr,
 							  uint32_t msg_data)
 {
 	auto msix_cap = read_msi_x_capability(dev, cap_addr);
 
 	msix_cap.header.bits.enable = 1;
 	msix_cap.header.bits.function_mask = 0;
+
+	write_msi_x_capability(dev, msix_cap, msg_addr, msg_data);
 }
 
 capability_header read_capability_header(const device& dev, uint8_t addr)

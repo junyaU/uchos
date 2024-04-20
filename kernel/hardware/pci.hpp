@@ -50,7 +50,7 @@ struct device {
 	}
 };
 
-uint64_t read_base_address_register(device& dev, unsigned int index);
+uint64_t read_base_address_register(const device& dev, unsigned int index);
 
 inline std::array<device, 32> devices;
 inline int num_devices;
@@ -113,6 +113,13 @@ struct msi_x_capability {
 	uint32_t table_offset;
 	uint32_t pba_bar;
 	uint32_t pba_offset;
+} __attribute__((packed));
+
+struct msix_table_entry {
+	uint32_t msg_addr;
+	uint32_t msg_upper_addr;
+	uint32_t msg_data;
+	uint32_t vector_control;
 } __attribute__((packed));
 
 const uint8_t CAP_MSI = 0x05;
