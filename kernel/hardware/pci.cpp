@@ -1,6 +1,7 @@
 #include "pci.hpp"
 #include "asm_utils.h"
 #include "graphics/log.hpp"
+#include <cstdint>
 #include <libs/common/types.hpp>
 
 namespace pci
@@ -166,6 +167,19 @@ msi_capability read_msi_capability(const device& dev, uint8_t cap_addr)
 	return msi_cap;
 }
 
+msi_x_capability read_msi_x_capability(const device& dev, uint8_t cap_addr)
+{
+	msi_x_capability msix_cap{};
+	msix_cap.header.data = read_conf_reg(dev, cap_addr);
+
+	msix_cap.table_bar = read_conf_reg(dev, cap_addr + 4);
+	msix_cap.table_offset = read_conf_reg(dev, cap_addr + 8);
+	msix_cap.pba_bar = read_conf_reg(dev, cap_addr + 12);
+	msix_cap.pba_offset = read_conf_reg(dev, cap_addr + 16);
+
+	return msix_cap;
+}
+
 void write_msi_capability(const device& dev,
 						  uint8_t cap_addr,
 						  const msi_capability& msi_cap)
@@ -208,6 +222,17 @@ void configure_msi_register(const device& dev,
 	write_msi_capability(dev, cap_addr, msi_cap);
 }
 
+void configure_msi_x_register(const device& dev,
+							  uint8_t cap_addr,
+							  uint32_t msg_addr,
+							  uint32_t msg_data)
+{
+	auto msix_cap = read_msi_x_capability(dev, cap_addr);
+
+	msix_cap.header.bits.enable = 1;
+	msix_cap.header.bits.function_mask = 0;
+}
+
 capability_header read_capability_header(const device& dev, uint8_t addr)
 {
 	capability_header header;
@@ -239,7 +264,8 @@ void configure_msi(const device& dev,
 	}
 
 	if (msix_capability_addr != 0) {
-		printk(KERN_ERROR, "MSI-X is not supported");
+		return configure_msi_x_register(dev, msix_capability_addr, msg_addr,
+										msg_data);
 	}
 }
 

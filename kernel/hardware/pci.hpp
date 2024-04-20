@@ -109,8 +109,10 @@ struct msi_x_capability {
 		} __attribute__((packed)) bits;
 	} __attribute__((packed)) header;
 
-	uint32_t msi_x_table_addr;
-	uint32_t msi_x_pba_addr;
+	uint32_t table_bar;
+	uint32_t table_offset;
+	uint32_t pba_bar;
+	uint32_t pba_offset;
 } __attribute__((packed));
 
 const uint8_t CAP_MSI = 0x05;
