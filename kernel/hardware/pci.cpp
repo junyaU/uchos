@@ -220,25 +220,25 @@ void configure_msi(const device& dev,
 				   uint32_t msg_data,
 				   unsigned int num_vector_exponent)
 {
-	uint8_t cap_addr = read_conf_reg(dev, 0x34) & 0xffU;
-	uint8_t msi_cap_addr = 0, msix_cap_addr = 0;
-	while (cap_addr != 0) {
-		auto header = read_capability_header(dev, cap_addr);
+	uint8_t capability_pointer = read_conf_reg(dev, 0x34) & 0xffU;
+	uint8_t msi_capability_addr = 0, msix_capability_addr = 0;
+	while (capability_pointer != 0) {
+		auto header = read_capability_header(dev, capability_pointer);
 		if (header.bits.cap_id == CAP_MSI) {
-			msi_cap_addr = cap_addr;
+			msi_capability_addr = capability_pointer;
 		} else if (header.bits.cap_id == CAP_MSIX) {
-			msix_cap_addr = cap_addr;
+			msix_capability_addr = capability_pointer;
 		}
 
-		cap_addr = header.bits.next_ptr;
+		capability_pointer = header.bits.next_ptr;
 	}
 
-	if (msi_cap_addr != 0) {
-		return configure_msi_register(dev, msi_cap_addr, msg_addr, msg_data,
+	if (msi_capability_addr != 0) {
+		return configure_msi_register(dev, msi_capability_addr, msg_addr, msg_data,
 									  num_vector_exponent);
 	}
 
-	if (msix_cap_addr != 0) {
+	if (msix_capability_addr != 0) {
 		printk(KERN_ERROR, "MSI-X is not supported");
 	}
 }
