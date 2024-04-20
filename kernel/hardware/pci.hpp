@@ -50,10 +50,17 @@ struct device {
 	}
 };
 
-uint64_t read_base_address_register(device& dev, unsigned int index);
+uint64_t read_base_address_register(const device& dev, unsigned int index);
 
 inline std::array<device, 32> devices;
 inline int num_devices;
+
+constexpr uint8_t BAR_0 = 0b000;
+constexpr uint8_t BAR_1 = 0b001;
+constexpr uint8_t BAR_2 = 0b010;
+constexpr uint8_t BAR_3 = 0b011;
+constexpr uint8_t BAR_4 = 0b100;
+constexpr uint8_t BAR_5 = 0b101;
 
 union capability_header {
 	uint32_t data;
@@ -86,6 +93,33 @@ struct msi_capability {
 	uint32_t msg_data;
 	uint32_t mask_bits;
 	uint32_t pending_bits;
+} __attribute__((packed));
+
+struct msi_x_capability {
+	union {
+		uint32_t data;
+
+		struct {
+			uint32_t cap_id : 8;
+			uint32_t next_ptr : 8;
+			uint32_t size_of_table : 11;
+			uint32_t : 1;
+			uint32_t function_mask : 1;
+			uint32_t enable : 1;
+		} __attribute__((packed)) bits;
+	} __attribute__((packed)) header;
+
+	uint32_t table_bar;
+	uint32_t table_offset;
+	uint32_t pba_bar;
+	uint32_t pba_offset;
+} __attribute__((packed));
+
+struct msix_table_entry {
+	uint32_t msg_addr;
+	uint32_t msg_upper_addr;
+	uint32_t msg_data;
+	uint32_t vector_control;
 } __attribute__((packed));
 
 const uint8_t CAP_MSI = 0x05;

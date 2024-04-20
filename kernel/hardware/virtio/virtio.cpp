@@ -21,7 +21,7 @@ error_t init_virtio_pci()
 
 	const uint8_t bsp_lapic_id = *reinterpret_cast<uint32_t*>(0xfee00020) >> 24;
 	pci::configure_msi_fixed_destination(
-			*virtio_dev, bsp_lapic_id, pci::msi_trigger_mode::LEVEL,
+			*virtio_dev, bsp_lapic_id, pci::msi_trigger_mode::EDGE,
 			pci::msi_delivery_mode::FIXED, interrupt_vector::VIRTIO, 0);
 
 	return OK;

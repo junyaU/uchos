@@ -1,6 +1,7 @@
 #include "pci.hpp"
 #include "asm_utils.h"
 #include "graphics/log.hpp"
+#include <cstdint>
 #include <libs/common/types.hpp>
 
 namespace pci
@@ -123,7 +124,7 @@ void load_devices()
 	}
 }
 
-uint64_t read_base_address_register(device& dev, unsigned int index)
+uint64_t read_base_address_register(const device& dev, unsigned int index)
 {
 	const auto base_addr_index = 0x10 + index * 4;
 	write_to_io_port(
@@ -166,6 +167,19 @@ msi_capability read_msi_capability(const device& dev, uint8_t cap_addr)
 	return msi_cap;
 }
 
+msi_x_capability read_msi_x_capability(const device& dev, uint8_t cap_addr)
+{
+	msi_x_capability msix_cap{};
+	msix_cap.header.data = read_conf_reg(dev, cap_addr);
+
+	msix_cap.table_bar = read_conf_reg(dev, cap_addr + 4);
+	msix_cap.table_offset = read_conf_reg(dev, cap_addr + 8);
+	msix_cap.pba_bar = read_conf_reg(dev, cap_addr + 12);
+	msix_cap.pba_offset = read_conf_reg(dev, cap_addr + 16);
+
+	return msix_cap;
+}
+
 void write_msi_capability(const device& dev,
 						  uint8_t cap_addr,
 						  const msi_capability& msi_cap)
@@ -185,6 +199,24 @@ void write_msi_capability(const device& dev,
 		write_conf_reg(dev, msg_data_addr + 4, msi_cap.mask_bits);
 		write_conf_reg(dev, msg_data_addr + 8, msi_cap.pending_bits);
 	}
+}
+
+void write_msi_x_capability(const device& dev,
+							const msi_x_capability& msix_cap,
+							uint64_t msg_addr,
+							uint32_t msg_data)
+{
+	uint64_t table_bar = read_base_address_register(dev, msix_cap.table_bar);
+
+	auto* msix_table =
+			reinterpret_cast<msix_table_entry*>(table_bar + msix_cap.table_offset);
+
+	msix_table->msg_addr = msg_addr & 0xffffffffU;
+	msix_table->msg_upper_addr = msg_addr >> 32;
+	msix_table->msg_data = msg_data;
+
+	// Memory barrier to ensure writes are not reordered
+	asm volatile("mfence" ::: "memory");
 }
 
 void configure_msi_register(const device& dev,
@@ -208,6 +240,19 @@ void configure_msi_register(const device& dev,
 	write_msi_capability(dev, cap_addr, msi_cap);
 }
 
+void configure_msi_x_register(const device& dev,
+							  uint8_t cap_addr,
+							  uint64_t msg_addr,
+							  uint32_t msg_data)
+{
+	auto msix_cap = read_msi_x_capability(dev, cap_addr);
+
+	msix_cap.header.bits.enable = 1;
+	msix_cap.header.bits.function_mask = 0;
+
+	write_msi_x_capability(dev, msix_cap, msg_addr, msg_data);
+}
+
 capability_header read_capability_header(const device& dev, uint8_t addr)
 {
 	capability_header header;
@@ -220,26 +265,27 @@ void configure_msi(const device& dev,
 				   uint32_t msg_data,
 				   unsigned int num_vector_exponent)
 {
-	uint8_t cap_addr = read_conf_reg(dev, 0x34) & 0xffU;
-	uint8_t msi_cap_addr = 0, msix_cap_addr = 0;
-	while (cap_addr != 0) {
-		auto header = read_capability_header(dev, cap_addr);
+	uint8_t capability_pointer = read_conf_reg(dev, 0x34) & 0xffU;
+	uint8_t msi_capability_addr = 0, msix_capability_addr = 0;
+	while (capability_pointer != 0) {
+		auto header = read_capability_header(dev, capability_pointer);
 		if (header.bits.cap_id == CAP_MSI) {
-			msi_cap_addr = cap_addr;
+			msi_capability_addr = capability_pointer;
 		} else if (header.bits.cap_id == CAP_MSIX) {
-			msix_cap_addr = cap_addr;
+			msix_capability_addr = capability_pointer;
 		}
 
-		cap_addr = header.bits.next_ptr;
+		capability_pointer = header.bits.next_ptr;
 	}
 
-	if (msi_cap_addr != 0) {
-		return configure_msi_register(dev, msi_cap_addr, msg_addr, msg_data,
+	if (msi_capability_addr != 0) {
+		return configure_msi_register(dev, msi_capability_addr, msg_addr, msg_data,
 									  num_vector_exponent);
 	}
 
-	if (msix_cap_addr != 0) {
-		printk(KERN_ERROR, "MSI-X is not supported");
+	if (msix_capability_addr != 0) {
+		return configure_msi_x_register(dev, msix_capability_addr, msg_addr,
+										msg_data);
 	}
 }
 
