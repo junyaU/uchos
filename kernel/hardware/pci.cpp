@@ -203,9 +203,12 @@ void write_msi_capability(const device& dev,
 
 void write_msi_x_capability(const device& dev,
 							const msi_x_capability& msix_cap,
+							uint8_t cap_addr,
 							uint64_t msg_addr,
 							uint32_t msg_data)
 {
+	write_conf_reg(dev, cap_addr, msix_cap.header.data);
+
 	uint64_t table_bar = read_base_address_register(dev, msix_cap.table_bar);
 
 	auto* msix_table =
@@ -250,7 +253,7 @@ void configure_msi_x_register(const device& dev,
 	msix_cap.header.bits.enable = 1;
 	msix_cap.header.bits.function_mask = 0;
 
-	write_msi_x_capability(dev, msix_cap, msg_addr, msg_data);
+	write_msi_x_capability(dev, msix_cap, cap_addr, msg_addr, msg_data);
 }
 
 capability_header read_capability_header(const device& dev, uint8_t addr)
@@ -284,8 +287,12 @@ void configure_msi(const device& dev,
 	}
 
 	if (msix_capability_addr != 0) {
-		return configure_msi_x_register(dev, msix_capability_addr, msg_addr,
-										msg_data);
+		configure_msi_x_register(dev, msix_capability_addr, msg_addr, msg_data);
+		auto msix_cap = read_msi_x_capability(dev, msix_capability_addr);
+
+		printk(KERN_ERROR, "MSI-X enabled %d", msix_cap.header.bits.enable);
+
+		return;
 	}
 }
 
