@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "hardware/mm_register.hpp"
 #include <array>
 #include <cstdint>
 #include <stdio.h>
@@ -116,10 +117,10 @@ struct msi_x_capability {
 } __attribute__((packed));
 
 struct msix_table_entry {
-	uint32_t msg_addr;
-	uint32_t msg_upper_addr;
-	uint32_t msg_data;
-	uint32_t vector_control;
+	memory_mapped_register<default_bitmap<uint32_t>> msg_addr;
+	memory_mapped_register<default_bitmap<uint32_t>> msg_upper_addr;
+	memory_mapped_register<default_bitmap<uint32_t>> msg_data;
+	memory_mapped_register<default_bitmap<uint32_t>> vector_control;
 } __attribute__((packed));
 
 const uint8_t CAP_MSI = 0x05;
