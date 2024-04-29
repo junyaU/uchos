@@ -1,6 +1,7 @@
 #include "pci.hpp"
 #include "asm_utils.h"
-#include "graphics/log.hpp"
+#include "hardware/mm_register.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <libs/common/types.hpp>
 
@@ -170,12 +171,10 @@ msi_capability read_msi_capability(const device& dev, uint8_t cap_addr)
 msi_x_capability read_msi_x_capability(const device& dev, uint8_t cap_addr)
 {
 	msi_x_capability msix_cap{};
-	msix_cap.header.data = read_conf_reg(dev, cap_addr);
 
-	msix_cap.table_bar = read_conf_reg(dev, cap_addr + 4);
-	msix_cap.table_offset = read_conf_reg(dev, cap_addr + 8);
-	msix_cap.pba_bar = read_conf_reg(dev, cap_addr + 12);
-	msix_cap.pba_offset = read_conf_reg(dev, cap_addr + 16);
+	msix_cap.header.data = read_conf_reg(dev, cap_addr);
+	msix_cap.table.data = read_conf_reg(dev, cap_addr + 4);
+	msix_cap.pba.data = read_conf_reg(dev, cap_addr + 8);
 
 	return msix_cap;
 }
@@ -204,19 +203,25 @@ void write_msi_capability(const device& dev,
 void write_msi_x_capability(const device& dev,
 							const msi_x_capability& msix_cap,
 							uint8_t cap_addr,
-							uint64_t msg_addr,
+							uint32_t msg_addr,
 							uint32_t msg_data)
 {
 	write_conf_reg(dev, cap_addr, msix_cap.header.data);
 
-	uint64_t table_bar = read_base_address_register(dev, msix_cap.table_bar);
+	uint64_t bar_addr = read_base_address_register(dev, msix_cap.table.bits.bar);
+	bar_addr &= 0xffff'ffff'ffff'f000U;
+	bar_addr += msix_cap.table.bits.offset << 3;
+	auto* table_entry = reinterpret_cast<msix_table_entry*>(bar_addr);
 
-	auto* msix_table =
-			reinterpret_cast<msix_table_entry*>(table_bar + msix_cap.table_offset);
+	for (size_t i = 0; i <= msix_cap.header.bits.size_of_table; ++i) {
+		if (table_entry[i].msg_addr.read() != 0) {
+			continue;
+		}
 
-	msix_table->msg_addr = msg_addr & 0xffffffffU;
-	msix_table->msg_upper_addr = msg_addr >> 32;
-	msix_table->msg_data = msg_data;
+		table_entry[i].msg_addr.write(default_bitmap<uint32_t>{ msg_addr });
+		table_entry[i].msg_data.write(default_bitmap<uint32_t>{ msg_data });
+		table_entry[i].vector_control.write(default_bitmap<uint32_t>{ 0 });
+	}
 
 	// Memory barrier to ensure writes are not reordered
 	asm volatile("mfence" ::: "memory");
@@ -245,7 +250,7 @@ void configure_msi_register(const device& dev,
 
 void configure_msi_x_register(const device& dev,
 							  uint8_t cap_addr,
-							  uint64_t msg_addr,
+							  uint32_t msg_addr,
 							  uint32_t msg_data)
 {
 	auto msix_cap = read_msi_x_capability(dev, cap_addr);
@@ -281,18 +286,14 @@ void configure_msi(const device& dev,
 		capability_pointer = header.bits.next_ptr;
 	}
 
+	if (msix_capability_addr != 0) {
+		return configure_msi_x_register(dev, msix_capability_addr, msg_addr,
+										msg_data);
+	}
+
 	if (msi_capability_addr != 0) {
 		return configure_msi_register(dev, msi_capability_addr, msg_addr, msg_data,
 									  num_vector_exponent);
-	}
-
-	if (msix_capability_addr != 0) {
-		configure_msi_x_register(dev, msix_capability_addr, msg_addr, msg_data);
-		auto msix_cap = read_msi_x_capability(dev, msix_capability_addr);
-
-		printk(KERN_ERROR, "MSI-X enabled %d", msix_cap.header.bits.enable);
-
-		return;
 	}
 }
 

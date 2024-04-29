@@ -108,13 +108,20 @@ struct msi_x_capability {
 			uint32_t function_mask : 1;
 			uint32_t enable : 1;
 		} __attribute__((packed)) bits;
-	} __attribute__((packed)) header;
+	} header;
 
-	uint32_t table_bar;
-	uint32_t table_offset;
-	uint32_t pba_bar;
-	uint32_t pba_offset;
-} __attribute__((packed));
+	union address_field {
+		uint32_t data;
+
+		struct {
+			uint32_t bar : 3;
+			uint32_t offset : 29;
+		} __attribute__((packed)) bits;
+	};
+
+	address_field table;
+	address_field pba;
+};
 
 struct msix_table_entry {
 	memory_mapped_register<default_bitmap<uint32_t>> msg_addr;
