@@ -20,4 +20,6 @@ struct interrupt_frame {
 
 void on_xhci_interrupt(interrupt_frame* frame);
 
+void on_virtio_interrupt(interrupt_frame* frame);
+
 [[gnu::no_caller_saved_registers]] void kill_userland(interrupt_frame* frame);
