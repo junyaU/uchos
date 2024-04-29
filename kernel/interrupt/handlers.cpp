@@ -1,5 +1,6 @@
 #include "handlers.hpp"
 #include "asm_utils.h"
+#include "graphics/log.hpp"
 #include "task/context.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
@@ -21,6 +22,13 @@ __attribute__((interrupt)) void on_xhci_interrupt(interrupt_frame* frame)
 	const message m = { NOTIFY_XHCI, INTERRUPT_TASK, {} };
 	send_message(XHCI_TASK_ID, &m);
 
+	notify_end_of_interrupt();
+}
+
+__attribute__((interrupt)) void on_virtio_interrupt(interrupt_frame* frame)
+{
+	// TODO: Implement virtio interrupt handler
+	printk(KERN_ERROR, "virtio interrupt");
 	notify_end_of_interrupt();
 }
 
