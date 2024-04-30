@@ -146,6 +146,11 @@ uint64_t read_base_address_register(const device& dev, unsigned int index)
 	return bar_low | (static_cast<uint64_t>(bar_high) << 32);
 }
 
+uint8_t get_capability_pointer(const device& dev)
+{
+	return read_conf_reg(dev, 0x34) & 0xffU;
+}
+
 msi_capability read_msi_capability(const device& dev, uint8_t cap_addr)
 {
 	msi_capability msi_cap{};
@@ -273,7 +278,7 @@ void configure_msi(const device& dev,
 				   uint32_t msg_data,
 				   unsigned int num_vector_exponent)
 {
-	uint8_t capability_pointer = read_conf_reg(dev, 0x34) & 0xffU;
+	uint8_t capability_pointer = get_capability_pointer(dev);
 	uint8_t msi_capability_addr = 0, msix_capability_addr = 0;
 	while (capability_pointer != 0) {
 		auto header = read_capability_header(dev, capability_pointer);

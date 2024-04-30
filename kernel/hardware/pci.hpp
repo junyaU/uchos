@@ -51,7 +51,11 @@ struct device {
 	}
 };
 
+uint32_t read_conf_reg(const device& dev, uint8_t reg_addr);
+
 uint64_t read_base_address_register(const device& dev, unsigned int index);
+
+uint8_t get_capability_pointer(const device& dev);
 
 inline std::array<device, 32> devices;
 inline int num_devices;
@@ -72,6 +76,8 @@ union capability_header {
 		uint32_t cap : 16;
 	} __attribute__((packed)) bits;
 } __attribute__((packed));
+
+capability_header read_capability_header(const device& dev, uint8_t addr);
 
 struct msi_capability {
 	union {
@@ -130,8 +136,9 @@ struct msix_table_entry {
 	memory_mapped_register<default_bitmap<uint32_t>> vector_control;
 } __attribute__((packed));
 
-const uint8_t CAP_MSI = 0x05;
-const uint8_t CAP_MSIX = 0x11;
+constexpr uint8_t CAP_MSI = 0x05;
+constexpr uint8_t CAP_MSIX = 0x11;
+constexpr uint8_t CAP_VIRTIO = 0x09;
 
 enum class msi_delivery_mode {
 	FIXED = 0b000,
