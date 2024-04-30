@@ -1,6 +1,12 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+
+namespace pci
+{
+struct device;
+}
 
 /* Common configuration */
 constexpr int VIRTIO_PCI_CAP_COMMON_CFG = 1;
@@ -19,15 +25,31 @@ constexpr int VIRTIO_PCI_CAP_VENDOR_CFG = 9;
 
 // https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-1240004
 struct virtio_pci_cap {
-	uint8_t cap_vndr;	/* Generic PCI field: PCI_CAP_ID_VNDR */
-	uint8_t cap_next;	/* Generic PCI field: next ptr. */
-	uint8_t cap_len;	/* Generic PCI field: capability length */
-	uint8_t cfg_type;	/* Identifies the structure. */
-	uint8_t bar;		/* Where to find it. */
-	uint8_t id;			/* Multiple capabilities of the same type */
-	uint8_t padding[2]; /* Pad to full dword. */
-	uint32_t offset;	/* Offset within bar. */
-	uint32_t length;	/* Length of the structure, in bytes. */
+	union {
+		uint32_t data;
+
+		struct {
+			uint8_t cap_vndr; /* Generic PCI field: PCI_CAP_ID_VNDR */
+			uint8_t cap_next; /* Generic PCI field: next ptr. */
+			uint8_t cap_len;  /* Generic PCI field: capability length */
+			uint8_t cfg_type; /* Identifies the structure. */
+		} __attribute__((packed)) fields;
+	} first_dword;
+
+	union {
+		uint32_t data;
+
+		struct {
+			uint8_t bar;		/* Where to find it. */
+			uint8_t id;			/* Multiple capabilities of the same type */
+			uint8_t padding[2]; /* Pad to full dword. */
+		} __attribute__((packed)) fields;
+	} second_dword;
+
+	uint32_t offset; /* Offset within bar. */
+	uint32_t length; /* Length of the structure, in bytes. */
+
+	virtio_pci_cap* next;
 } __attribute__((packed));
 
 // https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-1240004
@@ -64,3 +86,5 @@ struct virtio_pci_cfg_cap {
 	struct virtio_pci_cap cap;
 	uint8_t pci_cfg_data[4]; /* Offset within bar. */
 } __attribute__((packed));
+
+size_t find_virtio_pci_cap(pci::device& virtio_dev, virtio_pci_cap** caps);
