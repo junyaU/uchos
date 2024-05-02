@@ -1,5 +1,8 @@
 #include "hardware/virtio/pci.hpp"
+#include "graphics/log.hpp"
 #include "hardware/pci.hpp"
+#include "hardware/virtio/blk.hpp"
+#include "interrupt/vector.hpp"
 #include "memory/slab.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -40,4 +43,52 @@ size_t find_virtio_pci_cap(pci::device& virtio_dev, virtio_pci_cap** caps)
 	}
 
 	return num_caps;
+}
+
+error_t configure_pci_common_cfg(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
+{
+	// cfg->msix_config = interrupt_vector::VIRTIO;
+	// cfg->driver_feature_select = 0x0;
+	// cfg->driver_feature = VIRTIO_BLK_F_FLUSH;
+	// cfg->msix_config = interrupt_vector::VIRTIO;
+
+	printk(KERN_ERROR, "num_queues=%d", cfg->num_queues);
+	printk(KERN_ERROR, "queue_size=%d", cfg->queue_size);
+	return OK;
+}
+
+error_t set_virtio_pci_capability(pci::device& virtio_dev, virtio_pci_cap* caps)
+{
+	while (caps != nullptr) {
+		switch (caps->first_dword.fields.cfg_type) {
+			case VIRTIO_PCI_CAP_COMMON_CFG: {
+				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_COMMON_CFG");
+
+				auto* cfg = get_virtio_pci_capability<virtio_pci_common_cfg>(
+						virtio_dev, caps);
+				configure_pci_common_cfg(virtio_dev, cfg);
+
+				break;
+			}
+
+			case VIRTIO_PCI_CAP_NOTIFY_CFG:
+				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_NOTIFY_CFG");
+				break;
+			case VIRTIO_PCI_CAP_ISR_CFG:
+				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_ISR_CFG");
+				break;
+			case VIRTIO_PCI_CAP_DEVICE_CFG:
+				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_DEVICE_CFG");
+				break;
+			case VIRTIO_PCI_CAP_PCI_CFG:
+				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_PCI_CFG");
+				break;
+			default:
+				printk(KERN_ERROR, "Unknown virtio pci cap");
+		}
+
+		caps = caps->next;
+	}
+
+	return OK;
 }

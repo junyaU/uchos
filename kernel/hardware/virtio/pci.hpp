@@ -1,7 +1,9 @@
 #pragma once
 
+#include "hardware/pci.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <libs/common/types.hpp>
 
 namespace pci
 {
@@ -87,4 +89,16 @@ struct virtio_pci_cfg_cap {
 	uint8_t pci_cfg_data[4]; /* Offset within bar. */
 } __attribute__((packed));
 
+template<typename T>
+T* get_virtio_pci_capability(pci::device& virtio_dev, virtio_pci_cap* caps)
+{
+	uint64_t bar_addr = pci::read_base_address_register(
+			virtio_dev, caps->second_dword.fields.bar);
+	bar_addr = bar_addr & ~0xf;
+
+	return reinterpret_cast<T*>(bar_addr + caps->offset);
+}
+
 size_t find_virtio_pci_cap(pci::device& virtio_dev, virtio_pci_cap** caps);
+
+error_t set_virtio_pci_capability(pci::device& virtio_dev, virtio_pci_cap* cap);
