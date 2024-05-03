@@ -94,7 +94,7 @@ T* get_virtio_pci_capability(pci::device& virtio_dev, virtio_pci_cap* caps)
 {
 	uint64_t bar_addr = pci::read_base_address_register(
 			virtio_dev, caps->second_dword.fields.bar);
-	bar_addr = bar_addr & ~0xf;
+	bar_addr = bar_addr & 0xffff'ffff'ffff'f000U;
 
 	return reinterpret_cast<T*>(bar_addr + caps->offset);
 }

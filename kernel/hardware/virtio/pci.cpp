@@ -2,6 +2,7 @@
 #include "graphics/log.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/virtio/blk.hpp"
+#include "hardware/virtio/virtio.hpp"
 #include "interrupt/vector.hpp"
 #include "memory/slab.hpp"
 #include <cstddef>
@@ -45,15 +46,36 @@ size_t find_virtio_pci_cap(pci::device& virtio_dev, virtio_pci_cap** caps)
 	return num_caps;
 }
 
+error_t negotiate_features(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
+{
+	for (int i = 0; i < 2; i++) {
+		cfg->device_feature_select = i;
+		cfg->driver_feature_select = i;
+		cfg->driver_feature = cfg->device_feature;
+	}
+
+	cfg->device_status |= VIRTIO_STATUS_FEATURES_OK;
+	if ((cfg->device_status & VIRTIO_STATUS_FEATURES_OK) == 0) {
+		printk(KERN_ERROR, "Virtio device does not support features");
+	}
+
+	return OK;
+}
+
 error_t configure_pci_common_cfg(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
 {
-	// cfg->msix_config = interrupt_vector::VIRTIO;
-	// cfg->driver_feature_select = 0x0;
-	// cfg->driver_feature = VIRTIO_BLK_F_FLUSH;
-	// cfg->msix_config = interrupt_vector::VIRTIO;
+	cfg->device_status = 0;
+	while (cfg->device_status != 0) {
+	}
 
-	printk(KERN_ERROR, "num_queues=%d", cfg->num_queues);
-	printk(KERN_ERROR, "queue_size=%d", cfg->queue_size);
+	cfg->device_status = VIRTIO_STATUS_ACKNOWLEDGE;
+	cfg->device_status |= VIRTIO_STATUS_DRIVER;
+
+	if (auto err = negotiate_features(virtio_dev, cfg); IS_ERR(err)) {
+		printk(KERN_ERROR, "Failed to negotiate features");
+		return err;
+	}
+
 	return OK;
 }
 
