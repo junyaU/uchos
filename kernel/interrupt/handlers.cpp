@@ -32,6 +32,13 @@ __attribute__((interrupt)) void on_virtio_interrupt(interrupt_frame* frame)
 	notify_end_of_interrupt();
 }
 
+__attribute__((interrupt)) void on_virtqueue_interrupt(interrupt_frame* frame)
+{
+	// TODO: Implement virtqueue interrupt handler
+	printk(KERN_ERROR, "virtqueue interrupt");
+	notify_end_of_interrupt();
+}
+
 extern "C" void switch_task_by_timer_interrupt(context* ctx)
 {
 	const bool need_switch_task = ktimer->increment_tick();
