@@ -61,7 +61,7 @@ struct virtio_pci_common_cfg {
 	uint32_t device_feature;		/* read-only */
 	uint32_t driver_feature_select; /* write */
 	uint32_t driver_feature;		/* write */
-	uint16_t msix_config;			/* read-write */
+	uint16_t config_msix_vector;	/* read-write */
 	uint16_t num_queues;			/* read-only */
 	uint8_t device_status;			/* read-write */
 	uint8_t config_generation;		/* read-only */

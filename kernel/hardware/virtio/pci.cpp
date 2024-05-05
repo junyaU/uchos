@@ -1,9 +1,11 @@
 #include "hardware/virtio/pci.hpp"
+#include "bit_utils.hpp"
 #include "graphics/log.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/virtio/blk.hpp"
 #include "hardware/virtio/virtio.hpp"
 #include "interrupt/vector.hpp"
+#include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -62,6 +64,44 @@ error_t negotiate_features(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
 	return OK;
 }
 
+error_t setup_virtqueue(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
+{
+	auto descriptor_area_size = cfg->queue_size * 16;
+	auto available_ring_size = cfg->queue_size * 2 + 6;
+	auto used_ring_size = cfg->queue_size * 8 + 6;
+
+	auto avail_ring_offset = descriptor_area_size;
+	auto used_ring_offset =
+			align_up(avail_ring_offset + available_ring_size, PAGE_SIZE);
+
+	auto total_size = used_ring_offset + align_up(used_ring_size, PAGE_SIZE);
+
+	for (int i = 0; i < cfg->num_queues; i++) {
+		cfg->queue_select = i;
+
+		void* addr = kmalloc(total_size, KMALLOC_ZEROED, PAGE_SIZE);
+		if (addr == nullptr) {
+			printk(KERN_ERROR, "Failed to allocate memory for virtio queue");
+			return ERR_NO_MEMORY;
+		}
+
+		cfg->queue_desc = reinterpret_cast<uint64_t>(addr);
+		cfg->queue_avail = reinterpret_cast<uint64_t>(addr) + avail_ring_offset;
+		cfg->queue_used = reinterpret_cast<uint64_t>(addr) + used_ring_offset;
+
+		cfg->queue_msix_vector = interrupt_vector::VIRTIO;
+		if (cfg->queue_msix_vector != interrupt_vector::VIRTIO) {
+			printk(KERN_ERROR, "queue_msix_vector: 0x%x", cfg->queue_msix_vector);
+			printk(KERN_ERROR, "Failed to allocate MSI-X vector for virtqueue");
+			return ERR_NO_MEMORY;
+		}
+
+		cfg->queue_enable = 1;
+	}
+
+	return OK;
+}
+
 error_t configure_pci_common_cfg(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
 {
 	cfg->device_status = 0;
@@ -71,10 +111,19 @@ error_t configure_pci_common_cfg(pci::device& virtio_dev, virtio_pci_common_cfg*
 	cfg->device_status = VIRTIO_STATUS_ACKNOWLEDGE;
 	cfg->device_status |= VIRTIO_STATUS_DRIVER;
 
+	cfg->config_msix_vector = interrupt_vector::VIRTIO;
+
 	if (auto err = negotiate_features(virtio_dev, cfg); IS_ERR(err)) {
 		printk(KERN_ERROR, "Failed to negotiate features");
 		return err;
 	}
+
+	if (auto err = setup_virtqueue(virtio_dev, cfg); IS_ERR(err)) {
+		printk(KERN_ERROR, "Failed to setup virtqueue");
+		return err;
+	}
+
+	printk(KERN_ERROR, "initialized virtio device");
 
 	return OK;
 }
