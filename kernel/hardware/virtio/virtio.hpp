@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <libs/common/types.hpp>
 
@@ -41,24 +42,33 @@ struct virtq_desc {
 } __attribute__((packed));
 
 // https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-490006
-struct virtq_avail {
+struct virtq_driver {
 	uint16_t flags;
 	uint16_t idx;
 	uint16_t ring[];
 } __attribute__((packed));
 
 // https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-540008
-struct virtq_used_elem {
+struct virtq_device_elem {
 	uint32_t id;
 	uint32_t len;
 } __attribute__((packed));
 
 // usedリング (2.7.8 The Virtqueue Used Ring)
 // https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-540008
-struct virtq_used {
+struct virtq_device {
 	uint16_t flags;
 	uint16_t index;
-	struct virtq_used_elem ring[];
+	struct virtq_device_elem ring[];
 } __attribute__((packed));
+
+struct virtio_virtqueue {
+	size_t index;
+	uint16_t size;
+	uint16_t last_used_idx;
+	virtq_desc* desc;
+	virtq_driver* driver;
+	virtq_device* device;
+};
 
 error_t init_virtio_pci();
