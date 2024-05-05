@@ -25,6 +25,9 @@ constexpr int VIRTIO_PCI_CAP_SHARED_MEMORY_CFG = 8;
 /* Vendor-specific data */
 constexpr int VIRTIO_PCI_CAP_VENDOR_CFG = 9;
 
+// MSIX vector for virtio notifications
+constexpr int NO_VECTOR = 0xffff;
+
 // https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-1240004
 struct virtio_pci_cap {
 	union {

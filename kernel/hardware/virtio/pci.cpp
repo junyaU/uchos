@@ -50,7 +50,7 @@ size_t find_virtio_pci_cap(pci::device& virtio_dev, virtio_pci_cap** caps)
 
 error_t negotiate_features(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
 {
-	for (int i = 0; i < 2; i++) {
+	for (int i = 0; i < 2; ++i) {
 		cfg->device_feature_select = i;
 		cfg->driver_feature_select = i;
 		cfg->driver_feature = cfg->device_feature;
@@ -89,8 +89,8 @@ error_t setup_virtqueue(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
 		cfg->queue_driver = reinterpret_cast<uint64_t>(addr) + driver_ring_offset;
 		cfg->queue_device = reinterpret_cast<uint64_t>(addr) + device_ring_offset;
 
-		cfg->queue_msix_vector = static_cast<uint16_t>(interrupt_vector::VIRTQUEUE);
-		if (cfg->queue_msix_vector != interrupt_vector::VIRTQUEUE) {
+		cfg->queue_msix_vector = 1;
+		if (cfg->queue_msix_vector == NO_VECTOR) {
 			printk(KERN_ERROR, "queue_msix_vector: 0x%x", cfg->queue_msix_vector);
 			printk(KERN_ERROR, "Failed to allocate MSI-X vector for virtqueue");
 			return ERR_NO_MEMORY;
@@ -109,17 +109,24 @@ error_t configure_pci_common_cfg(pci::device& virtio_dev, virtio_pci_common_cfg*
 	cfg->device_status = VIRTIO_STATUS_ACKNOWLEDGE;
 	cfg->device_status |= VIRTIO_STATUS_DRIVER;
 
-	cfg->config_msix_vector = interrupt_vector::VIRTIO;
-
 	if (auto err = negotiate_features(virtio_dev, cfg); IS_ERR(err)) {
 		printk(KERN_ERROR, "Failed to negotiate features");
 		return err;
+	}
+
+	cfg->config_msix_vector = 0;
+	if (cfg->config_msix_vector == NO_VECTOR) {
+		printk(KERN_ERROR, "config_msix_vector: 0x%x", cfg->config_msix_vector);
+		printk(KERN_ERROR, "Failed to allocate MSI-X vector for virtio device");
+		return ERR_NO_MEMORY;
 	}
 
 	if (auto err = setup_virtqueue(virtio_dev, cfg); IS_ERR(err)) {
 		printk(KERN_ERROR, "Failed to setup virtqueue");
 		return err;
 	}
+
+	cfg->device_status |= VIRTIO_STATUS_DRIVER_OK;
 
 	printk(KERN_ERROR, "initialized virtio device");
 

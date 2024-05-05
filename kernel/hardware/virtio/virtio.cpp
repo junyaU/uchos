@@ -26,6 +26,9 @@ error_t init_virtio_pci()
 	pci::configure_msi_fixed_destination(
 			*virtio_dev, bsp_lapic_id, pci::msi_trigger_mode::EDGE,
 			pci::msi_delivery_mode::FIXED, interrupt_vector::VIRTIO, 0);
+	pci::configure_msi_fixed_destination(
+			*virtio_dev, bsp_lapic_id, pci::msi_trigger_mode::EDGE,
+			pci::msi_delivery_mode::FIXED, interrupt_vector::VIRTQUEUE, 0);
 
 	virtio_pci_cap* caps = nullptr;
 	find_virtio_pci_cap(*virtio_dev, &caps);
