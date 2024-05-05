@@ -67,16 +67,16 @@ error_t negotiate_features(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
 error_t setup_virtqueue(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
 {
 	auto descriptor_area_size = cfg->queue_size * 16;
-	auto available_ring_size = cfg->queue_size * 2 + 6;
-	auto used_ring_size = cfg->queue_size * 8 + 6;
+	auto driver_ring_size = cfg->queue_size * 2 + 6;
+	auto device_ring_size = cfg->queue_size * 8 + 6;
 
-	auto avail_ring_offset = descriptor_area_size;
-	auto used_ring_offset =
-			align_up(avail_ring_offset + available_ring_size, PAGE_SIZE);
+	auto driver_ring_offset = descriptor_area_size;
+	auto device_ring_offset =
+			align_up(driver_ring_offset + driver_ring_size, PAGE_SIZE);
 
-	auto total_size = used_ring_offset + align_up(used_ring_size, PAGE_SIZE);
+	auto total_size = device_ring_offset + align_up(device_ring_size, PAGE_SIZE);
 
-	for (int i = 0; i < cfg->num_queues; i++) {
+	for (int i = 0; i < cfg->num_queues; ++i) {
 		cfg->queue_select = i;
 
 		void* addr = kmalloc(total_size, KMALLOC_ZEROED, PAGE_SIZE);
@@ -86,17 +86,15 @@ error_t setup_virtqueue(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
 		}
 
 		cfg->queue_desc = reinterpret_cast<uint64_t>(addr);
-		cfg->queue_avail = reinterpret_cast<uint64_t>(addr) + avail_ring_offset;
-		cfg->queue_used = reinterpret_cast<uint64_t>(addr) + used_ring_offset;
+		cfg->queue_driver = reinterpret_cast<uint64_t>(addr) + driver_ring_offset;
+		cfg->queue_device = reinterpret_cast<uint64_t>(addr) + device_ring_offset;
 
-		cfg->queue_msix_vector = interrupt_vector::VIRTIO;
-		if (cfg->queue_msix_vector != interrupt_vector::VIRTIO) {
+		cfg->queue_msix_vector = static_cast<uint16_t>(interrupt_vector::VIRTQUEUE);
+		if (cfg->queue_msix_vector != interrupt_vector::VIRTQUEUE) {
 			printk(KERN_ERROR, "queue_msix_vector: 0x%x", cfg->queue_msix_vector);
 			printk(KERN_ERROR, "Failed to allocate MSI-X vector for virtqueue");
 			return ERR_NO_MEMORY;
 		}
-
-		cfg->queue_enable = 1;
 	}
 
 	return OK;

@@ -67,14 +67,16 @@ struct virtio_pci_common_cfg {
 	uint8_t config_generation;		/* read-only */
 
 	/* About a specific virtqueue. */
-	uint16_t queue_select;		/* write */
-	uint16_t queue_size;		/* write */
-	uint16_t queue_msix_vector; /* write */
-	uint16_t queue_enable;		/* write */
-	uint16_t queue_notify_off;	/* read-only */
-	uint64_t queue_desc;		/* read-write */
-	uint64_t queue_avail;		/* read-write */
-	uint64_t queue_used;		/* read-write */
+	uint16_t queue_select;			  /* write */
+	uint16_t queue_size;			  /* write */
+	uint16_t queue_msix_vector;		  /* write */
+	uint16_t queue_enable;			  /* write */
+	uint16_t queue_notify_off;		  /* read-only */
+	uint64_t queue_desc;			  /* read-write */
+	uint64_t queue_driver;			  /* read-write */
+	uint64_t queue_device;			  /* read-write */
+	uint16_t queue_notif_config_data; /* read-only for driver */
+	uint16_t queue_reset;			  /* read-write */
 } __attribute__((packed));
 
 // https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-1240004

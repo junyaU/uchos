@@ -224,8 +224,11 @@ void write_msi_x_capability(const device& dev,
 		}
 
 		table_entry[i].msg_addr.write(default_bitmap<uint32_t>{ msg_addr });
+		table_entry[i].msg_upper_addr.write(default_bitmap<uint32_t>{ 0 });
 		table_entry[i].msg_data.write(default_bitmap<uint32_t>{ msg_data });
 		table_entry[i].vector_control.write(default_bitmap<uint32_t>{ 0 });
+
+		break;
 	}
 
 	// Memory barrier to ensure writes are not reordered
