@@ -2,35 +2,34 @@
 #include "bit_utils.hpp"
 #include "graphics/log.hpp"
 #include "hardware/pci.hpp"
-#include "hardware/virtio/blk.hpp"
 #include "hardware/virtio/virtio.hpp"
-#include "interrupt/vector.hpp"
 #include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <libs/common/types.hpp>
 
-size_t find_virtio_pci_cap(pci::device& virtio_dev, virtio_pci_cap** caps)
+size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev, virtio_pci_cap** caps)
 {
 	uint8_t cap_id, cap_next;
-	uint32_t cap_addr = pci::get_capability_pointer(virtio_dev);
+	uint32_t cap_addr = pci::get_capability_pointer(*virtio_dev.dev);
 	virtio_pci_cap* prev_cap = nullptr;
 	size_t num_caps = 0;
 	*caps = nullptr;
 
 	while (cap_addr != 0) {
-		auto header = pci::read_capability_header(virtio_dev, cap_addr);
+		auto header = pci::read_capability_header(*virtio_dev.dev, cap_addr);
 		cap_id = header.bits.cap_id;
 		cap_next = header.bits.next_ptr;
 
 		if (cap_id == pci::CAP_VIRTIO) {
 			void* addr = kmalloc(sizeof(virtio_pci_cap), KMALLOC_ZEROED);
 			virtio_pci_cap* cap = new (addr) virtio_pci_cap;
-			cap->first_dword.data = pci::read_conf_reg(virtio_dev, cap_addr);
-			cap->second_dword.data = pci::read_conf_reg(virtio_dev, cap_addr + 4);
-			cap->offset = pci::read_conf_reg(virtio_dev, cap_addr + 8);
-			cap->length = pci::read_conf_reg(virtio_dev, cap_addr + 12);
+			cap->first_dword.data = pci::read_conf_reg(*virtio_dev.dev, cap_addr);
+			cap->second_dword.data =
+					pci::read_conf_reg(*virtio_dev.dev, cap_addr + 4);
+			cap->offset = pci::read_conf_reg(*virtio_dev.dev, cap_addr + 8);
+			cap->length = pci::read_conf_reg(*virtio_dev.dev, cap_addr + 12);
 
 			if (prev_cap != nullptr) {
 				prev_cap->next = cap;
@@ -48,27 +47,28 @@ size_t find_virtio_pci_cap(pci::device& virtio_dev, virtio_pci_cap** caps)
 	return num_caps;
 }
 
-error_t negotiate_features(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
+error_t negotiate_features(virtio_pci_device& virtio_dev)
 {
 	for (int i = 0; i < 2; ++i) {
-		cfg->device_feature_select = i;
-		cfg->driver_feature_select = i;
-		cfg->driver_feature = cfg->device_feature;
+		virtio_dev.common_cfg->device_feature_select = i;
+		virtio_dev.common_cfg->driver_feature_select = i;
+		virtio_dev.common_cfg->driver_feature =
+				virtio_dev.common_cfg->device_feature;
 	}
 
-	cfg->device_status |= VIRTIO_STATUS_FEATURES_OK;
-	if ((cfg->device_status & VIRTIO_STATUS_FEATURES_OK) == 0) {
+	virtio_dev.common_cfg->device_status |= VIRTIO_STATUS_FEATURES_OK;
+	if ((virtio_dev.common_cfg->device_status & VIRTIO_STATUS_FEATURES_OK) == 0) {
 		printk(KERN_ERROR, "Virtio device does not support features");
 	}
 
 	return OK;
 }
 
-error_t setup_virtqueue(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
+error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 {
-	auto descriptor_area_size = cfg->queue_size * 16;
-	auto driver_ring_size = cfg->queue_size * 2 + 6;
-	auto device_ring_size = cfg->queue_size * 8 + 6;
+	auto descriptor_area_size = virtio_dev.common_cfg->queue_size * 16;
+	auto driver_ring_size = virtio_dev.common_cfg->queue_size * 2 + 6;
+	auto device_ring_size = virtio_dev.common_cfg->queue_size * 8 + 6;
 
 	auto driver_ring_offset = descriptor_area_size;
 	auto device_ring_offset =
@@ -76,8 +76,8 @@ error_t setup_virtqueue(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
 
 	auto total_size = device_ring_offset + align_up(device_ring_size, PAGE_SIZE);
 
-	for (int i = 0; i < cfg->num_queues; ++i) {
-		cfg->queue_select = i;
+	for (int i = 0; i < virtio_dev.common_cfg->num_queues; ++i) {
+		virtio_dev.common_cfg->queue_select = i;
 
 		void* addr = kmalloc(total_size, KMALLOC_ZEROED, PAGE_SIZE);
 		if (addr == nullptr) {
@@ -85,13 +85,16 @@ error_t setup_virtqueue(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
 			return ERR_NO_MEMORY;
 		}
 
-		cfg->queue_desc = reinterpret_cast<uint64_t>(addr);
-		cfg->queue_driver = reinterpret_cast<uint64_t>(addr) + driver_ring_offset;
-		cfg->queue_device = reinterpret_cast<uint64_t>(addr) + device_ring_offset;
+		virtio_dev.common_cfg->queue_desc = reinterpret_cast<uint64_t>(addr);
+		virtio_dev.common_cfg->queue_driver =
+				reinterpret_cast<uint64_t>(addr) + driver_ring_offset;
+		virtio_dev.common_cfg->queue_device =
+				reinterpret_cast<uint64_t>(addr) + device_ring_offset;
 
-		cfg->queue_msix_vector = 1;
-		if (cfg->queue_msix_vector == NO_VECTOR) {
-			printk(KERN_ERROR, "queue_msix_vector: 0x%x", cfg->queue_msix_vector);
+		virtio_dev.common_cfg->queue_msix_vector = 1;
+		if (virtio_dev.common_cfg->queue_msix_vector == NO_VECTOR) {
+			printk(KERN_ERROR, "queue_msix_vector: 0x%x",
+				   virtio_dev.common_cfg->queue_msix_vector);
 			printk(KERN_ERROR, "Failed to allocate MSI-X vector for virtqueue");
 			return ERR_NO_MEMORY;
 		}
@@ -100,49 +103,51 @@ error_t setup_virtqueue(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
 	return OK;
 }
 
-error_t configure_pci_common_cfg(pci::device& virtio_dev, virtio_pci_common_cfg* cfg)
+error_t configure_pci_common_cfg(virtio_pci_device& virtio_dev)
 {
-	cfg->device_status = 0;
-	while (cfg->device_status != 0) {
+	virtio_dev.common_cfg->device_status = 0;
+	while (virtio_dev.common_cfg->device_status != 0) {
 	}
 
-	cfg->device_status = VIRTIO_STATUS_ACKNOWLEDGE;
-	cfg->device_status |= VIRTIO_STATUS_DRIVER;
+	virtio_dev.common_cfg->device_status = VIRTIO_STATUS_ACKNOWLEDGE;
+	virtio_dev.common_cfg->device_status |= VIRTIO_STATUS_DRIVER;
 
-	if (auto err = negotiate_features(virtio_dev, cfg); IS_ERR(err)) {
+	if (auto err = negotiate_features(virtio_dev); IS_ERR(err)) {
 		printk(KERN_ERROR, "Failed to negotiate features");
 		return err;
 	}
 
-	cfg->config_msix_vector = 0;
-	if (cfg->config_msix_vector == NO_VECTOR) {
-		printk(KERN_ERROR, "config_msix_vector: 0x%x", cfg->config_msix_vector);
+	virtio_dev.common_cfg->config_msix_vector = 0;
+	if (virtio_dev.common_cfg->config_msix_vector == NO_VECTOR) {
+		printk(KERN_ERROR, "config_msix_vector: 0x%x",
+			   virtio_dev.common_cfg->config_msix_vector);
 		printk(KERN_ERROR, "Failed to allocate MSI-X vector for virtio device");
 		return ERR_NO_MEMORY;
 	}
 
-	if (auto err = setup_virtqueue(virtio_dev, cfg); IS_ERR(err)) {
+	if (auto err = setup_virtqueue(virtio_dev); IS_ERR(err)) {
 		printk(KERN_ERROR, "Failed to setup virtqueue");
 		return err;
 	}
 
-	cfg->device_status |= VIRTIO_STATUS_DRIVER_OK;
+	virtio_dev.common_cfg->device_status |= VIRTIO_STATUS_DRIVER_OK;
 
 	printk(KERN_ERROR, "initialized virtio device");
 
 	return OK;
 }
 
-error_t set_virtio_pci_capability(pci::device& virtio_dev, virtio_pci_cap* caps)
+error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 {
-	while (caps != nullptr) {
-		switch (caps->first_dword.fields.cfg_type) {
+	while (virtio_dev.caps != nullptr) {
+		switch (virtio_dev.caps->first_dword.fields.cfg_type) {
 			case VIRTIO_PCI_CAP_COMMON_CFG: {
 				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_COMMON_CFG");
 
-				auto* cfg = get_virtio_pci_capability<virtio_pci_common_cfg>(
-						virtio_dev, caps);
-				configure_pci_common_cfg(virtio_dev, cfg);
+				virtio_dev.common_cfg =
+						get_virtio_pci_capability<virtio_pci_common_cfg>(virtio_dev);
+
+				configure_pci_common_cfg(virtio_dev);
 
 				break;
 			}
@@ -163,7 +168,7 @@ error_t set_virtio_pci_capability(pci::device& virtio_dev, virtio_pci_cap* caps)
 				printk(KERN_ERROR, "Unknown virtio pci cap");
 		}
 
-		caps = caps->next;
+		virtio_dev.caps = virtio_dev.caps->next;
 	}
 
 	return OK;

@@ -104,15 +104,15 @@ struct virtio_pci_device {
 };
 
 template<typename T>
-T* get_virtio_pci_capability(pci::device& virtio_dev, virtio_pci_cap* caps)
+T* get_virtio_pci_capability(virtio_pci_device& virtio_dev)
 {
 	uint64_t bar_addr = pci::read_base_address_register(
-			virtio_dev, caps->second_dword.fields.bar);
+			*virtio_dev.dev, virtio_dev.caps->second_dword.fields.bar);
 	bar_addr = bar_addr & 0xffff'ffff'ffff'f000U;
 
-	return reinterpret_cast<T*>(bar_addr + caps->offset);
+	return reinterpret_cast<T*>(bar_addr + virtio_dev.caps->offset);
 }
 
-size_t find_virtio_pci_cap(pci::device& virtio_dev, virtio_pci_cap** caps);
+size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev, virtio_pci_cap** caps);
 
-error_t set_virtio_pci_capability(pci::device& virtio_dev, virtio_pci_cap* cap);
+error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev);

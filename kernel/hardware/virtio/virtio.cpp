@@ -29,10 +29,15 @@ error_t init_virtio_pci()
 			*virtio_dev, bsp_lapic_id, pci::msi_trigger_mode::EDGE,
 			pci::msi_delivery_mode::FIXED, interrupt_vector::VIRTQUEUE, 0);
 
-	virtio_pci_cap* caps = nullptr;
-	find_virtio_pci_cap(*virtio_dev, &caps);
+	virtio_pci_device virtio_pci_dev = { .dev = virtio_dev };
 
-	error_t err = set_virtio_pci_capability(*virtio_dev, caps);
+	find_virtio_pci_cap(virtio_pci_dev, &virtio_pci_dev.caps);
+
+	error_t err = set_virtio_pci_capability(virtio_pci_dev);
+	if (IS_ERR(err)) {
+		printk(KERN_ERROR, "Failed to set virtio pci capability");
+		return err;
+	}
 
 	return OK;
 }

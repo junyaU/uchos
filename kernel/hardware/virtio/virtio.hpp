@@ -69,6 +69,8 @@ struct virtio_virtqueue {
 	virtq_desc* desc;
 	virtq_driver* driver;
 	virtq_device* device;
+
+	uintptr_t notify_addr;
 };
 
 error_t init_virtio_pci();
