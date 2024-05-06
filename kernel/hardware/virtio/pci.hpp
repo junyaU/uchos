@@ -1,6 +1,7 @@
 #pragma once
 
 #include "hardware/pci.hpp"
+#include "hardware/virtio/virtio.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <libs/common/types.hpp>
@@ -93,6 +94,14 @@ struct virtio_pci_cfg_cap {
 	struct virtio_pci_cap cap;
 	uint8_t pci_cfg_data[4]; /* Offset within bar. */
 } __attribute__((packed));
+
+struct virtio_pci_device {
+	pci::device* dev;				   /* PCI device. */
+	virtio_pci_cap* caps;			   /* Capabilities. */
+	virtio_pci_common_cfg* common_cfg; /* Common configuration. */
+	virtio_virtqueue* queues;		   /* Virtqueues. */
+	size_t num_queues;				   /* Number of virtqueues. */
+};
 
 template<typename T>
 T* get_virtio_pci_capability(pci::device& virtio_dev, virtio_pci_cap* caps)

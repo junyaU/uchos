@@ -3,7 +3,6 @@
 #include "hardware/pci.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "interrupt/vector.hpp"
-#include <cstddef>
 #include <cstdint>
 #include <libs/common/types.hpp>
 
