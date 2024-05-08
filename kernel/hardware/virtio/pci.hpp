@@ -99,8 +99,10 @@ struct virtio_pci_device {
 	pci::device* dev;				   /* PCI device. */
 	virtio_pci_cap* caps;			   /* Capabilities. */
 	virtio_pci_common_cfg* common_cfg; /* Common configuration. */
+	virtio_pci_notify_cap* notify_cfg; /* Notifications. */
 	virtio_virtqueue* queues;		   /* Virtqueues. */
 	size_t num_queues;				   /* Number of virtqueues. */
+	uintptr_t notify_base;			   /* Base address for notifications. */
 };
 
 template<typename T>

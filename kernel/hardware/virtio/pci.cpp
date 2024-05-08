@@ -137,6 +137,23 @@ error_t configure_pci_common_cfg(virtio_pci_device& virtio_dev)
 	return OK;
 }
 
+error_t configure_pci_notify_cfg(virtio_pci_device& virtio_dev)
+{
+
+	uint64_t bar_addr = pci::read_base_address_register(
+			*virtio_dev.dev, virtio_dev.notify_cfg->cap.second_dword.fields.bar);
+
+	bar_addr = bar_addr & 0xffff'ffff'ffff'f000U;
+
+	virtio_dev.notify_base = bar_addr + virtio_dev.notify_cfg->cap.offset;
+
+	virtio_dev.notify_base +=
+			static_cast<uint64_t>(virtio_dev.common_cfg->queue_notify_off *
+								  virtio_dev.notify_cfg->notify_off_multiplier);
+
+	return OK;
+}
+
 error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 {
 	while (virtio_dev.caps != nullptr) {
@@ -148,12 +165,15 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 						get_virtio_pci_capability<virtio_pci_common_cfg>(virtio_dev);
 
 				configure_pci_common_cfg(virtio_dev);
-
 				break;
 			}
 
 			case VIRTIO_PCI_CAP_NOTIFY_CFG:
 				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_NOTIFY_CFG");
+
+				virtio_dev.notify_cfg =
+						reinterpret_cast<virtio_pci_notify_cap*>(virtio_dev.caps);
+
 				break;
 			case VIRTIO_PCI_CAP_ISR_CFG:
 				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_ISR_CFG");
@@ -170,6 +190,8 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 
 		virtio_dev.caps = virtio_dev.caps->next;
 	}
+
+	configure_pci_notify_cfg(virtio_dev);
 
 	return OK;
 }
