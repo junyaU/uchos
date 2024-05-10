@@ -35,16 +35,16 @@ constexpr int VIRTQ_DESC_F_INDIRECT = 4;
 
 // https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-430005
 struct virtq_desc {
-	uint64_t addr;
-	uint32_t len;
-	uint16_t flags;
-	uint16_t next;
+	uint64_t addr;	/* Address of buffer */
+	uint32_t len;	/* Length of buffer */
+	uint16_t flags; /* The flags as indicated above */
+	uint16_t next;	/* Next field if flags & NEXT */
 } __attribute__((packed));
 
 // https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-490006
 struct virtq_driver {
 	uint16_t flags;
-	uint16_t idx;
+	uint16_t index;
 	uint16_t ring[];
 } __attribute__((packed));
 
@@ -54,7 +54,6 @@ struct virtq_device_elem {
 	uint32_t len;
 } __attribute__((packed));
 
-// usedリング (2.7.8 The Virtqueue Used Ring)
 // https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-540008
 struct virtq_device {
 	uint16_t flags;
@@ -64,13 +63,11 @@ struct virtq_device {
 
 struct virtio_virtqueue {
 	size_t index;
-	uint16_t size;
+	uint16_t num_desc;
 	uint16_t last_used_idx;
 	virtq_desc* desc;
 	virtq_driver* driver;
 	virtq_device* device;
-
-	uintptr_t notify_addr;
 };
 
 error_t init_virtio_pci();
