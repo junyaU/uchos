@@ -41,3 +41,26 @@ error_t init_virtio_pci()
 
 	return OK;
 }
+
+error_t init_virtqueue(virtio_virtqueue* queue,
+					   size_t index,
+					   size_t num_desc,
+					   uintptr_t desc_addr,
+					   uintptr_t driver_ring_addr,
+					   uintptr_t device_ring_addr)
+{
+	queue->index = index;
+	queue->num_desc = num_desc;
+	queue->desc = reinterpret_cast<virtq_desc*>(desc_addr);
+	queue->driver = reinterpret_cast<virtq_driver*>(driver_ring_addr);
+	queue->device = reinterpret_cast<virtq_device*>(device_ring_addr);
+
+	for (int i = 0; i < num_desc; ++i) {
+		queue->desc[i].addr = 0;
+		queue->desc[i].len = 0;
+		queue->desc[i].flags = 0;
+		queue->desc[i].next = (i + 1) % num_desc;
+	}
+
+	return OK;
+}
