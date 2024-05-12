@@ -70,6 +70,13 @@ struct virtio_virtqueue {
 	virtq_device* device;
 };
 
+struct virtio_entry {
+	uint32_t index;
+	uintptr_t addr;
+	uint32_t length;
+	bool write;
+};
+
 constexpr size_t calc_desc_area_size(size_t num_desc) { return num_desc * 16; }
 
 constexpr size_t calc_driver_ring_size(size_t num_desc) { return num_desc * 2 + 6; }
@@ -84,3 +91,7 @@ error_t init_virtqueue(virtio_virtqueue* queue,
 					   uintptr_t desc_addr,
 					   uintptr_t driver_ring_addr,
 					   uintptr_t device_ring_addr);
+
+int push_virtio_entry(virtio_virtqueue* queue,
+					  virtio_entry* entry_chain,
+					  size_t num_entries);
