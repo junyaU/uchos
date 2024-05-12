@@ -70,4 +70,17 @@ struct virtio_virtqueue {
 	virtq_device* device;
 };
 
+constexpr size_t calc_desc_area_size(size_t num_desc) { return num_desc * 16; }
+
+constexpr size_t calc_driver_ring_size(size_t num_desc) { return num_desc * 2 + 6; }
+
+constexpr size_t calc_device_ring_size(size_t num_desc) { return num_desc * 8 + 6; }
+
 error_t init_virtio_pci();
+
+error_t init_virtqueue(virtio_virtqueue* queue,
+					   size_t index,
+					   size_t num_desc,
+					   uintptr_t desc_addr,
+					   uintptr_t driver_ring_addr,
+					   uintptr_t device_ring_addr);

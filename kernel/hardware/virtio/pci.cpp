@@ -66,15 +66,20 @@ error_t negotiate_features(virtio_pci_device& virtio_dev)
 
 error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 {
-	auto descriptor_area_size = virtio_dev.common_cfg->queue_size * 16;
-	auto driver_ring_size = virtio_dev.common_cfg->queue_size * 2 + 6;
-	auto device_ring_size = virtio_dev.common_cfg->queue_size * 8 + 6;
+	size_t num_desc = virtio_dev.common_cfg->queue_size;
+	auto descriptor_area_size = calc_desc_area_size(num_desc);
+	auto driver_ring_size = calc_driver_ring_size(num_desc);
+	auto device_ring_size = calc_device_ring_size(num_desc);
 
 	auto driver_ring_offset = descriptor_area_size;
 	auto device_ring_offset =
 			align_up(driver_ring_offset + driver_ring_size, PAGE_SIZE);
 
 	auto total_size = device_ring_offset + align_up(device_ring_size, PAGE_SIZE);
+
+	virtio_dev.queues = reinterpret_cast<virtio_virtqueue*>(
+			kmalloc(sizeof(virtio_virtqueue) * virtio_dev.common_cfg->num_queues,
+					KMALLOC_ZEROED));
 
 	for (int i = 0; i < virtio_dev.common_cfg->num_queues; ++i) {
 		virtio_dev.common_cfg->queue_select = i;
@@ -85,11 +90,18 @@ error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 			return ERR_NO_MEMORY;
 		}
 
-		virtio_dev.common_cfg->queue_desc = reinterpret_cast<uint64_t>(addr);
-		virtio_dev.common_cfg->queue_driver =
+		uint64_t driver_ring_addr =
 				reinterpret_cast<uint64_t>(addr) + driver_ring_offset;
-		virtio_dev.common_cfg->queue_device =
+		uint64_t device_ring_addr =
 				reinterpret_cast<uint64_t>(addr) + device_ring_offset;
+
+		virtio_dev.common_cfg->queue_desc = reinterpret_cast<uint64_t>(addr);
+		virtio_dev.common_cfg->queue_driver = driver_ring_addr;
+		virtio_dev.common_cfg->queue_device = device_ring_addr;
+
+		init_virtqueue(&virtio_dev.queues[i], i, num_desc,
+					   reinterpret_cast<uintptr_t>(addr), driver_ring_addr,
+					   device_ring_addr);
 
 		virtio_dev.common_cfg->queue_msix_vector = 1;
 		if (virtio_dev.common_cfg->queue_msix_vector == NO_VECTOR) {
