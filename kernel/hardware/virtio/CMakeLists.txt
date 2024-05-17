@@ -1,4 +1,5 @@
 set(VIRTIO_SOURCE_FILES
+        blk.cpp
         virtio.cpp
         pci.cpp
         )
