@@ -207,3 +207,9 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 
 	return OK;
 }
+
+void notify_virtqueue(virtio_pci_device& virtio_dev, size_t queue_idx)
+{
+	asm volatile("sfence" ::: "memory");
+	*(volatile uint32_t*)virtio_dev.notify_base = queue_idx;
+}
