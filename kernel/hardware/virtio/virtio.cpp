@@ -3,6 +3,7 @@
 #include "hardware/pci.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "interrupt/vector.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <libs/common/types.hpp>
 
@@ -42,6 +43,54 @@ error_t init_virtio_pci()
 	return OK;
 }
 
+int push_virtio_entry(virtio_virtqueue* queue,
+					  virtio_entry* entry_chain,
+					  size_t num_entries)
+{
+	if (queue->num_free_desc < num_entries) {
+		// TODO: handle this case
+		printk(KERN_ERROR, "Not enough free descriptors");
+		return -1;
+	}
+
+	int top_free_idx = queue->top_free_idx;
+	int desc_idx = top_free_idx;
+	virtq_desc* desc = nullptr;
+
+	for (int i = 0; i < num_entries; ++i) {
+		virtio_entry* entry = &entry_chain[i];
+		entry->index = desc_idx;
+
+		desc = &queue->desc[desc_idx];
+		desc->addr = entry->addr;
+		desc->len = entry->length;
+
+		if (i + 1 < num_entries) {
+			desc->flags = VIRTQ_DESC_F_NEXT;
+		} else {
+			queue->top_free_idx = desc->next;
+			desc->flags = 0;
+			desc->next = 0;
+		}
+
+		if (entry->write) {
+			desc->flags |= VIRTQ_DESC_F_WRITE;
+		}
+
+		desc_idx = desc->next;
+		queue->num_free_desc--;
+	}
+
+	queue->driver->ring[queue->driver->index % queue->num_desc] = top_free_idx;
+
+	// memory barrier
+	asm volatile("sfence" ::: "memory");
+
+	queue->driver->index++;
+
+	return top_free_idx;
+}
+
 error_t init_virtqueue(virtio_virtqueue* queue,
 					   size_t index,
 					   size_t num_desc,
@@ -49,8 +98,10 @@ error_t init_virtqueue(virtio_virtqueue* queue,
 					   uintptr_t driver_ring_addr,
 					   uintptr_t device_ring_addr)
 {
+	printk(KERN_ERROR, "num_desc: %d", num_desc);
 	queue->index = index;
 	queue->num_desc = num_desc;
+	queue->num_free_desc = num_desc;
 	queue->desc = reinterpret_cast<virtq_desc*>(desc_addr);
 	queue->driver = reinterpret_cast<virtq_driver*>(driver_ring_addr);
 	queue->device = reinterpret_cast<virtq_device*>(device_ring_addr);

@@ -63,8 +63,11 @@ struct virtq_device {
 
 struct virtio_virtqueue {
 	size_t index;
-	uint16_t num_desc;
-	uint16_t last_used_idx;
+	size_t num_desc;
+	size_t num_free_desc;
+	size_t top_free_idx;
+	size_t last_driver_idx;
+	uint16_t last_device_idx;
 	virtq_desc* desc;
 	virtq_driver* driver;
 	virtq_device* device;
