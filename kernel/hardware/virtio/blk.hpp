@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <libs/common/types.hpp>
 
 /* Feature bits */
 constexpr int VIRTIO_BLK_F_SIZE_MAX = 1;
@@ -27,6 +28,11 @@ constexpr int VIRTIO_BLK_T_DISCARD = 11;
 constexpr int VIRTIO_BLK_T_WRITE_ZEROES = 13;
 constexpr int VIRTIO_BLK_T_SECURE_ERASE = 14;
 
+/* Status values */
+constexpr int VIRTIO_BLK_S_OK = 0;
+constexpr int VIRTIO_BLK_S_IOERR = 1;
+constexpr int VIRTIO_BLK_S_UNSUPP = 2;
+
 constexpr int SECTOR_SIZE = 512;
 
 struct virtio_blk_req {
@@ -36,3 +42,7 @@ struct virtio_blk_req {
 	uint8_t data[SECTOR_SIZE];
 	uint8_t status;
 } __attribute__((packed));
+
+error_t write_to_blk_device(uint8_t* buffer, uint64_t sector, uint32_t len);
+
+error_t read_from_blk_device(uint8_t* buffer, uint64_t sector, uint32_t len);
