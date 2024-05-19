@@ -17,6 +17,16 @@ constexpr int VIRTIO_BLK_F_LIFE_TIME = 15;
 constexpr int VIRTIO_BLK_F_SECURE_ERASE = 16;
 constexpr int VIRTIO_BLK_F_ZONED = 17;
 
+/* Request types */
+constexpr int VIRTIO_BLK_T_IN = 0;
+constexpr int VIRTIO_BLK_T_OUT = 1;
+constexpr int VIRTIO_BLK_T_FLUSH = 4;
+constexpr int VIRTIO_BLK_T_GET_ID = 8;
+constexpr int VIRTIO_BLK_T_LIFE_TIME = 10;
+constexpr int VIRTIO_BLK_T_DISCARD = 11;
+constexpr int VIRTIO_BLK_T_WRITE_ZEROES = 13;
+constexpr int VIRTIO_BLK_T_SECURE_ERASE = 14;
+
 constexpr int SECTOR_SIZE = 512;
 
 struct virtio_blk_req {
