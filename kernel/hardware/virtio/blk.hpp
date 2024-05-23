@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
+// Forward declaration
+struct virtio_pci_device;
+
 /* Feature bits */
 constexpr int VIRTIO_BLK_F_SIZE_MAX = 1;
 constexpr int VIRTIO_BLK_F_SEG_MAX = 2;
@@ -43,6 +46,9 @@ struct virtio_blk_req {
 	uint8_t status;
 } __attribute__((packed));
 
-error_t write_to_blk_device(uint8_t* buffer, uint64_t sector, uint32_t len);
+error_t write_to_blk_device(void* buffer,
+							uint64_t sector,
+							uint32_t len,
+							virtio_pci_device* dev);
 
-error_t read_from_blk_device(uint8_t* buffer, uint64_t sector, uint32_t len);
+error_t read_from_blk_device(void* buffer, uint64_t sector, uint32_t len);

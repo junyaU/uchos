@@ -5,7 +5,7 @@
 #include "libs/common/types.hpp"
 #include "memory/slab.hpp"
 
-error_t write_to_blk_device(uint8_t* buffer,
+error_t write_to_blk_device(void* buffer,
 							uint64_t sector,
 							uint32_t len,
 							virtio_pci_device* dev)
@@ -27,14 +27,17 @@ error_t write_to_blk_device(uint8_t* buffer,
 	// type, reserved, sector
 	chain[0].addr = (uint64_t)req;
 	chain[0].len = sizeof(uint32_t) * 2 + sizeof(uint64_t);
+	chain[0].write = false;
 
 	// data
 	chain[1].addr = (uint64_t)&req->data;
 	chain[1].len = len;
+	chain[1].write = false;
 
 	// status
 	chain[2].addr = (uint64_t)&req->status;
 	chain[2].len = sizeof(uint8_t);
+	chain[2].write = true;
 
 	push_virtio_entry(&dev->queues[0], chain, 3);
 
@@ -43,7 +46,7 @@ error_t write_to_blk_device(uint8_t* buffer,
 	return OK;
 }
 
-error_t read_from_blk_device(uint8_t* buffer, uint64_t sector, uint32_t len)
+error_t read_from_blk_device(void* buffer, uint64_t sector, uint32_t len)
 {
 	return OK;
 }
