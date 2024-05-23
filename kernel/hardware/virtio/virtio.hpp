@@ -76,7 +76,7 @@ struct virtio_virtqueue {
 struct virtio_entry {
 	uint32_t index;
 	uintptr_t addr;
-	uint32_t length;
+	uint32_t len;
 	bool write;
 };
 

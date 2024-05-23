@@ -63,7 +63,7 @@ int push_virtio_entry(virtio_virtqueue* queue,
 
 		desc = &queue->desc[desc_idx];
 		desc->addr = entry->addr;
-		desc->len = entry->length;
+		desc->len = entry->len;
 
 		if (i + 1 < num_entries) {
 			desc->flags = VIRTQ_DESC_F_NEXT;

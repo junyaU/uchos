@@ -171,8 +171,6 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 	while (virtio_dev.caps != nullptr) {
 		switch (virtio_dev.caps->first_dword.fields.cfg_type) {
 			case VIRTIO_PCI_CAP_COMMON_CFG: {
-				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_COMMON_CFG");
-
 				virtio_dev.common_cfg =
 						get_virtio_pci_capability<virtio_pci_common_cfg>(virtio_dev);
 
@@ -181,20 +179,15 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 			}
 
 			case VIRTIO_PCI_CAP_NOTIFY_CFG:
-				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_NOTIFY_CFG");
-
 				virtio_dev.notify_cfg =
 						reinterpret_cast<virtio_pci_notify_cap*>(virtio_dev.caps);
 
 				break;
 			case VIRTIO_PCI_CAP_ISR_CFG:
-				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_ISR_CFG");
 				break;
 			case VIRTIO_PCI_CAP_DEVICE_CFG:
-				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_DEVICE_CFG");
 				break;
 			case VIRTIO_PCI_CAP_PCI_CFG:
-				printk(KERN_ERROR, "found VIRTIO_PCI_CAP_PCI_CFG");
 				break;
 			default:
 				printk(KERN_ERROR, "Unknown virtio pci cap");
