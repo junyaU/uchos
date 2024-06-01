@@ -80,6 +80,10 @@ error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 	virtio_dev.queues = reinterpret_cast<virtio_virtqueue*>(
 			kmalloc(sizeof(virtio_virtqueue) * virtio_dev.common_cfg->num_queues,
 					KMALLOC_ZEROED));
+	if (virtio_dev.queues == nullptr) {
+		printk(KERN_ERROR, "Failed to allocate memory for virtio queues");
+		return ERR_NO_MEMORY;
+	}
 
 	for (int i = 0; i < virtio_dev.common_cfg->num_queues; ++i) {
 		virtio_dev.common_cfg->queue_select = i;
@@ -98,6 +102,8 @@ error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 		virtio_dev.common_cfg->queue_desc = reinterpret_cast<uint64_t>(addr);
 		virtio_dev.common_cfg->queue_driver = driver_ring_addr;
 		virtio_dev.common_cfg->queue_device = device_ring_addr;
+
+		virtio_dev.common_cfg->queue_enable = 1;
 
 		init_virtqueue(&virtio_dev.queues[i], i, num_desc,
 					   reinterpret_cast<uintptr_t>(addr), driver_ring_addr,

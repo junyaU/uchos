@@ -20,6 +20,7 @@ error_t write_to_blk_device(void* buffer,
 	req->type = VIRTIO_BLK_T_OUT;
 	req->reserved = 0;
 	req->sector = sector;
+	req->status = 0;
 
 	memcpy(req->data, buffer, len);
 

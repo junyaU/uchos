@@ -1,6 +1,7 @@
 #include "hardware/virtio/virtio.hpp"
 #include "graphics/log.hpp"
 #include "hardware/pci.hpp"
+#include "hardware/virtio/blk.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "interrupt/vector.hpp"
 #include <cstddef>
@@ -39,6 +40,8 @@ error_t init_virtio_pci()
 		printk(KERN_ERROR, "Failed to set virtio pci capability");
 		return err;
 	}
+
+	write_to_blk_device((void*)"", 1, 6, &virtio_pci_dev);
 
 	return OK;
 }
@@ -98,7 +101,6 @@ error_t init_virtqueue(virtio_virtqueue* queue,
 					   uintptr_t driver_ring_addr,
 					   uintptr_t device_ring_addr)
 {
-	printk(KERN_ERROR, "num_desc: %d", num_desc);
 	queue->index = index;
 	queue->num_desc = num_desc;
 	queue->num_free_desc = num_desc;
