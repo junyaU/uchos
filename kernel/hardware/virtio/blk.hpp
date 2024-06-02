@@ -38,6 +38,8 @@ constexpr int VIRTIO_BLK_S_UNSUPP = 2;
 
 constexpr int SECTOR_SIZE = 512;
 
+extern virtio_pci_device* storage_dev;
+
 struct virtio_blk_req {
 	uint32_t type;
 	uint32_t reserved;

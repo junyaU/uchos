@@ -177,8 +177,10 @@ void task_virtio()
 {
 	task* t = CURRENT_TASK;
 
-	t->message_handlers[NOTIFY_VIRTQUEUE] =
-			+[](const message& m) { printk(KERN_ERROR, "virtqueue interrupt"); };
+	t->message_handlers[NOTIFY_VIRTIO_BLK_QUEUE] = +[](const message& m) {
+		printk(KERN_ERROR, "virtqueue interrupt");
+		// pop_virtio_entry(&virtio_pci_dev.queue, nullptr, 0);
+	};
 
 	process_messages(t);
 }
