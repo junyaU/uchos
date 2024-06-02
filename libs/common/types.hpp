@@ -24,6 +24,7 @@ constexpr int KERNEL_TASK_ID = 0;
 constexpr int XHCI_TASK_ID = 2;
 constexpr int FS_TASK_ID = 3;
 constexpr int SHELL_TASK_ID = 4;
+constexpr int VIRTIO_TASK_ID = 5;
 
 constexpr int INTERRUPT_TASK = 100;
 

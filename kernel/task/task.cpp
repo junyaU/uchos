@@ -245,6 +245,10 @@ void initialize_task()
 			create_task("shell", reinterpret_cast<uint64_t>(&task_shell), true);
 	schedule_task(shell_task->id);
 
+	task* virtio_task =
+			create_task("virtio", reinterpret_cast<uint64_t>(&task_virtio), true);
+	schedule_task(virtio_task->id);
+
 	ktimer->add_switch_task_event(200);
 }
 
