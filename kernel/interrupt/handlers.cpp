@@ -32,9 +32,9 @@ __attribute__((interrupt)) void on_virtio_interrupt(interrupt_frame* frame)
 	notify_end_of_interrupt();
 }
 
-__attribute__((interrupt)) void on_virtqueue_interrupt(interrupt_frame* frame)
+__attribute__((interrupt)) void on_virtio_blk_queue_interrupt(interrupt_frame* frame)
 {
-	const message m = { NOTIFY_VIRTQUEUE, INTERRUPT_TASK, {} };
+	const message m = { NOTIFY_VIRTIO_BLK_QUEUE, INTERRUPT_TASK, {} };
 	send_message(VIRTIO_TASK_ID, &m);
 	notify_end_of_interrupt();
 }
