@@ -172,3 +172,13 @@ void task_usb_handler()
 
 	process_messages(t);
 }
+
+void task_virtio()
+{
+	task* t = CURRENT_TASK;
+
+	t->message_handlers[NOTIFY_VIRTQUEUE] =
+			+[](const message& m) { printk(KERN_ERROR, "virtqueue interrupt"); };
+
+	process_messages(t);
+}
