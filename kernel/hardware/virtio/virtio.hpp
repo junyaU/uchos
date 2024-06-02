@@ -98,3 +98,7 @@ error_t init_virtqueue(virtio_virtqueue* queue,
 int push_virtio_entry(virtio_virtqueue* queue,
 					  virtio_entry* entry_chain,
 					  size_t num_entries);
+
+int pop_virtio_entry(virtio_virtqueue* queue,
+					 virtio_entry* entry_chain,
+					 size_t num_entries);

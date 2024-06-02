@@ -41,7 +41,7 @@ error_t init_virtio_pci()
 		return err;
 	}
 
-	write_to_blk_device((void*)"", 1, 6, &virtio_pci_dev);
+	write_to_blk_device((void*)"a", 1, 1, &virtio_pci_dev);
 
 	return OK;
 }
@@ -89,9 +89,45 @@ int push_virtio_entry(virtio_virtqueue* queue,
 	// memory barrier
 	asm volatile("sfence" ::: "memory");
 
-	queue->driver->index++;
+	++queue->driver->index;
 
 	return top_free_idx;
+}
+
+int pop_virtio_entry(virtio_virtqueue* queue,
+					 virtio_entry* entry_chain,
+					 size_t num_entries)
+{
+	virtq_device_elem* elem =
+			&queue->device->ring[queue->last_device_idx % queue->num_desc];
+
+	int next_idx = elem->id;
+	virtq_desc* desc = nullptr;
+	int num_pop = 0;
+
+	while (num_pop < num_entries) {
+		desc = &queue->desc[next_idx];
+		entry_chain[num_pop].index = next_idx;
+		entry_chain[num_pop].addr = desc->addr;
+		entry_chain[num_pop].len = desc->len;
+		entry_chain[num_pop].write = (desc->flags & VIRTQ_DESC_F_WRITE) != 0;
+
+		++num_pop;
+
+		if ((desc->flags & VIRTQ_DESC_F_NEXT) == 0) {
+			break;
+		}
+
+		next_idx = desc->next;
+	}
+
+	desc->next = queue->top_free_idx;
+	queue->top_free_idx = elem->id;
+	queue->num_free_desc += num_pop;
+
+	++queue->last_device_idx;
+
+	return num_pop;
 }
 
 error_t init_virtqueue(virtio_virtqueue* queue,
