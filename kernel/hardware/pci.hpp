@@ -110,7 +110,7 @@ struct msi_x_capability {
 			uint32_t cap_id : 8;
 			uint32_t next_ptr : 8;
 			uint32_t size_of_table : 11;
-			uint32_t : 3;
+			uint32_t reserved : 3;
 			uint32_t function_mask : 1;
 			uint32_t enable : 1;
 		} __attribute__((packed)) bits;
@@ -123,10 +123,7 @@ struct msi_x_capability {
 			uint32_t bar : 3;
 			uint32_t offset : 29;
 		} __attribute__((packed)) bits;
-	};
-
-	address_field table;
-	address_field pba;
+	} table, pba;
 };
 
 struct msix_table_entry {
