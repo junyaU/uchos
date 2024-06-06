@@ -205,16 +205,14 @@ void write_msi_capability(const device& dev,
 	}
 }
 
-void write_msi_x_capability(const device& dev,
-							const msi_x_capability& msix_cap,
-							uint8_t cap_addr,
-							uint32_t msg_addr,
-							uint32_t msg_data)
+void configure_msi_x_table_entry(const device& dev,
+								 const msi_x_capability& msix_cap,
+								 uint8_t cap_addr,
+								 uint32_t msg_addr,
+								 uint32_t msg_data)
 {
-	write_conf_reg(dev, cap_addr, msix_cap.header.data);
-
 	uint64_t bar_addr = read_base_address_register(dev, msix_cap.table.bits.bar);
-	bar_addr &= 0xffff'ffff'ffff'f000U;
+	bar_addr &= ~0xfff;
 	bar_addr += msix_cap.table.bits.offset << 3;
 	auto* table_entry = reinterpret_cast<msix_table_entry*>(bar_addr);
 
@@ -266,7 +264,9 @@ void configure_msi_x_register(const device& dev,
 	msix_cap.header.bits.enable = 1;
 	msix_cap.header.bits.function_mask = 0;
 
-	write_msi_x_capability(dev, msix_cap, cap_addr, msg_addr, msg_data);
+	write_conf_reg(dev, cap_addr, msix_cap.header.data);
+
+	configure_msi_x_table_entry(dev, msix_cap, cap_addr, msg_addr, msg_data);
 }
 
 capability_header read_capability_header(const device& dev, uint8_t addr)
