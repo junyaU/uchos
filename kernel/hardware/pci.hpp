@@ -43,7 +43,7 @@ struct device {
 
 	bool is_intel() const { return vendor_id == 0x8086; }
 
-	bool is_vertio() const { return vendor_id == 0x1af4; }
+	bool is_virtio() const { return vendor_id == 0x1af4; }
 
 	void address(char* buf, size_t len) const
 	{

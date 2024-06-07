@@ -4,6 +4,7 @@
 #include "graphics/log.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/usb/xhci/xhci.hpp"
+#include "hardware/virtio/blk.hpp"
 #include "memory/page.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
@@ -175,6 +176,8 @@ void task_usb_handler()
 
 void task_virtio()
 {
+	init_blk_device();
+
 	task* t = CURRENT_TASK;
 
 	t->message_handlers[NOTIFY_VIRTIO_BLK_QUEUE] = +[](const message& m) {

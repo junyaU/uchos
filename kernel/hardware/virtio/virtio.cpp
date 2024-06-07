@@ -8,40 +8,41 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
-error_t init_virtio_pci()
+error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
 {
-	pci::device* virtio_dev = nullptr;
+	pci::device* dev = nullptr;
 	for (int i = 0; i < pci::num_devices; i++) {
-		if (pci::devices[i].is_vertio()) {
-			virtio_dev = &pci::devices[i];
+		if (pci::devices[i].is_virtio()) {
+			dev = &pci::devices[i];
 			break;
 		}
 	}
 
-	if (virtio_dev == nullptr) {
+	if (dev == nullptr) {
 		printk(KERN_ERROR, "No virtio device found");
 		return ERR_NO_DEVICE;
 	}
 
 	const uint8_t bsp_lapic_id = *reinterpret_cast<uint32_t*>(0xfee00020) >> 24;
 	pci::configure_msi_fixed_destination(
-			*virtio_dev, bsp_lapic_id, pci::msi_trigger_mode::EDGE,
+			*dev, bsp_lapic_id, pci::msi_trigger_mode::EDGE,
 			pci::msi_delivery_mode::FIXED, interrupt_vector::VIRTIO, 0);
 	pci::configure_msi_fixed_destination(
-			*virtio_dev, bsp_lapic_id, pci::msi_trigger_mode::EDGE,
+			*dev, bsp_lapic_id, pci::msi_trigger_mode::EDGE,
 			pci::msi_delivery_mode::FIXED, interrupt_vector::VIRTQUEUE, 0);
 
-	virtio_pci_device virtio_pci_dev = { .dev = virtio_dev };
+	virtio_dev->dev = dev;
 
-	find_virtio_pci_cap(virtio_pci_dev, &virtio_pci_dev.caps);
+	// TODO: refactor this
+	find_virtio_pci_cap(*virtio_dev, &virtio_dev->caps);
 
-	error_t err = set_virtio_pci_capability(virtio_pci_dev);
+	error_t err = set_virtio_pci_capability(*virtio_dev);
 	if (IS_ERR(err)) {
 		printk(KERN_ERROR, "Failed to set virtio pci capability");
 		return err;
 	}
 
-	write_to_blk_device((void*)"a", 1, 1, &virtio_pci_dev);
+	write_to_blk_device((void*)"a", 1, 1, virtio_dev);
 
 	return OK;
 }
@@ -101,13 +102,13 @@ int pop_virtio_entry(virtio_virtqueue* queue,
 	virtq_device_elem* elem =
 			&queue->device->ring[queue->last_device_idx % queue->num_desc];
 
-	int next_idx = elem->id;
+	int desc_idx = elem->id;
 	virtq_desc* desc = nullptr;
 	int num_pop = 0;
 
 	while (num_pop < num_entries) {
-		desc = &queue->desc[next_idx];
-		entry_chain[num_pop].index = next_idx;
+		desc = &queue->desc[desc_idx];
+		entry_chain[num_pop].index = desc_idx;
 		entry_chain[num_pop].addr = desc->addr;
 		entry_chain[num_pop].len = desc->len;
 		entry_chain[num_pop].write = (desc->flags & VIRTQ_DESC_F_WRITE) != 0;
@@ -118,7 +119,7 @@ int pop_virtio_entry(virtio_virtqueue* queue,
 			break;
 		}
 
-		next_idx = desc->next;
+		desc_idx = desc->next;
 	}
 
 	desc->next = queue->top_free_idx;

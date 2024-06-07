@@ -38,7 +38,7 @@ constexpr int VIRTIO_BLK_S_UNSUPP = 2;
 
 constexpr int SECTOR_SIZE = 512;
 
-extern virtio_pci_device* storage_dev;
+extern virtio_pci_device* blk_dev;
 
 struct virtio_blk_req {
 	uint32_t type;
@@ -54,3 +54,5 @@ error_t write_to_blk_device(void* buffer,
 							virtio_pci_device* dev);
 
 error_t read_from_blk_device(void* buffer, uint64_t sector, uint32_t len);
+
+error_t init_blk_device();
