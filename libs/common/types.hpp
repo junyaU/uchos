@@ -18,6 +18,7 @@ constexpr int ERR_PAGE_NOT_PRESENT = -5;
 constexpr int ERR_NO_TASK = -6;
 constexpr int ERR_NO_FILE = -7;
 constexpr int ERR_NO_DEVICE = -8;
+constexpr int ERR_FAILED_INIT_DEVICE = -9;
 
 // task ids
 constexpr int KERNEL_TASK_ID = 0;

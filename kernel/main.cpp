@@ -4,7 +4,6 @@
 #include "hardware/keyboard.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/usb/xhci/xhci.hpp"
-#include "hardware/virtio/virtio.hpp"
 #include "interrupt/idt.hpp"
 #include "memory/bootstrap_allocator.hpp"
 #include "memory/buddy_system.hpp"
@@ -74,8 +73,6 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	usb::xhci::initialize();
 
 	initialize_keyboard();
-
-	init_virtio_pci();
 
 	task_kernel();
 }

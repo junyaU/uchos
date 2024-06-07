@@ -4,6 +4,12 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
+// Forward declaration
+struct virtio_pci_device;
+
+// Device types
+constexpr int VIRTIO_BLK = 1;
+
 // Virtio Status Bits
 constexpr int VIRTIO_STATUS_ACKNOWLEDGE = 1;
 constexpr int VIRTIO_STATUS_DRIVER = 2;
@@ -86,7 +92,7 @@ constexpr size_t calc_driver_ring_size(size_t num_desc) { return num_desc * 2 + 
 
 constexpr size_t calc_device_ring_size(size_t num_desc) { return num_desc * 8 + 6; }
 
-error_t init_virtio_pci();
+error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type);
 
 error_t init_virtqueue(virtio_virtqueue* queue,
 					   size_t index,

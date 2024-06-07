@@ -5,7 +5,7 @@
 #include "libs/common/types.hpp"
 #include "memory/slab.hpp"
 
-virtio_pci_device* storage_dev = nullptr;
+virtio_pci_device* blk_dev = nullptr;
 
 error_t write_to_blk_device(void* buffer,
 							uint64_t sector,
@@ -74,5 +74,22 @@ error_t read_from_blk_device(void* buffer, uint64_t sector, uint32_t len)
 	chain[2].addr = (uint64_t)&req->status;
 	chain[2].len = sizeof(uint8_t);
 	chain[2].write = true;
+	return OK;
+}
+
+error_t init_blk_device()
+{
+	void* buffer = kmalloc(sizeof(virtio_pci_device), KMALLOC_ZEROED);
+	if (buffer == nullptr) {
+		printk(KERN_ERROR, "Failed to allocate memory for virtio_pci_device.");
+		return ERR_NO_MEMORY;
+	}
+
+	blk_dev = new (buffer) virtio_pci_device();
+
+	if (IS_ERR(init_virtio_pci_device(blk_dev, VIRTIO_BLK))) {
+		return ERR_FAILED_INIT_DEVICE;
+	}
+
 	return OK;
 }

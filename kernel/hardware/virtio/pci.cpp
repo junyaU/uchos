@@ -150,7 +150,7 @@ error_t configure_pci_common_cfg(virtio_pci_device& virtio_dev)
 
 	virtio_dev.common_cfg->device_status |= VIRTIO_STATUS_DRIVER_OK;
 
-	printk(KERN_ERROR, "initialized virtio device");
+	printk(KERN_INFO, "initialized virtio device");
 
 	return OK;
 }
@@ -176,13 +176,12 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 {
 	while (virtio_dev.caps != nullptr) {
 		switch (virtio_dev.caps->first_dword.fields.cfg_type) {
-			case VIRTIO_PCI_CAP_COMMON_CFG: {
+			case VIRTIO_PCI_CAP_COMMON_CFG:
 				virtio_dev.common_cfg =
 						get_virtio_pci_capability<virtio_pci_common_cfg>(virtio_dev);
 
 				configure_pci_common_cfg(virtio_dev);
 				break;
-			}
 
 			case VIRTIO_PCI_CAP_NOTIFY_CFG:
 				virtio_dev.notify_cfg =
