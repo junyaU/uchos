@@ -7,10 +7,7 @@
 
 virtio_pci_device* blk_dev = nullptr;
 
-error_t write_to_blk_device(void* buffer,
-							uint64_t sector,
-							uint32_t len,
-							virtio_pci_device* dev)
+error_t write_to_blk_device(void* buffer, uint64_t sector, uint32_t len)
 {
 	virtio_blk_req* req =
 			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), KMALLOC_ZEROED);
@@ -20,9 +17,8 @@ error_t write_to_blk_device(void* buffer,
 	}
 
 	req->type = VIRTIO_BLK_T_OUT;
-	req->reserved = 0;
 	req->sector = sector;
-	req->status = 0;
+	req->reserved = 0;
 
 	memcpy(req->data, buffer, len);
 
@@ -42,9 +38,9 @@ error_t write_to_blk_device(void* buffer,
 	chain[2].len = sizeof(uint8_t);
 	chain[2].write = true;
 
-	push_virtio_entry(&dev->queues[0], chain, 3);
+	push_virtio_entry(&blk_dev->queues[0], chain, 3);
 
-	notify_virtqueue(*dev, 0);
+	notify_virtqueue(*blk_dev, 0);
 
 	return OK;
 }
@@ -57,7 +53,6 @@ error_t read_from_blk_device(void* buffer, uint64_t sector, uint32_t len)
 	req->type = VIRTIO_BLK_T_IN;
 	req->reserved = 0;
 	req->sector = sector;
-	req->status = 0;
 
 	virtio_entry chain[3];
 	// type, reserved, sector
@@ -74,6 +69,11 @@ error_t read_from_blk_device(void* buffer, uint64_t sector, uint32_t len)
 	chain[2].addr = (uint64_t)&req->status;
 	chain[2].len = sizeof(uint8_t);
 	chain[2].write = true;
+
+	push_virtio_entry(&blk_dev->queues[0], chain, 3);
+
+	notify_virtqueue(*blk_dev, 0);
+
 	return OK;
 }
 
@@ -90,6 +90,15 @@ error_t init_blk_device()
 	if (IS_ERR(init_virtio_pci_device(blk_dev, VIRTIO_BLK))) {
 		return ERR_FAILED_INIT_DEVICE;
 	}
+
+	char name[5];
+	name[0] = 'v';
+	name[1] = 'd';
+	name[2] = 'a';
+	name[3] = 'a';
+	name[4] = '\0';
+
+	write_to_blk_device((void*)name, 0, 5);
 
 	return OK;
 }
