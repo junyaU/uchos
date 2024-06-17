@@ -42,8 +42,6 @@ error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
 		return err;
 	}
 
-	write_to_blk_device((void*)"a", 1, 1, virtio_dev);
-
 	return OK;
 }
 
