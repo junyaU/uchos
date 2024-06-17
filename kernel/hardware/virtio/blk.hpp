@@ -50,9 +50,6 @@ struct virtio_blk_req {
 
 error_t write_to_blk_device(void* buffer, uint64_t sector, uint32_t len);
 
-error_t read_from_blk_device(void* buffer,
-							 uint64_t sector,
-							 uint32_t len,
-							 virtio_pci_device* dev);
+error_t read_from_blk_device(void* buffer, uint64_t sector, uint32_t len);
 
 error_t init_blk_device();
