@@ -5,10 +5,13 @@
 #include "hardware/pci.hpp"
 #include "hardware/usb/xhci/xhci.hpp"
 #include "hardware/virtio/blk.hpp"
+#include "hardware/virtio/pci.hpp"
+#include "hardware/virtio/virtio.hpp"
 #include "memory/page.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 #include <cstddef>
+#include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
 
@@ -181,8 +184,25 @@ void task_virtio()
 	task* t = CURRENT_TASK;
 
 	t->message_handlers[NOTIFY_VIRTIO_BLK_QUEUE] = +[](const message& m) {
-		printk(KERN_ERROR, "virtqueue interrupt");
-		// pop_virtio_entry(&virtio_pci_dev.queue, nullptr, 0);
+		virtio_entry chain[3];
+		pop_virtio_entry(&blk_dev->queues[0], chain, 3);
+
+		auto* req = (virtio_blk_req*)chain[0].addr;
+		if (req->status != VIRTIO_BLK_S_OK) {
+			printk(KERN_ERROR, "virtio_blk_req failed");
+			return;
+		}
+
+		if (req->type == VIRTIO_BLK_T_IN) {
+			// read
+			printk(KERN_ERROR, "req data: %s", req->data);
+
+		} else if (req->type == VIRTIO_BLK_T_OUT) {
+			// write
+			printk(KERN_ERROR, "write to blk device");
+		}
+
+		kfree(req);
 	};
 
 	process_messages(t);

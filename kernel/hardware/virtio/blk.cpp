@@ -9,6 +9,16 @@ virtio_pci_device* blk_dev = nullptr;
 
 error_t write_to_blk_device(void* buffer, uint64_t sector, uint32_t len)
 {
+	if (len > SECTOR_SIZE) {
+		printk(KERN_ERROR, "Data size is too big.");
+		return ERR_INVALID_ARG;
+	}
+
+	if (len < SECTOR_SIZE) {
+		printk(KERN_ERROR, "Data size is too small.");
+		return ERR_INVALID_ARG;
+	}
+
 	virtio_blk_req* req =
 			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), KMALLOC_ZEROED);
 	if (req == nullptr) {
@@ -45,8 +55,18 @@ error_t write_to_blk_device(void* buffer, uint64_t sector, uint32_t len)
 	return OK;
 }
 
-error_t read_from_blk_device(void* buffer, uint64_t sector, uint32_t len)
+error_t read_from_blk_device(uint64_t sector, uint32_t len)
 {
+	if (len > SECTOR_SIZE) {
+		printk(KERN_ERROR, "Data size is too big.");
+		return ERR_INVALID_ARG;
+	}
+
+	if (len < SECTOR_SIZE) {
+		printk(KERN_ERROR, "Data size is too small.");
+		return ERR_INVALID_ARG;
+	}
+
 	virtio_blk_req* req =
 			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), KMALLOC_ZEROED);
 
@@ -91,14 +111,17 @@ error_t init_blk_device()
 		return ERR_FAILED_INIT_DEVICE;
 	}
 
-	char name[5];
-	name[0] = 'v';
-	name[1] = 'd';
-	name[2] = 'a';
-	name[3] = 'a';
-	name[4] = '\0';
+	char buf[SECTOR_SIZE];
+	buf[0] = 'h';
+	buf[1] = 'e';
+	buf[2] = 'l';
+	buf[3] = 'l';
+	buf[4] = 'o';
+	buf[5] = '\0';
 
-	write_to_blk_device((void*)name, 0, 5);
+	write_to_blk_device(buf, 1, SECTOR_SIZE);
+
+	read_from_blk_device(1, SECTOR_SIZE);
 
 	return OK;
 }
