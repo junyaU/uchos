@@ -191,9 +191,17 @@ void task_virtio()
 		const int len = m.data.blk_device.len < SECTOR_SIZE ? SECTOR_SIZE
 															: m.data.blk_device.len;
 
-		write_to_blk_device((void*)"hello", 1, 512);
+		char buf[512];
+		buf[0] = 'a';
+		buf[1] = 'b';
+		buf[2] = 'c';
+		buf[3] = 'd';
 
-		// printk(KERN_ERROR, "write to blk device");
+		write_to_blk_device(buf, 1, 512);
+
+		char read_buf[512];
+		read_from_blk_device(read_buf, 1, 512);
+		printk(KERN_ERROR, "read_buf: %s", read_buf);
 	};
 
 	t->message_handlers[IPC_READ_FROM_BLK_DEVICE] = +[](const message& m) {};
