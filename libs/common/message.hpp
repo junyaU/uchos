@@ -13,13 +13,14 @@ constexpr int NOTIFY_KEY_INPUT = 0;
 constexpr int NOTIFY_XHCI = 1;
 constexpr int NOTIFY_TIMER_TIMEOUT = 3;
 constexpr int NOTIFY_WRITE = 4;
-constexpr int NOTIFY_VIRTIO_BLK_QUEUE = 11;
 constexpr int IPC_FILE_SYSTEM_OPERATION = 5;
 constexpr int IPC_INITIALIZE_TASK = 6;
 constexpr int IPC_TIME = 7;
 constexpr int IPC_EXIT_TASK = 8;
 constexpr int IPC_MEMORY_USAGE = 9;
 constexpr int IPC_PCI = 10;
+constexpr int IPC_WRITE_TO_BLK_DEVICE = 12;
+constexpr int IPC_READ_FROM_BLK_DEVICE = 13;
 
 // file system operations
 constexpr int FS_OP_LIST = 0;
@@ -81,6 +82,12 @@ struct message {
 			unsigned int vendor_id;
 			char bus_address[8];
 		} pci;
+
+		struct {
+			char buf[100];
+			unsigned int sector;
+			unsigned int len;
+		} blk_device;
 
 	} data;
 };

@@ -27,15 +27,13 @@ __attribute__((interrupt)) void on_xhci_interrupt(interrupt_frame* frame)
 
 __attribute__((interrupt)) void on_virtio_interrupt(interrupt_frame* frame)
 {
-	// TODO: Implement virtio interrupt handler
 	printk(KERN_ERROR, "virtio interrupt");
 	notify_end_of_interrupt();
 }
 
 __attribute__((interrupt)) void on_virtio_blk_queue_interrupt(interrupt_frame* frame)
 {
-	const message m = { NOTIFY_VIRTIO_BLK_QUEUE, INTERRUPT_TASK, {} };
-	send_message(VIRTIO_TASK_ID, &m);
+	schedule_task(VIRTIO_BLK_TASK_ID);
 	notify_end_of_interrupt();
 }
 
@@ -47,6 +45,12 @@ extern "C" void switch_task_by_timer_interrupt(context* ctx)
 	if (need_switch_task) {
 		switch_task(*ctx);
 	}
+}
+
+extern "C" void switch_task_by_interrupt(context* ctx)
+{
+	notify_end_of_interrupt();
+	switch_task(*ctx);
 }
 
 void kill_userland(interrupt_frame* frame)

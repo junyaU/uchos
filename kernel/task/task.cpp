@@ -1,6 +1,7 @@
 #include "task/task.hpp"
 #include "file_system/file_descriptor.hpp"
 #include "graphics/log.hpp"
+#include "interrupt/vector.hpp"
 #include "list.hpp"
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
@@ -174,6 +175,15 @@ void switch_task(const context& current_ctx)
 	}
 
 	restore_context(&get_scheduled_task()->ctx);
+}
+
+void switch_next_task(bool sleep_current_task)
+{
+	if (sleep_current_task) {
+		CURRENT_TASK->state = TASK_WAITING;
+	}
+
+	__asm__("int %0" : : "i"(interrupt_vector::SWITCH_TASK));
 }
 
 void exit_task(int status)

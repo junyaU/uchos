@@ -62,12 +62,23 @@ extern std::array<task*, MAX_TASKS> tasks;
 extern list_t run_queue;
 
 task* create_task(const char* name, uint64_t task_addr, bool is_init);
+
 task* copy_task(task* parent, context* parent_ctx);
+
 task* get_scheduled_task();
+
 pid_t get_task_id_by_name(const char* name);
+
 pid_t get_available_task_id();
+
 void schedule_task(pid_t id);
+
 void switch_task(const context& current_ctx);
+
+void switch_next_task(bool sleep_current_task);
+
 void exit_task(int status);
+
 [[noreturn]] void process_messages(task* t);
+
 fd_t allocate_fd(task* t);
