@@ -19,13 +19,14 @@ constexpr int ERR_NO_TASK = -6;
 constexpr int ERR_NO_FILE = -7;
 constexpr int ERR_NO_DEVICE = -8;
 constexpr int ERR_FAILED_INIT_DEVICE = -9;
+constexpr int ERR_FAILED_WRITE_TO_DEVICE = -10;
 
 // task ids
 constexpr int KERNEL_TASK_ID = 0;
 constexpr int XHCI_TASK_ID = 2;
 constexpr int FS_TASK_ID = 3;
 constexpr int SHELL_TASK_ID = 4;
-constexpr int VIRTIO_TASK_ID = 5;
+constexpr int VIRTIO_BLK_TASK_ID = 5;
 
 constexpr int INTERRUPT_TASK = 100;
 

@@ -85,8 +85,7 @@ int push_virtio_entry(virtio_virtqueue* queue,
 
 	queue->driver->ring[queue->driver->index % queue->num_desc] = top_free_idx;
 
-	// memory barrier
-	asm volatile("sfence" ::: "memory");
+	__asm__ volatile("sfence" ::: "memory");
 
 	++queue->driver->index;
 

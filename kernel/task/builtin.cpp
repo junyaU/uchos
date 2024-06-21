@@ -183,27 +183,20 @@ void task_virtio()
 
 	task* t = CURRENT_TASK;
 
-	t->message_handlers[NOTIFY_VIRTIO_BLK_QUEUE] = +[](const message& m) {
-		virtio_entry chain[3];
-		pop_virtio_entry(&blk_dev->queues[0], chain, 3);
+	t->message_handlers[IPC_WRITE_TO_BLK_DEVICE] = +[](const message& m) {
+		message send_m = { .type = IPC_WRITE_TO_BLK_DEVICE,
+						   .sender = VIRTIO_BLK_TASK_ID };
 
-		auto* req = (virtio_blk_req*)chain[0].addr;
-		if (req->status != VIRTIO_BLK_S_OK) {
-			printk(KERN_ERROR, "virtio_blk_req failed");
-			return;
-		}
+		const int sector = m.data.blk_device.sector;
+		const int len = m.data.blk_device.len < SECTOR_SIZE ? SECTOR_SIZE
+															: m.data.blk_device.len;
 
-		if (req->type == VIRTIO_BLK_T_IN) {
-			// read
-			printk(KERN_ERROR, "req data: %s", req->data);
+		write_to_blk_device((void*)"hello", 1, 512);
 
-		} else if (req->type == VIRTIO_BLK_T_OUT) {
-			// write
-			printk(KERN_ERROR, "write to blk device");
-		}
-
-		kfree(req);
+		// printk(KERN_ERROR, "write to blk device");
 	};
+
+	t->message_handlers[IPC_READ_FROM_BLK_DEVICE] = +[](const message& m) {};
 
 	process_messages(t);
 }
