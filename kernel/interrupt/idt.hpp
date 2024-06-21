@@ -34,7 +34,8 @@ struct idtr {
 	uint64_t base;
 } __attribute__((packed));
 
-const int IST_FOR_TIMER = 1;
-const int IST_FOR_XHCI = 2;
+constexpr int IST_FOR_TIMER = 1;
+constexpr int IST_FOR_XHCI = 2;
+constexpr int IST_FOR_SWITCH_TASK = 3;
 
 void initialize_interrupt();

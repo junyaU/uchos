@@ -111,6 +111,7 @@ void initialize_tss()
 	set_tss(1, stack1);
 	set_tss(7 + 2 * IST_FOR_TIMER, stack2);
 	set_tss(7 + 2 * IST_FOR_XHCI, stack3);
+	set_tss(7 + 2 * IST_FOR_SWITCH_TASK, stack3);
 
 	const uint64_t tss_addr = reinterpret_cast<uint64_t>(tss.data());
 	set_system_segment(gdt[TSS >> 3], descriptor_type::TSS_AVAILABLE, 0,
