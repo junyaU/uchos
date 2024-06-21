@@ -8,5 +8,6 @@ public:
 		XHCI = 0x41,
 		VIRTIO = 0x42,
 		VIRTQUEUE = 0x43,
+		SWITCH_TASK = 0x44,
 	};
 };
