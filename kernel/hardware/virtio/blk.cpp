@@ -8,7 +8,7 @@
 
 virtio_pci_device* blk_dev = nullptr;
 
-error_t write_to_blk_device(void* buffer, uint64_t sector, uint32_t len)
+error_t validate_length(uint32_t len)
 {
 	if (len > SECTOR_SIZE) {
 		printk(KERN_ERROR, "Data size is too big.");
@@ -20,16 +20,23 @@ error_t write_to_blk_device(void* buffer, uint64_t sector, uint32_t len)
 		return ERR_INVALID_ARG;
 	}
 
+	return OK;
+}
+
+error_t write_to_blk_device(char* buffer, uint64_t sector, uint32_t len)
+{
+	if (auto err = validate_length(len); IS_ERR(err)) {
+		return err;
+	}
+
 	virtio_blk_req* req =
 			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), KMALLOC_ZEROED);
 	if (req == nullptr) {
-		printk(KERN_ERROR, "Failed to allocate memory for virtio_blk_req.");
 		return ERR_NO_MEMORY;
 	}
 
 	req->type = VIRTIO_BLK_T_OUT;
 	req->sector = sector;
-	req->reserved = 0;
 
 	memcpy(req->data, buffer, len);
 
@@ -64,16 +71,10 @@ error_t write_to_blk_device(void* buffer, uint64_t sector, uint32_t len)
 	return OK;
 }
 
-error_t read_from_blk_device(uint64_t sector, uint32_t len)
+error_t read_from_blk_device(char* buffer, uint64_t sector, uint32_t len)
 {
-	if (len > SECTOR_SIZE) {
-		printk(KERN_ERROR, "Data size is too big.");
-		return ERR_INVALID_ARG;
-	}
-
-	if (len < SECTOR_SIZE) {
-		printk(KERN_ERROR, "Data size is too small.");
-		return ERR_INVALID_ARG;
+	if (auto err = validate_length(len); IS_ERR(err)) {
+		return err;
 	}
 
 	virtio_blk_req* req =
@@ -102,8 +103,16 @@ error_t read_from_blk_device(uint64_t sector, uint32_t len)
 
 	notify_virtqueue(*blk_dev, 0);
 
-	// ここでタスクをスリープさせる
+	switch_next_task(true);
 
+	if (req->status != VIRTIO_BLK_S_OK) {
+		printk(KERN_ERROR, "Failed to read from block device.");
+		kfree(req);
+
+		return ERR_FAILED_WRITE_TO_DEVICE;
+	}
+
+	memcpy(buffer, req->data, len);
 	kfree(req);
 
 	return OK;
