@@ -207,7 +207,10 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 		virtio_dev.caps = virtio_dev.caps->next;
 	}
 
-	configure_pci_notify_cfg(virtio_dev);
+	if (auto err = configure_pci_notify_cfg(virtio_dev); IS_ERR(err)) {
+		printk(KERN_ERROR, "Failed to configure notify capability");
+		return err;
+	}
 
 	return OK;
 }
