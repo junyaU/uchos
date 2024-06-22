@@ -15,12 +15,15 @@ export LDFLAGS="-L$BASEDIR/lib"
 for MKF in $(ls $work_path/userland/*/Makefile); do
     APP_DIR=$(dirname $MKF)
     APP=$(basename $APP_DIR)
+    make ${MAKE_OPTS:-} -C $APP_DIR clean
     make ${MAKE_OPTS:-} -C $APP_DIR $APP
 done
 
 for MKF in $(ls $work_path/userland/commands/*/Makefile); do
     APP_DIR=$(dirname $MKF)
     APP=$(basename $APP_DIR)
+    printf "Building $APP\n"
+    make ${MAKE_OPTS:-} -C $APP_DIR clean
     make ${MAKE_OPTS:-} -C $APP_DIR $APP
 done
 
