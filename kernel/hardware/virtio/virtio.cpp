@@ -33,8 +33,7 @@ error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
 
 	virtio_dev->dev = dev;
 
-	// TODO: refactor this
-	find_virtio_pci_cap(*virtio_dev, &virtio_dev->caps);
+	find_virtio_pci_cap(*virtio_dev);
 
 	error_t err = set_virtio_pci_capability(*virtio_dev);
 	if (IS_ERR(err)) {
@@ -50,9 +49,31 @@ int push_virtio_entry(virtio_virtqueue* queue,
 					  size_t num_entries)
 {
 	if (queue->num_free_desc < num_entries) {
-		// TODO: handle this case
-		printk(KERN_ERROR, "Not enough free descriptors");
-		return -1;
+		while (queue->last_device_idx != queue->device->index) {
+			virtq_device_elem* elem =
+					&queue->device->ring[queue->last_device_idx % queue->num_desc];
+
+			int num_freed = 0;
+			int next_idx = elem->id;
+			while (true) {
+				virtq_desc* desc = &queue->desc[next_idx];
+				++num_freed;
+
+				if ((desc->flags & VIRTQ_DESC_F_NEXT) == 0) {
+					break;
+				}
+
+				next_idx = desc->next;
+			}
+
+			queue->top_free_idx = elem->id;
+			queue->num_free_desc += num_freed;
+			++queue->last_device_idx;
+		}
+	}
+
+	if (queue->num_free_desc < num_entries) {
+		return ERR_NO_MEMORY;
 	}
 
 	int top_free_idx = queue->top_free_idx;

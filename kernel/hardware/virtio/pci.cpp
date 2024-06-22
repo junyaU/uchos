@@ -9,13 +9,13 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
-size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev, virtio_pci_cap** caps)
+size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev)
 {
 	uint8_t cap_id, cap_next;
 	uint32_t cap_addr = pci::get_capability_pointer(*virtio_dev.dev);
 	virtio_pci_cap* prev_cap = nullptr;
 	size_t num_caps = 0;
-	*caps = nullptr;
+	virtio_dev.caps = nullptr;
 
 	while (cap_addr != 0) {
 		auto header = pci::read_capability_header(*virtio_dev.dev, cap_addr);
@@ -34,7 +34,7 @@ size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev, virtio_pci_cap** caps)
 			if (prev_cap != nullptr) {
 				prev_cap->next = cap;
 			} else {
-				*caps = cap;
+				virtio_dev.caps = cap;
 			}
 
 			prev_cap = cap;
