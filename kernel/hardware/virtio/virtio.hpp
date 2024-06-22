@@ -10,7 +10,7 @@ struct virtio_pci_device;
 // Device types
 constexpr int VIRTIO_BLK = 1;
 
-// Virtio Status Bits
+// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-110001
 constexpr int VIRTIO_STATUS_ACKNOWLEDGE = 1;
 constexpr int VIRTIO_STATUS_DRIVER = 2;
 constexpr int VIRTIO_STATUS_DRIVER_OK = 4;
@@ -18,7 +18,7 @@ constexpr int VIRTIO_STATUS_FEATURES_OK = 8;
 constexpr int VIRTIO_STATUS_DEVICE_NEEDS_RESET = 64;
 constexpr int VIRTIO_STATUS_FAILED = 128;
 
-// Virtio Device Features
+// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-7080006
 constexpr int VIRTIO_F_INDIRECT_DESC = 28;
 constexpr int VIRTIO_F_EVENT_IDX = 29;
 constexpr int VIRTIO_F_VERSION_1 = 32;
@@ -39,7 +39,7 @@ constexpr int VIRTQ_DESC_F_WRITE = 2;
 /* This means the buffer contains a list of buffer descriptors. */
 constexpr int VIRTQ_DESC_F_INDIRECT = 4;
 
-// https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-430005
+// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-430005
 struct virtq_desc {
 	uint64_t addr;	/* Address of buffer */
 	uint32_t len;	/* Length of buffer */
@@ -47,20 +47,20 @@ struct virtq_desc {
 	uint16_t next;	/* Next field if flags & NEXT */
 } __attribute__((packed));
 
-// https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-490006
+// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-490006
 struct virtq_driver {
 	uint16_t flags;
 	uint16_t index;
 	uint16_t ring[];
 } __attribute__((packed));
 
-// https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-540008
+// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-540008
 struct virtq_device_elem {
 	uint32_t id;
 	uint32_t len;
 } __attribute__((packed));
 
-// https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html#x1-540008
+// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-540008
 struct virtq_device {
 	uint16_t flags;
 	uint16_t index;

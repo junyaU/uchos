@@ -65,7 +65,7 @@ error_t negotiate_features(virtio_pci_device& virtio_dev)
 	for (int i = 0; i < 2; ++i) {
 		virtio_dev.common_cfg->driver_feature_select = i;
 		virtio_dev.common_cfg->driver_feature =
-				(driver_features >> (i * 32)) & 0xFFFFFFFF;
+				(driver_features >> (i * 32)) & 0xffffffff;
 	}
 
 	virtio_dev.common_cfg->device_status |= VIRTIO_STATUS_FEATURES_OK;
@@ -79,19 +79,18 @@ error_t negotiate_features(virtio_pci_device& virtio_dev)
 error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 {
 	size_t num_desc = virtio_dev.common_cfg->queue_size;
-	auto descriptor_area_size = calc_desc_area_size(num_desc);
-	auto driver_ring_size = calc_driver_ring_size(num_desc);
-	auto device_ring_size = calc_device_ring_size(num_desc);
+	size_t descriptor_area_size = calc_desc_area_size(num_desc);
+	size_t driver_ring_size = calc_driver_ring_size(num_desc);
+	size_t device_ring_size = calc_device_ring_size(num_desc);
 
 	auto driver_ring_offset = align_up(descriptor_area_size, 2);
 	auto device_ring_offset = align_up(driver_ring_offset + driver_ring_size, 4);
 
-	auto total_size = device_ring_offset + device_ring_size;
+	size_t total_size = device_ring_offset + device_ring_size;
 	virtio_dev.queues = reinterpret_cast<virtio_virtqueue*>(
 			kmalloc(sizeof(virtio_virtqueue) * virtio_dev.common_cfg->num_queues,
 					KMALLOC_ZEROED));
 	if (virtio_dev.queues == nullptr) {
-		printk(KERN_ERROR, "Failed to allocate memory for virtio queues");
 		return ERR_NO_MEMORY;
 	}
 
@@ -100,7 +99,6 @@ error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 
 		void* addr = kmalloc(total_size, KMALLOC_ZEROED, PAGE_SIZE);
 		if (addr == nullptr) {
-			printk(KERN_ERROR, "Failed to allocate memory for virtio queue");
 			return ERR_NO_MEMORY;
 		}
 
@@ -117,8 +115,6 @@ error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 
 		virtio_dev.common_cfg->queue_msix_vector = 1;
 		if (virtio_dev.common_cfg->queue_msix_vector == NO_VECTOR) {
-			printk(KERN_ERROR, "queue_msix_vector: 0x%x",
-				   virtio_dev.common_cfg->queue_msix_vector);
 			printk(KERN_ERROR, "Failed to allocate MSI-X vector for virtqueue");
 			return ERR_NO_MEMORY;
 		}
@@ -131,6 +127,9 @@ error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 
 error_t configure_pci_common_cfg(virtio_pci_device& virtio_dev)
 {
+	virtio_dev.common_cfg =
+			get_virtio_pci_capability<virtio_pci_common_cfg>(virtio_dev);
+
 	virtio_dev.common_cfg->device_status = 0;
 	while (virtio_dev.common_cfg->device_status != 0) {
 	}
@@ -145,8 +144,6 @@ error_t configure_pci_common_cfg(virtio_pci_device& virtio_dev)
 
 	virtio_dev.common_cfg->config_msix_vector = 0;
 	if (virtio_dev.common_cfg->config_msix_vector == NO_VECTOR) {
-		printk(KERN_ERROR, "config_msix_vector: 0x%x",
-			   virtio_dev.common_cfg->config_msix_vector);
 		printk(KERN_ERROR, "Failed to allocate MSI-X vector for virtio device");
 		return ERR_NO_MEMORY;
 	}
@@ -157,8 +154,6 @@ error_t configure_pci_common_cfg(virtio_pci_device& virtio_dev)
 	}
 
 	virtio_dev.common_cfg->device_status |= VIRTIO_STATUS_DRIVER_OK;
-
-	printk(KERN_INFO, "initialized virtio device");
 
 	return OK;
 }
@@ -185,23 +180,26 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 	while (virtio_dev.caps != nullptr) {
 		switch (virtio_dev.caps->first_dword.fields.cfg_type) {
 			case VIRTIO_PCI_CAP_COMMON_CFG:
-				virtio_dev.common_cfg =
-						get_virtio_pci_capability<virtio_pci_common_cfg>(virtio_dev);
-
 				configure_pci_common_cfg(virtio_dev);
 				break;
 
 			case VIRTIO_PCI_CAP_NOTIFY_CFG:
 				virtio_dev.notify_cfg =
 						reinterpret_cast<virtio_pci_notify_cap*>(virtio_dev.caps);
+				break;
 
-				break;
 			case VIRTIO_PCI_CAP_ISR_CFG:
+				printk(KERN_INFO, "ISR CFG not supported");
 				break;
+
 			case VIRTIO_PCI_CAP_DEVICE_CFG:
+				printk(KERN_INFO, "Device CFG not supported");
 				break;
+
 			case VIRTIO_PCI_CAP_PCI_CFG:
+				printk(KERN_INFO, "PCI CFG not supported");
 				break;
+
 			default:
 				printk(KERN_ERROR, "Unknown virtio pci cap");
 		}
@@ -209,7 +207,10 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 		virtio_dev.caps = virtio_dev.caps->next;
 	}
 
-	configure_pci_notify_cfg(virtio_dev);
+	if (auto err = configure_pci_notify_cfg(virtio_dev); IS_ERR(err)) {
+		printk(KERN_ERROR, "Failed to configure notify capability");
+		return err;
+	}
 
 	return OK;
 }

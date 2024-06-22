@@ -11,7 +11,7 @@
 error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
 {
 	pci::device* dev = nullptr;
-	for (int i = 0; i < pci::num_devices; i++) {
+	for (int i = 0; i < pci::num_devices; ++i) {
 		if (pci::devices[i].is_virtio()) {
 			dev = &pci::devices[i];
 			break;
@@ -35,8 +35,7 @@ error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
 
 	find_virtio_pci_cap(*virtio_dev);
 
-	error_t err = set_virtio_pci_capability(*virtio_dev);
-	if (IS_ERR(err)) {
+	if (auto err = set_virtio_pci_capability(*virtio_dev); IS_ERR(err)) {
 		printk(KERN_ERROR, "Failed to set virtio pci capability");
 		return err;
 	}
