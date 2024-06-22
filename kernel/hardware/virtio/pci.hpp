@@ -115,7 +115,7 @@ T* get_virtio_pci_capability(virtio_pci_device& virtio_dev)
 	return reinterpret_cast<T*>(bar_addr + virtio_dev.caps->offset);
 }
 
-size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev, virtio_pci_cap** caps);
+size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev);
 
 error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev);
 
