@@ -1,3 +1,12 @@
+/**
+ * @file hardware/virtio/pci.hpp
+ *
+ * @brief VirtIO PCI Device Driver
+ *
+ * This file defines the structures, functions, and constants used for
+ * interacting with VirtIO PCI devices. It provides functionalities for
+ * managing VirtIO PCI capabilities, common configurations, and notifications.
+ */
 #pragma once
 
 #include "hardware/pci.hpp"
@@ -30,7 +39,15 @@ constexpr int VIRTIO_PCI_CAP_VENDOR_CFG = 9;
 // MSIX vector for virtio notifications
 constexpr int NO_VECTOR = 0xffff;
 
-// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
+/**
+ * @struct virtio_pci_cap
+ * @brief VirtIO PCI Capability Structure
+ *
+ * This structure represents a VirtIO PCI capability.
+ *
+ * @see
+ * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
+ */
 struct virtio_pci_cap {
 	union {
 		uint32_t data;
@@ -59,7 +76,15 @@ struct virtio_pci_cap {
 	virtio_pci_cap* next;
 } __attribute__((packed));
 
-// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
+/**
+ * @struct virtio_pci_common_cfg
+ * @brief VirtIO PCI Common Configuration Structure
+ *
+ * This structure represents the common configuration for a VirtIO PCI device.
+ *
+ * @see
+ * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
+ */
 struct virtio_pci_common_cfg {
 	/* About the whole device. */
 	uint32_t device_feature_select; /* read-write */
@@ -84,18 +109,42 @@ struct virtio_pci_common_cfg {
 	uint16_t queue_reset;			  /* read-write */
 } __attribute__((packed));
 
-// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
+/**
+ * @struct virtio_pci_notify_cap
+ * @brief VirtIO PCI Notify Capability Structure
+ *
+ * This structure represents the notify capability for a VirtIO PCI device.
+ *
+ * @see
+ * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
+ */
 struct virtio_pci_notify_cap {
 	struct virtio_pci_cap cap;
 	uint32_t notify_off_multiplier; /* Multiplier for queue_notify_off. */
 } __attribute__((packed));
 
-// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
+/**
+ * @struct virtio_pci_cfg_cap
+ * @brief VirtIO PCI Configuration Capability Structure
+ *
+ * This structure represents the PCI configuration capability for a VirtIO PCI
+ * device.
+ *
+ * @see
+ * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
+ */
 struct virtio_pci_cfg_cap {
 	struct virtio_pci_cap cap;
 	uint8_t pci_cfg_data[4]; /* Offset within bar. */
 } __attribute__((packed));
 
+/**
+ * @struct virtio_pci_device
+ * @brief VirtIO PCI Device Structure
+ *
+ * This structure represents a VirtIO PCI device, including its capabilities,
+ * configurations, and associated Virtqueues.
+ */
 struct virtio_pci_device {
 	pci::device* dev;				   /* PCI device. */
 	virtio_pci_cap* caps;			   /* Capabilities. */
