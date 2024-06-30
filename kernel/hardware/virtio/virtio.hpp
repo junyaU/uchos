@@ -1,3 +1,13 @@
+/**
+ * @file hardware/virtio/virtio.hpp
+ *
+ * @brief VirtIO Device Driver
+ *
+ * This file defines the structures, functions, and constants used for
+ * interacting with VirtIO devices. It provides functionalities for initializing
+ * VirtIO PCI devices, managing Virtqueues, and handling descriptors.
+ */
+
 #pragma once
 
 #include <cstddef>
@@ -39,7 +49,14 @@ constexpr int VIRTQ_DESC_F_WRITE = 2;
 /* This means the buffer contains a list of buffer descriptors. */
 constexpr int VIRTQ_DESC_F_INDIRECT = 4;
 
-// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-430005
+/**
+ * @struct virtq_desc
+ * @brief Virtqueue Descriptor
+ *
+ * This structure describes a single descriptor in a Virtqueue.
+ * @see
+ * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-490006
+ */
 struct virtq_desc {
 	uint64_t addr;	/* Address of buffer */
 	uint32_t len;	/* Length of buffer */
@@ -47,26 +64,53 @@ struct virtq_desc {
 	uint16_t next;	/* Next field if flags & NEXT */
 } __attribute__((packed));
 
-// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-490006
+/**
+ * @struct virtq_driver
+ * @brief Virtqueue Driver Area
+ *
+ * This structure describes the driver area of a Virtqueue.
+ * @see
+ * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-490006
+ */
 struct virtq_driver {
 	uint16_t flags;
 	uint16_t index;
 	uint16_t ring[];
 } __attribute__((packed));
 
-// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-540008
+/**
+ * @struct virtq_device_elem
+ * @brief Virtqueue Device Element
+ *
+ * This structure describes an element in the device area of a Virtqueue.
+ * @see
+ * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-540008
+ */
 struct virtq_device_elem {
 	uint32_t id;
 	uint32_t len;
 } __attribute__((packed));
 
-// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-540008
+/**
+ * @struct virtq_device
+ * @brief Virtqueue Device Area
+ * This structure describes the device area of a Virtqueue.
+ * @see
+ * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-540008
+ */
 struct virtq_device {
 	uint16_t flags;
 	uint16_t index;
 	struct virtq_device_elem ring[];
 } __attribute__((packed));
 
+/**
+ * @struct virtio_virtqueue
+ * @brief Virtqueue Management Structure
+ *
+ * This structure manages a Virtqueue, including its descriptors,
+ * driver area, and device area.
+ */
 struct virtio_virtqueue {
 	size_t index;
 	size_t num_desc;
@@ -79,6 +123,12 @@ struct virtio_virtqueue {
 	virtq_device* device;
 };
 
+/**
+ * @struct virtio_entry
+ * @brief Virtqueue Entry
+ *
+ * This structure represents an entry in the Virtqueue.
+ */
 struct virtio_entry {
 	uint32_t index;
 	uintptr_t addr;
