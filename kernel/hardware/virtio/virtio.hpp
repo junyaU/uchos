@@ -69,6 +69,7 @@ struct virtq_desc {
  * @brief Virtqueue Driver Area
  *
  * This structure describes the driver area of a Virtqueue.
+ *
  * @see
  * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-490006
  */
@@ -83,6 +84,7 @@ struct virtq_driver {
  * @brief Virtqueue Device Element
  *
  * This structure describes an element in the device area of a Virtqueue.
+ *
  * @see
  * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-540008
  */
@@ -94,7 +96,9 @@ struct virtq_device_elem {
 /**
  * @struct virtq_device
  * @brief Virtqueue Device Area
+ *
  * This structure describes the device area of a Virtqueue.
+ *
  * @see
  * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-540008
  */

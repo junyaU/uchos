@@ -1,3 +1,13 @@
+/**
+ * @file hardware/virtio/blk.hpp
+ *
+ * @brief VirtIO Block Device Driver
+ *
+ * This file defines the structures, functions, and constants used for
+ * interacting with VirtIO block devices. It provides functionalities for
+ * reading from and writing to block devices, as well as initializing the
+ * block device.
+ */
 #pragma once
 
 #include <cstdint>
@@ -38,7 +48,15 @@ constexpr int VIRTIO_BLK_S_UNSUPP = 2;
 
 constexpr int SECTOR_SIZE = 512;
 
-// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-3160006
+/**
+ * @struct virtio_blk_req
+ * @brief VirtIO Block Request Structure
+ *
+ * This structure represents a request to a VirtIO block device.
+ *
+ * @see
+ * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-3160006
+ */
 struct virtio_blk_req {
 	uint32_t type;
 	uint32_t reserved;
