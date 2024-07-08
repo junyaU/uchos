@@ -1,6 +1,7 @@
 #include "task/task.hpp"
 #include "file_system/file_descriptor.hpp"
 #include "graphics/log.hpp"
+#include "hardware/virtio/blk.hpp"
 #include "interrupt/vector.hpp"
 #include "list.hpp"
 #include "memory/page.hpp"
@@ -255,8 +256,8 @@ void initialize_task()
 			create_task("shell", reinterpret_cast<uint64_t>(&task_shell), true);
 	schedule_task(shell_task->id);
 
-	task* virtio_task =
-			create_task("virtio", reinterpret_cast<uint64_t>(&task_virtio), true);
+	task* virtio_task = create_task(
+			"virtio", reinterpret_cast<uint64_t>(&virtio_blk_task), true);
 	schedule_task(virtio_task->id);
 
 	ktimer->add_switch_task_event(200);
