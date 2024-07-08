@@ -4,6 +4,7 @@
 #include "hardware/virtio/virtio.hpp"
 #include "libs/common/types.hpp"
 #include "memory/slab.hpp"
+#include "task/ipc.hpp"
 #include "task/task.hpp"
 
 virtio_pci_device* blk_dev = nullptr;
@@ -132,4 +133,49 @@ error_t init_blk_device()
 	}
 
 	return OK;
+}
+
+void virtio_blk_task()
+{
+	init_blk_device();
+
+	task* t = CURRENT_TASK;
+
+	t->message_handlers[IPC_WRITE_TO_BLK_DEVICE] = +[](const message& m) {
+		message send_m = { .type = IPC_WRITE_TO_BLK_DEVICE,
+						   .sender = VIRTIO_BLK_TASK_ID };
+
+		const int sector = m.data.blk_device.sector;
+		const int len = m.data.blk_device.len < SECTOR_SIZE ? SECTOR_SIZE
+															: m.data.blk_device.len;
+
+		char buf[512];
+		memcpy(buf, m.data.blk_device.buf, len);
+
+		if (IS_ERR(write_to_blk_device(buf, sector, len))) {
+			printk(KERN_ERROR, "failed to write to blk device");
+		}
+	};
+
+	t->message_handlers[IPC_READ_FROM_BLK_DEVICE] = +[](const message& m) {
+		message send_m = { .type = IPC_READ_FROM_BLK_DEVICE,
+						   .sender = VIRTIO_BLK_TASK_ID };
+
+		const int sector = m.data.blk_device.sector;
+		const int len = m.data.blk_device.len < SECTOR_SIZE ? SECTOR_SIZE
+															: m.data.blk_device.len;
+
+		char buf[512];
+		if (IS_ERR(read_from_blk_device(buf, sector, len))) {
+			printk(KERN_ERROR, "failed to read from blk device");
+		}
+
+		memcpy(send_m.data.blk_device.buf, buf, len);
+		send_m.data.blk_device.sector = sector;
+		send_m.data.blk_device.len = len;
+
+		send_message(m.sender, &send_m);
+	};
+
+	process_messages(t);
 }

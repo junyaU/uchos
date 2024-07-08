@@ -72,3 +72,5 @@ error_t write_to_blk_device(char* buffer, uint64_t sector, uint32_t len);
 error_t read_from_blk_device(char* buffer, uint64_t sector, uint32_t len);
 
 error_t init_blk_device();
+
+void virtio_blk_task();
