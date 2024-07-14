@@ -83,6 +83,8 @@ struct directory_entry {
 
 static const cluster_t END_OF_CLUSTER_CHAIN = 0x0FFFFFFFLU;
 
+constexpr size_t BOOT_SECTOR = 0;
+
 extern bios_parameter_block* BOOT_VOLUME_IMAGE;
 extern unsigned long BYTES_PER_CLUSTER;
 extern uint32_t* FAT_TABLE;
@@ -136,5 +138,7 @@ struct file_descriptor : public ::file_descriptor {
 	size_t read(void* buf, size_t len) override;
 	size_t write(const void* buf, size_t len) override;
 };
+
+void fat32_task();
 
 } // namespace file_system
