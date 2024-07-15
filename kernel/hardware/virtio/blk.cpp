@@ -1,4 +1,5 @@
 #include "hardware/virtio/blk.hpp"
+#include "bit_utils.hpp"
 #include "graphics/log.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
@@ -11,11 +12,6 @@ virtio_pci_device* blk_dev = nullptr;
 
 error_t validate_length(uint32_t len)
 {
-	if (len > SECTOR_SIZE) {
-		printk(KERN_ERROR, "Data size is too big.");
-		return ERR_INVALID_ARG;
-	}
-
 	if (len < SECTOR_SIZE) {
 		printk(KERN_ERROR, "Data size is too small.");
 		return ERR_INVALID_ARG;
@@ -158,14 +154,12 @@ void virtio_blk_task()
 	};
 
 	t->message_handlers[IPC_READ_FROM_BLK_DEVICE] = +[](const message& m) {
-		message send_m = { .type = IPC_READ_FROM_BLK_DEVICE,
-						   .sender = VIRTIO_BLK_TASK_ID };
+		message send_m = { .type = m.type, .sender = VIRTIO_BLK_TASK_ID };
 
 		const int sector = m.data.blk_device.sector;
-		const int len = m.data.blk_device.len < SECTOR_SIZE ? SECTOR_SIZE
-															: m.data.blk_device.len;
+		const int len = align_up(m.data.blk_device.len, SECTOR_SIZE);
 
-		char buf[512];
+		char buf[len];
 		if (IS_ERR(read_from_blk_device(buf, sector, len))) {
 			printk(KERN_ERROR, "failed to read from blk device");
 		}
