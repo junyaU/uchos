@@ -1,4 +1,5 @@
 #include "task/task.hpp"
+#include "file_system/fat.hpp"
 #include "file_system/file_descriptor.hpp"
 #include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
@@ -259,6 +260,10 @@ void initialize_task()
 	task* virtio_task = create_task(
 			"virtio", reinterpret_cast<uint64_t>(&virtio_blk_task), true);
 	schedule_task(virtio_task->id);
+
+	task* fs_fat32_task = create_task(
+			"fat32", reinterpret_cast<uint64_t>(&file_system::fat32_task), true);
+	schedule_task(fs_fat32_task->id);
 
 	ktimer->add_switch_task_event(200);
 }

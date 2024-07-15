@@ -85,7 +85,7 @@ struct message {
 		} pci;
 
 		struct {
-			char buf[512];
+			char buf[512 * 5];
 			unsigned int sector;
 			unsigned int len;
 		} blk_device;

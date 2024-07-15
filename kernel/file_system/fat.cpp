@@ -1,6 +1,12 @@
 #include "fat.hpp"
 #include "elf.hpp"
 #include "graphics/font.hpp"
+#include "graphics/log.hpp"
+#include "hardware/virtio/blk.hpp"
+#include "libs/common/message.hpp"
+#include "memory/slab.hpp"
+#include "task/ipc.hpp"
+#include "task/task.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -16,6 +22,7 @@ namespace file_system
 bios_parameter_block* BOOT_VOLUME_IMAGE;
 unsigned long BYTES_PER_CLUSTER;
 uint32_t* FAT_TABLE;
+uint32_t* TMP_FAT_TABLE;
 
 std::vector<char*> parse_path(const char* path)
 {
@@ -108,6 +115,7 @@ uintptr_t get_cluster_addr(cluster_t cluster_id)
 			BOOT_VOLUME_IMAGE->num_fats * BOOT_VOLUME_IMAGE->fat_size_32 +
 			(cluster_id - 2) * BOOT_VOLUME_IMAGE->sectors_per_cluster;
 
+	// TODO: 本来はメモリから読み込むのではなく、ストレージから読み込む
 	return reinterpret_cast<uintptr_t>(BOOT_VOLUME_IMAGE) +
 		   start_sector_num * BOOT_VOLUME_IMAGE->bytes_per_sector;
 }
@@ -122,6 +130,8 @@ void initialize_fat(void* volume_image)
 	const auto fat_offset = BOOT_VOLUME_IMAGE->reserved_sector_count *
 							BOOT_VOLUME_IMAGE->bytes_per_sector;
 
+	// TODO:
+	// メモリから読み込むのではなくストレージから読みこんで、FAT_TABLEに格納する
 	FAT_TABLE = reinterpret_cast<uint32_t*>(
 			reinterpret_cast<uintptr_t>(BOOT_VOLUME_IMAGE) + fat_offset);
 }
@@ -426,5 +436,45 @@ size_t load_file(void* buf, size_t len, directory_entry& entry)
 {
 	return file_descriptor(entry).read(buf, len);
 }
+
+void fat32_task()
+{
+	task* t = CURRENT_TASK;
+
+	message m = { .type = IPC_READ_FROM_BLK_DEVICE, .sender = FS_FAT32_TASK_ID };
+	m.data.blk_device.sector = BOOT_SECTOR;
+	m.data.blk_device.len = SECTOR_SIZE;
+	send_message(VIRTIO_BLK_TASK_ID, &m);
+
+	t->message_handlers[IPC_READ_FROM_BLK_DEVICE] = +[](const message& m) {
+		if (m.data.blk_device.sector == BOOT_SECTOR) {
+			void* bpb_buf = kmalloc(SECTOR_SIZE, KMALLOC_ZEROED);
+			memcpy(bpb_buf, m.data.blk_device.buf, SECTOR_SIZE);
+			initialize_fat(bpb_buf);
+
+			message m = { .type = IPC_READ_FROM_BLK_DEVICE,
+						  .sender = FS_FAT32_TASK_ID };
+			m.data.blk_device.sector = BOOT_VOLUME_IMAGE->reserved_sector_count;
+			uint32_t fat_table_size = BOOT_VOLUME_IMAGE->fat_size_32 *
+									  BOOT_VOLUME_IMAGE->bytes_per_sector;
+			void* fat_table_buf = kmalloc(fat_table_size, KMALLOC_ZEROED);
+			if (fat_table_buf == nullptr) {
+				printk(KERN_ERROR, "failed to allocate fat table buffer");
+				return;
+			}
+
+			FAT_TABLE = reinterpret_cast<uint32_t*>(fat_table_buf);
+			m.data.blk_device.len = SECTOR_SIZE * 5;
+
+			send_message(VIRTIO_BLK_TASK_ID, &m);
+		}
+
+		if (m.data.blk_device.sector == BOOT_VOLUME_IMAGE->reserved_sector_count) {
+			memcpy(FAT_TABLE, m.data.blk_device.buf, m.data.blk_device.len);
+		}
+	};
+
+	process_messages(t);
+};
 
 } // namespace file_system
