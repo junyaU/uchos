@@ -21,12 +21,13 @@ constexpr int IPC_MEMORY_USAGE = 9;
 constexpr int IPC_PCI = 10;
 constexpr int IPC_WRITE_TO_BLK_DEVICE = 12;
 constexpr int IPC_READ_FROM_BLK_DEVICE = 13;
+constexpr int IPC_INIT_FAT32 = 14;
 
 // file system operations
 constexpr int FS_OP_LIST = 0;
 constexpr int FS_OP_READ = 1;
 
-constexpr int NUM_MESSAGE_TYPES = 15;
+constexpr int NUM_MESSAGE_TYPES = 18;
 
 enum class timeout_action_t : uint8_t {
 	TERMINAL_CURSOR_BLINK,
