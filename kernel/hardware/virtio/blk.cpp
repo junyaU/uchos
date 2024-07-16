@@ -154,7 +154,8 @@ void virtio_blk_task()
 	};
 
 	t->message_handlers[IPC_READ_FROM_BLK_DEVICE] = +[](const message& m) {
-		message send_m = { .type = m.type, .sender = VIRTIO_BLK_TASK_ID };
+		message send_m = { .type = m.data.blk_device.dst_type,
+						   .sender = VIRTIO_BLK_TASK_ID };
 
 		const int sector = m.data.blk_device.sector;
 		const int len = align_up(m.data.blk_device.len, SECTOR_SIZE);

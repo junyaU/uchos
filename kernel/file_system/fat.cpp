@@ -1,6 +1,12 @@
 #include "fat.hpp"
 #include "elf.hpp"
 #include "graphics/font.hpp"
+#include "graphics/log.hpp"
+#include "hardware/virtio/blk.hpp"
+#include "libs/common/message.hpp"
+#include "memory/slab.hpp"
+#include "task/ipc.hpp"
+#include "task/task.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -16,6 +22,8 @@ namespace file_system
 bios_parameter_block* BOOT_VOLUME_IMAGE;
 unsigned long BYTES_PER_CLUSTER;
 uint32_t* FAT_TABLE;
+uint32_t* TMP_FAT_TABLE;
+unsigned int FAT_TABLE_SECTOR;
 
 std::vector<char*> parse_path(const char* path)
 {
@@ -108,6 +116,7 @@ uintptr_t get_cluster_addr(cluster_t cluster_id)
 			BOOT_VOLUME_IMAGE->num_fats * BOOT_VOLUME_IMAGE->fat_size_32 +
 			(cluster_id - 2) * BOOT_VOLUME_IMAGE->sectors_per_cluster;
 
+	// TODO: 本来はメモリから読み込むのではなく、ストレージから読み込む
 	return reinterpret_cast<uintptr_t>(BOOT_VOLUME_IMAGE) +
 		   start_sector_num * BOOT_VOLUME_IMAGE->bytes_per_sector;
 }
@@ -122,6 +131,8 @@ void initialize_fat(void* volume_image)
 	const auto fat_offset = BOOT_VOLUME_IMAGE->reserved_sector_count *
 							BOOT_VOLUME_IMAGE->bytes_per_sector;
 
+	// TODO:
+	// メモリから読み込むのではなくストレージから読みこんで、FAT_TABLEに格納する
 	FAT_TABLE = reinterpret_cast<uint32_t*>(
 			reinterpret_cast<uintptr_t>(BOOT_VOLUME_IMAGE) + fat_offset);
 }
@@ -196,6 +207,38 @@ directory_entry* find_directory_entry_by_path(const char* path)
 	}
 
 	return entry;
+}
+
+directory_entry* find_directory_entry_by_path_tmp(const char* path)
+{
+	const size_t path_len = strlen(path);
+	char path_copy[path_len + 1];
+	memset(path_copy, 0, sizeof(path_copy));
+	if (path != nullptr) {
+		memcpy(path_copy, path, path_len + 1);
+	}
+
+	to_upper(path_copy);
+
+	auto path_list = parse_path(path_copy);
+	auto cluster_id = BOOT_VOLUME_IMAGE->root_cluster;
+	const unsigned long start_sector_num =
+			BOOT_VOLUME_IMAGE->reserved_sector_count +
+			BOOT_VOLUME_IMAGE->num_fats * BOOT_VOLUME_IMAGE->fat_size_32 +
+			(cluster_id - 2) * BOOT_VOLUME_IMAGE->sectors_per_cluster;
+
+	printk(KERN_ERROR, "start_sector_num: %d", start_sector_num);
+
+	// for (const auto& path_name : path_list) {
+	// 	entry = find_directory_entry(path_name, cluster_id);
+	// 	if (entry == nullptr) {
+	// 		return nullptr;
+	// 	}
+
+	// 	cluster_id = entry->first_cluster();
+	// }
+
+	return nullptr;
 }
 
 std::vector<directory_entry*> list_entries_in_directory(directory_entry* entry)
@@ -426,5 +469,54 @@ size_t load_file(void* buf, size_t len, directory_entry& entry)
 {
 	return file_descriptor(entry).read(buf, len);
 }
+
+void fat32_task()
+{
+	task* t = CURRENT_TASK;
+
+	message m = { .type = IPC_READ_FROM_BLK_DEVICE, .sender = FS_FAT32_TASK_ID };
+	m.data.blk_device.sector = BOOT_SECTOR;
+	m.data.blk_device.len = SECTOR_SIZE;
+	m.data.blk_device.dst_type = IPC_INIT_FAT32;
+	send_message(VIRTIO_BLK_TASK_ID, &m);
+
+	t->message_handlers[IPC_INIT_FAT32] = +[](const message& m) {
+		if (m.data.blk_device.sector == BOOT_SECTOR) {
+			void* bpb_buf = kmalloc(SECTOR_SIZE, KMALLOC_ZEROED);
+			if (bpb_buf == nullptr) {
+				printk(KERN_ERROR, "failed to allocate memory for BPB");
+				return;
+			}
+
+			memcpy(bpb_buf, m.data.blk_device.buf, SECTOR_SIZE);
+			initialize_fat(bpb_buf);
+
+			FAT_TABLE_SECTOR = BOOT_VOLUME_IMAGE->reserved_sector_count;
+
+			message init_m = { .type = IPC_READ_FROM_BLK_DEVICE,
+							   .sender = FS_FAT32_TASK_ID };
+			init_m.data.blk_device.sector = FAT_TABLE_SECTOR;
+			init_m.data.blk_device.dst_type = IPC_INIT_FAT32;
+			init_m.data.blk_device.len = SECTOR_SIZE * 5;
+
+			send_message(VIRTIO_BLK_TASK_ID, &init_m);
+		}
+
+		if (m.data.blk_device.sector == FAT_TABLE_SECTOR) {
+			uint32_t fat_table_size = BOOT_VOLUME_IMAGE->fat_size_32 *
+									  BOOT_VOLUME_IMAGE->bytes_per_sector;
+			void* fat_table_buf = kmalloc(fat_table_size, KMALLOC_ZEROED);
+			if (fat_table_buf == nullptr) {
+				printk(KERN_ERROR, "failed to allocate memory for FAT table");
+				return;
+			}
+
+			FAT_TABLE = reinterpret_cast<uint32_t*>(fat_table_buf);
+			memcpy(FAT_TABLE, m.data.blk_device.buf, m.data.blk_device.len);
+		}
+	};
+
+	process_messages(t);
+};
 
 } // namespace file_system
