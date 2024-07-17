@@ -22,6 +22,7 @@ constexpr int IPC_PCI = 10;
 constexpr int IPC_WRITE_TO_BLK_DEVICE = 12;
 constexpr int IPC_READ_FROM_BLK_DEVICE = 13;
 constexpr int IPC_INIT_FAT32 = 14;
+constexpr int IPC_GET_FILE_FAT32 = 15;
 
 // file system operations
 constexpr int FS_OP_LIST = 0;
