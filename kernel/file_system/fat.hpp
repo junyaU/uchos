@@ -81,6 +81,23 @@ struct directory_entry {
 	}
 } __attribute__((packed));
 
+struct fat_table_cache {
+	uint32_t* data;
+	size_t cache_start_cluster;
+	size_t cache_end_cluster;
+	size_t cache_size;
+	bool dirty;
+
+	fat_table_cache()
+		: data(nullptr),
+		  cache_start_cluster(0),
+		  cache_end_cluster(0),
+		  cache_size(0),
+		  dirty(false)
+	{
+	}
+};
+
 static const cluster_t END_OF_CLUSTER_CHAIN = 0x0FFFFFFFLU;
 
 constexpr size_t BOOT_SECTOR = 0;
