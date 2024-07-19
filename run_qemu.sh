@@ -6,6 +6,7 @@ export PATH=/usr/local/Cellar/dosfstools/4.2/sbin:$PATH
 export PATH=/usr/local/opt/llvm/bin:$PATH
 
 mount_point="mnt"
+storage_mount_point="smnt"
 disk_img="disk.img"
 storage_img="storage.img"
 work_path="$HOME/src/github.com/junyaU/uchos"
@@ -15,6 +16,7 @@ source ./scripts/build_loader.sh
 source ./scripts/build_kernel.sh
 
 sudo umount $mount_point
+sudo umount $storage_mount_point
 
 qemu-system-x86_64 -m 1G \
     -drive if=pflash,format=raw,file=OVMF_CODE.fd \

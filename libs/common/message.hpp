@@ -21,14 +21,17 @@ constexpr int IPC_MEMORY_USAGE = 9;
 constexpr int IPC_PCI = 10;
 constexpr int IPC_WRITE_TO_BLK_DEVICE = 12;
 constexpr int IPC_READ_FROM_BLK_DEVICE = 13;
-constexpr int IPC_INIT_FAT32 = 14;
-constexpr int IPC_GET_FILE_FAT32 = 15;
+constexpr int IPC_GET_BPB_FAT32 = 14;
+constexpr int IPC_GET_FAT_TABLE_FAT32 = 15;
+constexpr int IPC_GET_ROOT_DIR_FAT32 = 16;
+constexpr int IPC_GET_FILE_FAT32 = 17;
+constexpr int IPC_GET_DIR_INFO_FAT32 = 18;
 
 // file system operations
 constexpr int FS_OP_LIST = 0;
 constexpr int FS_OP_READ = 1;
 
-constexpr int NUM_MESSAGE_TYPES = 18;
+constexpr int NUM_MESSAGE_TYPES = 20;
 
 enum class timeout_action_t : uint8_t {
 	TERMINAL_CURSOR_BLINK,
@@ -86,10 +89,15 @@ struct message {
 		} pci;
 
 		struct {
-			char buf[512 * 5];
+			char buf[512 * 4];
 			unsigned int sector;
 			unsigned int len;
 			int32_t dst_type;
 		} blk_device;
+
+		struct {
+			char path[30];
+			char path_list[30][30];
+		} get_dir_info_fat32;
 	} data;
 };

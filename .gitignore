@@ -7,6 +7,7 @@ OVMF_VARS.fd
 
 /build
 /mnt
+/storage_mnt
 disk.img
 storage.img
 

@@ -4,6 +4,7 @@ cmake -B $work_path/build $work_path/kernel
 cmake --build $work_path/build
 
 sudo cp $work_path/build/UchosKernel $mount_point/kernel.elf
+sudo cp $work_path/build/UchosKernel $storage_mount_point/kernel.elf
 
 BASEDIR=$work_path/x86_64-elf
 
@@ -30,17 +31,23 @@ done
 for APP in $(ls $work_path/userland); do
     if [ -f $work_path/userland/$APP/$APP ]; then
         sudo cp $work_path/userland/$APP/$APP $mount_point/
+        sudo cp $work_path/userland/$APP/$APP $storage_mount_point/
     fi
 done
 
 sudo mkdir -p $mount_point/commands
+sudo mkdir -p $storage_mount_point/commands
 
 for COMMAND in $(ls $work_path/userland/commands); do
     if [ -f $work_path/userland/commands/$COMMAND/$COMMAND ]; then
         sudo cp $work_path/userland/commands/$COMMAND/$COMMAND $mount_point/
+        sudo cp $work_path/userland/commands/$COMMAND/$COMMAND $storage_mount_point/
     fi
 done
 
 for RESOURCE in $(ls $work_path/resource); do
     sudo cp $work_path/resource/$RESOURCE $mount_point/
+    sudo cp $work_path/resource/$RESOURCE $storage_mount_point/
 done
+
+# ファイルシステムは、クラスタ単位で管理される

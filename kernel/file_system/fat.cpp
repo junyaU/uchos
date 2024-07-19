@@ -24,6 +24,7 @@ unsigned long BYTES_PER_CLUSTER;
 uint32_t* FAT_TABLE;
 uint32_t* TMP_FAT_TABLE;
 unsigned int FAT_TABLE_SECTOR;
+directory_entry* ROOT_DIR;
 
 std::vector<char*> parse_path(const char* path)
 {
@@ -119,6 +120,13 @@ uintptr_t get_cluster_addr(cluster_t cluster_id)
 	// TODO: 本来はメモリから読み込むのではなく、ストレージから読み込む
 	return reinterpret_cast<uintptr_t>(BOOT_VOLUME_IMAGE) +
 		   start_sector_num * BOOT_VOLUME_IMAGE->bytes_per_sector;
+}
+
+unsigned int calc_start_sector(cluster_t cluster_id)
+{
+	return BOOT_VOLUME_IMAGE->reserved_sector_count +
+		   BOOT_VOLUME_IMAGE->num_fats * BOOT_VOLUME_IMAGE->fat_size_32 +
+		   (cluster_id - 2) * BOOT_VOLUME_IMAGE->sectors_per_cluster;
 }
 
 void initialize_fat(void* volume_image)
@@ -221,13 +229,26 @@ directory_entry* find_directory_entry_by_path_tmp(const char* path)
 	to_upper(path_copy);
 
 	auto path_list = parse_path(path_copy);
-	auto cluster_id = BOOT_VOLUME_IMAGE->root_cluster;
-	const unsigned long start_sector_num =
-			BOOT_VOLUME_IMAGE->reserved_sector_count +
-			BOOT_VOLUME_IMAGE->num_fats * BOOT_VOLUME_IMAGE->fat_size_32 +
-			(cluster_id - 2) * BOOT_VOLUME_IMAGE->sectors_per_cluster;
 
-	printk(KERN_ERROR, "start_sector_num: %d", start_sector_num);
+	auto entries_per_cluster = BYTES_PER_CLUSTER / sizeof(directory_entry);
+
+	for (int i = 0; i < entries_per_cluster; ++i) {
+		if (ROOT_DIR[i].name[0] == 0x00) {
+			return nullptr;
+		}
+
+		if (ROOT_DIR[i].name[0] == 0xE5) {
+			continue;
+		}
+
+		if (ROOT_DIR[i].attribute == entry_attribute::LONG_NAME) {
+			continue;
+		}
+
+		if (entry_name_is_equal(ROOT_DIR[i], path_list[0])) {
+			return &ROOT_DIR[i];
+		}
+	}
 
 	// for (const auto& path_name : path_list) {
 	// 	entry = find_directory_entry(path_name, cluster_id);
@@ -474,46 +495,80 @@ void fat32_task()
 {
 	task* t = CURRENT_TASK;
 
+	fat_table_cache table_cache;
+
 	message m = { .type = IPC_READ_FROM_BLK_DEVICE, .sender = FS_FAT32_TASK_ID };
 	m.data.blk_device.sector = BOOT_SECTOR;
 	m.data.blk_device.len = SECTOR_SIZE;
-	m.data.blk_device.dst_type = IPC_INIT_FAT32;
+	m.data.blk_device.dst_type = IPC_GET_BPB_FAT32;
 	send_message(VIRTIO_BLK_TASK_ID, &m);
 
-	t->message_handlers[IPC_INIT_FAT32] = +[](const message& m) {
-		if (m.data.blk_device.sector == BOOT_SECTOR) {
-			void* bpb_buf = kmalloc(SECTOR_SIZE, KMALLOC_ZEROED);
-			if (bpb_buf == nullptr) {
-				printk(KERN_ERROR, "failed to allocate memory for BPB");
-				return;
-			}
+	t->message_handlers[IPC_GET_BPB_FAT32] = [&table_cache](const message& m) {
+		// あとで実装
+		return;
 
-			memcpy(bpb_buf, m.data.blk_device.buf, SECTOR_SIZE);
-			initialize_fat(bpb_buf);
+		void* bpb_buf;
+		KMALLOC_OR_RETURN(bpb_buf, SECTOR_SIZE, KMALLOC_ZEROED);
 
-			FAT_TABLE_SECTOR = BOOT_VOLUME_IMAGE->reserved_sector_count;
+		memcpy(bpb_buf, m.data.blk_device.buf, SECTOR_SIZE);
+		initialize_fat(bpb_buf);
 
-			message init_m = { .type = IPC_READ_FROM_BLK_DEVICE,
+		FAT_TABLE_SECTOR = BOOT_VOLUME_IMAGE->reserved_sector_count;
+
+		message init_m = { .type = IPC_READ_FROM_BLK_DEVICE,
+						   .sender = FS_FAT32_TASK_ID };
+		init_m.data.blk_device.sector = FAT_TABLE_SECTOR;
+		init_m.data.blk_device.dst_type = IPC_GET_FAT_TABLE_FAT32;
+		init_m.data.blk_device.len = BYTES_PER_CLUSTER;
+
+		send_message(VIRTIO_BLK_TASK_ID, &init_m);
+	};
+
+	t->message_handlers[IPC_GET_FAT_TABLE_FAT32] = [&table_cache](const message& m) {
+		void* table_buf = kmalloc(BYTES_PER_CLUSTER, KMALLOC_ZEROED);
+		KMALLOC_OR_RETURN(table_buf, BYTES_PER_CLUSTER, KMALLOC_ZEROED);
+		memcpy(table_buf, m.data.blk_device.buf, m.data.blk_device.len);
+
+		table_cache.cache_size = BYTES_PER_CLUSTER;
+		table_cache.cache_end_cluster = BYTES_PER_CLUSTER / sizeof(uint32_t);
+		table_cache.data = static_cast<uint32_t*>(table_buf);
+
+		FAT_TABLE = reinterpret_cast<uint32_t*>(table_buf);
+		memcpy(FAT_TABLE, m.data.blk_device.buf, m.data.blk_device.len);
+
+		unsigned int root_cluster = BOOT_VOLUME_IMAGE->root_cluster;
+		unsigned int start_sector = calc_start_sector(root_cluster);
+
+		message get_root_m = { .type = IPC_READ_FROM_BLK_DEVICE,
 							   .sender = FS_FAT32_TASK_ID };
-			init_m.data.blk_device.sector = FAT_TABLE_SECTOR;
-			init_m.data.blk_device.dst_type = IPC_INIT_FAT32;
-			init_m.data.blk_device.len = SECTOR_SIZE * 5;
+		get_root_m.data.blk_device.sector = start_sector;
+		get_root_m.data.blk_device.len = BYTES_PER_CLUSTER;
+		get_root_m.data.blk_device.dst_type = IPC_GET_ROOT_DIR_FAT32;
 
-			send_message(VIRTIO_BLK_TASK_ID, &init_m);
-		}
+		send_message(VIRTIO_BLK_TASK_ID, &get_root_m);
+	};
 
-		if (m.data.blk_device.sector == FAT_TABLE_SECTOR) {
-			uint32_t fat_table_size = BOOT_VOLUME_IMAGE->fat_size_32 *
-									  BOOT_VOLUME_IMAGE->bytes_per_sector;
-			void* fat_table_buf = kmalloc(fat_table_size, KMALLOC_ZEROED);
-			if (fat_table_buf == nullptr) {
-				printk(KERN_ERROR, "failed to allocate memory for FAT table");
-				return;
-			}
+	t->message_handlers[IPC_GET_ROOT_DIR_FAT32] = [](const message& m) {
+		void* root_dir_buf;
+		KMALLOC_OR_RETURN(root_dir_buf, BYTES_PER_CLUSTER, KMALLOC_ZEROED);
+		memcpy(root_dir_buf, m.data.blk_device.buf, m.data.blk_device.len);
+		ROOT_DIR = reinterpret_cast<directory_entry*>(root_dir_buf);
+	};
 
-			FAT_TABLE = reinterpret_cast<uint32_t*>(fat_table_buf);
-			memcpy(FAT_TABLE, m.data.blk_device.buf, m.data.blk_device.len);
-		}
+	t->message_handlers[IPC_GET_DIR_INFO_FAT32] = +[](const message& m) {
+		const char* path = m.data.get_dir_info_fat32.path;
+
+		auto* entry = find_directory_entry_by_path_tmp(path);
+
+		// message sm = { .type = IPC_READ_FROM_BLK_DEVICE,
+		// 			   .sender = FS_FAT32_TASK_ID };
+		// sm.data.blk_device.sector = 4028;
+		// sm.data.blk_device.len = SECTOR_SIZE * 5;
+		// sm.data.blk_device.dst_type = IPC_GET_DIR_INFO_FAT32;
+
+		// send_message(VIRTIO_BLK_TASK_ID, &m);
+
+		printk(KERN_ERROR, "name: %s", entry->name);
 	};
 
 	process_messages(t);
