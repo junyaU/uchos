@@ -34,9 +34,7 @@ void setup_identity_mapping()
 	}
 }
 
-void dump_page_table(page_table_entry* table,
-					 int page_table_level,
-					 linear_address addr)
+void dump_page_table(page_table_entry* table, int page_table_level, vaddr_t addr)
 {
 	const auto page_table_index = addr.part(page_table_level);
 	auto entry = table[page_table_index];
@@ -52,7 +50,7 @@ void dump_page_table(page_table_entry* table,
 		   page_table_level, page_table_index, entry.data);
 }
 
-void dump_page_tables(linear_address addr)
+void dump_page_tables(vaddr_t addr)
 {
 	printk(CURRENT_LOG_LEVEL, "dest_addr=%p", addr.data);
 	auto* pml4 = reinterpret_cast<page_table_entry*>(get_cr3());
@@ -90,7 +88,7 @@ page_table_entry* set_new_page_table(page_table_entry& entry)
 
 int setup_page_table(page_table_entry* page_table,
 					 int page_table_level,
-					 linear_address addr,
+					 vaddr_t addr,
 					 size_t num_pages,
 					 bool writable)
 {
@@ -132,7 +130,7 @@ int setup_page_table(page_table_entry* page_table,
 	return num_pages;
 }
 
-void setup_page_tables(linear_address addr, size_t num_pages, bool writable)
+void setup_page_tables(vaddr_t addr, size_t num_pages, bool writable)
 {
 	const int num_remaining_pages =
 			setup_page_table(reinterpret_cast<page_table_entry*>(get_cr3()), 4, addr,
@@ -225,7 +223,7 @@ void copy_page_tables(page_table_entry* dst,
 }
 
 void set_page_table_entry(page_table_entry* table,
-						  linear_address addr,
+						  vaddr_t addr,
 						  page_table_entry* entry)
 {
 	auto* pdpt = table[addr.part(4)].get_next_level_table();
@@ -251,7 +249,7 @@ error_t copy_target_page(uint64_t addr)
 	memcpy(page, reinterpret_cast<void*>(aligned_addr), PAGE_SIZE);
 
 	set_page_table_entry(reinterpret_cast<page_table_entry*>(get_cr3()),
-						 linear_address{ addr }, page);
+						 vaddr_t{ addr }, page);
 
 	return OK;
 }
