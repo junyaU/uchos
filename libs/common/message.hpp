@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include <cstddef>
 #include <cstdint>
 
 // flags for sys_ipc
@@ -38,9 +39,16 @@ enum class timeout_action_t : uint8_t {
 	SWITCH_TASK,
 };
 
+struct msg_ool_desc_t {
+	void* addr;
+	size_t size;
+	bool is_inline;
+};
+
 struct message {
 	int32_t type;
 	pid_t sender;
+	msg_ool_desc_t tool_desc;
 	bool is_end_of_message = true;
 
 	union {
