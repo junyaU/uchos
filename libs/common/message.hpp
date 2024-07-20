@@ -42,7 +42,7 @@ enum class timeout_action_t : uint8_t {
 struct msg_ool_desc_t {
 	void* addr;
 	size_t size;
-	bool is_inline;
+	bool present = false;
 };
 
 struct message {
