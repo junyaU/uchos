@@ -99,7 +99,7 @@ void copy_load_segment(elf64_ehdr_t* elf_header)
 			continue;
 		}
 
-		linear_address dest_addr;
+		vaddr_t dest_addr;
 		dest_addr.data = program_header[i].p_vaddr;
 
 		const auto num_pages =
@@ -142,7 +142,7 @@ void exec_elf(void* buffer, const char* name, const char* args)
 
 	load_elf(elf_header);
 
-	const linear_address argv_addr{ 0xffff'ffff'ffff'f000 };
+	const vaddr_t argv_addr{ 0xffff'ffff'ffff'f000 };
 	setup_page_tables(argv_addr, 1, true);
 
 	auto* argv = reinterpret_cast<char**>(argv_addr.data);
@@ -154,7 +154,7 @@ void exec_elf(void* buffer, const char* name, const char* args)
 							   argv, arg_v_len, arg_buf, arg_buf_len);
 
 	const int stack_size = PAGE_SIZE * 8;
-	const linear_address stack_addr{ 0xffff'ffff'ffff'f000 - stack_size };
+	const vaddr_t stack_addr{ 0xffff'ffff'ffff'f000 - stack_size };
 	setup_page_tables(stack_addr, stack_size / PAGE_SIZE, true);
 
 	task* t = CURRENT_TASK;

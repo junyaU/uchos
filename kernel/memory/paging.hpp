@@ -12,7 +12,7 @@
 
 constexpr size_t USER_SPACE_START_INDEX = 256;
 
-union linear_address {
+union vaddr_t {
 	uint64_t data;
 
 	struct {
@@ -96,11 +96,11 @@ union page_table_entry {
 	}
 };
 
-void dump_page_tables(linear_address addr);
+void dump_page_tables(vaddr_t addr);
 
 page_table_entry* new_page_table();
 
-void setup_page_tables(linear_address addr, size_t num_pages, bool writable);
+void setup_page_tables(vaddr_t addr, size_t num_pages, bool writable);
 
 page_table_entry* config_new_page_table();
 
