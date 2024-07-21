@@ -1,8 +1,8 @@
-#include "paging.hpp"
+#include "memory/paging.hpp"
 #include "graphics/log.hpp"
-#include "page.hpp"
+#include "memory/page.hpp"
+#include "memory/slab.hpp"
 #include "paging_utils.h"
-#include "slab.hpp"
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -34,6 +34,32 @@ void setup_identity_mapping()
 	}
 }
 
+page_table_entry* get_pte(page_table_entry* table, vaddr_t addr, int level)
+{
+	auto* next_table = table;
+	for (int i = 4; i > level; --i) {
+		const int index = addr.part(i);
+		auto entry = next_table[index];
+		if (!entry.bits.present) {
+			return nullptr;
+		}
+
+		next_table = entry.get_next_level_table();
+	}
+
+	return &next_table[addr.part(level)];
+}
+
+paddr_t get_paddr(page_table_entry* table, vaddr_t addr)
+{
+	auto* pte = get_pte(table, addr, 1);
+	if (pte == nullptr) {
+		return paddr_t{ 0 };
+	}
+
+	return paddr_t{ pte->bits.address << 12 };
+}
+
 void dump_page_table(page_table_entry* table, int page_table_level, vaddr_t addr)
 {
 	const auto page_table_index = addr.part(page_table_level);
@@ -59,7 +85,7 @@ void dump_page_tables(vaddr_t addr)
 
 page_table_entry* new_page_table()
 {
-	auto* base_addr = kmalloc(PAGE_SIZE, KMALLOC_ZEROED);
+	void* base_addr = kmalloc(PAGE_SIZE, KMALLOC_ZEROED);
 	if (base_addr == nullptr) {
 		printk(KERN_ERROR, "Failed to allocate memory for page table.");
 		return nullptr;
@@ -292,6 +318,71 @@ error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr)
 	}
 
 	return OK;
+}
+
+vaddr_t create_vaddr_from_index(int pml4_i, int pdpt_i, int pd_i, int pt_i)
+{
+	vaddr_t addr;
+	addr.data = 0;
+
+	addr.set_part(4, pml4_i & 0x1FF);
+	addr.set_part(3, pdpt_i & 0x1FF);
+	addr.set_part(2, pd_i & 0x1FF);
+	addr.set_part(1, pt_i & 0x1FF);
+
+	if ((addr.bits.page_map_level_4_index & 0x100) != 0) {
+		addr.bits.canonical = 0xFFFF;
+	} else {
+		addr.bits.canonical = 0x0000;
+	}
+
+	return addr;
+}
+
+// TODO: fix this function
+vaddr_t map_frame_to_vaddr(page_table_entry* table, uint64_t frame)
+{
+	for (int i = 256; i < 512; ++i) {
+		if (!table[i].bits.present) {
+			continue;
+		}
+
+		auto* pdpt = table[i].get_next_level_table();
+
+		for (int j = 0; j < 512; ++j) {
+			if (!pdpt[j].bits.present) {
+				continue;
+			}
+
+			auto* pd = pdpt[j].get_next_level_table();
+
+			for (int k = 0; k < 512; ++k) {
+				if (!pd[k].bits.present) {
+					continue;
+				}
+				auto* pt = pd[k].get_next_level_table();
+
+				for (int l = 0; l < 512; ++l) {
+					if (pt[l].bits.present) {
+						continue;
+					}
+
+					pt[l].bits.present = 1;
+					pt[l].bits.writable = 0;
+					pt[l].bits.user_accessible = 1;
+					pt[l].bits.address = frame >> 12;
+
+					vaddr_t addr = create_vaddr_from_index(i, j, k, l);
+
+					flush_tlb(addr.data);
+
+					return addr;
+				}
+			}
+		}
+	}
+
+	return vaddr_t{ 0 };
 }
 
 void initialize_paging()

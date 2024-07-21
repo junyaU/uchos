@@ -96,6 +96,10 @@ union page_table_entry {
 	}
 };
 
+page_table_entry* get_pte(page_table_entry* table, vaddr_t addr, int level);
+
+paddr_t get_paddr(page_table_entry* table, vaddr_t addr);
+
 void dump_page_tables(vaddr_t addr);
 
 page_table_entry* new_page_table();
@@ -117,5 +121,7 @@ void copy_kernel_space(page_table_entry* dst);
 page_table_entry* clone_page_table(page_table_entry* src, bool writable);
 
 error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr);
+
+vaddr_t map_frame_to_vaddr(page_table_entry* table, uint64_t frame);
 
 void initialize_paging();
