@@ -11,6 +11,7 @@
 #include <libs/common/types.hpp>
 
 constexpr size_t USER_SPACE_START_INDEX = 256;
+constexpr size_t PT_ENTRIES = 512;
 
 union vaddr_t {
 	uint64_t data;

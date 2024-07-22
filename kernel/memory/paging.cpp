@@ -339,45 +339,38 @@ vaddr_t create_vaddr_from_index(int pml4_i, int pdpt_i, int pd_i, int pt_i)
 	return addr;
 }
 
-// TODO: fix this function
 vaddr_t map_frame_to_vaddr(page_table_entry* table, uint64_t frame)
 {
-	for (int i = 256; i < 512; ++i) {
-		if (!table[i].bits.present) {
-			continue;
-		}
+	const int levels[] = { 4, 3, 2, 1 };
+	int indices[] = { 0, 0, 0, 0 };
 
-		auto* pdpt = table[i].get_next_level_table();
+	for (int level : levels) {
+		int start = (level == 4) ? USER_SPACE_START_INDEX : 0;
+		for (int i = start; i < PT_ENTRIES; ++i) {
+			if (level == 1) {
+				if (!table[i].bits.present) {
+					table[i].bits.present = 1;
+					table[i].bits.writable = 0;
+					table[i].bits.user_accessible = 1;
+					table[i].bits.address = frame >> 12;
 
-		for (int j = 0; j < 512; ++j) {
-			if (!pdpt[j].bits.present) {
-				continue;
-			}
+					indices[4 - level] = i;
 
-			auto* pd = pdpt[j].get_next_level_table();
-
-			for (int k = 0; k < 512; ++k) {
-				if (!pd[k].bits.present) {
-					continue;
-				}
-				auto* pt = pd[k].get_next_level_table();
-
-				for (int l = 0; l < 512; ++l) {
-					if (pt[l].bits.present) {
-						continue;
-					}
-
-					pt[l].bits.present = 1;
-					pt[l].bits.writable = 0;
-					pt[l].bits.user_accessible = 1;
-					pt[l].bits.address = frame >> 12;
-
-					vaddr_t addr = create_vaddr_from_index(i, j, k, l);
+					vaddr_t addr = create_vaddr_from_index(indices[0], indices[1],
+														   indices[2], indices[3]);
 
 					flush_tlb(addr.data);
-
 					return addr;
 				}
+			} else {
+				if (!table[i].bits.present) {
+					// TODO:  新しいテーブルを割り当てて初期化する必要がある
+					continue;
+				}
+
+				indices[4 - level] = i;
+				table = table[i].get_next_level_table();
+				break;
 			}
 		}
 	}
