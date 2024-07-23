@@ -402,6 +402,30 @@ vaddr_t map_frame_to_vaddr(page_table_entry* table, uint64_t frame, size_t num_p
 	return vaddr_t{ 0 };
 }
 
+error_t unmap_frame(page_table_entry* table, vaddr_t addr, size_t num_pages)
+{
+	for (size_t i = 0; i < num_pages; i++) {
+		vaddr_t target_addr{ addr.data + i * PAGE_SIZE };
+		auto* pte = get_pte(table, target_addr, 1);
+		if (pte == nullptr) {
+			return ERR_INVALID_ARG;
+		}
+
+		pte->data = 0;
+		flush_tlb(target_addr.data);
+	}
+
+	return OK;
+}
+
+size_t calc_required_pages(vaddr_t start, size_t size)
+{
+	vaddr_t end{ start.data + size };
+	vaddr_t start_page{ start.data - start.part(0) };
+	vaddr_t end_page{ end.data - end.part(0) + PAGE_SIZE };
+	return (end_page.data - start_page.data) / PAGE_SIZE;
+}
+
 void initialize_paging()
 {
 	printk(KERN_INFO, "Initializing paging...");

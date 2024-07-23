@@ -126,4 +126,8 @@ error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr);
 vaddr_t
 map_frame_to_vaddr(page_table_entry* table, uint64_t frame, size_t num_pages);
 
+error_t unmap_frame(page_table_entry* table, vaddr_t addr, size_t num_pages);
+
+size_t calc_required_pages(vaddr_t start, size_t size);
+
 void initialize_paging();
