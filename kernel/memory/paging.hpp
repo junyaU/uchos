@@ -123,6 +123,7 @@ page_table_entry* clone_page_table(page_table_entry* src, bool writable);
 
 error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr);
 
-vaddr_t map_frame_to_vaddr(page_table_entry* table, uint64_t frame);
+vaddr_t
+map_frame_to_vaddr(page_table_entry* table, uint64_t frame, size_t num_pages);
 
 void initialize_paging();

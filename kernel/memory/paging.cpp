@@ -339,28 +339,45 @@ vaddr_t create_vaddr_from_index(int pml4_i, int pdpt_i, int pd_i, int pt_i)
 	return addr;
 }
 
-vaddr_t map_frame_to_vaddr(page_table_entry* table, uint64_t frame)
+vaddr_t map_frame_to_vaddr(page_table_entry* table, uint64_t frame, size_t num_pages)
 {
-	const int levels[] = { 4, 3, 2, 1 };
 	int indices[] = { 0, 0, 0, 0 };
+	size_t consecutive_pages = 0;
+	vaddr_t start_addr;
 
-	for (int level : levels) {
+	for (int level = 4; level >= 1; --level) {
 		int start = (level == 4) ? USER_SPACE_START_INDEX : 0;
 		for (int i = start; i < PT_ENTRIES; ++i) {
 			if (level == 1) {
-				if (!table[i].bits.present) {
-					table[i].bits.present = 1;
-					table[i].bits.writable = 0;
-					table[i].bits.user_accessible = 1;
-					table[i].bits.address = frame >> 12;
+				for (size_t j = 0; j < num_pages; ++j) {
+					if (!table[i + j].bits.present) {
+						++consecutive_pages;
+					} else {
+						consecutive_pages = 0;
+						break;
+					}
+				}
+
+				if (consecutive_pages < num_pages) {
+					continue;
+				}
+
+				for (size_t j = 0; j < num_pages; ++j) {
+					table[i + j].bits.present = 1;
+					table[i + j].bits.writable = 0;
+					table[i + j].bits.user_accessible = 1;
+					table[i + j].bits.address = (frame + j * PAGE_SIZE) >> 12;
 
 					indices[4 - level] = i;
 
 					vaddr_t addr = create_vaddr_from_index(indices[0], indices[1],
 														   indices[2], indices[3]);
 
+					if (j == 0) {
+						start_addr = addr;
+					}
+
 					flush_tlb(addr.data);
-					return addr;
 				}
 			} else {
 				if (!table[i].bits.present) {
@@ -372,6 +389,13 @@ vaddr_t map_frame_to_vaddr(page_table_entry* table, uint64_t frame)
 				table = table[i].get_next_level_table();
 				break;
 			}
+
+			if (i == 511) {
+				// TODO: fix this
+				printk(KERN_ERROR, "Failed to map frame to virtual address.");
+			}
+
+			return start_addr;
 		}
 	}
 
