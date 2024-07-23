@@ -27,6 +27,7 @@ constexpr int IPC_GET_FAT_TABLE_FAT32 = 15;
 constexpr int IPC_GET_ROOT_DIR_FAT32 = 16;
 constexpr int IPC_GET_FILE_FAT32 = 17;
 constexpr int IPC_GET_DIR_INFO_FAT32 = 18;
+constexpr int IPC_OOL_MEMORY_DEALLOC = 19;
 
 // file system operations
 constexpr int FS_OP_LIST = 0;
