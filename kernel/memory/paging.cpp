@@ -1,8 +1,8 @@
-#include "paging.hpp"
+#include "memory/paging.hpp"
 #include "graphics/log.hpp"
-#include "page.hpp"
+#include "memory/page.hpp"
+#include "memory/slab.hpp"
 #include "paging_utils.h"
-#include "slab.hpp"
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -34,6 +34,32 @@ void setup_identity_mapping()
 	}
 }
 
+page_table_entry* get_pte(page_table_entry* table, vaddr_t addr, int level)
+{
+	auto* next_table = table;
+	for (int i = 4; i > level; --i) {
+		const int index = addr.part(i);
+		auto entry = next_table[index];
+		if (!entry.bits.present) {
+			return nullptr;
+		}
+
+		next_table = entry.get_next_level_table();
+	}
+
+	return &next_table[addr.part(level)];
+}
+
+paddr_t get_paddr(page_table_entry* table, vaddr_t addr)
+{
+	auto* pte = get_pte(table, addr, 1);
+	if (pte == nullptr) {
+		return paddr_t{ 0 };
+	}
+
+	return paddr_t{ pte->bits.address << 12 };
+}
+
 void dump_page_table(page_table_entry* table, int page_table_level, vaddr_t addr)
 {
 	const auto page_table_index = addr.part(page_table_level);
@@ -59,7 +85,7 @@ void dump_page_tables(vaddr_t addr)
 
 page_table_entry* new_page_table()
 {
-	auto* base_addr = kmalloc(PAGE_SIZE, KMALLOC_ZEROED);
+	void* base_addr = kmalloc(PAGE_SIZE, KMALLOC_ZEROED);
 	if (base_addr == nullptr) {
 		printk(KERN_ERROR, "Failed to allocate memory for page table.");
 		return nullptr;
@@ -292,6 +318,88 @@ error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr)
 	}
 
 	return OK;
+}
+
+vaddr_t create_vaddr_from_index(int pml4_i, int pdpt_i, int pd_i, int pt_i)
+{
+	vaddr_t addr;
+	addr.data = 0;
+
+	addr.set_part(4, pml4_i & 0x1FF);
+	addr.set_part(3, pdpt_i & 0x1FF);
+	addr.set_part(2, pd_i & 0x1FF);
+	addr.set_part(1, pt_i & 0x1FF);
+
+	if ((addr.bits.page_map_level_4_index & 0x100) != 0) {
+		addr.bits.canonical = 0xFFFF;
+	} else {
+		addr.bits.canonical = 0x0000;
+	}
+
+	return addr;
+}
+
+vaddr_t map_frame_to_vaddr(page_table_entry* table, uint64_t frame, size_t num_pages)
+{
+	int indices[] = { 0, 0, 0, 0 };
+	size_t consecutive_pages = 0;
+	vaddr_t start_addr;
+
+	for (int level = 4; level >= 1; --level) {
+		int start = (level == 4) ? USER_SPACE_START_INDEX : 0;
+		for (int i = start; i < PT_ENTRIES; ++i) {
+			if (level == 1) {
+				for (size_t j = 0; j < num_pages; ++j) {
+					if (!table[i + j].bits.present) {
+						++consecutive_pages;
+					} else {
+						consecutive_pages = 0;
+						break;
+					}
+				}
+
+				if (consecutive_pages < num_pages) {
+					continue;
+				}
+
+				for (size_t j = 0; j < num_pages; ++j) {
+					table[i + j].bits.present = 1;
+					table[i + j].bits.writable = 0;
+					table[i + j].bits.user_accessible = 1;
+					table[i + j].bits.address = (frame + j * PAGE_SIZE) >> 12;
+
+					indices[4 - level] = i;
+
+					vaddr_t addr = create_vaddr_from_index(indices[0], indices[1],
+														   indices[2], indices[3]);
+
+					if (j == 0) {
+						start_addr = addr;
+					}
+
+					flush_tlb(addr.data);
+				}
+			} else {
+				if (!table[i].bits.present) {
+					// TODO:  新しいテーブルを割り当てて初期化する必要がある
+					continue;
+				}
+
+				indices[4 - level] = i;
+				table = table[i].get_next_level_table();
+				break;
+			}
+
+			if (i == 511) {
+				// TODO: fix this
+				printk(KERN_ERROR, "Failed to map frame to virtual address.");
+			}
+
+			return start_addr;
+		}
+	}
+
+	return vaddr_t{ 0 };
 }
 
 void initialize_paging()
