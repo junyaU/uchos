@@ -50,9 +50,9 @@ error_t send_message(pid_t dst_id, message* m)
 	}
 
 	if (m->type == IPC_OOL_MEMORY_DEALLOC) {
-		handle_ool_memory_dealloc(*m);
+		ASSERT_OK(handle_ool_memory_dealloc(*m));
 	} else if (m->tool_desc.present) {
-		handle_ool_memory_alloc(*m, dst);
+		ASSERT_OK(handle_ool_memory_alloc(*m, dst));
 	}
 
 	if (dst->state == TASK_WAITING) {

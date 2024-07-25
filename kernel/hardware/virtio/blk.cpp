@@ -22,9 +22,7 @@ error_t validate_length(uint32_t len)
 
 error_t write_to_blk_device(char* buffer, uint64_t sector, uint32_t len)
 {
-	if (auto err = validate_length(len); IS_ERR(err)) {
-		return err;
-	}
+	ASSERT_OK(validate_length(len));
 
 	virtio_blk_req* req =
 			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), KMALLOC_ZEROED);
@@ -70,9 +68,7 @@ error_t write_to_blk_device(char* buffer, uint64_t sector, uint32_t len)
 
 error_t read_from_blk_device(char* buffer, uint64_t sector, uint32_t len)
 {
-	if (auto err = validate_length(len); IS_ERR(err)) {
-		return err;
-	}
+	ASSERT_OK(validate_length(len));
 
 	virtio_blk_req* req =
 			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), KMALLOC_ZEROED);
@@ -124,9 +120,7 @@ error_t init_blk_device()
 
 	blk_dev = new (buffer) virtio_pci_device();
 
-	if (IS_ERR(init_virtio_pci_device(blk_dev, VIRTIO_BLK))) {
-		return ERR_FAILED_INIT_DEVICE;
-	}
+	ASSERT_OK(init_virtio_pci_device(blk_dev, VIRTIO_BLK));
 
 	return OK;
 }

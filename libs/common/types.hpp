@@ -43,3 +43,11 @@ constexpr int NO_FD = -1;
 constexpr int STDIN_FILENO = 0;
 constexpr int STDOUT_FILENO = 1;
 constexpr int STDERR_FILENO = 2;
+
+#define ASSERT_OK(expression)                                                       \
+	do {                                                                            \
+		error_t __err = (expression);                                               \
+		if (IS_ERR(__err)) {                                                        \
+			return __err;                                                           \
+		}                                                                           \
+	} while (0)

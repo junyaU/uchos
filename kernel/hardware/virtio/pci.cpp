@@ -137,10 +137,7 @@ error_t configure_pci_common_cfg(virtio_pci_device& virtio_dev)
 	virtio_dev.common_cfg->device_status = VIRTIO_STATUS_ACKNOWLEDGE;
 	virtio_dev.common_cfg->device_status |= VIRTIO_STATUS_DRIVER;
 
-	if (auto err = negotiate_features(virtio_dev); IS_ERR(err)) {
-		printk(KERN_ERROR, "Failed to negotiate features");
-		return err;
-	}
+	ASSERT_OK(negotiate_features(virtio_dev));
 
 	virtio_dev.common_cfg->config_msix_vector = 0;
 	if (virtio_dev.common_cfg->config_msix_vector == NO_VECTOR) {
@@ -148,10 +145,7 @@ error_t configure_pci_common_cfg(virtio_pci_device& virtio_dev)
 		return ERR_NO_MEMORY;
 	}
 
-	if (auto err = setup_virtqueue(virtio_dev); IS_ERR(err)) {
-		printk(KERN_ERROR, "Failed to setup virtqueue");
-		return err;
-	}
+	ASSERT_OK(setup_virtqueue(virtio_dev));
 
 	virtio_dev.common_cfg->device_status |= VIRTIO_STATUS_DRIVER_OK;
 
@@ -207,10 +201,7 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 		virtio_dev.caps = virtio_dev.caps->next;
 	}
 
-	if (auto err = configure_pci_notify_cfg(virtio_dev); IS_ERR(err)) {
-		printk(KERN_ERROR, "Failed to configure notify capability");
-		return err;
-	}
+	ASSERT_OK(configure_pci_notify_cfg(virtio_dev));
 
 	return OK;
 }

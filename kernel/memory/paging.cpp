@@ -307,11 +307,7 @@ error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr)
 	auto user = (error_code >> 2) & 1;
 
 	if ((user != 0) && (rw != 0) && (exist != 0)) {
-		error_t err = copy_target_page(fault_addr);
-		if (IS_ERR(err)) {
-			printk(KERN_ERROR, "Failed to handle page fault: %d", err);
-			return err;
-		}
+		ASSERT_OK(copy_target_page(fault_addr));
 	} else {
 		printk(KERN_ERROR, "Page fault: user=%d, rw=%d, exist=%d", user, rw, exist);
 		return ERR_PAGE_NOT_PRESENT;

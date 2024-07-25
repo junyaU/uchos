@@ -35,12 +35,7 @@ error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
 
 	find_virtio_pci_cap(*virtio_dev);
 
-	if (auto err = set_virtio_pci_capability(*virtio_dev); IS_ERR(err)) {
-		printk(KERN_ERROR, "Failed to set virtio pci capability");
-		return err;
-	}
-
-	return OK;
+	return set_virtio_pci_capability(*virtio_dev);
 }
 
 int push_virtio_entry(virtio_virtqueue* queue,
