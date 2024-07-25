@@ -19,7 +19,7 @@ error_t handle_ool_memory_dealloc(const message& m)
 					   num_pages);
 }
 
-error_t handle_ool_memory_alloc(const message& m, task* dst)
+error_t handle_ool_memory_alloc(message& m, task* dst)
 {
 	vaddr_t addr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
 	size_t num_pages = calc_required_pages(addr, m.tool_desc.size);
@@ -30,14 +30,12 @@ error_t handle_ool_memory_alloc(const message& m, task* dst)
 	auto* dst_pml4 = reinterpret_cast<page_table_entry*>(dst->ctx.cr3);
 	vaddr_t dst_addr = map_frame_to_vaddr(dst_pml4, src_frame, num_pages);
 
-	// TODO: fix const_cast
-	const_cast<void*&>(m.tool_desc.addr) =
-			reinterpret_cast<void*>(dst_addr.data + addr.part(0));
+	m.tool_desc.addr = reinterpret_cast<void*>(dst_addr.data + addr.part(0));
 
 	return OK;
 }
 
-error_t send_message(pid_t dst_id, const message* m)
+error_t send_message(pid_t dst_id, message* m)
 {
 	if (dst_id == -1 || m->sender == dst_id) {
 		printk(KERN_ERROR, "invalid destination task id : dest = %d, sender = %d",
