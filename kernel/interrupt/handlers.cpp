@@ -20,7 +20,7 @@ namespace
 
 __attribute__((interrupt)) void on_xhci_interrupt(interrupt_frame* frame)
 {
-	const message m = { NOTIFY_XHCI, INTERRUPT_TASK, {} };
+	message m = { NOTIFY_XHCI, INTERRUPT_TASK, {} };
 	send_message(XHCI_TASK_ID, &m);
 	notify_end_of_interrupt();
 }
