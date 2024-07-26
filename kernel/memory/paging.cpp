@@ -336,11 +336,13 @@ vaddr_t create_vaddr_from_index(int pml4_i, int pdpt_i, int pd_i, int pt_i)
 	return addr;
 }
 
-vaddr_t map_frame_to_vaddr(page_table_entry* table, uint64_t frame, size_t num_pages)
+error_t map_frame_to_vaddr(page_table_entry* table,
+						   uint64_t frame,
+						   size_t num_pages,
+						   vaddr_t* start_addr)
 {
 	int indices[] = { 0, 0, 0, 0 };
 	size_t consecutive_pages = 0;
-	vaddr_t start_addr;
 
 	for (int level = 4; level >= 1; --level) {
 		int start = (level == 4) ? USER_SPACE_START_INDEX : 0;
@@ -371,14 +373,13 @@ vaddr_t map_frame_to_vaddr(page_table_entry* table, uint64_t frame, size_t num_p
 														   indices[2], indices[3]);
 
 					if (j == 0) {
-						start_addr = addr;
+						*start_addr = addr;
 					}
 
 					flush_tlb(addr.data);
 				}
 			} else {
 				if (!table[i].bits.present) {
-					// TODO:  新しいテーブルを割り当てて初期化する必要がある
 					continue;
 				}
 
@@ -387,16 +388,11 @@ vaddr_t map_frame_to_vaddr(page_table_entry* table, uint64_t frame, size_t num_p
 				break;
 			}
 
-			if (i == 511) {
-				// TODO: fix this
-				printk(KERN_ERROR, "Failed to map frame to virtual address.");
-			}
-
-			return start_addr;
+			return OK;
 		}
 	}
 
-	return vaddr_t{ 0 };
+	return ERR_NO_MEMORY;
 }
 
 error_t unmap_frame(page_table_entry* table, vaddr_t addr, size_t num_pages)
