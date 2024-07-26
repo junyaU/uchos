@@ -34,6 +34,11 @@ void setup_identity_mapping()
 	}
 }
 
+page_table_entry* get_active_page_table()
+{
+	return reinterpret_cast<page_table_entry*>(get_cr3());
+}
+
 page_table_entry* get_pte(page_table_entry* table, vaddr_t addr, int level)
 {
 	auto* next_table = table;
@@ -79,8 +84,7 @@ void dump_page_table(page_table_entry* table, int page_table_level, vaddr_t addr
 void dump_page_tables(vaddr_t addr)
 {
 	printk(CURRENT_LOG_LEVEL, "dest_addr=%p", addr.data);
-	auto* pml4 = reinterpret_cast<page_table_entry*>(get_cr3());
-	dump_page_table(pml4, 4, addr);
+	dump_page_table(get_active_page_table(), 4, addr);
 }
 
 page_table_entry* new_page_table()
@@ -159,8 +163,7 @@ int setup_page_table(page_table_entry* page_table,
 void setup_page_tables(vaddr_t addr, size_t num_pages, bool writable)
 {
 	const int num_remaining_pages =
-			setup_page_table(reinterpret_cast<page_table_entry*>(get_cr3()), 4, addr,
-							 num_pages, writable);
+			setup_page_table(get_active_page_table(), 4, addr, num_pages, writable);
 	if (num_remaining_pages == -1) {
 		printk(KERN_ERROR, "Failed to setup page tables.");
 		return;
@@ -274,16 +277,14 @@ error_t copy_target_page(uint64_t addr)
 	const auto aligned_addr = addr & ~0xfff;
 	memcpy(page, reinterpret_cast<void*>(aligned_addr), PAGE_SIZE);
 
-	set_page_table_entry(reinterpret_cast<page_table_entry*>(get_cr3()),
-						 vaddr_t{ addr }, page);
+	set_page_table_entry(get_active_page_table(), vaddr_t{ addr }, page);
 
 	return OK;
 }
 
 void copy_kernel_space(page_table_entry* dst)
 {
-	auto* src = reinterpret_cast<page_table_entry*>(get_cr3());
-	memcpy(dst, src, 256 * sizeof(page_table_entry));
+	memcpy(dst, get_active_page_table(), 256 * sizeof(page_table_entry));
 }
 
 page_table_entry* clone_page_table(page_table_entry* src, bool writable)

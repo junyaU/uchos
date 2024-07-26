@@ -2,7 +2,6 @@
 #include "graphics/log.hpp"
 #include "libs/common/message.hpp"
 #include "memory/paging.hpp"
-#include "memory/paging_utils.h"
 #include "task.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -15,8 +14,7 @@ error_t handle_ool_memory_dealloc(const message& m)
 
 	vaddr_t start_page{ addr.data - addr.part(0) };
 
-	return unmap_frame(reinterpret_cast<page_table_entry*>(get_cr3()), start_page,
-					   num_pages);
+	return unmap_frame(get_active_page_table(), start_page, num_pages);
 }
 
 error_t handle_ool_memory_alloc(message& m, task* dst)
@@ -24,8 +22,7 @@ error_t handle_ool_memory_alloc(message& m, task* dst)
 	vaddr_t addr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
 	size_t num_pages = calc_required_pages(addr, m.tool_desc.size);
 
-	paddr_t src_frame =
-			get_paddr(reinterpret_cast<page_table_entry*>(get_cr3()), addr);
+	paddr_t src_frame = get_paddr(get_active_page_table(), addr);
 
 	auto* dst_pml4 = reinterpret_cast<page_table_entry*>(dst->ctx.cr3);
 	vaddr_t dst_addr = map_frame_to_vaddr(dst_pml4, src_frame, num_pages);
