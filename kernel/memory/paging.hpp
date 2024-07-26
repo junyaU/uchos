@@ -97,6 +97,8 @@ union page_table_entry {
 	}
 };
 
+page_table_entry* get_active_page_table();
+
 page_table_entry* get_pte(page_table_entry* table, vaddr_t addr, int level);
 
 paddr_t get_paddr(page_table_entry* table, vaddr_t addr);

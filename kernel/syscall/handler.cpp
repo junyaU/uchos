@@ -3,7 +3,6 @@
 #include "graphics/log.hpp"
 #include "graphics/screen.hpp"
 #include "memory/paging.hpp"
-#include "memory/paging_utils.h"
 #include "memory/user.hpp"
 #include "sys/_default_fcntl.h"
 #include "syscall.hpp"
@@ -136,7 +135,7 @@ error_t sys_time(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	const uint64_t ms = arg1;
 	const int is_periodic = arg2;
 	const timeout_action_t action = static_cast<timeout_action_t>(arg3);
-	const pid_t  task_id = arg4;
+	const pid_t task_id = arg4;
 
 	if (is_periodic == 1) {
 		ktimer->add_periodic_timer_event(ms, action, task_id);
@@ -228,8 +227,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 		return ERR_NO_FILE;
 	}
 
-	page_table_entry* current_page_table =
-			reinterpret_cast<page_table_entry*>(get_cr3());
+	page_table_entry* current_page_table = get_active_page_table();
 	clean_page_tables(current_page_table);
 
 	page_table_entry* new_page_table = config_new_page_table();
