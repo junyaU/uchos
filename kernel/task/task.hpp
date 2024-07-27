@@ -52,6 +52,11 @@ struct task {
 	error_t copy_parent_page_table();
 
 	bool has_parent() const { return parent_id != -1; }
+
+	page_table_entry* get_page_table() const
+	{
+		return reinterpret_cast<page_table_entry*>(ctx.cr3);
+	}
 };
 
 extern task* CURRENT_TASK;
