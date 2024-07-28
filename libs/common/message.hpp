@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#define __user
+
 // flags for sys_ipc
 constexpr int IPC_RECV = 0;
 constexpr int IPC_SEND = 1;
@@ -41,7 +43,7 @@ enum class timeout_action_t : uint8_t {
 };
 
 struct msg_ool_desc_t {
-	void* addr;
+	void __user* addr;
 	size_t size;
 	bool present = false;
 };
