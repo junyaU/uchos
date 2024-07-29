@@ -10,11 +10,10 @@
 error_t handle_ool_memory_dealloc(const message& m)
 {
 	vaddr_t addr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
-	size_t num_pages = calc_required_pages(addr, m.tool_desc.size);
+	vaddr_t start_addr{ addr.data - addr.part(0) };
+	size_t pages_to_unmap = calc_required_pages(addr, m.tool_desc.size);
 
-	vaddr_t start_page{ addr.data - addr.part(0) };
-
-	return unmap_frame(get_active_page_table(), start_page, num_pages);
+	return unmap_frame(get_active_page_table(), start_addr, pages_to_unmap);
 }
 
 error_t handle_ool_memory_alloc(message& m, task* dst)
