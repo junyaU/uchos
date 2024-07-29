@@ -154,12 +154,17 @@ void virtio_blk_task()
 		const int sector = m.data.blk_device.sector;
 		const int len = align_up(m.data.blk_device.len, SECTOR_SIZE);
 
-		char buf[len];
+		char* buf = static_cast<char*>(kmalloc(len, KMALLOC_ZEROED));
+		if (buf == nullptr) {
+			printk(KERN_ERROR, "failed to allocate buffer");
+			return;
+		}
+
 		if (IS_ERR(read_from_blk_device(buf, sector, len))) {
 			printk(KERN_ERROR, "failed to read from blk device");
 		}
 
-		memcpy(send_m.data.blk_device.buf, buf, len);
+		send_m.data.blk_device.buf = buf;
 		send_m.data.blk_device.sector = sector;
 		send_m.data.blk_device.len = len;
 

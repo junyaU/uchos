@@ -1,8 +1,9 @@
-#include <../../libs/user/ipc.hpp>
-#include <../../libs/user/print.hpp>
-#include <../../libs/user/syscall.hpp>
 #include <cstdio>
 #include <cstdlib>
+#include <libs/common/message.hpp>
+#include <libs/user/ipc.hpp>
+#include <libs/user/print.hpp>
+#include <libs/user/syscall.hpp>
 
 extern "C" int main(void)
 {
