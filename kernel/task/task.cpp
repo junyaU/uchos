@@ -29,6 +29,16 @@ std::array<task*, MAX_TASKS> tasks;
 task* CURRENT_TASK = nullptr;
 task* IDLE_TASK = nullptr;
 
+const initial_task_info initial_tasks[] = {
+	{ "main", 0, false },
+	{ "idle", reinterpret_cast<uint64_t>(&task_idle), true },
+	{ "usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), true },
+	{ "file_system", reinterpret_cast<uint64_t>(&task_file_system), true },
+	{ "shell", reinterpret_cast<uint64_t>(&task_shell), true },
+	{ "virtio", reinterpret_cast<uint64_t>(&virtio_blk_task), true },
+	{ "fat32", reinterpret_cast<uint64_t>(&file_system::fat32_task), true },
+};
+
 pid_t get_available_task_id()
 {
 	for (pid_t i = 0; i < MAX_TASKS; i++) {
@@ -239,31 +249,17 @@ void initialize_task()
 	tasks = std::array<task*, MAX_TASKS>();
 	list_init(&run_queue);
 
-	task* main_task = create_task("main", 0, false);
-	main_task->state = TASK_RUNNING;
-	CURRENT_TASK = main_task;
+	for (const auto& t_info : initial_tasks) {
+		task* new_task = create_task(t_info.name, t_info.addr, t_info.is_init);
+		if (new_task != nullptr) {
+			schedule_task(new_task->id);
+		}
+	}
 
-	IDLE_TASK = create_task("idle", reinterpret_cast<uint64_t>(&task_idle), true);
+	CURRENT_TASK = tasks[0];
+	IDLE_TASK = tasks[1];
 
-	auto* usb_task = create_task(
-			"usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), true);
-	schedule_task(usb_task->id);
-
-	task* file_system_task = create_task(
-			"file_system", reinterpret_cast<uint64_t>(&task_file_system), true);
-	schedule_task(file_system_task->id);
-
-	task* shell_task =
-			create_task("shell", reinterpret_cast<uint64_t>(&task_shell), true);
-	schedule_task(shell_task->id);
-
-	task* virtio_task = create_task(
-			"virtio", reinterpret_cast<uint64_t>(&virtio_blk_task), true);
-	schedule_task(virtio_task->id);
-
-	task* fs_fat32_task = create_task(
-			"fat32", reinterpret_cast<uint64_t>(&file_system::fat32_task), true);
-	schedule_task(fs_fat32_task->id);
+	CURRENT_TASK->state = TASK_RUNNING;
 
 	ktimer->add_switch_task_event(200);
 }

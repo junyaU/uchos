@@ -59,6 +59,12 @@ struct task {
 	}
 };
 
+struct initial_task_info {
+	const char* name;
+	uint64_t addr;
+	bool is_init;
+};
+
 extern task* CURRENT_TASK;
 extern task* IDLE_TASK;
 
