@@ -65,4 +65,8 @@ ssize_t write(int fd, const void* buf, size_t count)
 	return count;
 }
 
-void _exit(int status) { sys_exit(status); }
+void _exit(int status)
+{
+	sys_exit(status);
+	__builtin_unreachable();
+}
