@@ -17,5 +17,5 @@ sudo mount -o loop $disk_img $mount_point
 
 # Create a storage disk image
 qemu-img create -f raw $storage_img 1G
-mkfs.fat -n 'UCH STORAGE' -s 4 -f 2 -R 32 -F 32 $storage_img
+mkfs.fat -n 'UCH STORAGE' -s 8 -f 2 -R 32 -F 32 $storage_img
 sudo mount -o loop $storage_img $storage_mount_point

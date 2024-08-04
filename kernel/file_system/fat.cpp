@@ -504,14 +504,7 @@ void fat32_task()
 	send_message(VIRTIO_BLK_TASK_ID, &m);
 
 	t->message_handlers[IPC_GET_BPB_FAT32] = [&table_cache](const message& m) {
-		// あとで実装
-		return;
-
-		void* bpb_buf;
-		KMALLOC_OR_RETURN(bpb_buf, SECTOR_SIZE, KMALLOC_ZEROED);
-
-		memcpy(bpb_buf, m.data.blk_device.buf, SECTOR_SIZE);
-		initialize_fat(bpb_buf);
+		initialize_fat(m.data.blk_device.buf);
 
 		FAT_TABLE_SECTOR = BOOT_VOLUME_IMAGE->reserved_sector_count;
 
@@ -525,16 +518,11 @@ void fat32_task()
 	};
 
 	t->message_handlers[IPC_GET_FAT_TABLE_FAT32] = [&table_cache](const message& m) {
-		void* table_buf = kmalloc(BYTES_PER_CLUSTER, KMALLOC_ZEROED);
-		KMALLOC_OR_RETURN(table_buf, BYTES_PER_CLUSTER, KMALLOC_ZEROED);
-		memcpy(table_buf, m.data.blk_device.buf, m.data.blk_device.len);
-
 		table_cache.cache_size = BYTES_PER_CLUSTER;
 		table_cache.cache_end_cluster = BYTES_PER_CLUSTER / sizeof(uint32_t);
-		table_cache.data = static_cast<uint32_t*>(table_buf);
+		table_cache.data = static_cast<uint32_t*>(m.data.blk_device.buf);
 
-		FAT_TABLE = reinterpret_cast<uint32_t*>(table_buf);
-		memcpy(FAT_TABLE, m.data.blk_device.buf, m.data.blk_device.len);
+		FAT_TABLE = reinterpret_cast<uint32_t*>(m.data.blk_device.buf);
 
 		unsigned int root_cluster = BOOT_VOLUME_IMAGE->root_cluster;
 		unsigned int start_sector = calc_start_sector(root_cluster);
@@ -549,10 +537,7 @@ void fat32_task()
 	};
 
 	t->message_handlers[IPC_GET_ROOT_DIR_FAT32] = [](const message& m) {
-		void* root_dir_buf;
-		KMALLOC_OR_RETURN(root_dir_buf, BYTES_PER_CLUSTER, KMALLOC_ZEROED);
-		memcpy(root_dir_buf, m.data.blk_device.buf, m.data.blk_device.len);
-		ROOT_DIR = reinterpret_cast<directory_entry*>(root_dir_buf);
+		ROOT_DIR = reinterpret_cast<directory_entry*>(m.data.blk_device.buf);
 	};
 
 	t->message_handlers[IPC_GET_DIR_INFO_FAT32] = +[](const message& m) {

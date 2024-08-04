@@ -100,7 +100,7 @@ struct message {
 		} pci;
 
 		struct {
-			char buf[512 * 4];
+			void* buf;
 			unsigned int sector;
 			unsigned int len;
 			int32_t dst_type;
