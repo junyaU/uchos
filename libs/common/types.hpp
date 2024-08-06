@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 using error_t = int;
@@ -7,6 +8,7 @@ using pid_t = int;
 using fd_t = int;
 using cluster_t = unsigned long;
 using paddr_t = uint64_t;
+using fs_id_t = size_t;
 
 // error codes
 #define IS_OK(err) (!IS_ERR(err))

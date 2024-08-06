@@ -24,6 +24,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <libs/common/types.hpp>
+#include <unordered_map>
+#include <vector>
 
 constexpr uint32_t ATTR_READ_ONLY = 0x00000001;
 constexpr uint32_t ATTR_HIDDEN = 0x00000002;
@@ -65,3 +68,17 @@ struct file_info {
 	file_system_type_t fs_type;
 	uint64_t fs_id;
 };
+
+struct file_read_context {
+	std::vector<uint8_t> buffer;
+	size_t total_size;
+	size_t read_size;
+
+	file_read_context(size_t total_size) : total_size(total_size), read_size(0) {}
+
+	bool is_complete() const { return read_size >= total_size; }
+};
+
+extern std::unordered_map<size_t, file_read_context> active_read_contexts;
+
+fs_id_t generate_unique_fs_id();
