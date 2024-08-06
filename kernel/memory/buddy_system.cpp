@@ -214,7 +214,6 @@ void initialize_memory_manager()
 			}
 
 			num_total_pages = 0;
-
 			continue;
 		}
 
@@ -222,7 +221,7 @@ void initialize_memory_manager()
 			start_index = i;
 		}
 
-		num_total_pages++;
+		++num_total_pages;
 	}
 
 	if (num_total_pages > 0) {

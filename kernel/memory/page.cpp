@@ -15,6 +15,11 @@ void initialize_pages()
 	for (size_t i = memory_start_index; i < memory_end_index; ++i) {
 		const size_t page_index = i - memory_start_index;
 
+		if (i == 0) {
+			pages[page_index].set_used();
+			continue;
+		}
+
 		pages[page_index].set_ptr(reinterpret_cast<void*>(i * PAGE_SIZE));
 		if (boot_allocator->is_bit_set(i)) {
 			pages[page_index].set_used();
