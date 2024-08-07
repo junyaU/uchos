@@ -135,12 +135,12 @@ void virtio_blk_task()
 		message send_m = { .type = IPC_WRITE_TO_BLK_DEVICE,
 						   .sender = VIRTIO_BLK_TASK_ID };
 
-		const int sector = m.data.blk_device.sector;
-		const int len = m.data.blk_device.len < SECTOR_SIZE ? SECTOR_SIZE
-															: m.data.blk_device.len;
+		const int sector = m.data.blk_io.sector;
+		const int len =
+				m.data.blk_io.len < SECTOR_SIZE ? SECTOR_SIZE : m.data.blk_io.len;
 
 		char buf[512];
-		memcpy(buf, m.data.blk_device.buf, len);
+		memcpy(buf, m.data.blk_io.buf, len);
 
 		if (IS_ERR(write_to_blk_device(buf, sector, len))) {
 			printk(KERN_ERROR, "failed to write to blk device");
@@ -148,11 +148,11 @@ void virtio_blk_task()
 	};
 
 	t->message_handlers[IPC_READ_FROM_BLK_DEVICE] = +[](const message& m) {
-		message send_m = { .type = m.data.blk_device.dst_type,
+		message send_m = { .type = m.data.blk_io.dst_type,
 						   .sender = VIRTIO_BLK_TASK_ID };
 
-		const int sector = m.data.blk_device.sector;
-		const int len = align_up(m.data.blk_device.len, SECTOR_SIZE);
+		const int sector = m.data.blk_io.sector;
+		const int len = align_up(m.data.blk_io.len, SECTOR_SIZE);
 
 		char* buf = static_cast<char*>(kmalloc(len, KMALLOC_ZEROED));
 		if (buf == nullptr) {
@@ -164,9 +164,11 @@ void virtio_blk_task()
 			printk(KERN_ERROR, "failed to read from blk device");
 		}
 
-		send_m.data.blk_device.buf = buf;
-		send_m.data.blk_device.sector = sector;
-		send_m.data.blk_device.len = len;
+		send_m.data.blk_io.buf = buf;
+		send_m.data.blk_io.sector = sector;
+		send_m.data.blk_io.len = len;
+		send_m.data.blk_io.sequence = m.data.blk_io.sequence;
+		send_m.data.blk_io.request_id = m.data.blk_io.request_id;
 
 		send_message(m.sender, &send_m);
 	};

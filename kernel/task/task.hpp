@@ -93,3 +93,5 @@ void exit_task(int status);
 [[noreturn]] void process_messages(task* t);
 
 fd_t allocate_fd(task* t);
+
+message wait_for_message(int32_t type);
