@@ -69,16 +69,29 @@ struct file_info {
 	uint64_t fs_id;
 };
 
-struct file_read_context {
+struct file_cache {
+	fs_id_t id;
+	pid_t requester;
 	std::vector<uint8_t> buffer;
 	size_t total_size;
 	size_t read_size;
+	char path[11];
 
-	file_read_context(size_t total_size) : total_size(total_size), read_size(0) {}
+	file_cache(size_t total_size, fs_id_t id, pid_t requester)
+		: id(id), requester(requester), total_size(total_size), read_size(0)
+	{
+		buffer.resize(total_size);
+	}
 
-	bool is_complete() const { return read_size >= total_size; }
+	bool is_read_complete() const { return read_size >= total_size; }
 };
 
-extern std::unordered_map<size_t, file_read_context> active_read_contexts;
+extern std::unordered_map<fs_id_t, file_cache> file_caches;
 
-fs_id_t generate_unique_fs_id();
+file_cache* find_file_cache_by_path(const char* path);
+
+file_cache* create_file_cache(const char* path, size_t total_size, pid_t requester);
+
+fs_id_t generate_fs_id();
+
+void init_read_contexts();

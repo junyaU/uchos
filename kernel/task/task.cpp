@@ -315,6 +315,32 @@ task::task(int id,
 	*reinterpret_cast<uint32_t*>(&ctx.fxsave_area[24]) = 0x1f80;
 }
 
+message wait_for_message(int32_t type)
+{
+	task* t = CURRENT_TASK;
+
+	while (true) {
+		if (t->messages.empty()) {
+			t->state = TASK_WAITING;
+			continue;
+		}
+
+		t->state = TASK_RUNNING;
+
+		message m = t->messages.front();
+		t->messages.pop();
+
+		if (m.type != type) {
+			__asm__("cli");
+			t->messages.push(m);
+			__asm__("sti");
+			continue;
+		}
+
+		return m;
+	}
+}
+
 extern "C" uint64_t get_current_task_stack()
 {
 	return CURRENT_TASK->kernel_stack_ptr;

@@ -81,23 +81,6 @@ struct directory_entry {
 	}
 } __attribute__((packed));
 
-struct fat_table_cache {
-	uint32_t* data;
-	size_t cache_start_cluster;
-	size_t cache_end_cluster;
-	size_t cache_size;
-	bool dirty;
-
-	fat_table_cache()
-		: data(nullptr),
-		  cache_start_cluster(0),
-		  cache_end_cluster(0),
-		  cache_size(0),
-		  dirty(false)
-	{
-	}
-};
-
 static const cluster_t END_OF_CLUSTER_CHAIN = 0x0FFFFFFFLU;
 
 constexpr size_t BOOT_SECTOR = 0;
@@ -123,6 +106,8 @@ directory_entry* find_directory_entry_by_path(const char* path);
 std::vector<directory_entry*> list_entries_in_directory(directory_entry* dir_entry);
 
 void execute_file(const directory_entry& entry, const char* args);
+
+void execute_file_v2(void* data, const directory_entry& entry, const char* args);
 
 void read_dir_entry_name(const directory_entry& entry, char* dest);
 

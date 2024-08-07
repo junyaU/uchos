@@ -1,5 +1,6 @@
 #include "fat.hpp"
 #include "elf.hpp"
+#include "file_system/file_info.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
@@ -217,51 +218,6 @@ directory_entry* find_directory_entry_by_path(const char* path)
 	return entry;
 }
 
-directory_entry* find_directory_entry_by_path_tmp(const char* path)
-{
-	const size_t path_len = strlen(path);
-	char path_copy[path_len + 1];
-	memset(path_copy, 0, sizeof(path_copy));
-	if (path != nullptr) {
-		memcpy(path_copy, path, path_len + 1);
-	}
-
-	to_upper(path_copy);
-
-	auto path_list = parse_path(path_copy);
-
-	auto entries_per_cluster = BYTES_PER_CLUSTER / sizeof(directory_entry);
-
-	for (int i = 0; i < entries_per_cluster; ++i) {
-		if (ROOT_DIR[i].name[0] == 0x00) {
-			return nullptr;
-		}
-
-		if (ROOT_DIR[i].name[0] == 0xE5) {
-			continue;
-		}
-
-		if (ROOT_DIR[i].attribute == entry_attribute::LONG_NAME) {
-			continue;
-		}
-
-		if (entry_name_is_equal(ROOT_DIR[i], path_list[0])) {
-			return &ROOT_DIR[i];
-		}
-	}
-
-	// for (const auto& path_name : path_list) {
-	// 	entry = find_directory_entry(path_name, cluster_id);
-	// 	if (entry == nullptr) {
-	// 		return nullptr;
-	// 	}
-
-	// 	cluster_id = entry->first_cluster();
-	// }
-
-	return nullptr;
-}
-
 std::vector<directory_entry*> list_entries_in_directory(directory_entry* entry)
 {
 	std::vector<directory_entry*> result;
@@ -308,6 +264,14 @@ void execute_file(const directory_entry& entry, const char* args)
 	read_dir_entry_name(entry, command_name);
 
 	exec_elf(file_buffer.data(), command_name, args);
+}
+
+void execute_file_v2(void* data, const directory_entry& entry, const char* args)
+{
+	char command_name[13];
+	read_dir_entry_name(entry, command_name);
+
+	exec_elf(data, command_name, args);
 }
 
 cluster_t extend_cluster_chain(cluster_t last_cluster, int num_clusters)
@@ -491,69 +455,170 @@ size_t load_file(void* buf, size_t len, directory_entry& entry)
 	return file_descriptor(entry).read(buf, len);
 }
 
+void send_read_req_to_blk_device(unsigned int sector,
+								 size_t len,
+								 int32_t dst_type,
+								 fs_id_t request_id = 0,
+								 size_t sequence = 0)
+{
+	message m = { .type = IPC_READ_FROM_BLK_DEVICE, .sender = FS_FAT32_TASK_ID };
+	m.data.blk_io.sector = sector;
+	m.data.blk_io.len = len;
+	m.data.blk_io.dst_type = dst_type;
+	m.data.blk_io.request_id = request_id;
+	m.data.blk_io.sequence = sequence;
+
+	send_message(VIRTIO_BLK_TASK_ID, &m);
+}
+
+void send_file_data(fs_id_t id, void* buf, size_t len, pid_t requester)
+{
+	message m = { .type = IPC_READ_FILE_DATA, .sender = FS_FAT32_TASK_ID };
+	m.data.blk_io.request_id = id;
+	m.data.blk_io.buf = buf;
+	m.data.blk_io.len = len;
+
+	send_message(requester, &m);
+}
+
+error_t process_read_data_response(const message& m)
+{
+	auto it = file_caches.find(m.data.blk_io.request_id);
+	if (it == file_caches.end()) {
+		printk(KERN_ERROR, "request id not found");
+		return ERR_INVALID_ARG;
+	}
+
+	auto& ctx = it->second;
+	size_t offset = m.data.blk_io.sequence * BYTES_PER_CLUSTER;
+	size_t copy_len = std::min(BYTES_PER_CLUSTER, ctx.total_size - offset);
+
+	memcpy(ctx.buffer.data() + offset, m.data.blk_io.buf, copy_len);
+	ctx.read_size += copy_len;
+
+	if (ctx.is_read_complete()) {
+		send_file_data(m.data.blk_io.request_id, ctx.buffer.data(), ctx.total_size,
+					   ctx.requester);
+	}
+
+	return OK;
+}
+
+error_t process_file_read_request(const message& m)
+{
+	const auto* entry = reinterpret_cast<directory_entry*>(m.data.fs_op.buf);
+	if (entry == nullptr) {
+		printk(KERN_ERROR, "entry is null");
+		return ERR_INVALID_ARG;
+	}
+
+	char file_name[12];
+	memcpy(file_name, entry->name, 11);
+
+	file_cache* c = find_file_cache_by_path(file_name);
+	if (c != nullptr) {
+		send_file_data(m.data.fs_op.request_id, c->buffer.data(), c->total_size,
+					   m.sender);
+		return OK;
+	}
+
+	int target_cluster = entry->first_cluster();
+	size_t sequence = 0;
+	file_cache* cache = create_file_cache(file_name, entry->file_size, m.sender);
+	if (cache == nullptr) {
+		printk(KERN_ERROR, "failed to create file cache");
+		return ERR_NO_MEMORY;
+	}
+
+	while (target_cluster != END_OF_CLUSTER_CHAIN) {
+		send_read_req_to_blk_device(calc_start_sector(target_cluster),
+									BYTES_PER_CLUSTER, IPC_READ_FILE_DATA, cache->id,
+									sequence++);
+
+		target_cluster = next_cluster(target_cluster);
+	}
+
+	return OK;
+}
+
 void fat32_task()
 {
 	task* t = CURRENT_TASK;
 
-	fat_table_cache table_cache;
+	init_read_contexts();
 
 	message m = { .type = IPC_READ_FROM_BLK_DEVICE, .sender = FS_FAT32_TASK_ID };
-	m.data.blk_device.sector = BOOT_SECTOR;
-	m.data.blk_device.len = SECTOR_SIZE;
-	m.data.blk_device.dst_type = IPC_GET_BPB_FAT32;
+	m.data.blk_io.sector = BOOT_SECTOR;
+	m.data.blk_io.len = SECTOR_SIZE;
+	m.data.blk_io.dst_type = IPC_GET_BPB_FAT32;
 	send_message(VIRTIO_BLK_TASK_ID, &m);
 
-	t->message_handlers[IPC_GET_BPB_FAT32] = [&table_cache](const message& m) {
-		initialize_fat(m.data.blk_device.buf);
+	t->message_handlers[IPC_GET_BPB_FAT32] = [](const message& m) {
+		initialize_fat(m.data.blk_io.buf);
 
 		FAT_TABLE_SECTOR = BOOT_VOLUME_IMAGE->reserved_sector_count;
 
-		message init_m = { .type = IPC_READ_FROM_BLK_DEVICE,
-						   .sender = FS_FAT32_TASK_ID };
-		init_m.data.blk_device.sector = FAT_TABLE_SECTOR;
-		init_m.data.blk_device.dst_type = IPC_GET_FAT_TABLE_FAT32;
-		init_m.data.blk_device.len = BYTES_PER_CLUSTER;
+		size_t table_size = BOOT_VOLUME_IMAGE->fat_size_32 * SECTOR_SIZE;
 
-		send_message(VIRTIO_BLK_TASK_ID, &init_m);
+		send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size,
+									IPC_GET_FAT_TABLE_FAT32);
 	};
 
-	t->message_handlers[IPC_GET_FAT_TABLE_FAT32] = [&table_cache](const message& m) {
-		table_cache.cache_size = BYTES_PER_CLUSTER;
-		table_cache.cache_end_cluster = BYTES_PER_CLUSTER / sizeof(uint32_t);
-		table_cache.data = static_cast<uint32_t*>(m.data.blk_device.buf);
-
-		FAT_TABLE = reinterpret_cast<uint32_t*>(m.data.blk_device.buf);
+	t->message_handlers[IPC_GET_FAT_TABLE_FAT32] = [](const message& m) {
+		FAT_TABLE = reinterpret_cast<uint32_t*>(m.data.blk_io.buf);
 
 		unsigned int root_cluster = BOOT_VOLUME_IMAGE->root_cluster;
 		unsigned int start_sector = calc_start_sector(root_cluster);
 
-		message get_root_m = { .type = IPC_READ_FROM_BLK_DEVICE,
-							   .sender = FS_FAT32_TASK_ID };
-		get_root_m.data.blk_device.sector = start_sector;
-		get_root_m.data.blk_device.len = BYTES_PER_CLUSTER;
-		get_root_m.data.blk_device.dst_type = IPC_GET_ROOT_DIR_FAT32;
-
-		send_message(VIRTIO_BLK_TASK_ID, &get_root_m);
+		send_read_req_to_blk_device(start_sector, BYTES_PER_CLUSTER,
+									IPC_GET_ROOT_DIR_FAT32);
 	};
 
 	t->message_handlers[IPC_GET_ROOT_DIR_FAT32] = [](const message& m) {
-		ROOT_DIR = reinterpret_cast<directory_entry*>(m.data.blk_device.buf);
+		ROOT_DIR = reinterpret_cast<directory_entry*>(m.data.blk_io.buf);
 	};
 
-	t->message_handlers[IPC_GET_DIR_INFO_FAT32] = +[](const message& m) {
-		const char* path = m.data.get_dir_info_fat32.path;
+	t->message_handlers[IPC_GET_DIRECTORY_CONTENTS] = +[](const message& m) {};
 
-		auto* entry = find_directory_entry_by_path_tmp(path);
+	t->message_handlers[IPC_GET_FILE_INFO] = +[](const message& m) {
+		const auto* path = m.data.fs_op.path;
+		to_upper(const_cast<char*>(path));
 
-		// message sm = { .type = IPC_READ_FROM_BLK_DEVICE,
-		// 			   .sender = FS_FAT32_TASK_ID };
-		// sm.data.blk_device.sector = 4028;
-		// sm.data.blk_device.len = SECTOR_SIZE * 5;
-		// sm.data.blk_device.dst_type = IPC_GET_DIR_INFO_FAT32;
+		message sm = { .type = IPC_GET_FILE_INFO, .sender = FS_FAT32_TASK_ID };
+		sm.data.fs_op.buf = nullptr;
 
-		// send_message(VIRTIO_BLK_TASK_ID, &m);
+		const auto entries_per_cluster = BYTES_PER_CLUSTER / sizeof(directory_entry);
+		for (int i = 0; i < entries_per_cluster; ++i) {
+			if (ROOT_DIR[i].name[0] == 0x00) {
+				break;
+			}
 
-		printk(KERN_ERROR, "name: %s", entry->name);
+			if (ROOT_DIR[i].name[0] == 0xE5) {
+				continue;
+			}
+
+			if (ROOT_DIR[i].attribute == entry_attribute::LONG_NAME) {
+				continue;
+			}
+
+			if (entry_name_is_equal(ROOT_DIR[i], path)) {
+				void* buf = kmalloc(sizeof(directory_entry), KMALLOC_ZEROED);
+				memcpy(buf, &ROOT_DIR[i], sizeof(directory_entry));
+				sm.data.fs_op.buf = buf;
+				break;
+			}
+		}
+
+		send_message(m.sender, &sm);
+	};
+
+	t->message_handlers[IPC_READ_FILE_DATA] = +[](const message& m) {
+		if (m.sender == VIRTIO_BLK_TASK_ID) {
+			process_read_data_response(m);
+			return;
+		}
+
+		process_file_read_request(m);
 	};
 
 	process_messages(t);
