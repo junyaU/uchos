@@ -13,6 +13,7 @@
 #include <libs/common/types.hpp>
 #include <memory>
 #include <queue>
+#include <unordered_map>
 #include <vector>
 
 void initialize_task();
@@ -24,6 +25,7 @@ struct task {
 	pid_t parent_id;
 	char name[32];
 	int priority;
+	bool is_initilized;
 	task_state state;
 	std::vector<uint64_t> stack;
 	uint64_t kernel_stack_ptr;
@@ -39,7 +41,8 @@ struct task {
 		 const char* task_name,
 		 uint64_t task_addr,
 		 task_state state,
-		 bool is_init);
+		 bool setup_context,
+		 bool is_initilized);
 
 	~task() { clean_page_tables(reinterpret_cast<page_table_entry*>(ctx.cr3)); }
 
@@ -62,7 +65,8 @@ struct task {
 struct initial_task_info {
 	const char* name;
 	uint64_t addr;
-	bool is_init;
+	bool setup_context;
+	bool is_initilized;
 };
 
 extern task* CURRENT_TASK;
@@ -71,8 +75,12 @@ extern task* IDLE_TASK;
 static constexpr int MAX_TASKS = 100;
 extern std::array<task*, MAX_TASKS> tasks;
 extern list_t run_queue;
+// extern std::unordered_map<pid_t, std::queue<message>> pending_messages;
 
-task* create_task(const char* name, uint64_t task_addr, bool is_init);
+task* create_task(const char* name,
+				  uint64_t task_addr,
+				  bool setup_context,
+				  bool is_initilized);
 
 task* copy_task(task* parent, context* parent_ctx);
 

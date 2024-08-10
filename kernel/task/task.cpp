@@ -25,18 +25,19 @@
 
 list_t run_queue;
 std::array<task*, MAX_TASKS> tasks;
+// std::unordered_map<pid_t, std::queue<message>> pending_messages;
 
 task* CURRENT_TASK = nullptr;
 task* IDLE_TASK = nullptr;
 
 const initial_task_info initial_tasks[] = {
-	{ "main", 0, false },
-	{ "idle", reinterpret_cast<uint64_t>(&task_idle), true },
-	{ "usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), true },
-	{ "file_system", reinterpret_cast<uint64_t>(&task_file_system), true },
-	{ "shell", reinterpret_cast<uint64_t>(&task_shell), true },
-	{ "virtio", reinterpret_cast<uint64_t>(&virtio_blk_task), true },
-	{ "fat32", reinterpret_cast<uint64_t>(&file_system::fat32_task), true },
+	{ "main", 0, false, true },
+	{ "idle", reinterpret_cast<uint64_t>(&task_idle), true, true },
+	{ "usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), true, false },
+	{ "file_system", reinterpret_cast<uint64_t>(&task_file_system), true, false },
+	{ "shell", reinterpret_cast<uint64_t>(&task_shell), true, false },
+	{ "virtio", reinterpret_cast<uint64_t>(&virtio_blk_task), true, false },
+	{ "fat32", reinterpret_cast<uint64_t>(&file_system::fat32_task), true, false },
 };
 
 pid_t get_available_task_id()
@@ -61,7 +62,10 @@ pid_t get_task_id_by_name(const char* name)
 	return -1;
 }
 
-task* create_task(const char* name, uint64_t task_addr, bool is_init)
+task* create_task(const char* name,
+				  uint64_t task_addr,
+				  bool setup_context,
+				  bool is_init)
 {
 	const pid_t task_id = get_available_task_id();
 	if (task_id == -1) {
@@ -69,7 +73,8 @@ task* create_task(const char* name, uint64_t task_addr, bool is_init)
 		return nullptr;
 	}
 
-	tasks[task_id] = new task(task_id, name, task_addr, TASK_WAITING, is_init);
+	tasks[task_id] =
+			new task(task_id, name, task_addr, TASK_WAITING, setup_context, is_init);
 
 	return tasks[task_id];
 }
@@ -123,7 +128,7 @@ error_t task::copy_parent_page_table()
 
 task* copy_task(task* parent, context* parent_ctx)
 {
-	task* child = create_task(parent->name, 0, false);
+	task* child = create_task(parent->name, 0, false, true);
 	if (child == nullptr) {
 		return nullptr;
 	}
@@ -248,9 +253,11 @@ void initialize_task()
 {
 	tasks = std::array<task*, MAX_TASKS>();
 	list_init(&run_queue);
+	// pending_messages = std::unordered_map<pid_t, std::queue<message>>();
 
 	for (const auto& t_info : initial_tasks) {
-		task* new_task = create_task(t_info.name, t_info.addr, t_info.is_init);
+		task* new_task = create_task(t_info.name, t_info.addr, t_info.setup_context,
+									 t_info.is_initilized);
 		if (new_task != nullptr) {
 			schedule_task(new_task->id);
 		}
@@ -268,10 +275,12 @@ task::task(int id,
 		   const char* task_name,
 		   uint64_t task_addr,
 		   task_state state,
-		   bool is_init)
+		   bool setup_context,
+		   bool is_initilized)
 	: id{ id },
 	  parent_id{ -1 },
 	  priority{ 2 }, // TODO: Implement priority scheduling
+	  is_initilized{ false },
 	  state{ state },
 	  stack{ std::vector<uint64_t>() },
 	  messages{ std::queue<message>() },
@@ -293,7 +302,7 @@ task::task(int id,
 		fds[i].reset();
 	}
 
-	if (!is_init) {
+	if (!setup_context) {
 		return;
 	}
 
