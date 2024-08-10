@@ -2,6 +2,7 @@
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
 #include "graphics/screen.hpp"
+#include "libs/common/message.hpp"
 #include "memory/paging.hpp"
 #include "memory/user.hpp"
 #include "sys/_default_fcntl.h"
@@ -40,8 +41,6 @@ error_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	const auto fd = arg1;
 	const auto* buf = reinterpret_cast<const char*>(arg2);
 	const auto count = arg3;
-
-	printk(KERN_ERROR, buf);
 
 	if (count > 1024) {
 		return E2BIG;
@@ -222,10 +221,23 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	copy_from_user(copy_args, args, args_len);
 	copy_args[args_len] = '\0';
 
-	auto* entry = file_system::find_directory_entry_by_path(copy_path);
+	message msg{ .type = IPC_GET_FILE_INFO, .sender = CURRENT_TASK->id };
+	memcpy(msg.data.fs_op.path, copy_path, path_len + 1);
+	send_message(FS_FAT32_TASK_ID, &msg);
+
+	message info_m = wait_for_message(IPC_GET_FILE_INFO);
+
+	auto* entry =
+			reinterpret_cast<file_system::directory_entry*>(info_m.data.fs_op.buf);
 	if (entry == nullptr) {
 		return ERR_NO_FILE;
 	}
+
+	message read_msg{ .type = IPC_READ_FILE_DATA, .sender = CURRENT_TASK->id };
+	read_msg.data.fs_op.buf = info_m.data.fs_op.buf;
+	send_message(FS_FAT32_TASK_ID, &read_msg);
+
+	message data_m = wait_for_message(IPC_READ_FILE_DATA);
 
 	page_table_entry* current_page_table = get_active_page_table();
 	clean_page_tables(current_page_table);
@@ -237,7 +249,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(new_page_table);
 
-	file_system::execute_file(*entry, copy_args);
+	file_system::execute_file_v2(data_m.data.fs_op.buf, "echo", copy_args);
 
 	return OK;
 }

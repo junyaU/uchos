@@ -23,7 +23,6 @@ namespace file_system
 bios_parameter_block* BOOT_VOLUME_IMAGE;
 unsigned long BYTES_PER_CLUSTER;
 uint32_t* FAT_TABLE;
-uint32_t* TMP_FAT_TABLE;
 unsigned int FAT_TABLE_SECTOR;
 directory_entry* ROOT_DIR;
 
@@ -266,12 +265,9 @@ void execute_file(const directory_entry& entry, const char* args)
 	exec_elf(file_buffer.data(), command_name, args);
 }
 
-void execute_file_v2(void* data, const directory_entry& entry, const char* args)
+void execute_file_v2(void* data, const char* name, const char* args)
 {
-	char command_name[13];
-	read_dir_entry_name(entry, command_name);
-
-	exec_elf(data, command_name, args);
+	exec_elf(data, name, args);
 }
 
 cluster_t extend_cluster_chain(cluster_t last_cluster, int num_clusters)
@@ -512,8 +508,9 @@ error_t process_file_read_request(const message& m)
 		return ERR_INVALID_ARG;
 	}
 
-	char file_name[12];
+	char file_name[12] = { 0 };
 	memcpy(file_name, entry->name, 11);
+	file_name[11] = 0;
 
 	file_cache* c = find_file_cache_by_path(file_name);
 	if (c != nullptr) {
@@ -547,13 +544,9 @@ void fat32_task()
 
 	init_read_contexts();
 
-	message m = { .type = IPC_READ_FROM_BLK_DEVICE, .sender = FS_FAT32_TASK_ID };
-	m.data.blk_io.sector = BOOT_SECTOR;
-	m.data.blk_io.len = SECTOR_SIZE;
-	m.data.blk_io.dst_type = IPC_GET_BPB_FAT32;
-	send_message(VIRTIO_BLK_TASK_ID, &m);
+	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE, IPC_GET_BPB_FAT32);
 
-	t->message_handlers[IPC_GET_BPB_FAT32] = [](const message& m) {
+	t->message_handlers[IPC_GET_BPB_FAT32] = +[](const message& m) {
 		initialize_fat(m.data.blk_io.buf);
 
 		FAT_TABLE_SECTOR = BOOT_VOLUME_IMAGE->reserved_sector_count;
@@ -564,7 +557,7 @@ void fat32_task()
 									IPC_GET_FAT_TABLE_FAT32);
 	};
 
-	t->message_handlers[IPC_GET_FAT_TABLE_FAT32] = [](const message& m) {
+	t->message_handlers[IPC_GET_FAT_TABLE_FAT32] = +[](const message& m) {
 		FAT_TABLE = reinterpret_cast<uint32_t*>(m.data.blk_io.buf);
 
 		unsigned int root_cluster = BOOT_VOLUME_IMAGE->root_cluster;
@@ -574,11 +567,9 @@ void fat32_task()
 									IPC_GET_ROOT_DIR_FAT32);
 	};
 
-	t->message_handlers[IPC_GET_ROOT_DIR_FAT32] = [](const message& m) {
+	t->message_handlers[IPC_GET_ROOT_DIR_FAT32] = +[](const message& m) {
 		ROOT_DIR = reinterpret_cast<directory_entry*>(m.data.blk_io.buf);
 	};
-
-	t->message_handlers[IPC_GET_DIRECTORY_CONTENTS] = +[](const message& m) {};
 
 	t->message_handlers[IPC_GET_FILE_INFO] = +[](const message& m) {
 		const auto* path = m.data.fs_op.path;
