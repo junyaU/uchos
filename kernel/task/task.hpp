@@ -2,6 +2,7 @@
 
 #include "file_system/file_descriptor.hpp"
 #include "list.hpp"
+#include "memory/custom_allocators.hpp"
 #include "memory/paging.hpp"
 #include "memory/slab.hpp"
 #include "task/context.hpp"
@@ -14,7 +15,6 @@
 #include <memory>
 #include <queue>
 #include <unordered_map>
-#include <vector>
 
 void initialize_task();
 
@@ -27,7 +27,8 @@ struct task {
 	int priority;
 	bool is_initilized;
 	task_state state;
-	std::vector<uint64_t> stack;
+	uint64_t* stack;
+	size_t stack_size;
 	uint64_t kernel_stack_ptr;
 	alignas(16) context ctx;
 	page_table_entry* page_table_snapshot;
@@ -75,7 +76,7 @@ extern task* IDLE_TASK;
 static constexpr int MAX_TASKS = 100;
 extern std::array<task*, MAX_TASKS> tasks;
 extern list_t run_queue;
-// extern std::unordered_map<pid_t, std::queue<message>> pending_messages;
+extern std::queue<message, kernel_allocator<message>> pending_messages;
 
 task* create_task(const char* name,
 				  uint64_t task_addr,
