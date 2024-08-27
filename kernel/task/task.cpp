@@ -258,7 +258,7 @@ void initialize_task()
 {
 	tasks = std::array<task*, MAX_TASKS>();
 	list_init(&run_queue);
-	// pending_messages = std::queue<message, kernel_allocator<message>>();
+	pending_messages = std::queue<message, kernel_allocator<message>>();
 
 	for (const auto& t_info : initial_tasks) {
 		task* new_task = create_task(t_info.name, t_info.addr, t_info.setup_context,
@@ -289,9 +289,7 @@ task::task(int id,
 	  state{ state },
 	  stack{ nullptr },
 	  messages{ std::queue<message>() },
-	  message_handlers{
-		  std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>()
-	  },
+	  message_handlers({ std::array<message_handler_t, NUM_MESSAGE_TYPES>() }),
 	  fds{ std::array<std::shared_ptr<file_descriptor>, 10>() }
 {
 	list_elem_init(&run_queue_elem);
