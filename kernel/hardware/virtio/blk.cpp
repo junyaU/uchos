@@ -8,6 +8,54 @@
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 
+namespace
+{
+void handle_read_request(const message& m)
+{
+	message send_m = { .type = m.data.blk_io.dst_type,
+					   .sender = VIRTIO_BLK_TASK_ID,
+					   .is_init_message = m.is_init_message };
+
+	const int sector = m.data.blk_io.sector;
+	const int len = m.data.blk_io.len;
+
+	char* buf = static_cast<char*>(kmalloc(len, KMALLOC_ZEROED));
+	if (buf == nullptr) {
+		printk(KERN_ERROR, "failed to allocate buffer");
+		return;
+	}
+
+	if (IS_ERR(read_from_blk_device(buf, sector, len))) {
+		printk(KERN_ERROR, "failed to read from blk device");
+	}
+
+	send_m.data.blk_io.buf = buf;
+	send_m.data.blk_io.sector = sector;
+	send_m.data.blk_io.len = len;
+	send_m.data.blk_io.sequence = m.data.blk_io.sequence;
+	send_m.data.blk_io.request_id = m.data.blk_io.request_id;
+
+	send_message(m.sender, &send_m);
+}
+
+void handle_write_request(const message& m)
+{
+	message send_m = { .type = IPC_WRITE_TO_BLK_DEVICE,
+					   .sender = VIRTIO_BLK_TASK_ID };
+
+	const int sector = m.data.blk_io.sector;
+	const int len =
+			m.data.blk_io.len < SECTOR_SIZE ? SECTOR_SIZE : m.data.blk_io.len;
+
+	char buf[512];
+	memcpy(buf, m.data.blk_io.buf, len);
+
+	if (IS_ERR(write_to_blk_device(buf, sector, len))) {
+		printk(KERN_ERROR, "failed to write to blk device");
+	}
+}
+} // namespace
+
 virtio_pci_device* blk_dev = nullptr;
 
 error_t validate_length(uint32_t len)
@@ -122,56 +170,38 @@ error_t init_blk_device()
 
 	ASSERT_OK(init_virtio_pci_device(blk_dev, VIRTIO_BLK));
 
+	CURRENT_TASK->is_initilized = true;
+
 	return OK;
 }
 
 void virtio_blk_task()
 {
-	init_blk_device();
-
 	task* t = CURRENT_TASK;
 
-	t->message_handlers[IPC_WRITE_TO_BLK_DEVICE] = +[](const message& m) {
-		message send_m = { .type = IPC_WRITE_TO_BLK_DEVICE,
-						   .sender = VIRTIO_BLK_TASK_ID };
+	init_blk_device();
 
-		const int sector = m.data.blk_io.sector;
-		const int len =
-				m.data.blk_io.len < SECTOR_SIZE ? SECTOR_SIZE : m.data.blk_io.len;
+	t->message_handlers2[IPC_READ_FROM_BLK_DEVICE] = handle_read_request;
+	t->message_handlers2[IPC_WRITE_TO_BLK_DEVICE] = handle_write_request;
 
-		char buf[512];
-		memcpy(buf, m.data.blk_io.buf, len);
+	t->is_initilized = true;
 
-		if (IS_ERR(write_to_blk_device(buf, sector, len))) {
-			printk(KERN_ERROR, "failed to write to blk device");
-		}
-	};
-
-	t->message_handlers[IPC_READ_FROM_BLK_DEVICE] = +[](const message& m) {
-		message send_m = { .type = m.data.blk_io.dst_type,
-						   .sender = VIRTIO_BLK_TASK_ID };
-
-		const int sector = m.data.blk_io.sector;
-		const int len = align_up(m.data.blk_io.len, SECTOR_SIZE);
-
-		char* buf = static_cast<char*>(kmalloc(len, KMALLOC_ZEROED));
-		if (buf == nullptr) {
-			printk(KERN_ERROR, "failed to allocate buffer");
-			return;
+	while (true) {
+		if (t->messages.empty()) {
+			switch_next_task(true);
+			continue;
 		}
 
-		if (IS_ERR(read_from_blk_device(buf, sector, len))) {
-			printk(KERN_ERROR, "failed to read from blk device");
+		t->state = TASK_RUNNING;
+
+		const message m = t->messages.front();
+		t->messages.pop();
+
+		if (m.type < 0 || m.type >= NUM_MESSAGE_TYPES) {
+			continue;
 		}
 
-		send_m.data.blk_io.buf = buf;
-		send_m.data.blk_io.sector = sector;
-		send_m.data.blk_io.len = len;
-		send_m.data.blk_io.sequence = m.data.blk_io.sequence;
-		send_m.data.blk_io.request_id = m.data.blk_io.request_id;
-
-		send_message(m.sender, &send_m);
-	};
-
-	process_messages(t);
+		t->message_handlers2[m.type](m);
+	}
+	// process_messages(t);
 }
