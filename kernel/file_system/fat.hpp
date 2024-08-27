@@ -107,7 +107,7 @@ std::vector<directory_entry*> list_entries_in_directory(directory_entry* dir_ent
 
 void execute_file(const directory_entry& entry, const char* args);
 
-void execute_file_v2(void* data, const directory_entry& entry, const char* args);
+void execute_file_v2(void* data, const char* name, const char* args);
 
 void read_dir_entry_name(const directory_entry& entry, char* dest);
 

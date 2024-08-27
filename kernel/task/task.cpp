@@ -5,6 +5,7 @@
 #include "hardware/virtio/blk.hpp"
 #include "interrupt/vector.hpp"
 #include "list.hpp"
+#include "memory/custom_allocators.hpp"
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/paging_utils.h"
@@ -14,29 +15,29 @@
 #include "task/ipc.hpp"
 #include "timers/timer.hpp"
 #include <array>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
 #include <memory>
 #include <queue>
-#include <vector>
 
 list_t run_queue;
 std::array<task*, MAX_TASKS> tasks;
+std::queue<message, kernel_allocator<message>> pending_messages;
 
 task* CURRENT_TASK = nullptr;
 task* IDLE_TASK = nullptr;
 
 const initial_task_info initial_tasks[] = {
-	{ "main", 0, false },
-	{ "idle", reinterpret_cast<uint64_t>(&task_idle), true },
-	{ "usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), true },
-	{ "file_system", reinterpret_cast<uint64_t>(&task_file_system), true },
-	{ "shell", reinterpret_cast<uint64_t>(&task_shell), true },
-	{ "virtio", reinterpret_cast<uint64_t>(&virtio_blk_task), true },
-	{ "fat32", reinterpret_cast<uint64_t>(&file_system::fat32_task), true },
+	{ "main", 0, false, true },
+	{ "idle", reinterpret_cast<uint64_t>(&task_idle), true, true },
+	{ "usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), true, true },
+	{ "file_system", reinterpret_cast<uint64_t>(&task_file_system), true, false },
+	{ "virtio", reinterpret_cast<uint64_t>(&virtio_blk_task), true, false },
+	{ "fat32", reinterpret_cast<uint64_t>(&file_system::fat32_task), true, true },
+	{ "shell", reinterpret_cast<uint64_t>(&task_shell), true, false },
 };
 
 pid_t get_available_task_id()
@@ -61,7 +62,10 @@ pid_t get_task_id_by_name(const char* name)
 	return -1;
 }
 
-task* create_task(const char* name, uint64_t task_addr, bool is_init)
+task* create_task(const char* name,
+				  uint64_t task_addr,
+				  bool setup_context,
+				  bool is_init)
 {
 	const pid_t task_id = get_available_task_id();
 	if (task_id == -1) {
@@ -69,7 +73,8 @@ task* create_task(const char* name, uint64_t task_addr, bool is_init)
 		return nullptr;
 	}
 
-	tasks[task_id] = new task(task_id, name, task_addr, TASK_WAITING, is_init);
+	tasks[task_id] =
+			new task(task_id, name, task_addr, TASK_WAITING, setup_context, is_init);
 
 	return tasks[task_id];
 }
@@ -81,13 +86,18 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 		return ERR_NO_TASK;
 	}
 
-	size_t parent_stack_size = parent->stack.size();
-	stack.resize(parent_stack_size);
-	memcpy(stack.data(), parent->stack.data(), parent_stack_size * sizeof(uint64_t));
+	stack_size = parent->stack_size;
 
-	auto parent_stack_top =
-			reinterpret_cast<uint64_t>(&parent->stack[parent_stack_size]);
-	auto child_stack_top = reinterpret_cast<uint64_t>(&stack[parent_stack_size]);
+	stack = static_cast<uint64_t*>(kmalloc(stack_size, KMALLOC_ZEROED, PAGE_SIZE));
+	if (stack == nullptr) {
+		printk(KERN_ERROR, "Failed to allocate stack for child task");
+		return ERR_NO_MEMORY;
+	}
+
+	memcpy(stack, parent->stack, stack_size);
+
+	auto parent_stack_top = reinterpret_cast<uint64_t>(parent->stack) + stack_size;
+	auto child_stack_top = reinterpret_cast<uint64_t>(stack) + stack_size;
 	uint64_t rsp_offset = parent_stack_top - parent_ctx.rsp;
 	uint64_t rbp_offset = parent_stack_top - parent_ctx.rbp;
 
@@ -123,7 +133,7 @@ error_t task::copy_parent_page_table()
 
 task* copy_task(task* parent, context* parent_ctx)
 {
-	task* child = create_task(parent->name, 0, false);
+	task* child = create_task(parent->name, 0, false, true);
 	if (child == nullptr) {
 		return nullptr;
 	}
@@ -216,7 +226,7 @@ void exit_task(int status)
 {
 	while (true) {
 		if (t->messages.empty()) {
-			t->state = TASK_WAITING;
+			switch_next_task(true);
 			continue;
 		}
 
@@ -248,9 +258,11 @@ void initialize_task()
 {
 	tasks = std::array<task*, MAX_TASKS>();
 	list_init(&run_queue);
+	// pending_messages = std::queue<message, kernel_allocator<message>>();
 
 	for (const auto& t_info : initial_tasks) {
-		task* new_task = create_task(t_info.name, t_info.addr, t_info.is_init);
+		task* new_task = create_task(t_info.name, t_info.addr, t_info.setup_context,
+									 t_info.is_initilized);
 		if (new_task != nullptr) {
 			schedule_task(new_task->id);
 		}
@@ -268,12 +280,14 @@ task::task(int id,
 		   const char* task_name,
 		   uint64_t task_addr,
 		   task_state state,
-		   bool is_init)
+		   bool setup_context,
+		   bool is_initilized)
 	: id{ id },
 	  parent_id{ -1 },
 	  priority{ 2 }, // TODO: Implement priority scheduling
+	  is_initilized{ is_initilized },
 	  state{ state },
-	  stack{ std::vector<uint64_t>() },
+	  stack{ nullptr },
 	  messages{ std::queue<message>() },
 	  message_handlers{
 		  std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>()
@@ -293,13 +307,18 @@ task::task(int id,
 		fds[i].reset();
 	}
 
-	if (!is_init) {
+	if (!setup_context) {
 		return;
 	}
 
-	const size_t stack_size = PAGE_SIZE * 8 / sizeof(stack[0]);
-	stack.resize(stack_size);
-	const uint64_t stack_end = reinterpret_cast<uint64_t>(&stack[stack_size]);
+	stack_size = PAGE_SIZE * 8;
+	stack = static_cast<uint64_t*>(kmalloc(stack_size, KMALLOC_ZEROED, PAGE_SIZE));
+	if (stack == nullptr) {
+		printk(KERN_ERROR, "Failed to allocate stack for task %s", name);
+		return;
+	}
+
+	const uint64_t stack_end = reinterpret_cast<uint64_t>(stack) + stack_size;
 
 	memset(&ctx, 0, sizeof(ctx));
 
@@ -321,7 +340,7 @@ message wait_for_message(int32_t type)
 
 	while (true) {
 		if (t->messages.empty()) {
-			t->state = TASK_WAITING;
+			switch_next_task(true);
 			continue;
 		}
 

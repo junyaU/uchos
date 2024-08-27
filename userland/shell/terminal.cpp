@@ -1,4 +1,5 @@
 #include "terminal.hpp"
+#include "libs/common/types.hpp"
 #include "shell.hpp"
 #include <cstdarg>
 #include <cstddef>
@@ -184,5 +185,5 @@ void terminal::input_char(char c)
 
 void set_cursor_timer(int ms)
 {
-	set_timer(ms, true, timeout_action_t::TERMINAL_CURSOR_BLINK, 4);
+	set_timer(ms, true, timeout_action_t::TERMINAL_CURSOR_BLINK, SHELL_TASK_ID);
 }
