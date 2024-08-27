@@ -181,27 +181,10 @@ void virtio_blk_task()
 
 	init_blk_device();
 
-	t->message_handlers2[IPC_READ_FROM_BLK_DEVICE] = handle_read_request;
-	t->message_handlers2[IPC_WRITE_TO_BLK_DEVICE] = handle_write_request;
+	t->message_handlers[IPC_READ_FROM_BLK_DEVICE] = handle_read_request;
+	t->message_handlers[IPC_WRITE_TO_BLK_DEVICE] = handle_write_request;
 
 	t->is_initilized = true;
 
-	while (true) {
-		if (t->messages.empty()) {
-			switch_next_task(true);
-			continue;
-		}
-
-		t->state = TASK_RUNNING;
-
-		const message m = t->messages.front();
-		t->messages.pop();
-
-		if (m.type < 0 || m.type >= NUM_MESSAGE_TYPES) {
-			continue;
-		}
-
-		t->message_handlers2[m.type](m);
-	}
-	// process_messages(t);
+	process_messages(t);
 }

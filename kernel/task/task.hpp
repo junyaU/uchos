@@ -34,9 +34,7 @@ struct task {
 	page_table_entry* page_table_snapshot;
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;
-	std::array<message_handler_t, NUM_MESSAGE_TYPES> message_handlers2;
-	std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>
-			message_handlers;
+	std::array<message_handler_t, NUM_MESSAGE_TYPES> message_handlers;
 	std::array<std::shared_ptr<file_descriptor>, 10> fds;
 
 	task(int id,

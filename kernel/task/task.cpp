@@ -289,10 +289,7 @@ task::task(int id,
 	  state{ state },
 	  stack{ nullptr },
 	  messages{ std::queue<message>() },
-	  message_handlers2({ std::array<message_handler_t, NUM_MESSAGE_TYPES>() }),
-	  message_handlers{
-		  std::array<std::function<void(const message&)>, NUM_MESSAGE_TYPES>()
-	  },
+	  message_handlers({ std::array<message_handler_t, NUM_MESSAGE_TYPES>() }),
 	  fds{ std::array<std::shared_ptr<file_descriptor>, 10>() }
 {
 	list_elem_init(&run_queue_elem);
