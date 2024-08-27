@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include "page.hpp"
-#include "pool.hpp"
+#include "memory/custom_allocators.hpp"
+#include "memory/page.hpp"
 #include <array>
 #include <cstddef>
 #include <list>

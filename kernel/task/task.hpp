@@ -9,12 +9,10 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
 #include <memory>
 #include <queue>
-#include <unordered_map>
 
 void initialize_task();
 
