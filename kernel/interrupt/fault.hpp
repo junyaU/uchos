@@ -2,6 +2,7 @@
 
 #include "graphics/log.hpp"
 #include "handlers.hpp"
+#include "libs/common/types.hpp"
 #include "memory/paging.hpp"
 #include "memory/paging_utils.h"
 
@@ -34,6 +35,9 @@ enum exception_code {
 __attribute__((no_caller_saved_registers)) void
 get_fault_name(uint64_t code, char* buf);
 
+__attribute__((no_caller_saved_registers)) void
+log_fault_info(const char* fault_type, interrupt_frame* frame);
+
 template<uint64_t error_code, bool has_error_code>
 struct fault_handler;
 
@@ -42,7 +46,10 @@ template<uint64_t error_code>
 struct fault_handler<error_code, false> {
 	static inline __attribute__((interrupt)) void handler(interrupt_frame* frame)
 	{
-		printk(KERN_ERROR, "Unhandled exception: %d", error_code);
+		char buf[30];
+		get_fault_name(error_code, buf);
+		log_fault_info(buf, frame);
+
 		while (true) {
 			__asm__("hlt");
 		}
@@ -66,13 +73,9 @@ struct fault_handler<error_code, true> {
 
 		char buf[30];
 		get_fault_name(error_code, buf);
-		printk(KERN_ERROR, buf);
+		log_fault_info(buf, frame);
+
 		kill_userland(frame);
-		printk(KERN_ERROR, "RIP: %016lx", frame->rip);
-		printk(KERN_ERROR, "RSP: %016lx", frame->rsp);
-		printk(KERN_ERROR, "RFLAGS: %016lx", frame->rflags);
-		printk(KERN_ERROR, "CS: %016lx", frame->cs);
-		printk(KERN_ERROR, "SS: %016lx", frame->ss);
 
 		while (true) {
 			__asm__("hlt");
