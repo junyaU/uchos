@@ -19,6 +19,7 @@ sudo umount $mount_point
 sudo umount $storage_mount_point
 
 qemu-system-x86_64 -m 1G \
+    -d cpu_reset \
     -drive if=pflash,format=raw,file=OVMF_CODE.fd \
     -drive if=pflash,format=raw,file=OVMF_VARS.fd \
     -drive if=ide,index=0,media=disk,format=raw,file=$disk_img \
