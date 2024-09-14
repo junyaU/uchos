@@ -123,15 +123,6 @@ void task_shell()
 	file_system::execute_file(*entry, nullptr);
 }
 
-void task_file_system()
-{
-	task* t = CURRENT_TASK;
-
-	t->is_initilized = true;
-
-	process_messages(t);
-}
-
 void task_usb_handler()
 {
 	task* t = CURRENT_TASK;
