@@ -1,9 +1,9 @@
 #include "hardware/virtio/blk.hpp"
-#include "bit_utils.hpp"
 #include "graphics/log.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
 #include "libs/common/types.hpp"
+#include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
@@ -72,8 +72,8 @@ error_t write_to_blk_device(char* buffer, uint64_t sector, uint32_t len)
 {
 	ASSERT_OK(validate_length(len));
 
-	virtio_blk_req* req =
-			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), KMALLOC_ZEROED);
+	virtio_blk_req* req = (virtio_blk_req*)kmalloc(sizeof(virtio_blk_req),
+												   KMALLOC_ZEROED, PAGE_SIZE);
 	if (req == nullptr) {
 		return ERR_NO_MEMORY;
 	}
@@ -118,8 +118,8 @@ error_t read_from_blk_device(char* buffer, uint64_t sector, uint32_t len)
 {
 	ASSERT_OK(validate_length(len));
 
-	virtio_blk_req* req =
-			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), KMALLOC_ZEROED);
+	virtio_blk_req* req = (virtio_blk_req*)kmalloc(sizeof(virtio_blk_req),
+												   KMALLOC_ZEROED, PAGE_SIZE);
 	if (req == nullptr) {
 		return ERR_NO_MEMORY;
 	}
