@@ -188,7 +188,7 @@ pid_t sys_fork(void)
 {
 	context current_ctx;
 	memset(&current_ctx, 0, sizeof(current_ctx));
-	__asm__ volatile("mov %%rdi, %0" : "=r"(current_ctx.rdi));
+	asm volatile("mov %%rdi, %0" : "=r"(current_ctx.rdi));
 	get_current_context(&current_ctx);
 
 	task* t = CURRENT_TASK;
@@ -265,6 +265,7 @@ pid_t sys_wait(uint64_t arg1)
 	while (true) {
 		if (t->messages.empty()) {
 			t->state = TASK_WAITING;
+			asm("pause");
 			continue;
 		}
 
