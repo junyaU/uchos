@@ -89,13 +89,13 @@ void dump_page_tables(vaddr_t addr)
 
 page_table_entry* new_page_table()
 {
-	void* base_addr = kmalloc(PAGE_SIZE, KMALLOC_ZEROED);
-	if (base_addr == nullptr) {
+	void* addr = kmalloc(PAGE_SIZE, KMALLOC_ZEROED, PAGE_SIZE);
+	if (addr == nullptr) {
 		printk(KERN_ERROR, "Failed to allocate memory for page table.");
 		return nullptr;
 	}
 
-	return reinterpret_cast<page_table_entry*>(base_addr);
+	return reinterpret_cast<page_table_entry*>(addr);
 }
 
 page_table_entry* set_new_page_table(page_table_entry& entry)

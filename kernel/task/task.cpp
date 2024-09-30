@@ -203,7 +203,7 @@ void switch_next_task(bool sleep_current_task)
 		CURRENT_TASK->state = TASK_WAITING;
 	}
 
-	__asm__("int %0" : : "i"(interrupt_vector::SWITCH_TASK));
+	asm("int %0" : : "i"(interrupt_vector::SWITCH_TASK));
 }
 
 void exit_task(int status)

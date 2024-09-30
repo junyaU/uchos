@@ -3,7 +3,6 @@
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
 #include "libs/common/types.hpp"
-#include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
@@ -72,8 +71,8 @@ error_t write_to_blk_device(char* buffer, uint64_t sector, uint32_t len)
 {
 	ASSERT_OK(validate_length(len));
 
-	virtio_blk_req* req = (virtio_blk_req*)kmalloc(sizeof(virtio_blk_req),
-												   KMALLOC_ZEROED, PAGE_SIZE);
+	virtio_blk_req* req =
+			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), KMALLOC_ZEROED);
 	if (req == nullptr) {
 		return ERR_NO_MEMORY;
 	}
@@ -81,14 +80,12 @@ error_t write_to_blk_device(char* buffer, uint64_t sector, uint32_t len)
 	req->type = VIRTIO_BLK_T_OUT;
 	req->sector = sector;
 
-	memcpy(req->data, buffer, len);
-
 	virtio_entry chain[3];
 	chain[0].addr = (uint64_t)req;
 	chain[0].len = sizeof(uint32_t) * 2 + sizeof(uint64_t);
 	chain[0].write = false;
 
-	chain[1].addr = (uint64_t)&req->data;
+	chain[1].addr = (uint64_t)buffer;
 	chain[1].len = len;
 	chain[1].write = false;
 
@@ -118,8 +115,8 @@ error_t read_from_blk_device(char* buffer, uint64_t sector, uint32_t len)
 {
 	ASSERT_OK(validate_length(len));
 
-	virtio_blk_req* req = (virtio_blk_req*)kmalloc(sizeof(virtio_blk_req),
-												   KMALLOC_ZEROED, PAGE_SIZE);
+	virtio_blk_req* req =
+			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), KMALLOC_ZEROED);
 	if (req == nullptr) {
 		return ERR_NO_MEMORY;
 	}
@@ -132,7 +129,7 @@ error_t read_from_blk_device(char* buffer, uint64_t sector, uint32_t len)
 	chain[0].len = sizeof(uint32_t) * 2 + sizeof(uint64_t);
 	chain[0].write = false;
 
-	chain[1].addr = (uint64_t)&req->data;
+	chain[1].addr = (uint64_t)buffer;
 	chain[1].len = len;
 	chain[1].write = true;
 
@@ -147,13 +144,13 @@ error_t read_from_blk_device(char* buffer, uint64_t sector, uint32_t len)
 	switch_next_task(true);
 
 	if (req->status != VIRTIO_BLK_S_OK) {
-		printk(KERN_ERROR, "Failed to read from block device.");
+		printk(KERN_ERROR, "Failed to read from block device. status: %d",
+			   req->status);
 		kfree(req);
 
 		return ERR_FAILED_WRITE_TO_DEVICE;
 	}
 
-	memcpy(buffer, req->data, len);
 	kfree(req);
 
 	return OK;
