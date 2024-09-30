@@ -61,7 +61,6 @@ struct virtio_blk_req {
 	uint32_t type;
 	uint32_t reserved;
 	uint64_t sector;
-	uint8_t data[SECTOR_SIZE];
 	uint8_t status;
 } __attribute__((packed));
 
