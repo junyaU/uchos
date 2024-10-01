@@ -53,9 +53,6 @@ private:
 	T* next_free_;
 };
 
-#include <cstddef>
-#include <limits>
-
 template<typename T>
 class kernel_allocator
 {

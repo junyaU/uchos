@@ -5,7 +5,6 @@
 #include "hardware/virtio/blk.hpp"
 #include "interrupt/vector.hpp"
 #include "list.hpp"
-#include "memory/custom_allocators.hpp"
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/paging_utils.h"
@@ -24,7 +23,6 @@
 
 list_t run_queue;
 std::array<task*, MAX_TASKS> tasks;
-std::queue<message, kernel_allocator<message>> pending_messages;
 
 task* CURRENT_TASK = nullptr;
 task* IDLE_TASK = nullptr;
@@ -256,7 +254,6 @@ void initialize_task()
 {
 	tasks = std::array<task*, MAX_TASKS>();
 	list_init(&run_queue);
-	pending_messages = std::queue<message, kernel_allocator<message>>();
 
 	for (const auto& t_info : initial_tasks) {
 		task* new_task = create_task(t_info.name, t_info.addr, t_info.setup_context,

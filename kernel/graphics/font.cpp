@@ -233,22 +233,24 @@ void initialize_freetype()
 		return;
 	}
 
-	auto* entry = file_system::find_directory_entry_by_path("/NIHONGO.TTF");
-	if (entry == nullptr) {
-		printk(KERN_ERROR, "NIHONGO.TTF not found");
-		return;
-	}
+	// TODO: fix this
 
-	const size_t file_size = entry->file_size;
+	// auto* entry = file_system::find_directory_entry_by_path("/NIHONGO.TTF");
+	// if (entry == nullptr) {
+	// 	printk(KERN_ERROR, "NIHONGO.TTF not found");
+	// 	return;
+	// }
 
-	__asm__("cli");
-	nihongo_font_data = new std::vector<uint8_t>(file_size);
-	__asm__("sti");
+	// const size_t file_size = entry->file_size;
 
-	size_t loaded_size =
-			file_system::load_file(nihongo_font_data->data(), file_size, *entry);
-	if (loaded_size != file_size) {
-		printk(KERN_ERROR, "Failed to load NIHONGO.TTF");
-		return;
-	}
+	// __asm__("cli");
+	// nihongo_font_data = new std::vector<uint8_t>(file_size);
+	// __asm__("sti");
+
+	// size_t loaded_size =
+	// 		file_system::load_file(nihongo_font_data->data(), file_size, *entry);
+	// if (loaded_size != file_size) {
+	// 	printk(KERN_ERROR, "Failed to load NIHONGO.TTF");
+	// 	return;
+	// }
 }

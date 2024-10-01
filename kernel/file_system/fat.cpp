@@ -9,22 +9,23 @@
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 #include <algorithm>
-#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <libs/common/types.hpp>
+#include <queue>
 #include <string.h>
 #include <utility>
 #include <vector>
 
 namespace file_system
 {
-bios_parameter_block* BOOT_VOLUME_IMAGE;
+bios_parameter_block* VOLUME_BPB;
 unsigned long BYTES_PER_CLUSTER;
 uint32_t* FAT_TABLE;
 unsigned int FAT_TABLE_SECTOR;
 directory_entry* ROOT_DIR;
+std::queue<message> pending_messages;
 
 std::vector<char*> parse_path(const char* path)
 {
@@ -81,27 +82,6 @@ void read_dir_entry_name(const directory_entry& entry, char* dest)
 	}
 }
 
-void register_file_name(const char* name, directory_entry* entry)
-{
-	memset(entry->name, 0x20, 11);
-
-	const char* dot = strchr(name, '.');
-	if (dot == nullptr) {
-		for (int i = 0; i < 8 && name[i] != 0; ++i) {
-			entry->name[i] = toupper(name[i]);
-		}
-		return;
-	}
-
-	for (int i = 0; i < 8 && i < dot - name; ++i) {
-		entry->name[i] = toupper(name[i]);
-	}
-
-	for (int i = 0; i < 3 && dot[i + 1] != 0; ++i) {
-		entry->name[8 + i] = toupper(dot[i + 1]);
-	}
-}
-
 bool entry_name_is_equal(const directory_entry& entry, const char* name)
 {
 	char entry_name[13];
@@ -110,39 +90,18 @@ bool entry_name_is_equal(const directory_entry& entry, const char* name)
 	return strcmp(entry_name, name) == 0;
 }
 
-uintptr_t get_cluster_addr(cluster_t cluster_id)
-{
-	const unsigned long start_sector_num =
-			BOOT_VOLUME_IMAGE->reserved_sector_count +
-			BOOT_VOLUME_IMAGE->num_fats * BOOT_VOLUME_IMAGE->fat_size_32 +
-			(cluster_id - 2) * BOOT_VOLUME_IMAGE->sectors_per_cluster;
-
-	// TODO: 本来はメモリから読み込むのではなく、ストレージから読み込む
-	return reinterpret_cast<uintptr_t>(BOOT_VOLUME_IMAGE) +
-		   start_sector_num * BOOT_VOLUME_IMAGE->bytes_per_sector;
-}
-
 unsigned int calc_start_sector(cluster_t cluster_id)
 {
-	return BOOT_VOLUME_IMAGE->reserved_sector_count +
-		   BOOT_VOLUME_IMAGE->num_fats * BOOT_VOLUME_IMAGE->fat_size_32 +
-		   (cluster_id - 2) * BOOT_VOLUME_IMAGE->sectors_per_cluster;
+	return VOLUME_BPB->reserved_sector_count +
+		   VOLUME_BPB->num_fats * VOLUME_BPB->fat_size_32 +
+		   (cluster_id - 2) * VOLUME_BPB->sectors_per_cluster;
 }
 
 void initialize_fat(void* volume_image)
 {
-	BOOT_VOLUME_IMAGE = reinterpret_cast<bios_parameter_block*>(volume_image);
-	BYTES_PER_CLUSTER =
-			static_cast<unsigned long>(BOOT_VOLUME_IMAGE->bytes_per_sector) *
-			BOOT_VOLUME_IMAGE->sectors_per_cluster;
-
-	const auto fat_offset = BOOT_VOLUME_IMAGE->reserved_sector_count *
-							BOOT_VOLUME_IMAGE->bytes_per_sector;
-
-	// TODO:
-	// メモリから読み込むのではなくストレージから読みこんで、FAT_TABLEに格納する
-	FAT_TABLE = reinterpret_cast<uint32_t*>(
-			reinterpret_cast<uintptr_t>(BOOT_VOLUME_IMAGE) + fat_offset);
+	VOLUME_BPB = reinterpret_cast<bios_parameter_block*>(volume_image);
+	BYTES_PER_CLUSTER = static_cast<unsigned long>(VOLUME_BPB->bytes_per_sector) *
+						VOLUME_BPB->sectors_per_cluster;
 }
 
 cluster_t next_cluster(cluster_t cluster_id)
@@ -155,117 +114,7 @@ cluster_t next_cluster(cluster_t cluster_id)
 	return next;
 }
 
-directory_entry* find_directory_entry(const char* name, cluster_t cluster_id)
-{
-	if (cluster_id == 0) {
-		cluster_id = BOOT_VOLUME_IMAGE->root_cluster;
-	}
-
-	const auto entries_per_cluster = BYTES_PER_CLUSTER / sizeof(directory_entry);
-
-	while (cluster_id != END_OF_CLUSTER_CHAIN) {
-		auto* dir_entry = get_sector<directory_entry>(cluster_id);
-
-		for (int i = 0; i < entries_per_cluster; i++) {
-			if (dir_entry[i].name[0] == 0x00) {
-				return nullptr;
-			}
-
-			if (dir_entry[i].name[0] == 0xE5) {
-				continue;
-			}
-
-			if (dir_entry[i].attribute == entry_attribute::LONG_NAME) {
-				continue;
-			}
-
-			if (entry_name_is_equal(dir_entry[i], name)) {
-				return &dir_entry[i];
-			}
-		}
-
-		cluster_id = next_cluster(cluster_id);
-	}
-
-	return nullptr;
-}
-
-directory_entry* find_directory_entry_by_path(const char* path)
-{
-	const size_t path_len = strlen(path);
-	char path_copy[path_len + 1];
-	memset(path_copy, 0, sizeof(path_copy));
-	if (path != nullptr) {
-		memcpy(path_copy, path, path_len + 1);
-	}
-
-	to_upper(path_copy);
-
-	auto path_list = parse_path(path_copy);
-	auto cluster_id = BOOT_VOLUME_IMAGE->root_cluster;
-	auto* entry = get_sector<directory_entry>(cluster_id);
-
-	for (const auto& path_name : path_list) {
-		entry = find_directory_entry(path_name, cluster_id);
-		if (entry == nullptr) {
-			return nullptr;
-		}
-
-		cluster_id = entry->first_cluster();
-	}
-
-	return entry;
-}
-
-std::vector<directory_entry*> list_entries_in_directory(directory_entry* entry)
-{
-	std::vector<directory_entry*> result;
-
-	auto cluster_id = entry->first_cluster();
-	if (entry->attribute == entry_attribute::VOLUME_ID) {
-		cluster_id = BOOT_VOLUME_IMAGE->root_cluster;
-	}
-
-	const auto entries_per_cluster = BYTES_PER_CLUSTER / sizeof(directory_entry);
-
-	while (cluster_id != END_OF_CLUSTER_CHAIN) {
-		auto* dir_entry = get_sector<directory_entry>(cluster_id);
-
-		for (int i = 0; i < entries_per_cluster; ++i) {
-			if (dir_entry[i].name[0] == 0x00) {
-				return result;
-			}
-
-			if (dir_entry[i].name[0] == 0xE5) {
-				continue;
-			}
-
-			if (dir_entry[i].attribute == entry_attribute::LONG_NAME) {
-				continue;
-			}
-
-			result.push_back(&dir_entry[i]);
-		}
-
-		cluster_id = next_cluster(cluster_id);
-	}
-
-	return result;
-}
-
-void execute_file(const directory_entry& entry, const char* args)
-{
-	std::vector<uint8_t> file_buffer(entry.file_size);
-	load_file(file_buffer.data(), entry.file_size,
-			  const_cast<directory_entry&>(entry));
-
-	char command_name[13];
-	read_dir_entry_name(entry, command_name);
-
-	exec_elf(file_buffer.data(), command_name, args);
-}
-
-void execute_file_v2(void* data, const char* name, const char* args)
+void execute_file(void* data, const char* name, const char* args)
 {
 	exec_elf(data, name, args);
 }
@@ -289,82 +138,6 @@ cluster_t extend_cluster_chain(cluster_t last_cluster, int num_clusters)
 	return current_cluster;
 }
 
-directory_entry* allocate_directory_entry(cluster_t cluster_id)
-{
-	while (true) {
-		auto* dir_entry = get_sector<directory_entry>(cluster_id);
-		for (int i = 0; i < BYTES_PER_CLUSTER / sizeof(directory_entry); ++i) {
-			if (dir_entry[i].name[0] == 0x00 || dir_entry[i].name[0] == 0xE5) {
-				return &dir_entry[i];
-			}
-		}
-
-		if (next_cluster(cluster_id) == END_OF_CLUSTER_CHAIN) {
-			break;
-		}
-
-		cluster_id = next_cluster(cluster_id);
-	}
-
-	const cluster_t new_cluster = extend_cluster_chain(cluster_id, 1);
-	if (new_cluster == cluster_id) {
-		return nullptr;
-	}
-
-	auto* dir_entry = get_sector<directory_entry>(new_cluster);
-	memset(dir_entry, 0, BYTES_PER_CLUSTER);
-
-	return &dir_entry[0];
-}
-
-std::pair<const char*, const char*> split_path(char* path)
-{
-	const char* last_slash = strrchr(path, '/');
-	if (last_slash == nullptr) {
-		return { nullptr, path };
-	}
-
-	if (last_slash == path) {
-		return { nullptr, last_slash + 1 };
-	}
-
-	if (last_slash[1] == '\0') {
-		return { nullptr, nullptr };
-	}
-
-	path[last_slash - path] = '\0';
-
-	return { path, last_slash + 1 };
-}
-
-directory_entry* create_file(const char* path)
-{
-	const size_t path_len = strlen(path);
-	char file_path[path_len + 1];
-	memcpy(file_path, path, path_len + 1);
-	auto [parent_path, file_name] = split_path(file_path);
-
-	cluster_t parent_cluster_id = BOOT_VOLUME_IMAGE->root_cluster;
-	if (parent_path != nullptr) {
-		auto* parent_entry = find_directory_entry_by_path(parent_path);
-		if (parent_entry == nullptr) {
-			return nullptr;
-		}
-
-		parent_cluster_id = parent_entry->first_cluster();
-	}
-
-	directory_entry* new_entry = allocate_directory_entry(parent_cluster_id);
-	if (new_entry == nullptr) {
-		return nullptr;
-	}
-
-	new_entry->file_size = 0;
-	register_file_name(file_name, new_entry);
-
-	return new_entry;
-}
-
 cluster_t allocate_cluster_chain(size_t num_clusters)
 {
 	cluster_t first_cluster = 2;
@@ -380,76 +153,9 @@ cluster_t allocate_cluster_chain(size_t num_clusters)
 	return first_cluster;
 }
 
-size_t file_descriptor::read(void* buf, size_t len)
-{
-	uint8_t* p = reinterpret_cast<uint8_t*>(buf);
-	len = std::min(len, entry.file_size - current_file_offset);
-
-	size_t total_read = 0;
-	while (total_read < len) {
-		uint8_t* sector = get_sector<uint8_t>(current_cluster);
-		const size_t cluster_remain = BYTES_PER_CLUSTER - current_cluster_offset;
-		const size_t read_len = std::min(len - total_read, cluster_remain);
-
-		memcpy(&p[total_read], &sector[current_cluster_offset], read_len);
-		total_read += read_len;
-		current_cluster_offset += read_len;
-
-		if (current_cluster_offset == BYTES_PER_CLUSTER) {
-			current_cluster = next_cluster(current_cluster);
-			current_cluster_offset = 0;
-		}
-	}
-
-	current_file_offset += total_read;
-	return total_read;
-}
-
-size_t file_descriptor::write(const void* buf, size_t len)
-{
-	auto num_clusters = [](size_t size) {
-		return (size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
-	};
-
-	if (write_cluster == 0) {
-		write_cluster = allocate_cluster_chain(num_clusters(len));
-		entry.first_cluster_low = write_cluster & 0xFFFF;
-		entry.first_cluster_high = (write_cluster >> 16) & 0xFFFF;
-	}
-
-	const uint8_t* p = reinterpret_cast<const uint8_t*>(buf);
-
-	size_t total_written = 0;
-	while (total_written < len) {
-		if (write_cluster_offset == BYTES_PER_CLUSTER) {
-			const cluster_t next = next_cluster(write_cluster);
-			write_cluster =
-					next == END_OF_CLUSTER_CHAIN
-							? extend_cluster_chain(write_cluster,
-												   num_clusters(len - total_written))
-							: next;
-			write_cluster_offset = 0;
-		}
-
-		uint8_t* sector = get_sector<uint8_t>(write_cluster);
-		const size_t cluster_remain = BYTES_PER_CLUSTER - write_cluster_offset;
-		const size_t write_len = std::min(len, cluster_remain);
-		memcpy(&sector[write_cluster_offset], &p[total_written], write_len);
-
-		total_written += write_len;
-		write_cluster_offset += write_len;
-	}
-
-	file_written_bytes += total_written;
-	entry.file_size = file_written_bytes;
-
-	return total_written;
-}
-
-size_t load_file(void* buf, size_t len, directory_entry& entry)
-{
-	return file_descriptor(entry).read(buf, len);
-}
+// TODO: fix this
+size_t file_descriptor::read(void* buf, size_t len) { return 0; }
+size_t file_descriptor::write(const void* buf, size_t len) { return 0; }
 
 void send_read_req_to_blk_device(unsigned int sector,
 								 size_t len,
@@ -542,11 +248,13 @@ error_t process_file_read_request(const message& m)
 
 void handle_get_bpb(const message& m)
 {
-	initialize_fat(m.data.blk_io.buf);
+	VOLUME_BPB = reinterpret_cast<bios_parameter_block*>(m.data.blk_io.buf);
+	BYTES_PER_CLUSTER = static_cast<unsigned long>(VOLUME_BPB->bytes_per_sector) *
+						VOLUME_BPB->sectors_per_cluster;
 
-	FAT_TABLE_SECTOR = BOOT_VOLUME_IMAGE->reserved_sector_count;
+	FAT_TABLE_SECTOR = VOLUME_BPB->reserved_sector_count;
 
-	size_t table_size = static_cast<size_t>(BOOT_VOLUME_IMAGE->fat_size_32) *
+	size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
 						static_cast<size_t>(SECTOR_SIZE);
 
 	send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size,
@@ -556,7 +264,7 @@ void handle_get_bpb(const message& m)
 void handle_get_fat_table(const message& m)
 {
 	FAT_TABLE = reinterpret_cast<uint32_t*>(m.data.blk_io.buf);
-	unsigned int root_cluster = BOOT_VOLUME_IMAGE->root_cluster;
+	unsigned int root_cluster = VOLUME_BPB->root_cluster;
 	unsigned int start_sector = calc_start_sector(root_cluster);
 
 	send_read_req_to_blk_device(start_sector, BYTES_PER_CLUSTER,
@@ -565,17 +273,23 @@ void handle_get_fat_table(const message& m)
 
 void handle_get_root_dir(const message& m)
 {
-	void* buf = kmalloc(m.data.blk_io.len, KMALLOC_ZEROED);
-	memcpy(buf, m.data.blk_io.buf, m.data.blk_io.len);
-	ROOT_DIR = reinterpret_cast<directory_entry*>(buf);
-
-	kfree(m.data.blk_io.buf);
-
+	ROOT_DIR = reinterpret_cast<directory_entry*>(m.data.blk_io.buf);
 	CURRENT_TASK->is_initilized = true;
+
+	while (!pending_messages.empty()) {
+		auto msg = pending_messages.front();
+		pending_messages.pop();
+		CURRENT_TASK->messages.push(msg);
+	}
 }
 
 void handle_get_file_info(const message& m)
 {
+	if (!CURRENT_TASK->is_initilized) {
+		pending_messages.push(m);
+		return;
+	}
+
 	const auto* path = m.data.fs_op.path;
 	to_upper(const_cast<char*>(path));
 
@@ -609,6 +323,11 @@ void handle_get_file_info(const message& m)
 
 void handle_read_file_data(const message& m)
 {
+	if (!CURRENT_TASK->is_initilized) {
+		pending_messages.push(m);
+		return;
+	}
+
 	if (m.sender == VIRTIO_BLK_TASK_ID) {
 		process_read_data_response(m);
 		return;
@@ -620,6 +339,8 @@ void handle_read_file_data(const message& m)
 void fat32_task()
 {
 	task* t = CURRENT_TASK;
+	t->is_initilized = false;
+	pending_messages = std::queue<message>();
 
 	init_read_contexts();
 

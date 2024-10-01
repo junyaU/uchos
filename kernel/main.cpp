@@ -1,9 +1,5 @@
-#include "file_system/fat.hpp"
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
-#include "hardware/keyboard.hpp"
-#include "hardware/pci.hpp"
-#include "hardware/usb/xhci/xhci.hpp"
 #include "interrupt/idt.hpp"
 #include "memory/bootstrap_allocator.hpp"
 #include "memory/buddy_system.hpp"
@@ -62,17 +58,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	syscall::initialize();
 
-	file_system::initialize_fat(volume_image);
-
 	initialize_task();
-
-	initialize_freetype();
-
-	initialize_pci();
-
-	usb::xhci::initialize();
-
-	initialize_keyboard();
 
 	task_kernel();
 }
