@@ -35,10 +35,6 @@ constexpr int IPC_GET_FILE_INFO = 21;
 constexpr int IPC_READ_FILE_DATA = 22;
 constexpr int IPC_RELEASE_FILE_BUFFER = 23;
 
-// file system operations
-constexpr int FS_OP_LIST = 0;
-constexpr int FS_OP_READ = 1;
-
 constexpr int NUM_MESSAGE_TYPES = 24;
 
 enum class timeout_action_t : uint8_t {
@@ -79,11 +75,6 @@ struct message {
 			char s[128];
 			int level;
 		} write;
-
-		struct {
-			char path[30];
-			int operation;
-		} fs_operation;
 
 		struct {
 			char buf[128];

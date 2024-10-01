@@ -153,10 +153,6 @@ cluster_t allocate_cluster_chain(size_t num_clusters)
 	return first_cluster;
 }
 
-// TODO: fix this
-size_t file_descriptor::read(void* buf, size_t len) { return 0; }
-size_t file_descriptor::write(const void* buf, size_t len) { return 0; }
-
 void send_read_req_to_blk_device(unsigned int sector,
 								 size_t len,
 								 int32_t dst_type,
