@@ -225,29 +225,6 @@ EFI_STATUS EFIAPI LoaderMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE* system_t
 		}
 	}
 
-	VOID* volume_image;
-
-	EFI_BLOCK_IO_PROTOCOL* block_io;
-	status = OpenBlockIoProtocolForLoadedImage(image_handle, &block_io);
-	if (EFI_ERROR(status)) {
-		Print(L"failed to open block io protocol: %r\n", status);
-		while (1)
-			;
-	}
-
-	EFI_BLOCK_IO_MEDIA* media = block_io->Media;
-	UINTN volume_size = (UINTN)media->BlockSize * (media->LastBlock + 1);
-	if (volume_size > 32 * 1024 * 1024) {
-		volume_size = 32 * 1024 * 1024;
-	}
-
-	status = ReadBlocks(block_io, media->MediaId, volume_size, &volume_image);
-	if (EFI_ERROR(status)) {
-		Print(L"failed to read blocks: %r\n", status);
-		while (1)
-			;
-	}
-
 	CHAR8 memory_map_buf[4096 * 4];
 	struct MemoryMap memory_map = {
 		sizeof(memory_map_buf), memory_map_buf, 0, 0, 0, 0
@@ -268,11 +245,10 @@ EFI_STATUS EFIAPI LoaderMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE* system_t
 
 	UINT64 entry_addr = *(UINT64*)(kernel_buf + 24);
 
-	typedef void 
-	KernelEntryPoint(const struct FrameBufferConf* frame_buffer_conf,
-					 const struct MemoryMap* memory_map, const VOID* rsdp,
-					 VOID* volume_image);
-	((KernelEntryPoint*)entry_addr)(&conf, &memory_map, rsdp, volume_image);
+	typedef void KernelEntryPoint(const struct FrameBufferConf* frame_buffer_conf,
+								  const struct MemoryMap* memory_map,
+								  const VOID* rsdp);
+	((KernelEntryPoint*)entry_addr)(&conf, &memory_map, rsdp);
 
 	return EFI_SUCCESS;
 }
