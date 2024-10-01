@@ -32,7 +32,7 @@ void load_idt(size_t size, uint64_t addr)
 
 void initialize_interrupt()
 {
-	printk(KERN_INFO, "Initializing interrupt...");
+	LOG_INFO("Initializing interrupt...");
 
 	auto set_entry = [](int irq, auto handler, uint16_t ist = 0) {
 		set_idt_entry(idt[irq], reinterpret_cast<uint64_t>(handler),
@@ -74,5 +74,5 @@ void initialize_interrupt()
 
 	__asm__("sti");
 
-	printk(KERN_INFO, "Interrupt initialized successfully.");
+	LOG_INFO("Interrupt initialized successfully.");
 }

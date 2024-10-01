@@ -42,10 +42,10 @@ const fixed_acpi_description_table* fadt;
 
 void initialize(const root_system_description_pointer& rsdp)
 {
-	printk(KERN_INFO, "Initializing ACPI...");
+	LOG_INFO("Initializing ACPI...");
 
 	if (!rsdp.is_valid()) {
-		printk(KERN_ERROR, "acpi is invalid");
+		LOG_ERROR("acpi is invalid");
 		return;
 	}
 
@@ -61,13 +61,13 @@ void initialize(const root_system_description_pointer& rsdp)
 	}
 
 	if (fadt == nullptr) {
-		printk(KERN_ERROR, "FADT is not found");
+		LOG_ERROR("FADT is not found");
 		return;
 	}
 
-	printk(KERN_INFO, "PM timer is available");
+	LOG_INFO("PM timer is available");
 
-	printk(KERN_INFO, "ACPI initialized successfully.");
+	LOG_INFO("ACPI initialized successfully.");
 }
 
 const int PM_TIMER_FREQUENCY = 3579545;

@@ -34,7 +34,7 @@ uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
 	if (id == 0) {
 		id = last_id_++;
 	} else if (last_id_ < id) {
-		printk(KERN_ERROR, "invalid timer id: %lu", id);
+		LOG_ERROR("invalid timer id: %lu", id);
 		return 0;
 	}
 
@@ -63,7 +63,7 @@ void kernel_timer::add_switch_task_event(unsigned long millisec)
 void kernel_timer::remove_timer_event(uint64_t id)
 {
 	if (id == 0 || last_id_ < id) {
-		printk(KERN_ERROR, "invalid timer id: %lu", id);
+		LOG_ERROR("invalid timer id: %lu", id);
 		return;
 	}
 
@@ -106,15 +106,15 @@ bool kernel_timer::increment_tick()
 kernel_timer* ktimer;
 void initialize_timer()
 {
-	printk(KERN_INFO, "Initializing logical timer...");
+	LOG_INFO("Initializing logical timer...");
 
 	void* addr = kmalloc(sizeof(kernel_timer), KMALLOC_ZEROED);
 	if (addr == nullptr) {
-		printk(KERN_ERROR, "Failed to allocate memory for kernel timer.");
+		LOG_ERROR("Failed to allocate memory for kernel timer.");
 		return;
 	}
 
 	ktimer = new (addr) kernel_timer;
 
-	printk(KERN_INFO, "Logical timer initialized successfully.");
+	LOG_INFO("Logical timer initialized successfully.");
 }

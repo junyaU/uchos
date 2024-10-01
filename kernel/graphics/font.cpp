@@ -36,13 +36,13 @@ void render_unicode(char32_t c, FT_Face face)
 {
 	const auto glyph_index = FT_Get_Char_Index(face, c);
 	if (glyph_index == 0) {
-		printk(KERN_ERROR, "Glyph not found");
+		LOG_ERROR("Glyph not found");
 		return;
 	}
 
 	if (int err = FT_Load_Glyph(face, glyph_index,
 								FT_LOAD_RENDER | FT_LOAD_TARGET_MONO)) {
-		printk(KERN_ERROR, "Failed to load glyph: %d", err);
+		LOG_ERROR("Failed to load glyph: %d", err);
 		return;
 	}
 }
@@ -212,12 +212,12 @@ FT_Face new_face()
 
 	if (int err = FT_New_Memory_Face(ft_library, nihongo_font_data->data(),
 									 nihongo_font_data->size(), 0, &face)) {
-		printk(KERN_ERROR, "Failed to create new face: %d", err);
+		LOG_ERROR("Failed to create new face: %d", err);
 		return 0;
 	}
 
 	if (int err = FT_Set_Pixel_Sizes(face, 16, 16)) {
-		printk(KERN_ERROR, "Failed to set pixel size: %d", err);
+		LOG_ERROR("Failed to set pixel size: %d", err);
 		return 0;
 	}
 
@@ -229,7 +229,7 @@ void initialize_font() { kfont = new (bitmap_font_buffer) bitmap_font{ 8, 16 }; 
 void initialize_freetype()
 {
 	if (int err = FT_Init_FreeType(&ft_library)) {
-		printk(KERN_ERROR, "Failed to initialize FreeType: %d", err);
+		LOG_ERROR("Failed to initialize FreeType: %d", err);
 		return;
 	}
 

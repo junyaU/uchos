@@ -31,3 +31,10 @@ struct term_file_descriptor : public file_descriptor {
 	size_t read(void* buf, size_t len) override;
 	size_t write(const void* buf, size_t len) override;
 };
+
+#define LOG(level, fmt, ...)                                                        \
+	printk(level, "[%s:%d] " fmt "", __func__, __LINE__, ##__VA_ARGS__)
+
+#define LOG_DEBUG(fmt, ...) LOG(KERN_DEBUG, fmt, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...) LOG(KERN_INFO, fmt, ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) LOG(KERN_ERROR, fmt, ##__VA_ARGS__)

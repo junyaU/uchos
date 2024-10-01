@@ -32,14 +32,14 @@ void device::control_in(const control_transfer_data& data)
 	usb::device::control_in(data);
 
 	if (data.ep_id.number() < 0 || data.ep_id.number() > 15) {
-		printk(KERN_ERROR, "invalid endpoint id");
+		LOG_ERROR("invalid endpoint id");
 		return;
 	}
 
 	const device_context_index dc_index{ data.ep_id };
 	ring* transfer_ring = transfer_rings_[dc_index.value - 1];
 	if (transfer_ring == nullptr) {
-		printk(KERN_ERROR, "transfer ring is not allocated");
+		LOG_ERROR("transfer ring is not allocated");
 		return;
 	}
 
@@ -74,14 +74,14 @@ void device::control_out(const control_transfer_data& data)
 	usb::device::control_out(data);
 
 	if (data.ep_id.number() < 0 || data.ep_id.number() > 15) {
-		printk(KERN_ERROR, "invalid endpoint id");
+		LOG_ERROR("invalid endpoint id");
 		return;
 	}
 
 	const device_context_index dc_index{ data.ep_id };
 	ring* transfer_ring = transfer_rings_[dc_index.value - 1];
 	if (transfer_ring == nullptr) {
-		printk(KERN_ERROR, "transfer ring is not allocated");
+		LOG_ERROR("transfer ring is not allocated");
 		return;
 	}
 
@@ -118,7 +118,7 @@ void device::interrupt_in(const interrupt_transfer_data& data)
 	const device_context_index dc_index{ data.ep_id };
 	ring* transfer_ring = transfer_rings_[dc_index.value - 1];
 	if (transfer_ring == nullptr) {
-		printk(KERN_ERROR, "transfer ring is not allocated");
+		LOG_ERROR("transfer ring is not allocated");
 		return;
 	}
 
@@ -136,8 +136,8 @@ void device::interrupt_out(const interrupt_transfer_data& data)
 {
 	usb::device::interrupt_out(data);
 
-	printk(KERN_DEBUG, "interrupt_out: ep_id: %d, buf: %p, len: %d\n",
-		   data.ep_id.number(), data.buf, data.len);
+	LOG_DEBUG("interrupt_out: ep_id: %d, buf: %p, len: %d\n", data.ep_id.number(),
+			  data.buf, data.len);
 }
 
 void device::on_transfer_event_received(const transfer_event_trb& event_trb)
@@ -147,8 +147,8 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 	const bool is_success = event_trb.bits.completion_code == 1 ||
 							event_trb.bits.completion_code == 13;
 	if (!is_success) {
-		printk(KERN_DEBUG, "transfer failed: completion code: %d\n",
-			   event_trb.bits.completion_code);
+		LOG_DEBUG("transfer failed: completion code: %d\n",
+				  event_trb.bits.completion_code);
 		return;
 	}
 
@@ -165,7 +165,7 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 
 	auto opt_setup_stage_trb = setup_stages_.get(issued_trb);
 	if (!opt_setup_stage_trb) {
-		printk(KERN_ERROR, "setup stage trb not found");
+		LOG_ERROR("setup stage trb not found");
 		return;
 	}
 
@@ -186,7 +186,7 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 		transfer_length = data_stage->bits.trb_transfer_length - residual_length;
 	} else if (auto* status_stage = trb_dynamic_cast<status_stage_trb>(issued_trb);
 			   status_stage == nullptr) {
-		printk(KERN_ERROR, "invalid trb type");
+		LOG_ERROR("invalid trb type");
 		return;
 	}
 

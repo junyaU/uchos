@@ -9,17 +9,16 @@ extern "C" int main(int argc, char** argv)
 {
 	pid_t pid = sys_getpid();
 	message m = { .type = IPC_FILE_SYSTEM_OPERATION, .sender = pid };
-	m.data.fs_operation.operation = FS_OP_LIST;
 
 	char* input = argv[1];
 
 	if (input == nullptr) {
-		memcpy(m.data.fs_operation.path, "/", 2);
+		// memcpy(m.data.fs_operation.path, "/", 2);
 	} else {
-		memcpy(m.data.fs_operation.path, input, strlen(input));
+		// memcpy(m.data.fs_operation.path, input, strlen(input));
 	}
 
-	send_message(FS_TASK_ID, &m);
+	// send_message(FS_TASK_ID, &m);
 
 	exit(0);
 }

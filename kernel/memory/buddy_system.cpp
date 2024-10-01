@@ -38,7 +38,7 @@ void* buddy_system::allocate(size_t size)
 {
 	const int order = calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
 	if (order == -1) {
-		printk(KERN_ERROR, "invalid size: %d", size);
+		LOG_ERROR("invalid size: %d", size);
 		return nullptr;
 	}
 
@@ -52,7 +52,7 @@ void* buddy_system::allocate(size_t size)
 		}
 
 		if (next_order == -1) {
-			printk(KERN_ERROR, "failed to allocate memory: order=%d", order);
+			LOG_ERROR("failed to allocate memory: order=%d", order);
 			return nullptr;
 		}
 
@@ -65,8 +65,7 @@ void* buddy_system::allocate(size_t size)
 
 	auto* page = free_lists_[order].front();
 	if (page->is_used()) {
-		printk(KERN_ERROR, "order-%d : page is already used: %p", order,
-			   page->ptr());
+		LOG_ERROR("order-%d : page is already used: %p", order, page->ptr());
 
 		return nullptr;
 	}
@@ -84,13 +83,13 @@ void buddy_system::free(void* addr, size_t size)
 {
 	auto* start_page = &pages[reinterpret_cast<uintptr_t>(addr) / PAGE_SIZE];
 	if (start_page->is_free()) {
-		printk(KERN_ERROR, "double free detected at address: %p", addr);
+		LOG_ERROR("double free detected at address: %p", addr);
 		return;
 	}
 
 	int order = calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
 	if (order == -1) {
-		printk(KERN_ERROR, "invalid size: %d", size);
+		LOG_ERROR("invalid size: %d", size);
 		return;
 	}
 
@@ -179,27 +178,26 @@ void buddy_system::register_memory_blocks(size_t num_total_pages, page* start_pa
 void buddy_system::print_free_lists(int order) const
 {
 	if (order != -1) {
-		printk(KERN_INFO, "order-%d remaining blocks: %d", order,
-			   free_lists_[order].size());
+		LOG_INFO("order-%d remaining blocks: %d", order, free_lists_[order].size());
 		for (const auto& page : free_lists_[order]) {
-			printk(KERN_DEBUG, " %p", page->ptr());
+			LOG_DEBUG(" %p", page->ptr());
 		}
-		printk(KERN_DEBUG, "\n");
+		LOG_DEBUG("\n");
 		return;
 	}
 
 	for (int i = 0; i <= MAX_ORDER; i++) {
-		printk(KERN_INFO, "order-%d remaining blocks: %d", i, free_lists_[i].size());
+		LOG_INFO("order-%d remaining blocks: %d", i, free_lists_[i].size());
 		for (const auto& page : free_lists_[i]) {
-			printk(KERN_DEBUG, " %p", page->ptr());
+			LOG_DEBUG(" %p", page->ptr());
 		}
-		printk(KERN_DEBUG, "\n");
+		LOG_DEBUG("\n");
 	}
 }
 
 void initialize_memory_manager()
 {
-	printk(KERN_INFO, "Initializing memory manager...");
+	LOG_INFO("Initializing memory manager...");
 
 	memory_manager = new buddy_system();
 
@@ -228,5 +226,5 @@ void initialize_memory_manager()
 		memory_manager->register_memory_blocks(num_total_pages, &pages[start_index]);
 	}
 
-	printk(KERN_INFO, "Memory manager initialized successfully.");
+	LOG_INFO("Memory manager initialized successfully.");
 }

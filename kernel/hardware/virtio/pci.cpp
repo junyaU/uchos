@@ -70,7 +70,7 @@ error_t negotiate_features(virtio_pci_device& virtio_dev)
 
 	virtio_dev.common_cfg->device_status |= VIRTIO_STATUS_FEATURES_OK;
 	if ((virtio_dev.common_cfg->device_status & VIRTIO_STATUS_FEATURES_OK) == 0) {
-		printk(KERN_ERROR, "Virtio device does not support features");
+		LOG_ERROR("Virtio device does not support features");
 	}
 
 	return OK;
@@ -115,7 +115,7 @@ error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 
 		virtio_dev.common_cfg->queue_msix_vector = 1;
 		if (virtio_dev.common_cfg->queue_msix_vector == NO_VECTOR) {
-			printk(KERN_ERROR, "Failed to allocate MSI-X vector for virtqueue");
+			LOG_ERROR("Failed to allocate MSI-X vector for virtqueue");
 			return ERR_NO_MEMORY;
 		}
 
@@ -141,7 +141,7 @@ error_t configure_pci_common_cfg(virtio_pci_device& virtio_dev)
 
 	virtio_dev.common_cfg->config_msix_vector = 0;
 	if (virtio_dev.common_cfg->config_msix_vector == NO_VECTOR) {
-		printk(KERN_ERROR, "Failed to allocate MSI-X vector for virtio device");
+		LOG_ERROR("Failed to allocate MSI-X vector for virtio device");
 		return ERR_NO_MEMORY;
 	}
 
@@ -183,19 +183,19 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 				break;
 
 			case VIRTIO_PCI_CAP_ISR_CFG:
-				printk(KERN_INFO, "ISR CFG not supported");
+				LOG_INFO("ISR CFG not supported");
 				break;
 
 			case VIRTIO_PCI_CAP_DEVICE_CFG:
-				printk(KERN_INFO, "Device CFG not supported");
+				LOG_INFO("Device CFG not supported");
 				break;
 
 			case VIRTIO_PCI_CAP_PCI_CFG:
-				printk(KERN_INFO, "PCI CFG not supported");
+				LOG_INFO("PCI CFG not supported");
 				break;
 
 			default:
-				printk(KERN_ERROR, "Unknown virtio pci cap");
+				LOG_ERROR("Unknown virtio pci cap");
 		}
 
 		virtio_dev.caps = virtio_dev.caps->next;
