@@ -120,7 +120,7 @@ void initialize_slab_allocator();
 	do {                                                                            \
 		(ptr) = kmalloc(size, flags);                                               \
 		if ((ptr) == nullptr) {                                                     \
-			printk(KERN_ERROR, "failed to allocate memory: %s", #ptr);              \
+			LOG_ERROR("failed to allocate memory: %s", #ptr);                       \
 			return;                                                                 \
 		}                                                                           \
 	} while (0)

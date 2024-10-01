@@ -68,7 +68,7 @@ struct fault_handler<error_code, true> {
 				return;
 			}
 
-			printk(KERN_ERROR, "Page fault at %016lx", fault_addr);
+			LOG_ERROR("Page fault at %016lx", fault_addr);
 		}
 
 		char buf[30];

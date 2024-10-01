@@ -27,7 +27,7 @@ __attribute__((interrupt)) void on_xhci_interrupt(interrupt_frame* frame)
 
 __attribute__((interrupt)) void on_virtio_interrupt(interrupt_frame* frame)
 {
-	printk(KERN_ERROR, "virtio interrupt");
+	LOG_ERROR("virtio interrupt");
 	notify_end_of_interrupt();
 }
 

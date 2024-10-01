@@ -34,14 +34,14 @@ error_t handle_ool_memory_alloc(message& m, task* dst)
 error_t send_message(pid_t dst_id, message* m)
 {
 	if (dst_id == -1 || m->sender == dst_id) {
-		printk(KERN_ERROR, "invalid destination task id : dest = %d, sender = %d",
-			   dst_id, m->sender);
+		LOG_ERROR("invalid destination task id : dest = %d, sender = %d", dst_id,
+				  m->sender);
 		return ERR_INVALID_ARG;
 	}
 
 	task* dst = tasks[dst_id];
 	if (dst == nullptr) {
-		printk(KERN_ERROR, "send_message: task %d is not found", dst_id);
+		LOG_ERROR("send_message: task %d is not found", dst_id);
 		return ERR_INVALID_TASK;
 	}
 

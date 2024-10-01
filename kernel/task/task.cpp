@@ -65,7 +65,7 @@ task* create_task(const char* name,
 {
 	const pid_t task_id = get_available_task_id();
 	if (task_id == -1) {
-		printk(KERN_ERROR, "failed to allocate task id");
+		LOG_ERROR("failed to allocate task id");
 		return nullptr;
 	}
 
@@ -86,7 +86,7 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 
 	stack = static_cast<uint64_t*>(kmalloc(stack_size, KMALLOC_ZEROED, PAGE_SIZE));
 	if (stack == nullptr) {
-		printk(KERN_ERROR, "Failed to allocate stack for child task");
+		LOG_ERROR("Failed to allocate stack for child task");
 		return ERR_NO_MEMORY;
 	}
 
@@ -138,12 +138,12 @@ task* copy_task(task* parent, context* parent_ctx)
 	memcpy(&child->ctx, parent_ctx, sizeof(context));
 
 	if (IS_ERR(child->copy_parent_stack(*parent_ctx))) {
-		printk(KERN_ERROR, "Failed to copy parent stack : %s", parent->name);
+		LOG_ERROR("Failed to copy parent stack : %s", parent->name);
 		return nullptr;
 	}
 
 	if (IS_ERR(child->copy_parent_page_table())) {
-		printk(KERN_ERROR, "Failed to copy parent page table : %s", parent->name);
+		LOG_ERROR("Failed to copy parent page table : %s", parent->name);
 		return nullptr;
 	}
 
@@ -167,7 +167,7 @@ task* get_scheduled_task()
 void schedule_task(pid_t id)
 {
 	if (tasks.size() <= id || tasks[id] == nullptr) {
-		printk(KERN_ERROR, "schedule_task: task %d is not found", id);
+		LOG_ERROR("schedule_task: task %d is not found", id);
 		return;
 	}
 
@@ -307,7 +307,7 @@ task::task(int id,
 	stack_size = PAGE_SIZE * 8;
 	stack = static_cast<uint64_t*>(kmalloc(stack_size, KMALLOC_ZEROED, PAGE_SIZE));
 	if (stack == nullptr) {
-		printk(KERN_ERROR, "Failed to allocate stack for task %s", name);
+		LOG_ERROR("Failed to allocate stack for task %s", name);
 		return;
 	}
 

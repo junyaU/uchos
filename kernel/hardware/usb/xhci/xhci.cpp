@@ -44,7 +44,7 @@ void initialize_device(controller& xhc, uint8_t port_id, uint8_t slot_id)
 {
 	auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 	if (dev == nullptr) {
-		printk(KERN_ERROR, "device not found for slot id %d", slot_id);
+		LOG_ERROR("device not found for slot id %d", slot_id);
 		return;
 	}
 
@@ -56,7 +56,7 @@ void complete_configuration(controller& xhc, uint8_t port_id, uint8_t slot_id)
 {
 	auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 	if (dev == nullptr) {
-		printk(KERN_ERROR, "device not found for slot id %d", slot_id);
+		LOG_ERROR("device not found for slot id %d", slot_id);
 		return;
 	}
 
@@ -72,7 +72,7 @@ void address_device(controller& xhc, uint8_t port_id, uint8_t slot_id)
 
 	device* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 	if (dev == nullptr) {
-		printk(KERN_ERROR, "device not found for slot id %d", slot_id);
+		LOG_ERROR("device not found for slot id %d", slot_id);
 		return;
 	}
 
@@ -109,7 +109,7 @@ void on_event(controller& xhc, port_status_change_event_trb& trb)
 		case port_connection_state::RESETTING_PORT:
 			return enable_slot(xhc, p);
 		default:
-			printk(KERN_ERROR, "port %d is not disconnected or resetting", port_id);
+			LOG_ERROR("port %d is not disconnected or resetting", port_id);
 			break;
 	}
 }
@@ -119,7 +119,7 @@ void on_event(controller& xhc, transfer_event_trb& trb)
 	const uint8_t slot_id = trb.bits.slot_id;
 	auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 	if (dev == nullptr) {
-		printk(KERN_ERROR, "device not found for slot id %d", slot_id);
+		LOG_ERROR("device not found for slot id %d", slot_id);
 		return;
 	}
 
@@ -142,7 +142,7 @@ void on_event(controller& xhc, command_completion_event_trb& trb)
 		case enable_slot_command_trb::TYPE:
 			if (port_connection_states[addressing_port] !=
 				port_connection_state::ENABLEING_SLOT) {
-				printk(KERN_ERROR, "port %d is not enabling slot", addressing_port);
+				LOG_ERROR("port %d is not enabling slot", addressing_port);
 				return;
 			}
 
@@ -151,20 +151,20 @@ void on_event(controller& xhc, command_completion_event_trb& trb)
 		case address_device_command_trb::TYPE: {
 			auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 			if (dev == nullptr) {
-				printk(KERN_ERROR, "device not found for slot id %d", slot_id);
+				LOG_ERROR("device not found for slot id %d", slot_id);
 				return;
 			};
 
 			auto port_id = dev->context()->slot.bits.root_hub_port_num;
 			if (port_id != addressing_port) {
-				printk(KERN_ERROR, "port id %d is not equal to addressing port %d",
-					   port_id, addressing_port);
+				LOG_ERROR("port id %d is not equal to addressing port %d", port_id,
+						  addressing_port);
 				return;
 			}
 
 			if (port_connection_states[port_id] !=
 				port_connection_state::ADDRESSING_DEVICE) {
-				printk(KERN_ERROR, "port %d is not addressing device", port_id);
+				LOG_ERROR("port %d is not addressing device", port_id);
 				return;
 			}
 
@@ -184,14 +184,14 @@ void on_event(controller& xhc, command_completion_event_trb& trb)
 		case configure_endpoint_command_trb::TYPE:
 			auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 			if (dev == nullptr) {
-				printk(KERN_ERROR, "device not found for slot id %d", slot_id);
+				LOG_ERROR("device not found for slot id %d", slot_id);
 				return;
 			}
 
 			auto port_id = dev->context()->slot.bits.root_hub_port_num;
 			if (port_connection_states[port_id] !=
 				port_connection_state::CONFIGURING_ENDPOINTS) {
-				printk(KERN_ERROR, "port %d is not configuring endpoints", port_id);
+				LOG_ERROR("port %d is not configuring endpoints", port_id);
 				return;
 			}
 
@@ -344,7 +344,7 @@ void configure_endpoints(controller& xhc, device& dev)
 	const auto port_id{ dev.context()->slot.bits.root_hub_port_num };
 	const int port_speed = xhc.port_at(port_id).speed();
 	if (port_speed == 0 || port_speed > SUPER_SPEED_PLUS) {
-		printk(KERN_ERROR, "unsupported port speed");
+		LOG_ERROR("unsupported port speed");
 		return;
 	}
 
@@ -414,7 +414,7 @@ void process_event(controller& xhc)
 					   trb_dynamic_cast<command_completion_event_trb>(event_trb)) {
 		on_event(xhc, *trb);
 	} else {
-		printk(KERN_ERROR, "unknown event trb type %d", event_trb->bits.trb_type);
+		LOG_ERROR("unknown event trb type %d", event_trb->bits.trb_type);
 	}
 
 	xhc.primary_event_ring()->pop();
@@ -424,7 +424,7 @@ controller* host_controller;
 
 void initialize()
 {
-	printk(KERN_INFO, "Initializing xHCI...");
+	LOG_INFO("Initializing xHCI...");
 
 	pci::device* xhc_dev = nullptr;
 	for (int i = 0; i < pci::num_devices; i++) {
@@ -438,7 +438,7 @@ void initialize()
 	}
 
 	if (xhc_dev == nullptr) {
-		printk(KERN_ERROR, "xHCI device not found.");
+		LOG_ERROR("xHCI device not found.");
 		return;
 	}
 
@@ -468,7 +468,7 @@ void initialize()
 		configure_port(xhc, p);
 	}
 
-	printk(KERN_INFO, "xHCI initialized successfully.");
+	LOG_INFO("xHCI initialized successfully.");
 }
 
 void process_events()

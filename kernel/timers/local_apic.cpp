@@ -20,7 +20,7 @@ constexpr uint32_t COUNT_MAX = 0xffffffffU;
 
 void initialize()
 {
-	printk(KERN_INFO, "Initializing local APIC...");
+	LOG_INFO("Initializing local APIC...");
 
 	DIVIDE_CONF = 0b1011;	   // divide by 1
 	LVT_TIMER = (0b001 << 16); // mask
@@ -34,7 +34,7 @@ void initialize()
 
 	const uint32_t freq = elapsed * 10;
 
-	printk(KERN_INFO, "Local APIC timer frequency: %u Hz", freq);
+	LOG_INFO("Local APIC timer frequency: %u Hz", freq);
 
 	DIVIDE_CONF = 0b1011; // divide by 1
 
@@ -42,7 +42,7 @@ void initialize()
 
 	INITIAL_COUNT = freq / TIMER_FREQUENCY;
 
-	printk(KERN_INFO, "Local APIC initialized successfully.");
+	LOG_INFO("Local APIC initialized successfully.");
 }
 
 } // namespace local_apic

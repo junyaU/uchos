@@ -15,7 +15,7 @@ void ring::initialize(size_t buf_size)
 	buffer_ = reinterpret_cast<trb*>(
 			kmalloc(sizeof(trb) * buffer_size_, KMALLOC_ZEROED, 64));
 	if (buffer_ == nullptr) {
-		printk(KERN_ERROR, "failed to allocate memory for ring");
+		LOG_ERROR("failed to allocate memory for ring");
 		return;
 	}
 }
@@ -58,7 +58,7 @@ void event_ring::initialize(size_t buf_size,
 	buffer_ = reinterpret_cast<trb*>(
 			kmalloc(sizeof(trb) * buffer_size_, KMALLOC_ZEROED, 64));
 	if (buffer_ == nullptr) {
-		printk(KERN_ERROR, "failed to allocate memory for event ring");
+		LOG_ERROR("failed to allocate memory for event ring");
 		return;
 	}
 
@@ -66,7 +66,7 @@ void event_ring::initialize(size_t buf_size,
 			kmalloc(sizeof(event_ring_segment_table_entry), KMALLOC_ZEROED, 64));
 	if (segment_table_ == nullptr) {
 		kfree(buffer_);
-		printk(KERN_ERROR, "failed to allocate memory for event ring segment table");
+		LOG_ERROR("failed to allocate memory for event ring segment table");
 		return;
 	}
 

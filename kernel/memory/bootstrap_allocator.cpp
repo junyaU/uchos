@@ -42,7 +42,7 @@ void* bootstrap_allocator::allocate(size_t size)
 		}
 	}
 
-	printk(KERN_ERROR, "failed to allocate %u bytes", size);
+	LOG_ERROR("failed to allocate %u bytes", size);
 
 	return nullptr;
 }
@@ -79,9 +79,9 @@ void bootstrap_allocator::show_available_memory() const
 		}
 	}
 
-	printk(KERN_INFO, "available memory: %u MiB / %u MiB",
-		   available_pages * PAGE_SIZE / 1024 / 1024,
-		   (end_index() - start_index()) * PAGE_SIZE / 1024 / 1024);
+	LOG_INFO("available memory: %u MiB / %u MiB",
+			 available_pages * PAGE_SIZE / 1024 / 1024,
+			 (end_index() - start_index()) * PAGE_SIZE / 1024 / 1024);
 }
 
 alignas(bootstrap_allocator) char bootstrap_allocator_buffer[sizeof(
@@ -90,7 +90,7 @@ bootstrap_allocator* boot_allocator;
 
 void initialize_bootstrap_allocator(const MemoryMap& mem_map)
 {
-	printk(KERN_INFO, "Initializing bootstrap allocator...");
+	LOG_INFO("Initializing bootstrap allocator...");
 	boot_allocator = new (bootstrap_allocator_buffer) bootstrap_allocator();
 
 	const auto mem_map_base = reinterpret_cast<uintptr_t>(mem_map.buffer);
@@ -110,7 +110,7 @@ void initialize_bootstrap_allocator(const MemoryMap& mem_map)
 
 	boot_allocator->show_available_memory();
 
-	printk(KERN_INFO, "Bootstrap allocator initialized successfully.");
+	LOG_INFO("Bootstrap allocator initialized successfully.");
 }
 
 extern "C" caddr_t program_break, program_break_end;
@@ -123,7 +123,7 @@ void initialize_heap()
 
 	auto* heap = boot_allocator->allocate(heap_size);
 	if (heap == nullptr) {
-		printk(KERN_ERROR, "failed to allocate heap");
+		LOG_ERROR("failed to allocate heap");
 		return;
 	}
 
@@ -138,5 +138,5 @@ void disable_bootstrap_allocator()
 		boot_allocator = nullptr;
 	}
 
-	printk(KERN_INFO, "Bootstrap allocator disabled.");
+	LOG_INFO("Bootstrap allocator disabled.");
 }

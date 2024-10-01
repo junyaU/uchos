@@ -19,7 +19,7 @@ size_t copy_to_user(void __user* to, const void* from, size_t n)
 	}
 
 	if (!is_user_address(to, n)) {
-		printk(KERN_ERROR, "invalid address for copy_to_user: %p", to);
+		LOG_ERROR("invalid address for copy_to_user: %p", to);
 		return 0;
 	}
 
@@ -37,7 +37,7 @@ size_t copy_from_user(void* to, const void __user* from, size_t n)
 	}
 
 	if (!is_user_address(from, n)) {
-		printk(KERN_ERROR, "invalid address for copy_from_user: %p", from);
+		LOG_ERROR("invalid address for copy_from_user: %p", from);
 		return 0;
 	}
 

@@ -77,13 +77,13 @@ void dump_page_table(page_table_entry* table, int page_table_level, vaddr_t addr
 		dump_page_table(entry.get_next_level_table(), page_table_level - 1, addr);
 	}
 
-	printk(CURRENT_LOG_LEVEL, "page_table_level=%d, index=%d entry=%p",
-		   page_table_level, page_table_index, entry.data);
+	LOG_ERROR("page_table_level=%d, index=%d entry=%p", page_table_level,
+			  page_table_index, entry.data);
 }
 
 void dump_page_tables(vaddr_t addr)
 {
-	printk(CURRENT_LOG_LEVEL, "dest_addr=%p", addr.data);
+	LOG_ERROR("dest_addr=%p", addr.data);
 	dump_page_table(get_active_page_table(), 4, addr);
 }
 
@@ -91,7 +91,7 @@ page_table_entry* new_page_table()
 {
 	void* addr = kmalloc(PAGE_SIZE, KMALLOC_ZEROED, PAGE_SIZE);
 	if (addr == nullptr) {
-		printk(KERN_ERROR, "Failed to allocate memory for page table.");
+		LOG_ERROR("Failed to allocate memory for page table.");
 		return nullptr;
 	}
 
@@ -126,8 +126,7 @@ int setup_page_table(page_table_entry* page_table,
 		const int page_table_index = addr.part(page_table_level);
 		auto* child_table = set_new_page_table(page_table[page_table_index]);
 		if (child_table == nullptr) {
-			printk(KERN_ERROR, "Failed to setup page table: level=%d",
-				   page_table_level);
+			LOG_ERROR("Failed to setup page table: level=%d", page_table_level);
 			return -1;
 		}
 
@@ -139,8 +138,7 @@ int setup_page_table(page_table_entry* page_table,
 			const int num_remaining_pages = setup_page_table(
 					child_table, page_table_level - 1, addr, num_pages, writable);
 			if (num_remaining_pages == -1) {
-				printk(KERN_ERROR, "Failed to setup page table: level=%d",
-					   page_table_level);
+				LOG_ERROR("Failed to setup page table: level=%d", page_table_level);
 				return -1;
 			}
 
@@ -165,7 +163,7 @@ void setup_page_tables(vaddr_t addr, size_t num_pages, bool writable)
 	const int num_remaining_pages =
 			setup_page_table(get_active_page_table(), 4, addr, num_pages, writable);
 	if (num_remaining_pages == -1) {
-		printk(KERN_ERROR, "Failed to setup page tables.");
+		LOG_ERROR("Failed to setup page tables.");
 		return;
 	}
 
@@ -270,7 +268,7 @@ error_t copy_target_page(uint64_t addr)
 {
 	auto* page = new_page_table();
 	if (page == nullptr) {
-		printk(KERN_ERROR, "Failed to allocate memory for page table.");
+		LOG_ERROR("Failed to allocate memory for page table.");
 		return ERR_NO_MEMORY;
 	}
 
@@ -291,7 +289,7 @@ page_table_entry* clone_page_table(page_table_entry* src, bool writable)
 {
 	auto* table = new_page_table();
 	if (table == nullptr) {
-		printk(KERN_ERROR, "Failed to allocate memory for page table.");
+		LOG_ERROR("Failed to allocate memory for page table.");
 		return nullptr;
 	}
 
@@ -310,7 +308,7 @@ error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr)
 	if ((user != 0) && (rw != 0) && (exist != 0)) {
 		ASSERT_OK(copy_target_page(fault_addr));
 	} else {
-		printk(KERN_ERROR, "Page fault: user=%d, rw=%d, exist=%d", user, rw, exist);
+		LOG_ERROR("Page fault: user=%d, rw=%d, exist=%d", user, rw, exist);
 		return ERR_PAGE_NOT_PRESENT;
 	}
 
@@ -421,8 +419,8 @@ size_t calc_required_pages(vaddr_t start, size_t size)
 
 void initialize_paging()
 {
-	printk(KERN_INFO, "Initializing paging...");
+	LOG_INFO("Initializing paging...");
 	setup_identity_mapping();
 	set_cr3(reinterpret_cast<uint64_t>(&pml4_table));
-	printk(KERN_INFO, "Paging initialized successfully.");
+	LOG_INFO("Paging initialized successfully.");
 }

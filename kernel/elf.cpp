@@ -125,7 +125,7 @@ void load_elf(elf64_ehdr_t* elf_header)
 
 	const auto first_load_addr = get_first_load_addr(elf_header);
 	if (first_load_addr < 0xffff'8000'0000'0000) {
-		printk(KERN_ERROR, "invalid load address: %p", first_load_addr);
+		LOG_ERROR("invalid load address: %p", first_load_addr);
 		return;
 	}
 
@@ -136,7 +136,7 @@ void exec_elf(void* buffer, const char* name, const char* args)
 {
 	auto* elf_header = reinterpret_cast<elf64_ehdr_t*>(buffer);
 	if (!is_elf(elf_header)) {
-		printk(KERN_ERROR, "not an ELF file: %s", name);
+		LOG_ERROR("not an ELF file: %s", name);
 		return;
 	}
 

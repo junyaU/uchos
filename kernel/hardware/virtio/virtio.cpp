@@ -19,7 +19,7 @@ error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
 	}
 
 	if (dev == nullptr) {
-		printk(KERN_ERROR, "No virtio device found");
+		LOG_ERROR("No virtio device found");
 		return ERR_NO_DEVICE;
 	}
 

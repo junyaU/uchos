@@ -185,7 +185,7 @@ error_t process_read_data_response(const message& m)
 {
 	auto it = file_caches.find(m.data.blk_io.request_id);
 	if (it == file_caches.end()) {
-		printk(KERN_ERROR, "request id not found");
+		LOG_ERROR("request id not found");
 		return ERR_INVALID_ARG;
 	}
 
@@ -208,7 +208,7 @@ error_t process_file_read_request(const message& m)
 {
 	const auto* entry = reinterpret_cast<directory_entry*>(m.data.fs_op.buf);
 	if (entry == nullptr) {
-		printk(KERN_ERROR, "entry is null");
+		LOG_ERROR("entry is null");
 		return ERR_INVALID_ARG;
 	}
 
@@ -227,7 +227,7 @@ error_t process_file_read_request(const message& m)
 	size_t sequence = 0;
 	file_cache* cache = create_file_cache(file_name, entry->file_size, m.sender);
 	if (cache == nullptr) {
-		printk(KERN_ERROR, "failed to create file cache");
+		LOG_ERROR("failed to create file cache");
 		return ERR_NO_MEMORY;
 	}
 

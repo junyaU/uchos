@@ -93,7 +93,7 @@ void task_shell()
 	auto* entry =
 			reinterpret_cast<file_system::directory_entry*>(info_m.data.fs_op.buf);
 	if (entry == nullptr) {
-		printk(KERN_ERROR, "failed to find shell");
+		LOG_ERROR("failed to find shell");
 		while (true) {
 			__asm__("hlt");
 		}

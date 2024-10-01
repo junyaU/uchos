@@ -1,4 +1,5 @@
 #include "fault.hpp"
+#include "graphics/log.hpp"
 #include "task/task.hpp"
 
 void get_fault_name(uint64_t code, char* buf)
@@ -76,11 +77,11 @@ void get_fault_name(uint64_t code, char* buf)
 void log_fault_info(const char* fault_type, interrupt_frame* frame)
 {
 	task* t = CURRENT_TASK;
-	printk(KERN_ERROR, "Error in task %d (%s)", t->id, t->name);
-	printk(KERN_ERROR, "Fault type: %s", fault_type);
-	printk(KERN_ERROR, "RIP: 0x%016lx", frame->rip);
-	printk(KERN_ERROR, "RSP: 0x%016lx", frame->rsp);
-	printk(KERN_ERROR, "RFLAGS: 0x%016lx", frame->rflags);
-	printk(KERN_ERROR, "CS: 0x%016lx", frame->cs);
-	printk(KERN_ERROR, "SS: 0x%016lx", frame->ss);
+	LOG_ERROR("Error in task %d (%s)", t->id, t->name);
+	LOG_ERROR("Fault type: %s", fault_type);
+	LOG_ERROR("RIP: 0x%016lx", frame->rip);
+	LOG_ERROR("RSP: 0x%016lx", frame->rsp);
+	LOG_ERROR("RFLAGS: 0x%016lx", frame->rflags);
+	LOG_ERROR("CS: 0x%016lx", frame->cs);
+	LOG_ERROR("SS: 0x%016lx", frame->ss);
 }

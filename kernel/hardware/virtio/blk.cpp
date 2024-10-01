@@ -20,12 +20,12 @@ void handle_read_request(const message& m)
 
 	char* buf = static_cast<char*>(kmalloc(len, KMALLOC_ZEROED));
 	if (buf == nullptr) {
-		printk(KERN_ERROR, "failed to allocate buffer");
+		LOG_ERROR("failed to allocate buffer");
 		return;
 	}
 
 	if (IS_ERR(read_from_blk_device(buf, sector, len))) {
-		printk(KERN_ERROR, "failed to read from blk device");
+		LOG_ERROR("failed to read from blk device");
 	}
 
 	send_m.data.blk_io.buf = buf;
@@ -50,7 +50,7 @@ void handle_write_request(const message& m)
 	memcpy(buf, m.data.blk_io.buf, len);
 
 	if (IS_ERR(write_to_blk_device(buf, sector, len))) {
-		printk(KERN_ERROR, "failed to write to blk device");
+		LOG_ERROR("failed to write to blk device");
 	}
 }
 } // namespace
@@ -60,7 +60,7 @@ virtio_pci_device* blk_dev = nullptr;
 error_t validate_length(uint32_t len)
 {
 	if (len < SECTOR_SIZE) {
-		printk(KERN_ERROR, "Data size is too small.");
+		LOG_ERROR("Data size is too small.");
 		return ERR_INVALID_ARG;
 	}
 
@@ -100,7 +100,7 @@ error_t write_to_blk_device(char* buffer, uint64_t sector, uint32_t len)
 	switch_next_task(true);
 
 	if (req->status != VIRTIO_BLK_S_OK) {
-		printk(KERN_ERROR, "Failed to write to block device.");
+		LOG_ERROR("Failed to write to block device.");
 		kfree(req);
 
 		return ERR_FAILED_WRITE_TO_DEVICE;
@@ -144,8 +144,7 @@ error_t read_from_blk_device(char* buffer, uint64_t sector, uint32_t len)
 	switch_next_task(true);
 
 	if (req->status != VIRTIO_BLK_S_OK) {
-		printk(KERN_ERROR, "Failed to read from block device. status: %d",
-			   req->status);
+		LOG_ERROR("Failed to read from block device. status: %d", req->status);
 		kfree(req);
 
 		return ERR_FAILED_WRITE_TO_DEVICE;
