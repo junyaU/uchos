@@ -82,45 +82,30 @@ void task_kernel()
 
 void task_shell()
 {
-	// task* t = CURRENT_TASK;
+	task* t = CURRENT_TASK;
 
-	// process_messages(t);
+	message m = { .type = IPC_GET_FILE_INFO, .sender = SHELL_TASK_ID };
+	char path[6] = "shell";
+	memcpy(m.data.fs_op.path, path, 6);
+	send_message(FS_FAT32_TASK_ID, &m);
 
-	// message m = { .type = IPC_GET_FILE_INFO, .sender = SHELL_TASK_ID };
-	// char path[6] = "shell";
-	// memcpy(m.data.fs_op.path, path, 6);
-	// send_message(FS_FAT32_TASK_ID, &m);
-
-	// message info_m = wait_for_message(IPC_GET_FILE_INFO);
-
-	// auto* entry =
-	// 		reinterpret_cast<file_system::directory_entry*>(info_m.data.fs_op.buf);
-	// if (entry == nullptr) {
-	// 	printk(KERN_ERROR, "failed to find shell");
-	// 	return;
-	// }
-
-	// printk(KERN_ERROR, "size: %d", entry->file_size);
-
-	// message read_msg = { .type = IPC_READ_FILE_DATA, .sender = SHELL_TASK_ID };
-	// read_msg.data.fs_op.buf = info_m.data.fs_op.buf;
-	// send_message(FS_FAT32_TASK_ID, &read_msg);
-
-	// message data_m = wait_for_message(IPC_READ_FILE_DATA);
-
-	// process_messages(t);
-
-	// exec_elf(data_m.data.fs_op.buf, "shell", nullptr);
-
-	auto* entry = file_system::find_directory_entry_by_path("/shell");
+	message info_m = wait_for_message(IPC_GET_FILE_INFO);
+	auto* entry =
+			reinterpret_cast<file_system::directory_entry*>(info_m.data.fs_op.buf);
 	if (entry == nullptr) {
-		printk(KERN_ERROR, "failed to find /shell");
-		return;
+		printk(KERN_ERROR, "failed to find shell");
+		while (true) {
+			__asm__("hlt");
+		}
 	}
 
-	CURRENT_TASK->is_initilized = true;
+	message read_m = { .type = IPC_READ_FILE_DATA, .sender = SHELL_TASK_ID };
+	read_m.data.fs_op.buf = info_m.data.fs_op.buf;
+	send_message(FS_FAT32_TASK_ID, &read_m);
 
-	file_system::execute_file(*entry, nullptr);
+	message data_m = wait_for_message(IPC_READ_FILE_DATA);
+	CURRENT_TASK->is_initilized = true;
+	file_system::execute_file(data_m.data.fs_op.buf, "shell", nullptr);
 }
 
 void task_usb_handler()

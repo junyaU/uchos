@@ -72,21 +72,23 @@ fd_t sys_open(uint64_t arg1, uint64_t arg2)
 		return STDIN_FILENO;
 	}
 
-	auto* entry = file_system::find_directory_entry_by_path(path);
-	if (entry == nullptr) {
-		if ((flags & O_CREAT) == 0) {
-			printk(KERN_ERROR, "open: %s: No such file or directory\n", path);
-			return NO_FD;
-		}
+	// TODO: fix this
 
-		auto* new_entry = file_system::create_file(path);
-		if (new_entry == nullptr) {
-			printk(KERN_ERROR, "open: %s: No such file or directory\n", path);
-			return NO_FD;
-		}
+	// auto* entry = file_system::find_directory_entry_by_path(path);
+	// if (entry == nullptr) {
+	// 	if ((flags & O_CREAT) == 0) {
+	// 		printk(KERN_ERROR, "open: %s: No such file or directory\n", path);
+	// 		return NO_FD;
+	// 	}
 
-		entry = new_entry;
-	}
+	// 	auto* new_entry = file_system::create_file(path);
+	// 	if (new_entry == nullptr) {
+	// 		printk(KERN_ERROR, "open: %s: No such file or directory\n", path);
+	// 		return NO_FD;
+	// 	}
+
+	// 	entry = new_entry;
+	// }
 
 	task* t = CURRENT_TASK;
 	const fd_t fd = allocate_fd(t);
@@ -95,7 +97,7 @@ fd_t sys_open(uint64_t arg1, uint64_t arg2)
 		return NO_FD;
 	}
 
-	t->fds[fd] = std::make_unique<file_system::file_descriptor>(*entry);
+	// t->fds[fd] = std::make_unique<file_system::file_descriptor>(*entry);
 
 	return fd;
 }
@@ -249,7 +251,8 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(new_page_table);
 
-	file_system::execute_file_v2(data_m.data.fs_op.buf, "echo", copy_args);
+	// TODO: fix this
+	file_system::execute_file(data_m.data.fs_op.buf, "", copy_args);
 
 	return OK;
 }

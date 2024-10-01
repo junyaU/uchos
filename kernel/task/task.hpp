@@ -2,7 +2,6 @@
 
 #include "file_system/file_descriptor.hpp"
 #include "list.hpp"
-#include "memory/custom_allocators.hpp"
 #include "memory/paging.hpp"
 #include "memory/slab.hpp"
 #include "task/context.hpp"
@@ -73,7 +72,6 @@ extern task* IDLE_TASK;
 static constexpr int MAX_TASKS = 100;
 extern std::array<task*, MAX_TASKS> tasks;
 extern list_t run_queue;
-extern std::queue<message, kernel_allocator<message>> pending_messages;
 
 task* create_task(const char* name,
 				  uint64_t task_addr,

@@ -17,7 +17,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <libs/common/types.hpp>
-#include <vector>
 
 namespace file_system
 {
@@ -85,37 +84,11 @@ static const cluster_t END_OF_CLUSTER_CHAIN = 0x0FFFFFFFLU;
 
 constexpr size_t BOOT_SECTOR = 0;
 
-extern bios_parameter_block* BOOT_VOLUME_IMAGE;
-extern unsigned long BYTES_PER_CLUSTER;
-extern uint32_t* FAT_TABLE;
-
-uintptr_t get_cluster_addr(cluster_t cluster_id);
-
-template<class T>
-T* get_sector(cluster_t cluster_id)
-{
-	return reinterpret_cast<T*>(get_cluster_addr(cluster_id));
-}
-
 cluster_t next_cluster(cluster_t cluster_id);
 
-directory_entry* find_directory_entry(const char* name, cluster_t cluster_id);
-
-directory_entry* find_directory_entry_by_path(const char* path);
-
-std::vector<directory_entry*> list_entries_in_directory(directory_entry* dir_entry);
-
-void execute_file(const directory_entry& entry, const char* args);
-
-void execute_file_v2(void* data, const char* name, const char* args);
+void execute_file(void* data, const char* name, const char* args);
 
 void read_dir_entry_name(const directory_entry& entry, char* dest);
-
-directory_entry* create_file(const char* path);
-
-void initialize_fat(void* volume_image);
-
-size_t load_file(void* buf, size_t len, directory_entry& entry);
 
 struct file_descriptor : public ::file_descriptor {
 	directory_entry& entry;
