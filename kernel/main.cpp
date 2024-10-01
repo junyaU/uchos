@@ -23,8 +23,7 @@ char kernel_stack[1024 * 1024];
 
 extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 					 const MemoryMap& memory_map,
-					 const acpi::root_system_description_pointer& rsdp,
-					 void* volume_image)
+					 const acpi::root_system_description_pointer& rsdp)
 {
 	initialize_screen(frame_buffer_conf, { 0, 0, 0 });
 
