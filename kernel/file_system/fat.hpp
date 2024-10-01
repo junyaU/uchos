@@ -90,30 +90,6 @@ void execute_file(void* data, const char* name, const char* args);
 
 void read_dir_entry_name(const directory_entry& entry, char* dest);
 
-struct file_descriptor : public ::file_descriptor {
-	directory_entry& entry;
-	cluster_t current_cluster;
-	size_t current_cluster_offset;
-	size_t current_file_offset;
-	size_t file_written_bytes;
-	cluster_t write_cluster;
-	size_t write_cluster_offset;
-
-	file_descriptor(directory_entry& e)
-		: entry(e),
-		  current_cluster(e.first_cluster()),
-		  current_cluster_offset(0),
-		  current_file_offset(0),
-		  file_written_bytes(0),
-		  write_cluster(e.first_cluster()),
-		  write_cluster_offset(0)
-	{
-	}
-
-	size_t read(void* buf, size_t len) override;
-	size_t write(const void* buf, size_t len) override;
-};
-
 void fat32_task();
 
 } // namespace file_system
