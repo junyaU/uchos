@@ -4,8 +4,8 @@
 #include "graphics/screen.hpp"
 #include "libs/common/message.hpp"
 #include "memory/paging.hpp"
+#include "memory/slab.hpp"
 #include "memory/user.hpp"
-#include "sys/_default_fcntl.h"
 #include "syscall.hpp"
 #include "task/context_switch.h"
 #include "task/ipc.hpp"
@@ -236,10 +236,11 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	}
 
 	message read_msg{ .type = IPC_READ_FILE_DATA, .sender = CURRENT_TASK->id };
-	read_msg.data.fs_op.buf = info_m.data.fs_op.buf;
+	read_msg.data.fs_op.buf = entry;
 	send_message(FS_FAT32_TASK_ID, &read_msg);
 
 	message data_m = wait_for_message(IPC_READ_FILE_DATA);
+	kfree(entry);
 
 	page_table_entry* current_page_table = get_active_page_table();
 	clean_page_tables(current_page_table);

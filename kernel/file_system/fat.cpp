@@ -201,6 +201,8 @@ error_t process_read_data_response(const message& m)
 					   ctx.requester);
 	}
 
+	kfree(m.data.blk_io.buf);
+
 	return OK;
 }
 
@@ -247,7 +249,6 @@ void handle_get_bpb(const message& m)
 	VOLUME_BPB = reinterpret_cast<bios_parameter_block*>(m.data.blk_io.buf);
 	BYTES_PER_CLUSTER = static_cast<unsigned long>(VOLUME_BPB->bytes_per_sector) *
 						VOLUME_BPB->sectors_per_cluster;
-
 	FAT_TABLE_SECTOR = VOLUME_BPB->reserved_sector_count;
 
 	size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *

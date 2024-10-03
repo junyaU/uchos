@@ -21,6 +21,17 @@ file_cache* create_file_cache(const char* path, size_t total_size, pid_t request
 {
 	fs_id_t id = generate_fs_id();
 
+	if (file_caches.size() >= MAX_FILE_ID) {
+		int oldest_id = -1;
+		for (auto it = file_caches.begin(); it != file_caches.end();) {
+			if (oldest_id == -1 || it->first < oldest_id) {
+				oldest_id = it->first;
+			}
+		}
+
+		file_caches.erase(oldest_id);
+	}
+
 	file_cache cache(total_size, id, requester);
 	memcpy(cache.path, path, strlen(path));
 	auto result = file_caches.emplace(id, cache);
