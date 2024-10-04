@@ -201,6 +201,8 @@ error_t process_read_data_response(const message& m)
 					   ctx.requester);
 	}
 
+	kfree(m.data.blk_io.buf);
+
 	return OK;
 }
 
@@ -247,14 +249,13 @@ void handle_get_bpb(const message& m)
 	VOLUME_BPB = reinterpret_cast<bios_parameter_block*>(m.data.blk_io.buf);
 	BYTES_PER_CLUSTER = static_cast<unsigned long>(VOLUME_BPB->bytes_per_sector) *
 						VOLUME_BPB->sectors_per_cluster;
-
 	FAT_TABLE_SECTOR = VOLUME_BPB->reserved_sector_count;
 
 	size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
 						static_cast<size_t>(SECTOR_SIZE);
 
-	send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size,
-								IPC_GET_FAT_TABLE_FAT32, true);
+	send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size, IPC_GET_FAT_TABLE,
+								true);
 }
 
 void handle_get_fat_table(const message& m)
@@ -263,8 +264,8 @@ void handle_get_fat_table(const message& m)
 	unsigned int root_cluster = VOLUME_BPB->root_cluster;
 	unsigned int start_sector = calc_start_sector(root_cluster);
 
-	send_read_req_to_blk_device(start_sector, BYTES_PER_CLUSTER,
-								IPC_GET_ROOT_DIR_FAT32, true);
+	send_read_req_to_blk_device(start_sector, BYTES_PER_CLUSTER, IPC_GET_ROOT_DIR,
+								true);
 }
 
 void handle_get_root_dir(const message& m)
@@ -332,6 +333,8 @@ void handle_read_file_data(const message& m)
 	process_file_read_request(m);
 }
 
+void handle_get_directory_contents(const message& m) {}
+
 void fat32_task()
 {
 	task* t = CURRENT_TASK;
@@ -340,13 +343,14 @@ void fat32_task()
 
 	init_read_contexts();
 
-	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE, IPC_GET_BPB_FAT32, true);
+	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE, IPC_GET_BPB, true);
 
-	t->message_handlers[IPC_GET_BPB_FAT32] = handle_get_bpb;
-	t->message_handlers[IPC_GET_FAT_TABLE_FAT32] = handle_get_fat_table;
-	t->message_handlers[IPC_GET_ROOT_DIR_FAT32] = handle_get_root_dir;
+	t->message_handlers[IPC_GET_BPB] = handle_get_bpb;
+	t->message_handlers[IPC_GET_FAT_TABLE] = handle_get_fat_table;
+	t->message_handlers[IPC_GET_ROOT_DIR] = handle_get_root_dir;
 	t->message_handlers[IPC_GET_FILE_INFO] = handle_get_file_info;
 	t->message_handlers[IPC_READ_FILE_DATA] = handle_read_file_data;
+	t->message_handlers[IPC_GET_DIRECTORY_CONTENTS] = handle_get_directory_contents;
 
 	process_messages(t);
 };
