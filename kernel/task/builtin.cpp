@@ -19,9 +19,7 @@ void notify_xhci_handler(const message& m) { usb::xhci::process_events(); }
 
 void handle_initialize_task(const message& m)
 {
-	message send_m = { .type = IPC_INITIALIZE_TASK,
-					   .sender = KERNEL_TASK_ID,
-					   .is_init_message = true };
+	message send_m = { .type = IPC_INITIALIZE_TASK, .sender = KERNEL_TASK_ID };
 	send_m.data.init.task_id = m.sender;
 	send_message(SHELL_TASK_ID, &send_m);
 }
