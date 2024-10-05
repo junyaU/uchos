@@ -49,7 +49,6 @@ struct message {
 	int32_t type;
 	pid_t sender;
 	msg_ool_desc_t tool_desc;
-	bool is_init_message = false;
 	bool is_end_of_message = true;
 
 	union {

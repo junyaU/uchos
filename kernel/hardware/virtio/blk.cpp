@@ -12,8 +12,7 @@ namespace
 void handle_read_request(const message& m)
 {
 	message send_m = { .type = m.data.blk_io.dst_type,
-					   .sender = VIRTIO_BLK_TASK_ID,
-					   .is_init_message = m.is_init_message };
+					   .sender = VIRTIO_BLK_TASK_ID };
 
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len;

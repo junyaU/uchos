@@ -97,13 +97,6 @@ unsigned int calc_start_sector(cluster_t cluster_id)
 		   (cluster_id - 2) * VOLUME_BPB->sectors_per_cluster;
 }
 
-void initialize_fat(void* volume_image)
-{
-	VOLUME_BPB = reinterpret_cast<bios_parameter_block*>(volume_image);
-	BYTES_PER_CLUSTER = static_cast<unsigned long>(VOLUME_BPB->bytes_per_sector) *
-						VOLUME_BPB->sectors_per_cluster;
-}
-
 cluster_t next_cluster(cluster_t cluster_id)
 {
 	const uint32_t next = FAT_TABLE[cluster_id];
@@ -156,12 +149,10 @@ cluster_t allocate_cluster_chain(size_t num_clusters)
 void send_read_req_to_blk_device(unsigned int sector,
 								 size_t len,
 								 int32_t dst_type,
-								 bool is_init = false,
 								 fs_id_t request_id = 0,
 								 size_t sequence = 0)
 {
 	message m = { .type = IPC_READ_FROM_BLK_DEVICE, .sender = FS_FAT32_TASK_ID };
-	m.is_init_message = is_init;
 	m.data.blk_io.sector = sector;
 	m.data.blk_io.len = len;
 	m.data.blk_io.dst_type = dst_type;
@@ -235,8 +226,8 @@ error_t process_file_read_request(const message& m)
 
 	while (target_cluster != END_OF_CLUSTER_CHAIN) {
 		send_read_req_to_blk_device(calc_start_sector(target_cluster),
-									BYTES_PER_CLUSTER, IPC_READ_FILE_DATA, false,
-									cache->id, sequence++);
+									BYTES_PER_CLUSTER, IPC_READ_FILE_DATA, cache->id,
+									sequence++);
 
 		target_cluster = next_cluster(target_cluster);
 	}
@@ -254,8 +245,7 @@ void handle_get_bpb(const message& m)
 	size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
 						static_cast<size_t>(SECTOR_SIZE);
 
-	send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size, IPC_GET_FAT_TABLE,
-								true);
+	send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size, IPC_GET_FAT_TABLE);
 }
 
 void handle_get_fat_table(const message& m)
@@ -264,8 +254,7 @@ void handle_get_fat_table(const message& m)
 	unsigned int root_cluster = VOLUME_BPB->root_cluster;
 	unsigned int start_sector = calc_start_sector(root_cluster);
 
-	send_read_req_to_blk_device(start_sector, BYTES_PER_CLUSTER, IPC_GET_ROOT_DIR,
-								true);
+	send_read_req_to_blk_device(start_sector, BYTES_PER_CLUSTER, IPC_GET_ROOT_DIR);
 }
 
 void handle_get_root_dir(const message& m)
@@ -333,7 +322,17 @@ void handle_read_file_data(const message& m)
 	process_file_read_request(m);
 }
 
-void handle_get_directory_contents(const message& m) {}
+void handle_get_directory_contents(const message& m)
+{
+	message sm = { .type = IPC_GET_DIRECTORY_CONTENTS, .sender = FS_FAT32_TASK_ID };
+
+	std::vector<char*> path = parse_path(m.data.fs_op.path);
+	for (const auto& p : path) {
+		send_message(FS_FAT32_TASK_ID, &sm);
+	}
+
+	send_message(m.sender, &sm);
+}
 
 void fat32_task()
 {
