@@ -1,5 +1,5 @@
 #include "user.hpp"
-#include "../graphics/log.hpp"
+#include "graphics/log.hpp"
 #include <cstddef>
 #include <cstdint>
 
