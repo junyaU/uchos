@@ -73,7 +73,7 @@ struct message {
 		} write;
 
 		struct {
-			char buf[128];
+			char buf[256];
 		} write_shell;
 
 		struct {
