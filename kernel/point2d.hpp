@@ -1,15 +1,15 @@
 #pragma once
 
-class Point2D
+class point2d
 {
 public:
-	Point2D(int x, int y) : x_{ x }, y_{ y } {};
+	point2d(int x, int y) : x_{ x }, y_{ y } {};
 	int GetX() const { return x_; }
 	int GetY() const { return y_; }
 
-	Point2D operator+(const Point2D& rhs) const
+	point2d operator+(const point2d& rhs) const
 	{
-		return Point2D{ x_ + rhs.x_, y_ + rhs.y_ };
+		return point2d{ x_ + rhs.x_, y_ + rhs.y_ };
 	}
 
 private:

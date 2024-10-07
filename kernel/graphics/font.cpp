@@ -1,10 +1,8 @@
 #include "font.hpp"
-#include "file_system/fat.hpp"
 #include "log.hpp"
 #include "point2d.hpp"
 #include "screen.hpp"
 #include <cctype>
-#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -47,14 +45,14 @@ void render_unicode(char32_t c, FT_Face face)
 	}
 }
 
-void write_ascii(screen& scr, Point2D position, char c, uint32_t color_code)
+void write_ascii(screen& scr, point2d position, char c, uint32_t color_code)
 {
 	const uint8_t* font = kfont->get_font(c);
 	if (font != nullptr) {
 		for (int dy = 0; dy < kfont->height(); dy++) {
 			for (int dx = 0; dx < kfont->width(); dx++) {
 				if ((font[dy] << dx & 0x80) != 0) {
-					scr.put_pixel(position + Point2D{ dx, dy }, color_code);
+					scr.put_pixel(position + point2d{ dx, dy }, color_code);
 				}
 			}
 		}
@@ -82,43 +80,47 @@ int utf8_size(uint8_t c)
 	return 0;
 }
 
-void write_unicode(screen& scr, Point2D position, char32_t c, uint32_t color_code)
+void write_unicode(screen& scr, point2d position, char32_t c, uint32_t color_code)
 {
-	if (is_ascii_code(c)) {
-		write_ascii(scr, position, c, color_code);
-		return;
-	}
-
-	auto* face = new_face();
-	if (face == nullptr) {
-		write_ascii(scr, position, '?', color_code);
-		write_ascii(scr, position + Point2D{ kfont->width(), 0 }, '?', color_code);
-		return;
-	}
-
-	render_unicode(c, face);
-
-	FT_Bitmap& bitmap = face->glyph->bitmap;
-	const int baseline = (face->height + face->descender) *
-						 face->size->metrics.y_ppem / face->units_per_EM;
-	const auto glyph_topleft =
-			position +
-			Point2D{ face->glyph->bitmap_left, baseline - face->glyph->bitmap_top };
-
-	for (int dy = 0; dy < bitmap.rows; ++dy) {
-		unsigned char* q = &bitmap.buffer[bitmap.pitch * dy];
-		if (bitmap.pitch < 0) {
-			q -= bitmap.pitch * bitmap.rows;
+	{
+		if (is_ascii_code(c)) {
+			write_ascii(scr, position, c, color_code);
+			return;
 		}
-		for (int dx = 0; dx < bitmap.width; ++dx) {
-			const bool b = (q[dx >> 3] & (0x80 >> (dx & 0x7))) != 0;
-			if (b) {
-				kscreen->put_pixel(glyph_topleft + Point2D{ dx, dy }, color_code);
+
+		auto* face = new_face();
+		if (face == nullptr) {
+			write_ascii(scr, position, '?', color_code);
+			write_ascii(scr, position + point2d{ kfont->width(), 0 }, '?',
+						color_code);
+			return;
+		}
+
+		render_unicode(c, face);
+
+		FT_Bitmap& bitmap = face->glyph->bitmap;
+		const int baseline = (face->height + face->descender) *
+							 face->size->metrics.y_ppem / face->units_per_EM;
+		const auto glyph_topleft =
+				position + point2d{ face->glyph->bitmap_left,
+									baseline - face->glyph->bitmap_top };
+
+		for (int dy = 0; dy < bitmap.rows; ++dy) {
+			unsigned char* q = &bitmap.buffer[bitmap.pitch * dy];
+			if (bitmap.pitch < 0) {
+				q -= bitmap.pitch * bitmap.rows;
+			}
+			for (int dx = 0; dx < bitmap.width; ++dx) {
+				const bool b = (q[dx >> 3] & (0x80 >> (dx & 0x7))) != 0;
+				if (b) {
+					kscreen->put_pixel(glyph_topleft + point2d{ dx, dy },
+									   color_code);
+				}
 			}
 		}
-	}
 
-	FT_Done_Face(face);
+		FT_Done_Face(face);
+	}
 }
 
 char32_t utf8_to_unicode(const char* utf8)
@@ -164,14 +166,14 @@ char decode_utf8(char32_t c)
 	return 0;
 }
 
-void write_string(screen& scr, Point2D position, const char* s, uint32_t color_code)
+void write_string(screen& scr, point2d position, const char* s, uint32_t color_code)
 {
 	int font_position = 0;
 	while (*s != '\0') {
 		const int size = utf8_size(*s);
 		const char32_t c = utf8_to_unicode(s);
 
-		write_unicode(scr, position + Point2D{ font_position * kfont->width(), 0 },
+		write_unicode(scr, position + point2d{ font_position * kfont->width(), 0 },
 					  c, color_code);
 
 		font_position += is_ascii_code(c) ? 1 : 2;
@@ -232,25 +234,4 @@ void initialize_freetype()
 		LOG_ERROR("Failed to initialize FreeType: %d", err);
 		return;
 	}
-
-	// TODO: fix this
-
-	// auto* entry = file_system::find_directory_entry_by_path("/NIHONGO.TTF");
-	// if (entry == nullptr) {
-	// 	printk(KERN_ERROR, "NIHONGO.TTF not found");
-	// 	return;
-	// }
-
-	// const size_t file_size = entry->file_size;
-
-	// __asm__("cli");
-	// nihongo_font_data = new std::vector<uint8_t>(file_size);
-	// __asm__("sti");
-
-	// size_t loaded_size =
-	// 		file_system::load_file(nihongo_font_data->data(), file_size, *entry);
-	// if (loaded_size != file_size) {
-	// 	printk(KERN_ERROR, "Failed to load NIHONGO.TTF");
-	// 	return;
-	// }
 }

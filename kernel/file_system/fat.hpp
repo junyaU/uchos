@@ -13,7 +13,6 @@
 
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <libs/common/types.hpp>
 
@@ -81,7 +80,7 @@ struct directory_entry {
 
 static const cluster_t END_OF_CLUSTER_CHAIN = 0x0FFFFFFFLU;
 
-constexpr size_t BOOT_SECTOR = 0;
+constexpr unsigned int BOOT_SECTOR = 0;
 
 cluster_t next_cluster(cluster_t cluster_id);
 
