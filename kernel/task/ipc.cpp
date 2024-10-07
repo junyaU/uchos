@@ -2,6 +2,7 @@
 #include "graphics/log.hpp"
 #include "libs/common/message.hpp"
 #include "memory/paging.hpp"
+#include "memory/user.hpp"
 #include "task.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -21,12 +22,19 @@ error_t handle_ool_memory_alloc(message& m, task* dst)
 	vaddr_t src_vaddr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
 	size_t num_pages = calc_required_pages(src_vaddr, m.tool_desc.size);
 	paddr_t src_paddr = get_paddr(get_active_page_table(), src_vaddr);
+	int data_offset = src_vaddr.part(0);
+
+	// kernel → userspace
+	if (!is_user_address(m.tool_desc.addr, m.tool_desc.size)) {
+		src_paddr = reinterpret_cast<uint64_t>(m.tool_desc.addr);
+		data_offset = 0;
+	}
 
 	vaddr_t dst_vaddr;
 	ASSERT_OK(map_frame_to_vaddr(dst->get_page_table(), src_paddr, num_pages,
 								 &dst_vaddr));
 
-	m.tool_desc.addr = reinterpret_cast<void*>(dst_vaddr.data + src_vaddr.part(0));
+	m.tool_desc.addr = reinterpret_cast<void*>(dst_vaddr.data + data_offset);
 
 	return OK;
 }
