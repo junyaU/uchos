@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <libs/common/stat.hpp>
 #include <libs/common/types.hpp>
 #include <queue>
 #include <string.h>
@@ -22,6 +23,7 @@ namespace file_system
 {
 bios_parameter_block* VOLUME_BPB;
 unsigned long BYTES_PER_CLUSTER;
+unsigned long ENTRIES_PER_CLUSTER;
 uint32_t* FAT_TABLE;
 unsigned int FAT_TABLE_SECTOR;
 directory_entry* ROOT_DIR;
@@ -240,6 +242,7 @@ void handle_get_bpb(const message& m)
 	VOLUME_BPB = reinterpret_cast<bios_parameter_block*>(m.data.blk_io.buf);
 	BYTES_PER_CLUSTER = static_cast<unsigned long>(VOLUME_BPB->bytes_per_sector) *
 						VOLUME_BPB->sectors_per_cluster;
+	ENTRIES_PER_CLUSTER = BYTES_PER_CLUSTER / sizeof(directory_entry);
 	FAT_TABLE_SECTOR = VOLUME_BPB->reserved_sector_count;
 
 	size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
@@ -282,8 +285,7 @@ void handle_get_file_info(const message& m)
 	message sm = { .type = IPC_GET_FILE_INFO, .sender = FS_FAT32_TASK_ID };
 	sm.data.fs_op.buf = nullptr;
 
-	const auto entries_per_cluster = BYTES_PER_CLUSTER / sizeof(directory_entry);
-	for (int i = 0; i < entries_per_cluster; ++i) {
+	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
 		if (ROOT_DIR[i].name[0] == 0x00) {
 			break;
 		}
@@ -324,12 +326,52 @@ void handle_read_file_data(const message& m)
 
 void handle_get_directory_contents(const message& m)
 {
-	message sm = { .type = IPC_GET_DIRECTORY_CONTENTS, .sender = FS_FAT32_TASK_ID };
-
-	std::vector<char*> path = parse_path(m.data.fs_op.path);
-	for (const auto& p : path) {
-		send_message(FS_FAT32_TASK_ID, &sm);
+	if (m.type == IPC_READ_FROM_BLK_DEVICE) {
+		return;
 	}
+
+	directory_entry* current_dir = ROOT_DIR;
+	char entries[ENTRIES_PER_CLUSTER * sizeof(directory_entry)];
+	int entries_count = 0;
+	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
+		if (current_dir[i].name[0] == 0x00) {
+			break;
+		}
+
+		if (current_dir[i].name[0] == 0xE5) {
+			continue;
+		}
+
+		if (current_dir[i].attribute == entry_attribute::LONG_NAME) {
+			continue;
+		}
+
+		memcpy(&entries[entries_count * sizeof(directory_entry)], &current_dir[i],
+			   sizeof(directory_entry));
+		++entries_count;
+	}
+
+	void* buf = kmalloc(entries_count * sizeof(stat), KMALLOC_ZEROED);
+	if (buf == nullptr) {
+		LOG_ERROR("failed to allocate memory");
+		return;
+	}
+
+	for (int i = 0; i < entries_count; ++i) {
+		stat* s = reinterpret_cast<stat*>(buf) + i;
+		read_dir_entry_name(*reinterpret_cast<directory_entry*>(
+									&entries[i * sizeof(directory_entry)]),
+							s->name);
+		s->size = current_dir[i].file_size;
+		s->type = current_dir[i].attribute == entry_attribute::DIRECTORY
+						  ? stat_type_t::DIRECTORY
+						  : stat_type_t::REGULAR_FILE;
+	}
+
+	message sm = { .type = IPC_GET_DIRECTORY_CONTENTS, .sender = FS_FAT32_TASK_ID };
+	sm.tool_desc.addr = buf;
+	sm.tool_desc.size = entries_count * sizeof(stat);
+	sm.tool_desc.present = true;
 
 	send_message(m.sender, &sm);
 }
@@ -342,7 +384,7 @@ void fat32_task()
 
 	init_read_contexts();
 
-	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE, IPC_GET_BPB, true);
+	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE, IPC_GET_BPB);
 
 	t->message_handlers[IPC_GET_BPB] = handle_get_bpb;
 	t->message_handlers[IPC_GET_FAT_TABLE] = handle_get_fat_table;
