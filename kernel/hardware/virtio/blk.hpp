@@ -10,6 +10,7 @@
  */
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <libs/common/types.hpp>
 
@@ -46,7 +47,7 @@ constexpr int VIRTIO_BLK_S_OK = 0;
 constexpr int VIRTIO_BLK_S_IOERR = 1;
 constexpr int VIRTIO_BLK_S_UNSUPP = 2;
 
-constexpr int SECTOR_SIZE = 512;
+constexpr size_t SECTOR_SIZE = 512;
 
 /**
  * @struct virtio_blk_req

@@ -14,7 +14,7 @@ public:
 	const uint8_t* get_font(char c);
 	int width() const { return width_; }
 	int height() const { return height_; }
-	Point2D size() const { return { width_, height_ }; }
+	point2d size() const { return { width_, height_ }; }
 
 private:
 	const uint8_t* font_data_;
@@ -32,11 +32,11 @@ char32_t utf8_to_unicode(const char* utf8);
 
 char decode_utf8(char32_t c);
 
-void write_ascii(screen& scr, Point2D position, char c, uint32_t color_code);
+void write_ascii(screen& scr, point2d position, char c, uint32_t color_code);
 
-void write_unicode(screen& scr, Point2D position, char32_t c, uint32_t color_code);
+void write_unicode(screen& scr, point2d position, char32_t c, uint32_t color_code);
 
-void write_string(screen& scr, Point2D position, const char* s, uint32_t color_code);
+void write_string(screen& scr, point2d position, const char* s, uint32_t color_code);
 
 void to_lower(char* s);
 

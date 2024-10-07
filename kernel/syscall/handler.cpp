@@ -6,6 +6,7 @@
 #include "memory/paging.hpp"
 #include "memory/slab.hpp"
 #include "memory/user.hpp"
+#include "point2d.hpp"
 #include "syscall.hpp"
 #include "task/context_switch.h"
 #include "task/ipc.hpp"
@@ -126,7 +127,7 @@ error_t sys_fill_rect(uint64_t arg1,
 	const int height = arg4;
 	const uint32_t color = arg5;
 
-	kscreen->fill_rectangle(Point2D{ x, y }, Point2D{ width, height }, color);
+	kscreen->fill_rectangle(point2d{ x, y }, point2d{ width, height }, color);
 
 	return OK;
 }

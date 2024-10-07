@@ -13,12 +13,12 @@ public:
 
 	int width() const { return horizontal_resolution_; }
 	int height() const { return vertical_resolution_; }
-	Point2D size() const { return { width(), height() }; }
+	point2d size() const { return { width(), height() }; }
 
 	Color bg_color() const { return bg_color_; }
 
-	void put_pixel(Point2D point, uint32_t color_code);
-	void fill_rectangle(Point2D position, Point2D size, uint32_t color_code);
+	void put_pixel(point2d point, uint32_t color_code);
+	void fill_rectangle(point2d position, point2d size, uint32_t color_code);
 
 private:
 	uint64_t pixels_per_scan_line_;
