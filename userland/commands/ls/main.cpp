@@ -3,6 +3,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/stat.hpp>
 #include <libs/common/types.hpp>
+#include <libs/user/console.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/syscall.hpp>
 
@@ -31,11 +32,7 @@ extern "C" int main(int argc, char** argv)
 			continue;
 		}
 
-		message send_m = { .type = NOTIFY_WRITE,
-						   .sender = pid,
-						   .is_end_of_message = msg.is_end_of_message };
-
-		char* buf = reinterpret_cast<char*>(send_m.data.write_shell.buf);
+		char buf[256];
 		size_t buf_pos = 0;
 		size_t buf_size = msg.tool_desc.size;
 
@@ -58,7 +55,7 @@ extern "C" int main(int argc, char** argv)
 			buf_pos += 4;
 		}
 
-		send_message(SHELL_TASK_ID, &send_m);
+		printu(buf);
 
 		deallocate_ool_memory(pid, msg.tool_desc.addr, msg.tool_desc.size);
 
