@@ -1,7 +1,6 @@
 #include "libs/common/message.hpp"
-#include <cstdio>
+#include "libs/user/console.hpp"
 #include <cstdlib>
-#include <cstring>
 #include <libs/common/types.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/syscall.hpp>
@@ -25,16 +24,9 @@ extern "C" int main(int argc, char** argv)
 			continue;
 		}
 
-		message send_m = { .type = NOTIFY_WRITE, .sender = pid };
-
-		char buf[100];
-		sprintf(buf, "Used memory: %u MiB\nTotal memory: %u MiB",
-				msg.data.memory_usage.used / 1024 / 1024,
-				msg.data.memory_usage.total / 1024 / 1024);
-
-		memcpy(send_m.data.write_shell.buf, buf, strlen(buf));
-
-		send_message(SHELL_TASK_ID, &send_m);
+		printu("Used memory: %u MiB\nTotal memory: %u MiB",
+			   msg.data.memory_usage.used / 1024 / 1024,
+			   msg.data.memory_usage.total / 1024 / 1024);
 
 		exit(0);
 	}

@@ -1,3 +1,4 @@
+#include "libs/user/console.hpp"
 #include <cstdlib>
 #include <cstring>
 #include <libs/common/types.hpp>
@@ -6,16 +7,12 @@
 
 extern "C" int main(int argc, char** argv)
 {
-	pid_t pid = sys_getpid();
-	message m;
-	m.sender = pid;
-	m.type = NOTIFY_WRITE;
-
+	char buf[256];
 	if (argv[1] != nullptr) {
-		memcpy(m.data.write_shell.buf, argv[1], strlen(argv[1]));
+		memcpy(buf, argv[1], strlen(argv[1]));
 	}
 
-	send_message(SHELL_TASK_ID, &m);
+	printu(buf);
 
 	exit(0);
 }
