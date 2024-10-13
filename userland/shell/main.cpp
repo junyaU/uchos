@@ -41,7 +41,7 @@ extern "C" int main(void)
 						break;
 				};
 				break;
-			case msg_t::IPC_INITIALIZE_TASK:
+			case msg_t::INITIALIZE_TASK:
 				set_cursor_timer(500);
 				break;
 			default:

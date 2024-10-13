@@ -26,7 +26,7 @@ message wait_for_message(msg_t type)
 void initialize_task()
 {
 	message m;
-	m.type = msg_t::IPC_INITIALIZE_TASK;
+	m.type = msg_t::INITIALIZE_TASK;
 
 	send_message(KERNEL_TASK_ID, &m);
 }

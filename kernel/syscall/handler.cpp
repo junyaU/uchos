@@ -177,7 +177,7 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 		message copy_m;
 		copy_from_user(&copy_m, &m, sizeof(m));
 
-		if (copy_m.type == msg_t::IPC_INITIALIZE_TASK) {
+		if (copy_m.type == msg_t::INITIALIZE_TASK) {
 			copy_m.sender = t->id;
 		}
 
