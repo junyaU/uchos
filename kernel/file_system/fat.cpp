@@ -238,40 +238,37 @@ error_t process_file_read_request(const message& m)
 	return OK;
 }
 
-void handle_get_bpb(const message& m)
+void handle_initialize(const message& m)
 {
-	VOLUME_BPB = reinterpret_cast<bios_parameter_block*>(m.data.blk_io.buf);
-	BYTES_PER_CLUSTER = static_cast<unsigned long>(VOLUME_BPB->bytes_per_sector) *
-						VOLUME_BPB->sectors_per_cluster;
-	ENTRIES_PER_CLUSTER = BYTES_PER_CLUSTER / sizeof(directory_entry);
-	FAT_TABLE_SECTOR = VOLUME_BPB->reserved_sector_count;
+	if (m.data.blk_io.sector == BOOT_SECTOR) {
+		VOLUME_BPB = reinterpret_cast<bios_parameter_block*>(m.data.blk_io.buf);
+		BYTES_PER_CLUSTER =
+				static_cast<unsigned long>(VOLUME_BPB->bytes_per_sector) *
+				VOLUME_BPB->sectors_per_cluster;
+		ENTRIES_PER_CLUSTER = BYTES_PER_CLUSTER / sizeof(directory_entry);
+		FAT_TABLE_SECTOR = VOLUME_BPB->reserved_sector_count;
 
-	size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
-						static_cast<size_t>(SECTOR_SIZE);
+		size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
+							static_cast<size_t>(SECTOR_SIZE);
 
-	send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size,
-								msg_t::IPC_GET_FAT_TABLE);
-}
+		send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size,
+									msg_t::INITIALIZE_TASK);
+	} else if (m.data.blk_io.sector == FAT_TABLE_SECTOR) {
+		FAT_TABLE = reinterpret_cast<uint32_t*>(m.data.blk_io.buf);
+		unsigned int root_cluster = VOLUME_BPB->root_cluster;
+		unsigned int start_sector = calc_start_sector(root_cluster);
 
-void handle_get_fat_table(const message& m)
-{
-	FAT_TABLE = reinterpret_cast<uint32_t*>(m.data.blk_io.buf);
-	unsigned int root_cluster = VOLUME_BPB->root_cluster;
-	unsigned int start_sector = calc_start_sector(root_cluster);
+		send_read_req_to_blk_device(start_sector, BYTES_PER_CLUSTER,
+									msg_t::INITIALIZE_TASK);
+	} else {
+		ROOT_DIR = reinterpret_cast<directory_entry*>(m.data.blk_io.buf);
+		CURRENT_TASK->is_initilized = true;
 
-	send_read_req_to_blk_device(start_sector, BYTES_PER_CLUSTER,
-								msg_t::IPC_GET_ROOT_DIR);
-}
-
-void handle_get_root_dir(const message& m)
-{
-	ROOT_DIR = reinterpret_cast<directory_entry*>(m.data.blk_io.buf);
-	CURRENT_TASK->is_initilized = true;
-
-	while (!pending_messages.empty()) {
-		auto msg = pending_messages.front();
-		pending_messages.pop();
-		CURRENT_TASK->messages.push(msg);
+		while (!pending_messages.empty()) {
+			auto msg = pending_messages.front();
+			pending_messages.pop();
+			CURRENT_TASK->messages.push(msg);
+		}
 	}
 }
 
@@ -388,11 +385,9 @@ void fat32_task()
 
 	init_read_contexts();
 
-	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE, msg_t::IPC_GET_BPB);
+	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE, msg_t::INITIALIZE_TASK);
 
-	t->add_msg_handler(msg_t::IPC_GET_BPB, handle_get_bpb);
-	t->add_msg_handler(msg_t::IPC_GET_FAT_TABLE, handle_get_fat_table);
-	t->add_msg_handler(msg_t::IPC_GET_ROOT_DIR, handle_get_root_dir);
+	t->add_msg_handler(msg_t::INITIALIZE_TASK, handle_initialize);
 	t->add_msg_handler(msg_t::IPC_GET_FILE_INFO, handle_get_file_info);
 	t->add_msg_handler(msg_t::IPC_READ_FILE_DATA, handle_read_file_data);
 	t->add_msg_handler(msg_t::IPC_GET_DIRECTORY_CONTENTS,
