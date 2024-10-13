@@ -12,7 +12,7 @@ extern "C" int main(int argc, char** argv)
 	pid_t pid = sys_getpid();
 	char* input = argv[1];
 
-	message m = { .type = IPC_GET_DIRECTORY_CONTENTS, .sender = pid };
+	message m = { .type = msg_t::IPC_GET_DIRECTORY_CONTENTS, .sender = pid };
 	if (input != nullptr) {
 		memcpy(m.data.fs_op.path, input, strlen(input));
 	} else {
@@ -24,11 +24,11 @@ extern "C" int main(int argc, char** argv)
 	message msg;
 	while (true) {
 		receive_message(&msg);
-		if (msg.type == NO_TASK) {
+		if (msg.type == msg_t::NO_TASK) {
 			continue;
 		}
 
-		if (msg.type != IPC_GET_DIRECTORY_CONTENTS) {
+		if (msg.type != msg_t::IPC_GET_DIRECTORY_CONTENTS) {
 			continue;
 		}
 

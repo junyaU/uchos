@@ -2,7 +2,6 @@
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
 #include "graphics/screen.hpp"
-#include "libs/common/message.hpp"
 #include "memory/paging.hpp"
 #include "memory/slab.hpp"
 #include "memory/user.hpp"
@@ -17,6 +16,7 @@
 #include <cstdint>
 #include <cstring>
 #include <fcntl.h>
+#include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
 #include <memory>
 #include <stdint.h>
@@ -161,7 +161,7 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	if (flags == IPC_RECV) {
 		if (t->messages.empty()) {
 			memset(&m, 0, sizeof(m));
-			m.type = NO_TASK;
+			m.type = msg_t::NO_TASK;
 			return OK;
 		}
 
@@ -177,7 +177,7 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 		message copy_m;
 		copy_from_user(&copy_m, &m, sizeof(m));
 
-		if (copy_m.type == IPC_INITIALIZE_TASK) {
+		if (copy_m.type == msg_t::IPC_INITIALIZE_TASK) {
 			copy_m.sender = t->id;
 		}
 
@@ -224,11 +224,11 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	copy_from_user(copy_args, args, args_len);
 	copy_args[args_len] = '\0';
 
-	message msg{ .type = IPC_GET_FILE_INFO, .sender = CURRENT_TASK->id };
+	message msg{ .type = msg_t::IPC_GET_FILE_INFO, .sender = CURRENT_TASK->id };
 	memcpy(msg.data.fs_op.path, copy_path, path_len + 1);
 	send_message(FS_FAT32_TASK_ID, &msg);
 
-	message info_m = wait_for_message(IPC_GET_FILE_INFO);
+	message info_m = wait_for_message(msg_t::IPC_GET_FILE_INFO);
 
 	auto* entry =
 			reinterpret_cast<file_system::directory_entry*>(info_m.data.fs_op.buf);
@@ -236,11 +236,12 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 		return ERR_NO_FILE;
 	}
 
-	message read_msg{ .type = IPC_READ_FILE_DATA, .sender = CURRENT_TASK->id };
+	message read_msg{ .type = msg_t::IPC_READ_FILE_DATA,
+					  .sender = CURRENT_TASK->id };
 	read_msg.data.fs_op.buf = entry;
 	send_message(FS_FAT32_TASK_ID, &read_msg);
 
-	message data_m = wait_for_message(IPC_READ_FILE_DATA);
+	message data_m = wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	kfree(entry);
 
 	page_table_entry* current_page_table = get_active_page_table();
@@ -279,7 +280,7 @@ pid_t sys_wait(uint64_t arg1)
 		message m = t->messages.front();
 		t->messages.pop();
 
-		if (m.type != IPC_EXIT_TASK) {
+		if (m.type != msg_t::IPC_EXIT_TASK) {
 			__asm__("cli");
 			t->messages.push(m);
 			__asm__("sti");
@@ -290,7 +291,7 @@ pid_t sys_wait(uint64_t arg1)
 		return m.sender;
 	}
 
-	return NO_TASK;
+	return -1;
 }
 
 pid_t sys_getpid(void) { return CURRENT_TASK->id; }

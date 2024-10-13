@@ -31,7 +31,7 @@ struct task {
 	page_table_entry* page_table_snapshot;
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;
-	std::array<message_handler_t, NUM_MESSAGE_TYPES> message_handlers;
+	std::array<message_handler_t, total_message_types> message_handlers;
 	std::array<std::shared_ptr<file_descriptor>, 10> fds;
 
 	task(int id,
@@ -50,6 +50,8 @@ struct task {
 	error_t copy_parent_stack(const context& parent_ctx);
 
 	error_t copy_parent_page_table();
+
+	void add_msg_handler(msg_t type, message_handler_t handler);
 
 	bool has_parent() const { return parent_id != -1; }
 
@@ -98,4 +100,4 @@ void exit_task(int status);
 
 fd_t allocate_fd(task* t);
 
-message wait_for_message(int32_t type);
+message wait_for_message(msg_t type);

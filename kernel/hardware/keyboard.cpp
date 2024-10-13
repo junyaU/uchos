@@ -1,6 +1,7 @@
 #include "usb/class_driver/keyboard.hpp"
 #include "keyboard.hpp"
 #include "task/ipc.hpp"
+#include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
 
 namespace
@@ -60,7 +61,7 @@ void initialize_keyboard()
 		const char ascii =
 				shift ? keycode_map_shifted[keycode] : keycode_map[keycode];
 
-		message m{ .type = NOTIFY_KEY_INPUT, .sender = INTERRUPT_TASK };
+		message m{ .type = msg_t::NOTIFY_KEY_INPUT, .sender = INTERRUPT_TASK };
 		m.data.key_input.key_code = keycode;
 		m.data.key_input.modifier = modifier;
 		m.data.key_input.ascii = static_cast<uint8_t>(ascii);

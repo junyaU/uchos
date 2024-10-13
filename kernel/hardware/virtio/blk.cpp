@@ -2,10 +2,11 @@
 #include "graphics/log.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
-#include "libs/common/types.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
+#include <libs/common/message.hpp>
+#include <libs/common/types.hpp>
 
 namespace
 {
@@ -38,7 +39,7 @@ void handle_read_request(const message& m)
 
 void handle_write_request(const message& m)
 {
-	message send_m = { .type = IPC_WRITE_TO_BLK_DEVICE,
+	message send_m = { .type = msg_t::IPC_WRITE_TO_BLK_DEVICE,
 					   .sender = VIRTIO_BLK_TASK_ID };
 
 	const int sector = m.data.blk_io.sector;
@@ -176,8 +177,8 @@ void virtio_blk_task()
 
 	init_blk_device();
 
-	t->message_handlers[IPC_READ_FROM_BLK_DEVICE] = handle_read_request;
-	t->message_handlers[IPC_WRITE_TO_BLK_DEVICE] = handle_write_request;
+	t->add_msg_handler(msg_t::IPC_READ_FROM_BLK_DEVICE, handle_read_request);
+	t->add_msg_handler(msg_t::IPC_WRITE_TO_BLK_DEVICE, handle_write_request);
 
 	t->is_initilized = true;
 

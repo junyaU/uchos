@@ -1,6 +1,7 @@
 #include "shell.hpp"
 #include "terminal.hpp"
 #include <cstdlib>
+#include <libs/common/message.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/print.hpp>
 #include <libs/user/syscall.hpp>
@@ -20,18 +21,18 @@ extern "C" int main(void)
 	message msg;
 	while (true) {
 		receive_message(&msg);
-		if (msg.type == NO_TASK) {
+		if (msg.type == msg_t::NO_TASK) {
 			continue;
 		}
 
 		switch (msg.type) {
-			case NOTIFY_KEY_INPUT:
+			case msg_t::NOTIFY_KEY_INPUT:
 				term->input_char(msg.data.key_input.ascii);
 				break;
-			case NOTIFY_WRITE:
+			case msg_t::NOTIFY_WRITE:
 				term->print_message(msg.data.write_shell.buf, msg.is_end_of_message);
 				break;
-			case NOTIFY_TIMER_TIMEOUT:
+			case msg_t::NOTIFY_TIMER_TIMEOUT:
 				switch (msg.data.timer.action) {
 					case timeout_action_t::TERMINAL_CURSOR_BLINK:
 						term->blink_cursor();
@@ -40,7 +41,7 @@ extern "C" int main(void)
 						break;
 				};
 				break;
-			case IPC_INITIALIZE_TASK:
+			case msg_t::IPC_INITIALIZE_TASK:
 				set_cursor_timer(500);
 				break;
 			default:

@@ -2,6 +2,7 @@
 #include "graphics/log.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
+#include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
 
 uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
@@ -89,7 +90,7 @@ bool kernel_timer::increment_tick()
 		}
 
 		message m;
-		m.type = NOTIFY_TIMER_TIMEOUT;
+		m.type = msg_t::NOTIFY_TIMER_TIMEOUT;
 		m.sender = KERNEL_TASK_ID;
 		m.data.timer.action = e.action;
 		send_message(e.task_id, &m);

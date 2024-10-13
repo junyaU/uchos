@@ -4,6 +4,7 @@
 #include "task/task.hpp"
 #include <cstddef>
 #include <cstring>
+#include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
 
 void printk(int level, const char* format, ...)
@@ -57,7 +58,7 @@ size_t term_file_descriptor::read(void* buf, size_t len)
 		const message m = t->messages.front();
 		t->messages.pop();
 
-		if (m.type == NOTIFY_KEY_INPUT) {
+		if (m.type == msg_t::NOTIFY_KEY_INPUT) {
 			bufc[read_len++] = m.data.key_input.ascii;
 		}
 	}

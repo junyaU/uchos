@@ -10,29 +10,32 @@
 constexpr int IPC_RECV = 0;
 constexpr int IPC_SEND = 1;
 
-// ipc message types
-constexpr int NO_TASK = -1;
-constexpr int NOTIFY_KEY_INPUT = 0;
-constexpr int NOTIFY_XHCI = 1;
-constexpr int NOTIFY_TIMER_TIMEOUT = 3;
-constexpr int NOTIFY_WRITE = 4;
-constexpr int IPC_INITIALIZE_TASK = 5;
-constexpr int IPC_TIME = 6;
-constexpr int IPC_EXIT_TASK = 7;
-constexpr int IPC_MEMORY_USAGE = 8;
-constexpr int IPC_PCI = 9;
-constexpr int IPC_WRITE_TO_BLK_DEVICE = 10;
-constexpr int IPC_READ_FROM_BLK_DEVICE = 11;
-constexpr int IPC_GET_BPB = 12;
-constexpr int IPC_GET_FAT_TABLE = 13;
-constexpr int IPC_GET_ROOT_DIR = 14;
-constexpr int IPC_OOL_MEMORY_DEALLOC = 15;
-constexpr int IPC_GET_DIRECTORY_CONTENTS = 16;
-constexpr int IPC_GET_FILE_INFO = 17;
-constexpr int IPC_READ_FILE_DATA = 18;
-constexpr int IPC_RELEASE_FILE_BUFFER = 19;
+enum class msg_t : int32_t {
+	NO_TASK = -1,
+	NOTIFY_KEY_INPUT,
+	NOTIFY_XHCI,
+	NOTIFY_TIMER_TIMEOUT,
+	NOTIFY_WRITE,
+	IPC_INITIALIZE_TASK,
+	IPC_TIME,
+	IPC_EXIT_TASK,
+	IPC_MEMORY_USAGE,
+	IPC_PCI,
+	IPC_WRITE_TO_BLK_DEVICE,
+	IPC_READ_FROM_BLK_DEVICE,
+	IPC_GET_BPB,
+	IPC_GET_FAT_TABLE,
+	IPC_GET_ROOT_DIR,
+	IPC_OOL_MEMORY_DEALLOC,
+	IPC_GET_DIRECTORY_CONTENTS,
+	IPC_GET_FILE_INFO,
+	IPC_READ_FILE_DATA,
+	IPC_RELEASE_FILE_BUFFER,
+	MAX_MESSAGE_TYPE,
+};
 
-constexpr int NUM_MESSAGE_TYPES = 24;
+constexpr int32_t total_message_types =
+		static_cast<int32_t>(msg_t::MAX_MESSAGE_TYPE);
 
 enum class timeout_action_t : uint8_t {
 	TERMINAL_CURSOR_BLINK,
@@ -46,7 +49,7 @@ struct msg_ool_desc_t {
 };
 
 struct message {
-	int32_t type;
+	msg_t type;
 	pid_t sender;
 	msg_ool_desc_t tool_desc;
 	bool is_end_of_message = true;
@@ -97,7 +100,7 @@ struct message {
 			unsigned int sector;
 			size_t len;
 			size_t sequence;
-			int32_t dst_type;
+			msg_t dst_type;
 		} blk_io;
 
 		struct {

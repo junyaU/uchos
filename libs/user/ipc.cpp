@@ -1,6 +1,7 @@
 #include "ipc.hpp"
-#include "libs/common/types.hpp"
 #include "syscall.hpp"
+#include <libs/common/message.hpp>
+#include <libs/common/types.hpp>
 
 void receive_message(message* msg)
 {
@@ -15,14 +16,14 @@ void send_message(pid_t dst, const message* msg)
 void initialize_task()
 {
 	message m;
-	m.type = IPC_INITIALIZE_TASK;
+	m.type = msg_t::IPC_INITIALIZE_TASK;
 
 	send_message(KERNEL_TASK_ID, &m);
 }
 
 void deallocate_ool_memory(pid_t sender, void* addr, size_t size)
 {
-	message m = { .type = IPC_OOL_MEMORY_DEALLOC, .sender = sender };
+	message m = { .type = msg_t::IPC_OOL_MEMORY_DEALLOC, .sender = sender };
 	m.tool_desc.addr = addr;
 	m.tool_desc.size = size;
 	m.tool_desc.present = true;

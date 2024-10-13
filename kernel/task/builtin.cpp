@@ -19,14 +19,15 @@ void notify_xhci_handler(const message& m) { usb::xhci::process_events(); }
 
 void handle_initialize_task(const message& m)
 {
-	message send_m = { .type = IPC_INITIALIZE_TASK, .sender = KERNEL_TASK_ID };
+	message send_m = { .type = msg_t::IPC_INITIALIZE_TASK,
+					   .sender = KERNEL_TASK_ID };
 	send_m.data.init.task_id = m.sender;
 	send_message(SHELL_TASK_ID, &send_m);
 }
 
 void handle_memory_usage(const message& m)
 {
-	message send_m = { .type = IPC_MEMORY_USAGE, .sender = KERNEL_TASK_ID };
+	message send_m = { .type = msg_t::IPC_MEMORY_USAGE, .sender = KERNEL_TASK_ID };
 
 	size_t used_mem = 0;
 	size_t total_mem = 0;
@@ -41,7 +42,7 @@ void handle_memory_usage(const message& m)
 
 void handle_pci(const message& m)
 {
-	message send_m = { .type = IPC_PCI,
+	message send_m = { .type = msg_t::IPC_PCI,
 					   .sender = KERNEL_TASK_ID,
 					   .is_end_of_message = false };
 
@@ -71,9 +72,9 @@ void task_kernel()
 {
 	task* t = CURRENT_TASK;
 
-	t->message_handlers[IPC_INITIALIZE_TASK] = handle_initialize_task;
-	t->message_handlers[IPC_MEMORY_USAGE] = handle_memory_usage;
-	t->message_handlers[IPC_PCI] = handle_pci;
+	t->add_msg_handler(msg_t::IPC_INITIALIZE_TASK, handle_initialize_task);
+	t->add_msg_handler(msg_t::IPC_MEMORY_USAGE, handle_memory_usage);
+	t->add_msg_handler(msg_t::IPC_PCI, handle_pci);
 
 	process_messages(t);
 }
@@ -82,12 +83,12 @@ void task_shell()
 {
 	task* t = CURRENT_TASK;
 
-	message m = { .type = IPC_GET_FILE_INFO, .sender = SHELL_TASK_ID };
+	message m = { .type = msg_t::IPC_GET_FILE_INFO, .sender = SHELL_TASK_ID };
 	char path[6] = "shell";
 	memcpy(m.data.fs_op.path, path, 6);
 	send_message(FS_FAT32_TASK_ID, &m);
 
-	message info_m = wait_for_message(IPC_GET_FILE_INFO);
+	message info_m = wait_for_message(msg_t::IPC_GET_FILE_INFO);
 	auto* entry =
 			reinterpret_cast<file_system::directory_entry*>(info_m.data.fs_op.buf);
 	if (entry == nullptr) {
@@ -97,11 +98,11 @@ void task_shell()
 		}
 	}
 
-	message read_m = { .type = IPC_READ_FILE_DATA, .sender = SHELL_TASK_ID };
+	message read_m = { .type = msg_t::IPC_READ_FILE_DATA, .sender = SHELL_TASK_ID };
 	read_m.data.fs_op.buf = info_m.data.fs_op.buf;
 	send_message(FS_FAT32_TASK_ID, &read_m);
 
-	message data_m = wait_for_message(IPC_READ_FILE_DATA);
+	message data_m = wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	CURRENT_TASK->is_initilized = true;
 	file_system::execute_file(data_m.data.fs_op.buf, "shell", nullptr);
 }
@@ -116,7 +117,7 @@ void task_usb_handler()
 
 	initialize_keyboard();
 
-	t->message_handlers[NOTIFY_XHCI] = notify_xhci_handler;
+	t->add_msg_handler(msg_t::NOTIFY_XHCI, notify_xhci_handler);
 
 	process_messages(t);
 }
