@@ -13,6 +13,16 @@ void send_message(pid_t dst, const message* msg)
 	sys_ipc(dst, msg->sender, msg, IPC_SEND);
 }
 
+message wait_for_message(msg_t type)
+{
+	message m;
+	do {
+		receive_message(&m);
+	} while (m.type != type);
+
+	return m;
+}
+
 void initialize_task()
 {
 	message m;
