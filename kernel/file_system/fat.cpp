@@ -150,11 +150,12 @@ cluster_t allocate_cluster_chain(size_t num_clusters)
 
 void send_read_req_to_blk_device(unsigned int sector,
 								 size_t len,
-								 int32_t dst_type,
+								 msg_t dst_type,
 								 fs_id_t request_id = 0,
 								 size_t sequence = 0)
 {
-	message m = { .type = IPC_READ_FROM_BLK_DEVICE, .sender = FS_FAT32_TASK_ID };
+	message m = { .type = msg_t::IPC_READ_FROM_BLK_DEVICE,
+				  .sender = FS_FAT32_TASK_ID };
 	m.data.blk_io.sector = sector;
 	m.data.blk_io.len = len;
 	m.data.blk_io.dst_type = dst_type;
@@ -166,7 +167,7 @@ void send_read_req_to_blk_device(unsigned int sector,
 
 void send_file_data(fs_id_t id, void* buf, size_t len, pid_t requester)
 {
-	message m = { .type = IPC_READ_FILE_DATA, .sender = FS_FAT32_TASK_ID };
+	message m = { .type = msg_t::IPC_READ_FILE_DATA, .sender = FS_FAT32_TASK_ID };
 	m.data.blk_io.request_id = id;
 	m.data.blk_io.buf = buf;
 	m.data.blk_io.len = len;
@@ -228,8 +229,8 @@ error_t process_file_read_request(const message& m)
 
 	while (target_cluster != END_OF_CLUSTER_CHAIN) {
 		send_read_req_to_blk_device(calc_start_sector(target_cluster),
-									BYTES_PER_CLUSTER, IPC_READ_FILE_DATA, cache->id,
-									sequence++);
+									BYTES_PER_CLUSTER, msg_t::IPC_READ_FILE_DATA,
+									cache->id, sequence++);
 
 		target_cluster = next_cluster(target_cluster);
 	}
@@ -248,7 +249,8 @@ void handle_get_bpb(const message& m)
 	size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
 						static_cast<size_t>(SECTOR_SIZE);
 
-	send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size, IPC_GET_FAT_TABLE);
+	send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size,
+								msg_t::IPC_GET_FAT_TABLE);
 }
 
 void handle_get_fat_table(const message& m)
@@ -257,7 +259,8 @@ void handle_get_fat_table(const message& m)
 	unsigned int root_cluster = VOLUME_BPB->root_cluster;
 	unsigned int start_sector = calc_start_sector(root_cluster);
 
-	send_read_req_to_blk_device(start_sector, BYTES_PER_CLUSTER, IPC_GET_ROOT_DIR);
+	send_read_req_to_blk_device(start_sector, BYTES_PER_CLUSTER,
+								msg_t::IPC_GET_ROOT_DIR);
 }
 
 void handle_get_root_dir(const message& m)
@@ -282,7 +285,7 @@ void handle_get_file_info(const message& m)
 	const auto* path = m.data.fs_op.path;
 	to_upper(const_cast<char*>(path));
 
-	message sm = { .type = IPC_GET_FILE_INFO, .sender = FS_FAT32_TASK_ID };
+	message sm = { .type = msg_t::IPC_GET_FILE_INFO, .sender = FS_FAT32_TASK_ID };
 	sm.data.fs_op.buf = nullptr;
 
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
@@ -326,7 +329,7 @@ void handle_read_file_data(const message& m)
 
 void handle_get_directory_contents(const message& m)
 {
-	if (m.type == IPC_READ_FROM_BLK_DEVICE) {
+	if (m.type == msg_t::IPC_READ_FROM_BLK_DEVICE) {
 		return;
 	}
 
@@ -368,7 +371,8 @@ void handle_get_directory_contents(const message& m)
 						  : stat_type_t::REGULAR_FILE;
 	}
 
-	message sm = { .type = IPC_GET_DIRECTORY_CONTENTS, .sender = FS_FAT32_TASK_ID };
+	message sm = { .type = msg_t::IPC_GET_DIRECTORY_CONTENTS,
+				   .sender = FS_FAT32_TASK_ID };
 	sm.tool_desc.addr = buf;
 	sm.tool_desc.size = entries_count * sizeof(stat);
 	sm.tool_desc.present = true;
@@ -384,14 +388,15 @@ void fat32_task()
 
 	init_read_contexts();
 
-	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE, IPC_GET_BPB);
+	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE, msg_t::IPC_GET_BPB);
 
-	t->message_handlers[IPC_GET_BPB] = handle_get_bpb;
-	t->message_handlers[IPC_GET_FAT_TABLE] = handle_get_fat_table;
-	t->message_handlers[IPC_GET_ROOT_DIR] = handle_get_root_dir;
-	t->message_handlers[IPC_GET_FILE_INFO] = handle_get_file_info;
-	t->message_handlers[IPC_READ_FILE_DATA] = handle_read_file_data;
-	t->message_handlers[IPC_GET_DIRECTORY_CONTENTS] = handle_get_directory_contents;
+	t->add_msg_handler(msg_t::IPC_GET_BPB, handle_get_bpb);
+	t->add_msg_handler(msg_t::IPC_GET_FAT_TABLE, handle_get_fat_table);
+	t->add_msg_handler(msg_t::IPC_GET_ROOT_DIR, handle_get_root_dir);
+	t->add_msg_handler(msg_t::IPC_GET_FILE_INFO, handle_get_file_info);
+	t->add_msg_handler(msg_t::IPC_READ_FILE_DATA, handle_read_file_data);
+	t->add_msg_handler(msg_t::IPC_GET_DIRECTORY_CONTENTS,
+					   handle_get_directory_contents);
 
 	process_messages(t);
 };

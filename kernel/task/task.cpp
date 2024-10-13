@@ -127,6 +127,14 @@ error_t task::copy_parent_page_table()
 	return OK;
 }
 
+void task::add_msg_handler(msg_t type, message_handler_t handler)
+{
+	if (type == msg_t::NO_TASK || type >= msg_t::MAX_MESSAGE_TYPE) {
+		return;
+	}
+	message_handlers[static_cast<int32_t>(type)] = handler;
+}
+
 task* copy_task(task* parent, context* parent_ctx)
 {
 	task* child = create_task(parent->name, 0, false, true);
@@ -209,7 +217,7 @@ void exit_task(int status)
 	task* t = CURRENT_TASK;
 
 	if (t->has_parent()) {
-		message m = { .type = IPC_EXIT_TASK, .sender = t->id };
+		message m = { .type = msg_t::IPC_EXIT_TASK, .sender = t->id };
 		m.data.exit_task.status = status;
 		send_message(t->parent_id, &m);
 	}
@@ -231,11 +239,11 @@ void exit_task(int status)
 		const message m = t->messages.front();
 		t->messages.pop();
 
-		if (m.type < 0 || m.type >= NUM_MESSAGE_TYPES) {
+		if (m.type == msg_t::NO_TASK || m.type >= msg_t::MAX_MESSAGE_TYPE) {
 			continue;
 		}
 
-		t->message_handlers[m.type](m);
+		t->message_handlers[static_cast<int32_t>(m.type)](m);
 	}
 }
 
@@ -284,7 +292,7 @@ task::task(int id,
 	  state{ state },
 	  stack{ nullptr },
 	  messages{ std::queue<message>() },
-	  message_handlers({ std::array<message_handler_t, NUM_MESSAGE_TYPES>() }),
+	  message_handlers({ std::array<message_handler_t, total_message_types>() }),
 	  fds{ std::array<std::shared_ptr<file_descriptor>, 10>() }
 {
 	list_elem_init(&run_queue_elem);
@@ -327,7 +335,7 @@ task::task(int id,
 	*reinterpret_cast<uint32_t*>(&ctx.fxsave_area[24]) = 0x1f80;
 }
 
-message wait_for_message(int32_t type)
+message wait_for_message(msg_t type)
 {
 	task* t = CURRENT_TASK;
 

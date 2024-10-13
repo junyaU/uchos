@@ -10,21 +10,21 @@
 extern "C" int main(int argc, char** argv)
 {
 	pid_t pid = sys_getpid();
-	message m = { .type = IPC_PCI, .sender = pid };
+	message m = { .type = msg_t::IPC_PCI, .sender = pid };
 	send_message(KERNEL_TASK_ID, &m);
 
 	message msg;
 	while (true) {
 		receive_message(&msg);
-		if (msg.type == NO_TASK) {
+		if (msg.type == msg_t::NO_TASK) {
 			continue;
 		}
 
-		if (msg.type != IPC_PCI) {
+		if (msg.type != msg_t::IPC_PCI) {
 			continue;
 		}
 
-		message send_m = { .type = NOTIFY_WRITE,
+		message send_m = { .type = msg_t::NOTIFY_WRITE,
 						   .sender = pid,
 						   .is_end_of_message = msg.is_end_of_message };
 

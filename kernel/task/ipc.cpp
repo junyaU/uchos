@@ -1,11 +1,11 @@
 #include "ipc.hpp"
 #include "graphics/log.hpp"
-#include "libs/common/message.hpp"
 #include "memory/paging.hpp"
 #include "memory/user.hpp"
 #include "task.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
 
 error_t handle_ool_memory_dealloc(const message& m)
@@ -53,7 +53,7 @@ error_t send_message(pid_t dst_id, message* m)
 		return ERR_INVALID_TASK;
 	}
 
-	if (m->type == IPC_OOL_MEMORY_DEALLOC) {
+	if (m->type == msg_t::IPC_OOL_MEMORY_DEALLOC) {
 		ASSERT_OK(handle_ool_memory_dealloc(*m));
 	} else if (m->tool_desc.present) {
 		ASSERT_OK(handle_ool_memory_alloc(*m, dst));

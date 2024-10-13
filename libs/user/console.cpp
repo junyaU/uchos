@@ -16,7 +16,9 @@ void printu(const char* format, ...)
 
 	pid_t pid = sys_getpid();
 
-	message m = { .type = NOTIFY_WRITE, .sender = pid, .is_end_of_message = true };
+	message m = { .type = msg_t::NOTIFY_WRITE,
+				  .sender = pid,
+				  .is_end_of_message = true };
 	memcpy(m.data.write_shell.buf, buffer, sizeof(buffer));
 
 	send_message(SHELL_TASK_ID, &m);

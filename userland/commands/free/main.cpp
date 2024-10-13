@@ -9,18 +9,18 @@ extern "C" int main(int argc, char** argv)
 {
 	pid_t pid = sys_getpid();
 
-	message m = { .type = IPC_MEMORY_USAGE, .sender = pid };
+	message m = { .type = msg_t::IPC_MEMORY_USAGE, .sender = pid };
 
 	send_message(KERNEL_TASK_ID, &m);
 
 	message msg;
 	while (true) {
 		receive_message(&msg);
-		if (msg.type == NO_TASK) {
+		if (msg.type == msg_t::NO_TASK) {
 			continue;
 		}
 
-		if (msg.type != IPC_MEMORY_USAGE) {
+		if (msg.type != msg_t::IPC_MEMORY_USAGE) {
 			continue;
 		}
 
