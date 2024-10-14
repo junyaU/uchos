@@ -1,6 +1,5 @@
 #pragma once
 
-#include "file_system/file_descriptor.hpp"
 #include "list.hpp"
 #include "memory/paging.hpp"
 #include "memory/slab.hpp"
@@ -10,7 +9,6 @@
 #include <cstdint>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
-#include <memory>
 #include <queue>
 
 void initialize_task();
@@ -32,7 +30,6 @@ struct task {
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;
 	std::array<message_handler_t, total_message_types> message_handlers;
-	std::array<std::shared_ptr<file_descriptor>, 10> fds;
 
 	task(int id,
 		 const char* task_name,

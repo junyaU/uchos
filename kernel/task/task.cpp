@@ -1,6 +1,5 @@
 #include "task/task.hpp"
 #include "file_system/fat.hpp"
-#include "file_system/file_descriptor.hpp"
 #include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
 #include "interrupt/vector.hpp"
@@ -18,7 +17,6 @@
 #include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
-#include <memory>
 #include <queue>
 
 list_t run_queue;
@@ -247,17 +245,6 @@ void exit_task(int status)
 	}
 }
 
-fd_t allocate_fd(task* t)
-{
-	for (fd_t i = 0; i < t->fds.size(); i++) {
-		if (t->fds[i] == nullptr) {
-			return i;
-		}
-	}
-
-	return NO_FD;
-}
-
 void initialize_task()
 {
 	tasks = std::array<task*, MAX_TASKS>();
@@ -292,8 +279,7 @@ task::task(int id,
 	  state{ state },
 	  stack{ nullptr },
 	  messages{ std::queue<message>() },
-	  message_handlers({ std::array<message_handler_t, total_message_types>() }),
-	  fds{ std::array<std::shared_ptr<file_descriptor>, 10>() }
+	  message_handlers({ std::array<message_handler_t, total_message_types>() })
 {
 	list_elem_init(&run_queue_elem);
 
@@ -303,10 +289,6 @@ task::task(int id,
 
 	strncpy(name, task_name, sizeof(name) - 1);
 	name[sizeof(name) - 1] = '\0';
-
-	for (int i = 0; i < 3; ++i) {
-		fds[i].reset();
-	}
 
 	if (!setup_context) {
 		return;
