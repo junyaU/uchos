@@ -5,6 +5,7 @@
 #include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
 #include "libs/common/message.hpp"
+#include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
@@ -351,7 +352,7 @@ void handle_get_directory_contents(const message& m)
 		++entries_count;
 	}
 
-	void* buf = kmalloc(entries_count * sizeof(stat), KMALLOC_ZEROED);
+	void* buf = kmalloc(entries_count * sizeof(stat), KMALLOC_ZEROED, PAGE_SIZE);
 	if (buf == nullptr) {
 		LOG_ERROR("failed to allocate memory");
 		return;
