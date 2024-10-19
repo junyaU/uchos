@@ -157,12 +157,7 @@ void exec_elf(void* buffer, const char* name, const char* args)
 	const vaddr_t stack_addr{ 0xffff'ffff'ffff'f000 - stack_size };
 	setup_page_tables(stack_addr, stack_size / PAGE_SIZE, true);
 
-	task* t = CURRENT_TASK;
-	for (int i = 0; i < 3; ++i) {
-		t->fds[i] = std::make_unique<term_file_descriptor>();
-	}
-
 	auto entry_addr = elf_header->e_entry;
 	call_userland(argc, argv, USER_SS, entry_addr, stack_addr.data + stack_size - 8,
-				  &t->kernel_stack_ptr);
+				  &CURRENT_TASK->kernel_stack_ptr);
 }
