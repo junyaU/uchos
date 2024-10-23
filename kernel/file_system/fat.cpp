@@ -4,7 +4,6 @@
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
-#include "libs/common/message.hpp"
 #include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
@@ -13,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <libs/common/message.hpp>
 #include <libs/common/stat.hpp>
 #include <libs/common/types.hpp>
 #include <queue>
@@ -169,9 +169,9 @@ void send_read_req_to_blk_device(unsigned int sector,
 void send_file_data(fs_id_t id, void* buf, size_t len, pid_t requester)
 {
 	message m = { .type = msg_t::IPC_READ_FILE_DATA, .sender = FS_FAT32_TASK_ID };
-	m.data.blk_io.request_id = id;
-	m.data.blk_io.buf = buf;
-	m.data.blk_io.len = len;
+	m.data.fs_op.request_id = id;
+	m.data.fs_op.buf = buf;
+	m.data.fs_op.len = len;
 
 	send_message(requester, &m);
 }
@@ -369,12 +369,24 @@ void handle_get_directory_contents(const message& m)
 						  : stat_type_t::REGULAR_FILE;
 	}
 
-	message sm = { .type = msg_t::IPC_GET_DIRECTORY_CONTENTS,
+	message sm = { .type = msg_t::GET_DIRECTORY_CONTENTS,
 				   .sender = FS_FAT32_TASK_ID };
 	sm.tool_desc.addr = buf;
 	sm.tool_desc.size = entries_count * sizeof(stat);
 	sm.tool_desc.present = true;
 
+	send_message(m.sender, &sm);
+}
+
+void handle_fs_open(const message& m)
+{
+	const char* path = reinterpret_cast<const char*>(m.data.fs_op.path);
+	to_upper(const_cast<char*>(path));
+
+	LOG_ERROR("path: %s", path);
+	// TODO: implement fs_open
+
+	message sm = { .type = msg_t::FS_OPEN, .sender = FS_FAT32_TASK_ID };
 	send_message(m.sender, &sm);
 }
 
@@ -391,8 +403,8 @@ void fat32_task()
 	t->add_msg_handler(msg_t::INITIALIZE_TASK, handle_initialize);
 	t->add_msg_handler(msg_t::IPC_GET_FILE_INFO, handle_get_file_info);
 	t->add_msg_handler(msg_t::IPC_READ_FILE_DATA, handle_read_file_data);
-	t->add_msg_handler(msg_t::IPC_GET_DIRECTORY_CONTENTS,
-					   handle_get_directory_contents);
+	t->add_msg_handler(msg_t::GET_DIRECTORY_CONTENTS, handle_get_directory_contents);
+	t->add_msg_handler(msg_t::FS_OPEN, handle_fs_open);
 
 	process_messages(t);
 };
