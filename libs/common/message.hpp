@@ -24,7 +24,7 @@ enum class msg_t : int32_t {
 	IPC_WRITE_TO_BLK_DEVICE,
 	IPC_READ_FROM_BLK_DEVICE,
 	IPC_OOL_MEMORY_DEALLOC,
-	IPC_GET_DIRECTORY_CONTENTS,
+	GET_DIRECTORY_CONTENTS,
 	IPC_GET_FILE_INFO,
 	IPC_READ_FILE_DATA,
 	IPC_RELEASE_FILE_BUFFER,
@@ -106,6 +106,7 @@ struct message {
 
 		struct {
 			fs_id_t request_id;
+			fd_t fd;
 			void* buf;
 			char path[30];
 			size_t len;
