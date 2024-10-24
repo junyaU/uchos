@@ -1,5 +1,6 @@
 #include "fat.hpp"
 #include "elf.hpp"
+#include "file_system/file_descriptor.hpp"
 #include "file_system/file_info.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
@@ -108,6 +109,21 @@ cluster_t next_cluster(cluster_t cluster_id)
 	}
 
 	return next;
+}
+
+directory_entry* find_dir_entry(const char* name)
+{
+	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
+		if (ROOT_DIR[i].name[0] == 0) {
+			break;
+		}
+
+		if (entry_name_is_equal(ROOT_DIR[i], name)) {
+			return &ROOT_DIR[i];
+		}
+	}
+
+	return nullptr;
 }
 
 void execute_file(void* data, const char* name, const char* args)
@@ -380,14 +396,22 @@ void handle_get_directory_contents(const message& m)
 
 void handle_fs_open(const message& m)
 {
+	message req = { .type = msg_t::FS_OPEN, .sender = FS_FAT32_TASK_ID };
+
 	const char* path = reinterpret_cast<const char*>(m.data.fs_op.path);
 	to_upper(const_cast<char*>(path));
 
-	LOG_ERROR("path: %s", path);
-	// TODO: implement fs_open
+	directory_entry* entry = find_dir_entry(path);
+	if (entry == nullptr) {
+		req.data.fs_op.fd = -1;
+		send_message(m.sender, &req);
+		return;
+	}
 
-	message sm = { .type = msg_t::FS_OPEN, .sender = FS_FAT32_TASK_ID };
-	send_message(m.sender, &sm);
+	file_descriptor* fd = register_fd(path, entry->file_size, m.sender);
+	req.data.fs_op.fd = fd == nullptr ? -1 : fd->fd;
+
+	send_message(m.sender, &req);
 }
 
 void fat32_task()
@@ -397,6 +421,7 @@ void fat32_task()
 	pending_messages = std::queue<message>();
 
 	init_read_contexts();
+	init_fds();
 
 	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE, msg_t::INITIALIZE_TASK);
 

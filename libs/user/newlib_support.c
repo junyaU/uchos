@@ -28,17 +28,6 @@ off_t lseek(int fd, off_t offset, int whence)
 	return -1;
 }
 
-int open(const char* path, int flags)
-{
-	uint64_t res = sys_open(path, flags);
-	if (res == -1) {
-		errno = ENOENT;
-		return -1;
-	}
-
-	return res;
-}
-
 ssize_t read(int fd, void* buf, size_t count)
 {
 	uint64_t res = sys_read(fd, buf, count);
