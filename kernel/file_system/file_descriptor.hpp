@@ -11,8 +11,14 @@
 struct file_descriptor {
 	fd_t fd;
 	char name[11];
+	pid_t pid;
 	size_t size;
 	size_t offset;
 };
 
-extern std::array<file_descriptor, 100> fds;
+constexpr size_t MAX_FILE_DESCRIPTORS = 100;
+extern std::array<file_descriptor, MAX_FILE_DESCRIPTORS> fds;
+
+file_descriptor* register_fd(const char* name, size_t size, pid_t pid);
+
+void init_fds();

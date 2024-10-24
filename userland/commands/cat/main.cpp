@@ -1,24 +1,27 @@
 #include "libs/common/message.hpp"
+#include "libs/user/console.hpp"
 #include <cstdlib>
 #include <cstring>
 #include <libs/common/types.hpp>
+#include <libs/user/file.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/syscall.hpp>
 
 extern "C" int main(int argc, char** argv)
 {
-	pid_t pid = sys_getpid();
 	char* input = argv[1];
-	message m = { .type = IPC_FILE_SYSTEM_OPERATION, .sender = pid };
-
 	if (input == nullptr) {
-		const char* msg = "cat: missing file operand\n";
-		// memcpy(m.data.fs_operation.path, msg, strlen(msg));
-	} else {
-		// memcpy(m.data.fs_operation.path, input, strlen(input));
+		printu("cat: missing file operand");
+		exit(0);
 	}
 
-	// send_message(FS_TASK_ID, &m);
+	fd_t fd = fs_open(input, 0);
+	if (fd == -1) {
+		printu("cat: %s: No such file or directory", input);
+		exit(0);
+	}
+
+	// TODO: Implement reading file content
 
 	exit(0);
 }

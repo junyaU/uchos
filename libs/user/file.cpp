@@ -1,4 +1,3 @@
-#include "libs/user/console.hpp"
 #include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>

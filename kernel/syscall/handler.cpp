@@ -30,11 +30,12 @@ size_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	const auto count = arg3;
 
 	task* t = CURRENT_TASK;
-	if (fd >= t->fds.size() || t->fds[fd] == nullptr) {
-		return 0;
-	}
+	// if (fd >= t->fds.size() || t->fds[fd] == nullptr) {
+	// 	return 0;
+	// }
 
-	return t->fds[fd]->read(buf, count);
+	// return t->fds[fd]->read(buf, count);
+	return 0;
 }
 
 error_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
@@ -48,59 +49,16 @@ error_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	}
 
 	task* t = CURRENT_TASK;
-	if (fd >= t->fds.size() || t->fds[fd] == nullptr) {
-		return EBADF;
-	}
-
-	const size_t written = t->fds[fd]->write(buf, count);
-	if (written != count) {
-		return EIO;
-	}
-
-	return OK;
-}
-
-fd_t sys_open(uint64_t arg1, uint64_t arg2)
-{
-	const char* path = reinterpret_cast<const char*>(arg1);
-	const int flags = arg2;
-
-	if (path == nullptr) {
-		return NO_FD;
-	}
-
-	if (strncmp(path, "/dev/stdin", 10) == 0) {
-		return STDIN_FILENO;
-	}
-
-	// TODO: fix this
-
-	// auto* entry = file_system::find_directory_entry_by_path(path);
-	// if (entry == nullptr) {
-	// 	if ((flags & O_CREAT) == 0) {
-	// 		LOG_ERROR("open: %s: No such file or directory\n", path);
-	// 		return NO_FD;
-	// 	}
-
-	// 	auto* new_entry = file_system::create_file(path);
-	// 	if (new_entry == nullptr) {
-	// 		LOG_ERROR("open: %s: No such file or directory\n", path);
-	// 		return NO_FD;
-	// 	}
-
-	// 	entry = new_entry;
+	// if (fd >= t->fds.size() || t->fds[fd] == nullptr) {
+	// 	return EBADF;
 	// }
 
-	task* t = CURRENT_TASK;
-	const fd_t fd = allocate_fd(t);
-	if (fd == NO_FD) {
-		LOG_ERROR("open: %s: Too many open files\n", path);
-		return NO_FD;
-	}
+	// const size_t written = t->fds[fd]->write(buf, count);
+	// if (written != count) {
+	// 	return EIO;
+	// }
 
-	// t->fds[fd] = std::make_unique<file_system::file_descriptor>(*entry);
-
-	return fd;
+	return OK;
 }
 
 size_t sys_draw_text(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
@@ -313,9 +271,6 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 			break;
 		case SYS_WRITE:
 			sys_write(arg1, arg2, arg3);
-			break;
-		case SYS_OPEN:
-			result = sys_open(arg1, arg2);
 			break;
 		case SYS_EXIT:
 			sys_exit(arg1);
