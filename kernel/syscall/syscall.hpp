@@ -12,9 +12,6 @@
 #pragma once
 
 // system call number
-constexpr int SYS_READ = 0;
-constexpr int SYS_WRITE = 1;
-constexpr int SYS_CLOSE = 3;
 constexpr int SYS_DRAW_TEXT = 4;
 constexpr int SYS_FILL_RECT = 5;
 constexpr int SYS_TIME = 6;

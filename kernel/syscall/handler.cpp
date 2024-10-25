@@ -11,56 +11,16 @@
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 #include "timers/timer.hpp"
-#include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <fcntl.h>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
-#include <memory>
 #include <stdint.h>
 
 namespace syscall
 {
-size_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
-{
-	const auto fd = arg1;
-	auto* buf = reinterpret_cast<char*>(arg2);
-	const auto count = arg3;
-
-	task* t = CURRENT_TASK;
-	// if (fd >= t->fds.size() || t->fds[fd] == nullptr) {
-	// 	return 0;
-	// }
-
-	// return t->fds[fd]->read(buf, count);
-	return 0;
-}
-
-error_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
-{
-	const auto fd = arg1;
-	const auto* buf = reinterpret_cast<const char*>(arg2);
-	const auto count = arg3;
-
-	if (count > 1024) {
-		return E2BIG;
-	}
-
-	task* t = CURRENT_TASK;
-	// if (fd >= t->fds.size() || t->fds[fd] == nullptr) {
-	// 	return EBADF;
-	// }
-
-	// const size_t written = t->fds[fd]->write(buf, count);
-	// if (written != count) {
-	// 	return EIO;
-	// }
-
-	return OK;
-}
-
 size_t sys_draw_text(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 {
 	const char* text = reinterpret_cast<const char*>(arg1);
@@ -266,12 +226,6 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 	uint64_t result = 0;
 
 	switch (syscall_number) {
-		case SYS_READ:
-			result = sys_read(arg1, arg2, arg3);
-			break;
-		case SYS_WRITE:
-			sys_write(arg1, arg2, arg3);
-			break;
 		case SYS_EXIT:
 			sys_exit(arg1);
 			break;

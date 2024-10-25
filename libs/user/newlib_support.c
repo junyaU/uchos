@@ -28,16 +28,7 @@ off_t lseek(int fd, off_t offset, int whence)
 	return -1;
 }
 
-ssize_t read(int fd, void* buf, size_t count)
-{
-	uint64_t res = sys_read(fd, buf, count);
-	if (res == -1) {
-		errno = EBADF;
-		return -1;
-	}
-
-	return res;
-}
+ssize_t read(int fd, void* buf, size_t count) { return 0; }
 
 caddr_t sbrk(int incr)
 {
