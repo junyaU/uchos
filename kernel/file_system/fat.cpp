@@ -182,17 +182,36 @@ void send_read_req_to_blk_device(unsigned int sector,
 	send_message(VIRTIO_BLK_TASK_ID, &m);
 }
 
-void send_file_data(fs_id_t id, void* buf, size_t len, pid_t requester)
+void send_file_data(fs_id_t id,
+					void* buf,
+					size_t size,
+					pid_t requester,
+					msg_t type,
+					bool for_user)
 {
-	message m = { .type = msg_t::IPC_READ_FILE_DATA, .sender = FS_FAT32_TASK_ID };
+	message m = { .type = type, .sender = FS_FAT32_TASK_ID };
 	m.data.fs_op.request_id = id;
-	m.data.fs_op.buf = buf;
-	m.data.fs_op.len = len;
+
+	if (for_user) {
+		void* user_buf = kmalloc(size, KMALLOC_ZEROED, PAGE_SIZE);
+		if (user_buf == nullptr) {
+			LOG_ERROR("failed to allocate memory");
+			return;
+		}
+
+		memcpy(user_buf, buf, size);
+		m.tool_desc.addr = user_buf;
+		m.tool_desc.size = size;
+		m.tool_desc.present = true;
+	} else {
+		m.data.fs_op.buf = buf;
+		m.data.fs_op.len = size;
+	}
 
 	send_message(requester, &m);
 }
 
-error_t process_read_data_response(const message& m)
+error_t process_read_data_response(const message& m, bool for_user)
 {
 	auto it = file_caches.find(m.data.blk_io.request_id);
 	if (it == file_caches.end()) {
@@ -209,7 +228,7 @@ error_t process_read_data_response(const message& m)
 
 	if (ctx.is_read_complete()) {
 		send_file_data(m.data.blk_io.request_id, ctx.buffer.data(), ctx.total_size,
-					   ctx.requester);
+					   ctx.requester, m.type, for_user);
 	}
 
 	kfree(m.data.blk_io.buf);
@@ -217,14 +236,9 @@ error_t process_read_data_response(const message& m)
 	return OK;
 }
 
-error_t process_file_read_request(const message& m)
+error_t
+process_file_read_request(const message& m, directory_entry* entry, bool for_user)
 {
-	const auto* entry = reinterpret_cast<directory_entry*>(m.data.fs_op.buf);
-	if (entry == nullptr) {
-		LOG_ERROR("entry is null");
-		return ERR_INVALID_ARG;
-	}
-
 	char file_name[12] = { 0 };
 	memcpy(file_name, entry->name, 11);
 	file_name[11] = 0;
@@ -232,7 +246,7 @@ error_t process_file_read_request(const message& m)
 	file_cache* c = find_file_cache_by_path(file_name);
 	if (c != nullptr) {
 		send_file_data(m.data.fs_op.request_id, c->buffer.data(), c->total_size,
-					   m.sender);
+					   m.sender, m.type, for_user);
 		return OK;
 	}
 
@@ -246,8 +260,8 @@ error_t process_file_read_request(const message& m)
 
 	while (target_cluster != END_OF_CLUSTER_CHAIN) {
 		send_read_req_to_blk_device(calc_start_sector(target_cluster),
-									BYTES_PER_CLUSTER, msg_t::IPC_READ_FILE_DATA,
-									cache->id, sequence++);
+									BYTES_PER_CLUSTER, m.type, cache->id,
+									sequence++);
 
 		target_cluster = next_cluster(target_cluster);
 	}
@@ -334,11 +348,17 @@ void handle_read_file_data(const message& m)
 	}
 
 	if (m.sender == VIRTIO_BLK_TASK_ID) {
-		process_read_data_response(m);
+		process_read_data_response(m, false);
 		return;
 	}
 
-	process_file_read_request(m);
+	directory_entry* entry = reinterpret_cast<directory_entry*>(m.data.fs_op.buf);
+	if (entry == nullptr) {
+		LOG_ERROR("entry is null");
+		return;
+	}
+
+	process_file_read_request(m, entry, false);
 }
 
 void handle_get_directory_contents(const message& m)
@@ -414,6 +434,34 @@ void handle_fs_open(const message& m)
 	send_message(m.sender, &req);
 }
 
+void handle_fs_read(const message& m)
+{
+	if (m.sender == VIRTIO_BLK_TASK_ID) {
+		process_read_data_response(m, true);
+		return;
+	}
+
+	message req = { .type = msg_t::FS_READ, .sender = FS_FAT32_TASK_ID };
+
+	file_descriptor* fd = get_fd(m.data.fs_op.fd);
+	if (fd == nullptr) {
+		LOG_ERROR("fd not found");
+		req.data.fs_op.len = 0;
+		send_message(m.sender, &req);
+		return;
+	}
+
+	directory_entry* entry = find_dir_entry(fd->name);
+	if (entry == nullptr) {
+		LOG_ERROR("entry not found");
+		req.data.fs_op.len = 0;
+		send_message(m.sender, &req);
+		return;
+	}
+
+	process_file_read_request(m, entry, true);
+}
+
 void fat32_task()
 {
 	task* t = CURRENT_TASK;
@@ -430,6 +478,7 @@ void fat32_task()
 	t->add_msg_handler(msg_t::IPC_READ_FILE_DATA, handle_read_file_data);
 	t->add_msg_handler(msg_t::GET_DIRECTORY_CONTENTS, handle_get_directory_contents);
 	t->add_msg_handler(msg_t::FS_OPEN, handle_fs_open);
+	t->add_msg_handler(msg_t::FS_READ, handle_fs_read);
 
 	process_messages(t);
 };

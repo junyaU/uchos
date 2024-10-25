@@ -18,3 +18,21 @@ fd_t fs_open(const char* path, int flags)
 
 	return res.data.fs_op.fd;
 }
+
+size_t fs_read(fd_t fd, void* buf, size_t count)
+{
+	pid_t pid = sys_getpid();
+	message m = { .type = msg_t::FS_READ, .sender = pid };
+	m.data.fs_op.fd = fd;
+	m.data.fs_op.len = count;
+
+	send_message(FS_FAT32_TASK_ID, &m);
+
+	message res = wait_for_message(msg_t::FS_READ);
+
+	memcpy(buf, res.tool_desc.addr, res.tool_desc.size);
+
+	deallocate_ool_memory(pid, res.tool_desc.addr, res.tool_desc.size);
+
+	return res.tool_desc.size;
+}
