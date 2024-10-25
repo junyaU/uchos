@@ -470,8 +470,6 @@ void handle_fs_close(const message& m)
 		return;
 	}
 
-	LOG_ERROR("closing file %s", fd->name);
-
 	memset(fd, 0, sizeof(file_descriptor));
 	fd->fd = -1;
 }
