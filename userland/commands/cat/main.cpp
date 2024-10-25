@@ -30,5 +30,7 @@ extern "C" int main(int argc, char** argv)
 
 	printu(buf);
 
+	fs_close(fd);
+
 	exit(0);
 }

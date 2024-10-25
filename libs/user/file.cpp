@@ -36,3 +36,12 @@ size_t fs_read(fd_t fd, void* buf, size_t count)
 
 	return res.tool_desc.size;
 }
+
+void fs_close(fd_t fd)
+{
+	pid_t pid = sys_getpid();
+	message m = { .type = msg_t::FS_CLOSE, .sender = pid };
+	m.data.fs_op.fd = fd;
+
+	send_message(FS_FAT32_TASK_ID, &m);
+}
