@@ -12,7 +12,7 @@ extern "C" int main(int argc, char** argv)
 	pid_t pid = sys_getpid();
 	char* input = argv[1];
 
-	message m = { .type = msg_t::IPC_GET_DIRECTORY_CONTENTS, .sender = pid };
+	message m = { .type = msg_t::GET_DIRECTORY_CONTENTS, .sender = pid };
 	if (input != nullptr) {
 		memcpy(m.data.fs_op.path, input, strlen(input));
 	} else {
@@ -21,7 +21,7 @@ extern "C" int main(int argc, char** argv)
 
 	send_message(FS_FAT32_TASK_ID, &m);
 
-	message msg = wait_for_message(msg_t::IPC_GET_DIRECTORY_CONTENTS);
+	message msg = wait_for_message(msg_t::GET_DIRECTORY_CONTENTS);
 
 	char buf[256];
 	size_t buf_pos = 0;

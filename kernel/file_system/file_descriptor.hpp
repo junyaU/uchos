@@ -19,6 +19,8 @@ struct file_descriptor {
 constexpr size_t MAX_FILE_DESCRIPTORS = 100;
 extern std::array<file_descriptor, MAX_FILE_DESCRIPTORS> fds;
 
+file_descriptor* get_fd(int fd);
+
 file_descriptor* register_fd(const char* name, size_t size, pid_t pid);
 
 void init_fds();
