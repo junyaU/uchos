@@ -462,6 +462,20 @@ void handle_fs_read(const message& m)
 	process_file_read_request(m, entry, true);
 }
 
+void handle_fs_close(const message& m)
+{
+	file_descriptor* fd = get_fd(m.data.fs_op.fd);
+	if (fd == nullptr) {
+		LOG_ERROR("fd not found");
+		return;
+	}
+
+	LOG_ERROR("closing file %s", fd->name);
+
+	memset(fd, 0, sizeof(file_descriptor));
+	fd->fd = -1;
+}
+
 void fat32_task()
 {
 	task* t = CURRENT_TASK;
@@ -479,6 +493,7 @@ void fat32_task()
 	t->add_msg_handler(msg_t::GET_DIRECTORY_CONTENTS, handle_get_directory_contents);
 	t->add_msg_handler(msg_t::FS_OPEN, handle_fs_open);
 	t->add_msg_handler(msg_t::FS_READ, handle_fs_read);
+	t->add_msg_handler(msg_t::FS_CLOSE, handle_fs_close);
 
 	process_messages(t);
 };
