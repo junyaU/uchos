@@ -1,11 +1,10 @@
 #include <cstdio>
-#include <cstdlib>
 #include <libs/common/message.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/print.hpp>
 #include <libs/user/syscall.hpp>
 
-extern "C" int main(void)
+int main(void)
 {
 	int pid = sys_fork();
 
@@ -15,5 +14,5 @@ extern "C" int main(void)
 		printf("parent process, child pid = %d", pid);
 	}
 
-	exit(0);
+	return 0;
 }

@@ -1,13 +1,12 @@
 #include "pci_device.hpp"
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/syscall.hpp>
 
-extern "C" int main(int argc, char** argv)
+int main(int argc, char** argv)
 {
 	pid_t pid = sys_getpid();
 	message m = { .type = msg_t::IPC_PCI, .sender = pid };
@@ -39,9 +38,9 @@ extern "C" int main(int argc, char** argv)
 		send_message(SHELL_TASK_ID, &send_m);
 
 		if (msg.is_end_of_message) {
-			exit(0);
+			return 0;
 		}
 	}
 
-	exit(0);
+	return 0;
 }
