@@ -1,16 +1,14 @@
 #include "shell.hpp"
 #include "terminal.hpp"
-#include <cstdlib>
 #include <libs/common/message.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/print.hpp>
 #include <libs/user/syscall.hpp>
-#include <stdalign.h>
 
 alignas(terminal) char buffer[sizeof(terminal)];
 alignas(shell) char shell_buffer[sizeof(shell)];
 
-extern "C" int main(void)
+int main(void)
 {
 	initialize_task();
 
@@ -49,5 +47,5 @@ extern "C" int main(void)
 		}
 	}
 
-	exit(0);
+	return 0;
 }

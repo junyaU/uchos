@@ -7,7 +7,7 @@
 #include <libs/user/ipc.hpp>
 #include <libs/user/syscall.hpp>
 
-extern "C" int main(int argc, char** argv)
+int main(int argc, char** argv)
 {
 	pid_t pid = sys_getpid();
 	char* input = argv[1];
@@ -50,5 +50,5 @@ extern "C" int main(int argc, char** argv)
 
 	deallocate_ool_memory(pid, msg.tool_desc.addr, msg.tool_desc.size);
 
-	exit(0);
+	return 0;
 }

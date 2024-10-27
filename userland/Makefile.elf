@@ -2,7 +2,7 @@ CPPFLAGS += -I. -D__SCLE
 CFLAGS   += -O0 -Wall -g --target=x86_64-elf -mcmodel=large
 CXXFLAGS += -O0 -Wall -g --target=x86_64-elf -mcmodel=large \
             -fno-exceptions -fno-rtti -std=c++17
-LDFLAGS += --entry main -z norelro --image-base 0xffff800000000000 --static -z separate-code
+LDFLAGS += -z norelro --image-base 0xffff800000000000 --static -z separate-code
 
 ifneq ("$(wildcard ../../libs/user)","")
 ROOT_DIR := $(shell realpath ../../)
@@ -11,7 +11,7 @@ ROOT_DIR := $(shell realpath ../../../)
 endif
 
 LIB_DIR := $(ROOT_DIR)/libs/user
-OBJS +=  $(LIB_DIR)/ipc.o $(LIB_DIR)/newlib_support.o $(LIB_DIR)/print.o \
+OBJS +=  $(LIB_DIR)/start.o $(LIB_DIR)/ipc.o $(LIB_DIR)/newlib_support.o $(LIB_DIR)/print.o \
 		 $(LIB_DIR)/syscall.o $(LIB_DIR)/time.o $(LIB_DIR)/console.o $(LIB_DIR)/file.o
 
 INCLUDES = -I./../../
