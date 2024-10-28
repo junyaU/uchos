@@ -157,7 +157,7 @@ void exec_elf(void* buffer, const char* name, const char* args)
 	const vaddr_t stack_addr{ 0xffff'ffff'ffff'f000 - stack_size };
 	setup_page_tables(stack_addr, stack_size / PAGE_SIZE, true);
 
-	auto entry_addr = elf_header->e_entry;
-	call_userland(argc, argv, USER_SS, entry_addr, stack_addr.data + stack_size - 8,
-				  &CURRENT_TASK->kernel_stack_ptr);
+	enter_user_mode(argc, argv, USER_SS, elf_header->e_entry,
+					stack_addr.data + stack_size - 8,
+					&CURRENT_TASK->kernel_stack_ptr);
 }

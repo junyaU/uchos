@@ -44,8 +44,8 @@ write_msr:
     wrmsr
     ret
 
-global call_userland ; void call_userland(int argc, char** argv, uint16_t ss, uint64_t rip, uint64_t rsp, uint64_t* kernel_rsp)
-call_userland:
+global enter_user_mode ; void enter_user_mode(int argc, char** argv, uint16_t ss, uint64_t rip, uint64_t rsp, uint64_t* kernel_rsp)
+enter_user_mode:
     ; save callee-saved registers
     push rbx
     push rbp
