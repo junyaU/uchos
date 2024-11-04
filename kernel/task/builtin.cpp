@@ -80,8 +80,6 @@ void task_kernel()
 
 void task_shell()
 {
-	task* t = CURRENT_TASK;
-
 	message m = { .type = msg_t::IPC_GET_FILE_INFO, .sender = SHELL_TASK_ID };
 	char path[6] = "shell";
 	memcpy(m.data.fs_op.path, path, 6);

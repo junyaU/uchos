@@ -39,9 +39,6 @@ void handle_read_request(const message& m)
 
 void handle_write_request(const message& m)
 {
-	message send_m = { .type = msg_t::IPC_WRITE_TO_BLK_DEVICE,
-					   .sender = VIRTIO_BLK_TASK_ID };
-
 	const int sector = m.data.blk_io.sector;
 	const int len =
 			m.data.blk_io.len < SECTOR_SIZE ? SECTOR_SIZE : m.data.blk_io.len;
@@ -67,7 +64,7 @@ error_t validate_length(uint32_t len)
 	return OK;
 }
 
-error_t write_to_blk_device(char* buffer, uint64_t sector, uint32_t len)
+error_t write_to_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 {
 	ASSERT_OK(validate_length(len));
 
@@ -111,7 +108,7 @@ error_t write_to_blk_device(char* buffer, uint64_t sector, uint32_t len)
 	return OK;
 }
 
-error_t read_from_blk_device(char* buffer, uint64_t sector, uint32_t len)
+error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 {
 	ASSERT_OK(validate_length(len));
 

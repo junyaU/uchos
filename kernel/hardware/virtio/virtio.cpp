@@ -134,6 +134,10 @@ int pop_virtio_entry(virtio_virtqueue* queue,
 		desc_idx = desc->next;
 	}
 
+	if (desc == nullptr) {
+		return 0;
+	}
+
 	desc->next = queue->top_free_idx;
 	queue->top_free_idx = elem->id;
 	queue->num_free_desc += num_pop;

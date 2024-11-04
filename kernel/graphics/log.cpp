@@ -8,7 +8,7 @@
 
 void printk(int level, const char* format, ...)
 {
-	if (level != CURRENT_LOG_LEVEL) {
+	if (level != CURRENT_LOG_LEVEL || format == nullptr) {
 		return;
 	}
 
@@ -16,7 +16,7 @@ void printk(int level, const char* format, ...)
 	char s[1024];
 
 	va_start(ap, format);
-	vsprintf(s, format, ap);
+	vsnprintf(s, sizeof(s), format, ap);
 	va_end(ap);
 
 	for (size_t i = 0; i < strlen(s) && s[i] != '\0'; ++i) {

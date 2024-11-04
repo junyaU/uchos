@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 extern "C" {
 void flush_tlb(uint64_t addr);
 

@@ -6,70 +6,70 @@ void get_fault_name(uint64_t code, char* buf)
 {
 	switch (code) {
 		case DIVIDE_ERROR:
-			strcpy(buf, "Divide Error");
+			strlcpy(buf, "Divide Error", 13);
 			break;
 		case DEBUG:
-			strcpy(buf, "Debug");
+			strlcpy(buf, "Debug", 6);
 			break;
 		case NMI:
-			strcpy(buf, "Non-Maskable Interrupt");
+			strlcpy(buf, "Non-Maskable Interrupt", 23);
 			break;
 		case BREAKPOINT:
-			strcpy(buf, "Breakpoint");
+			strlcpy(buf, "Breakpoint", 11);
 			break;
 		case OVERFLOW:
-			strcpy(buf, "Overflow");
+			strlcpy(buf, "Overflow", 9);
 			break;
 		case BOUND_RANGE_EXCEEDED:
-			strcpy(buf, "Bound Range Exceeded");
+			strlcpy(buf, "Bound Range Exceeded", 20);
 			break;
 		case INVALID_OPCODE:
-			strcpy(buf, "Invalid Opcode");
+			strlcpy(buf, "Invalid Opcode", 14);
 			break;
 		case DEVICE_NOT_AVAILABLE:
-			strcpy(buf, "Device Not Available");
+			strlcpy(buf, "Device Not Available", 20);
 			break;
 		case DOUBLE_FAULT:
-			strcpy(buf, "Double Fault");
+			strlcpy(buf, "Double Fault", 12);
 			break;
 		case COPROCESSOR_SEGMENT_OVERRUN:
-			strcpy(buf, "Coprocessor Segment Overrun");
+			strlcpy(buf, "Coprocessor Segment Overrun", 27);
 			break;
 		case INVALID_TSS:
-			strcpy(buf, "Invalid TSS");
+			strlcpy(buf, "Invalid TSS", 11);
 			break;
 		case SEGMENT_NOT_PRESENT:
-			strcpy(buf, "Segment Not Present");
+			strlcpy(buf, "Segment Not Present", 19);
 			break;
 		case STACK_SEGMENT_FAULT:
-			strcpy(buf, "Stack Segment Fault");
+			strlcpy(buf, "Stack Segment Fault", 19);
 			break;
 		case GENERAL_PROTECTION:
-			strcpy(buf, "General Protection");
+			strlcpy(buf, "General Protection", 18);
 			break;
 		case PAGE_FAULT:
-			strcpy(buf, "Page Fault");
+			strlcpy(buf, "Page Fault", 10);
 			break;
 		case RESERVED:
-			strcpy(buf, "Reserved");
+			strlcpy(buf, "Reserved", 8);
 			break;
 		case X87_FPU_ERROR:
-			strcpy(buf, "x87 FPU Error");
+			strlcpy(buf, "x87 FPU Error", 13);
 			break;
 		case ALIGNMENT_CHECK:
-			strcpy(buf, "Alignment Check");
+			strlcpy(buf, "Alignment Check", 15);
 			break;
 		case MACHINE_CHECK:
-			strcpy(buf, "Machine Check");
+			strlcpy(buf, "Machine Check", 13);
 			break;
 		case SIMD_FP_EXCEPTION:
-			strcpy(buf, "SIMD Floating-Point Exception");
+			strlcpy(buf, "SIMD Floating-Point Exception", 29);
 			break;
 		case VIRTUALIZATION_EXCEPTION:
-			strcpy(buf, "Virtualization Exception");
+			strlcpy(buf, "Virtualization Exception", 24);
 			break;
 		default:
-			strcpy(buf, "Unknown Exception");
+			strlcpy(buf, "Unknown Exception", 17);
 			break;
 	}
 }
