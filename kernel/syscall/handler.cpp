@@ -69,7 +69,6 @@ error_t sys_time(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 {
 	const int dest = arg1;
-	const int src = arg2;
 	message __user& m = *reinterpret_cast<message*>(arg3);
 	const int flags = arg4;
 
@@ -78,7 +77,7 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 
 	if (flags == IPC_RECV) {
 		if (t->messages.empty()) {
-			memset(&m, 0, sizeof(m));
+			m = {};
 			m.type = msg_t::NO_TASK;
 			return OK;
 		}

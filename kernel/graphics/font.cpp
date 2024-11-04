@@ -88,7 +88,7 @@ void write_unicode(screen& scr, point2d position, char32_t c, uint32_t color_cod
 			return;
 		}
 
-		auto* face = new_face();
+		auto face = nullptr; // new_face();
 		if (face == nullptr) {
 			write_ascii(scr, position, '?', color_code);
 			write_ascii(scr, position + point2d{ kfont->width(), 0 }, '?',
@@ -96,30 +96,30 @@ void write_unicode(screen& scr, point2d position, char32_t c, uint32_t color_cod
 			return;
 		}
 
-		render_unicode(c, face);
+		// render_unicode(c, face);
 
-		FT_Bitmap& bitmap = face->glyph->bitmap;
-		const int baseline = (face->height + face->descender) *
-							 face->size->metrics.y_ppem / face->units_per_EM;
-		const auto glyph_topleft =
-				position + point2d{ face->glyph->bitmap_left,
-									baseline - face->glyph->bitmap_top };
+		// FT_Bitmap& bitmap = face->glyph->bitmap;
+		// const int baseline = (face->height + face->descender) *
+		// 					 face->size->metrics.y_ppem / face->units_per_EM;
+		// const auto glyph_topleft =
+		// 		position + point2d{ face->glyph->bitmap_left,
+		// 							baseline - face->glyph->bitmap_top };
 
-		for (int dy = 0; dy < bitmap.rows; ++dy) {
-			unsigned char* q = &bitmap.buffer[bitmap.pitch * dy];
-			if (bitmap.pitch < 0) {
-				q -= bitmap.pitch * bitmap.rows;
-			}
-			for (int dx = 0; dx < bitmap.width; ++dx) {
-				const bool b = (q[dx >> 3] & (0x80 >> (dx & 0x7))) != 0;
-				if (b) {
-					kscreen->put_pixel(glyph_topleft + point2d{ dx, dy },
-									   color_code);
-				}
-			}
-		}
+		// for (int dy = 0; dy < bitmap.rows; ++dy) {
+		// 	unsigned char* q = &bitmap.buffer[bitmap.pitch * dy];
+		// 	if (bitmap.pitch < 0) {
+		// 		q -= bitmap.pitch * bitmap.rows;
+		// 	}
+		// 	for (int dx = 0; dx < bitmap.width; ++dx) {
+		// 		const bool b = (q[dx >> 3] & (0x80 >> (dx & 0x7))) != 0;
+		// 		if (b) {
+		// 			kscreen->put_pixel(glyph_topleft + point2d{ dx, dy },
+		// 							   color_code);
+		// 		}
+		// 	}
+		// }
 
-		FT_Done_Face(face);
+		// FT_Done_Face(face);
 	}
 }
 
