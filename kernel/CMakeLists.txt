@@ -27,7 +27,6 @@ set(ROOTDIR "../")
 
 # Disable the use of rpath.
 set(CMAKE_SKIP_RPATH TRUE)
-
 # Enable NASM assembly language support.
 enable_language(ASM_NASM)
 set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <INCLUDES> -f elf64 -o <OBJECT> <SOURCE>")
@@ -46,7 +45,6 @@ include_directories(
 
 message(STATUS "Including LIBDIR: ${CMAKE_SOURCE_DIR}")
 
-
 # Add compile options for both C and C++.
 add_compile_options(
         -O0
@@ -56,6 +54,7 @@ add_compile_options(
         -ffreestanding
         -mno-red-zone
         -nostdlibinc
+        -Wno-interrupt-service-routine
         -D__ELF__
         -D_LDBL_EQ_DBL
         -D_GNU_SOURCE
