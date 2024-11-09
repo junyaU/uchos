@@ -126,6 +126,22 @@ directory_entry* find_dir_entry(const char* name)
 	return nullptr;
 }
 
+// TODO: argument for the directory
+directory_entry* find_empty_dir_entry()
+{
+	if (ROOT_DIR == nullptr) {
+		return nullptr;
+	}
+
+	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
+		if (ROOT_DIR[i].name[0] == 0) {
+			return &ROOT_DIR[i];
+		}
+	}
+
+	return nullptr;
+}
+
 void execute_file(void* data, const char* name, const char* args)
 {
 	exec_elf(data, name, args);
@@ -287,10 +303,9 @@ void handle_initialize(const message& m)
 	} else if (m.data.blk_io.sector == FAT_TABLE_SECTOR) {
 		FAT_TABLE = reinterpret_cast<uint32_t*>(m.data.blk_io.buf);
 		unsigned int root_cluster = VOLUME_BPB->root_cluster;
-		unsigned int start_sector = calc_start_sector(root_cluster);
 
-		send_read_req_to_blk_device(start_sector, BYTES_PER_CLUSTER,
-									msg_t::INITIALIZE_TASK);
+		send_read_req_to_blk_device(calc_start_sector(root_cluster),
+									BYTES_PER_CLUSTER, msg_t::INITIALIZE_TASK);
 	} else {
 		ROOT_DIR = reinterpret_cast<directory_entry*>(m.data.blk_io.buf);
 		CURRENT_TASK->is_initilized = true;
@@ -474,6 +489,38 @@ void handle_fs_close(const message& m)
 	fd->fd = -1;
 }
 
+void handle_fs_mkfile(const message& m)
+{
+	message reply = { .type = msg_t::FS_MKFILE, .sender = FS_FAT32_TASK_ID };
+
+	const char* path = reinterpret_cast<const char*>(m.data.fs_op.path);
+	to_upper(const_cast<char*>(path));
+
+	directory_entry* existing_entry = find_dir_entry(path);
+	if (existing_entry != nullptr) {
+		reply.data.fs_op.fd = -1;
+		send_message(m.sender, &reply);
+		return;
+	}
+
+	directory_entry* entry = find_empty_dir_entry();
+	if (entry == nullptr) {
+		reply.data.fs_op.fd = -1;
+		send_message(m.sender, &reply);
+		return;
+	}
+
+	memcpy(entry->name, path, strlen(path));
+	entry->attribute = entry_attribute::ARCHIVE;
+	entry->file_size = 0;
+
+	file_descriptor* fd = register_fd(path, 0, m.sender);
+
+	reply.data.fs_op.fd = fd == nullptr ? -1 : fd->fd;
+
+	send_message(m.sender, &reply);
+}
+
 void fat32_task()
 {
 	task* t = CURRENT_TASK;
@@ -492,6 +539,7 @@ void fat32_task()
 	t->add_msg_handler(msg_t::FS_OPEN, handle_fs_open);
 	t->add_msg_handler(msg_t::FS_READ, handle_fs_read);
 	t->add_msg_handler(msg_t::FS_CLOSE, handle_fs_close);
+	t->add_msg_handler(msg_t::FS_MKFILE, handle_fs_mkfile);
 
 	process_messages(t);
 };

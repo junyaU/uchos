@@ -32,6 +32,7 @@ enum class msg_t : int32_t {
 	FS_CLOSE,
 	FS_READ,
 	FS_WRITE,
+	FS_MKFILE,
 	MAX_MESSAGE_TYPE, // must be the last
 };
 
