@@ -129,6 +129,10 @@ directory_entry* find_dir_entry(const char* name)
 // TODO: argument for the directory
 directory_entry* find_empty_dir_entry()
 {
+	if (ROOT_DIR == nullptr) {
+		return nullptr;
+	}
+
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
 		if (ROOT_DIR[i].name[0] == 0) {
 			return &ROOT_DIR[i];
