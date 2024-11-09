@@ -45,3 +45,16 @@ void fs_close(fd_t fd)
 
 	send_message(FS_FAT32_TASK_ID, &m);
 }
+
+fd_t fs_create(const char* path)
+{
+	pid_t pid = sys_getpid();
+	message m = { .type = msg_t::FS_MKFILE, .sender = pid };
+	memcpy(m.data.fs_op.path, path, strlen(path));
+
+	send_message(FS_FAT32_TASK_ID, &m);
+
+	message res = wait_for_message(msg_t::FS_MKFILE);
+
+	return res.data.fs_op.fd;
+}

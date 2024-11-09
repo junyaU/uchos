@@ -56,6 +56,7 @@ add_compile_options(
         -ffreestanding
         -mno-red-zone
         -nostdlibinc
+        -Wno-interrupt-service-routine
         -D__ELF__
         -D_LDBL_EQ_DBL
         -D_GNU_SOURCE
