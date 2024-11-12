@@ -26,9 +26,12 @@ message wait_for_message(msg_t type)
 void initialize_task()
 {
 	message m;
-	m.type = msg_t::INITIALIZE_TASK;
 
+	m.type = msg_t::INITIALIZE_TASK;
 	send_message(KERNEL_TASK_ID, &m);
+
+	m.type = msg_t::FS_REGISTER_PATH;
+	send_message(FS_FAT32_TASK_ID, &m);
 }
 
 void deallocate_ool_memory(pid_t sender, void* addr, size_t size)

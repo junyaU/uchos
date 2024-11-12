@@ -1,5 +1,6 @@
 #include "task/builtin.hpp"
 #include "file_system/fat.hpp"
+#include "file_system/path.hpp"
 #include "graphics/log.hpp"
 #include "hardware/keyboard.hpp"
 #include "hardware/pci.hpp"
@@ -58,6 +59,19 @@ void handle_pci(const message& m)
 		send_message(m.sender, &send_m);
 	}
 }
+
+void handle_fs_register_path(const message& m)
+{
+	path* p = reinterpret_cast<path*>(m.data.fs_op.buf);
+	if (p == nullptr) {
+		LOG_ERROR("failed to allocate memory");
+		return;
+	}
+
+	memcpy(&CURRENT_TASK->fs_path, p, sizeof(path));
+
+	kfree(p);
+};
 } // namespace
 
 void task_idle()
@@ -74,6 +88,7 @@ void task_kernel()
 	t->add_msg_handler(msg_t::INITIALIZE_TASK, handle_initialize_task);
 	t->add_msg_handler(msg_t::IPC_MEMORY_USAGE, handle_memory_usage);
 	t->add_msg_handler(msg_t::IPC_PCI, handle_pci);
+	t->add_msg_handler(msg_t::FS_REGISTER_PATH, handle_fs_register_path);
 
 	process_messages(t);
 }
@@ -82,7 +97,7 @@ void task_shell()
 {
 	message m = { .type = msg_t::IPC_GET_FILE_INFO, .sender = SHELL_TASK_ID };
 	char path[6] = "shell";
-	memcpy(m.data.fs_op.path, path, 6);
+	memcpy(m.data.fs_op.name, path, 6);
 	send_message(FS_FAT32_TASK_ID, &m);
 
 	message info_m = wait_for_message(msg_t::IPC_GET_FILE_INFO);

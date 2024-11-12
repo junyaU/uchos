@@ -325,8 +325,8 @@ void handle_get_file_info(const message& m)
 		return;
 	}
 
-	const auto* path = m.data.fs_op.path;
-	to_upper(const_cast<char*>(path));
+	const auto* name = m.data.fs_op.name;
+	to_upper(const_cast<char*>(name));
 
 	message sm = { .type = msg_t::IPC_GET_FILE_INFO, .sender = FS_FAT32_TASK_ID };
 	sm.data.fs_op.buf = nullptr;
@@ -344,7 +344,7 @@ void handle_get_file_info(const message& m)
 			continue;
 		}
 
-		if (entry_name_is_equal(ROOT_DIR[i], path)) {
+		if (entry_name_is_equal(ROOT_DIR[i], name)) {
 			void* buf = kmalloc(sizeof(directory_entry), KMALLOC_ZEROED);
 			memcpy(buf, &ROOT_DIR[i], sizeof(directory_entry));
 			sm.data.fs_op.buf = buf;
@@ -433,17 +433,17 @@ void handle_fs_open(const message& m)
 {
 	message req = { .type = msg_t::FS_OPEN, .sender = FS_FAT32_TASK_ID };
 
-	const char* path = reinterpret_cast<const char*>(m.data.fs_op.path);
-	to_upper(const_cast<char*>(path));
+	const char* name = reinterpret_cast<const char*>(m.data.fs_op.name);
+	to_upper(const_cast<char*>(name));
 
-	directory_entry* entry = find_dir_entry(path);
+	directory_entry* entry = find_dir_entry(name);
 	if (entry == nullptr) {
 		req.data.fs_op.fd = -1;
 		send_message(m.sender, &req);
 		return;
 	}
 
-	file_descriptor* fd = register_fd(path, entry->file_size, m.sender);
+	file_descriptor* fd = register_fd(name, entry->file_size, m.sender);
 	req.data.fs_op.fd = fd == nullptr ? -1 : fd->fd;
 
 	send_message(m.sender, &req);
@@ -493,10 +493,10 @@ void handle_fs_mkfile(const message& m)
 {
 	message reply = { .type = msg_t::FS_MKFILE, .sender = FS_FAT32_TASK_ID };
 
-	const char* path = reinterpret_cast<const char*>(m.data.fs_op.path);
-	to_upper(const_cast<char*>(path));
+	const char* name = reinterpret_cast<const char*>(m.data.fs_op.name);
+	to_upper(const_cast<char*>(name));
 
-	directory_entry* existing_entry = find_dir_entry(path);
+	directory_entry* existing_entry = find_dir_entry(name);
 	if (existing_entry != nullptr) {
 		reply.data.fs_op.fd = -1;
 		send_message(m.sender, &reply);
@@ -510,15 +510,37 @@ void handle_fs_mkfile(const message& m)
 		return;
 	}
 
-	memcpy(entry->name, path, strlen(path));
+	memcpy(entry->name, name, strlen(name));
 	entry->attribute = entry_attribute::ARCHIVE;
 	entry->file_size = 0;
 
-	file_descriptor* fd = register_fd(path, 0, m.sender);
+	file_descriptor* fd = register_fd(name, 0, m.sender);
 
 	reply.data.fs_op.fd = fd == nullptr ? -1 : fd->fd;
 
 	send_message(m.sender, &reply);
+}
+
+void handle_fs_register_path(const message& m)
+{
+	if (!CURRENT_TASK->is_initilized) {
+		pending_messages.push(m);
+		return;
+	}
+
+	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = FS_FAT32_TASK_ID };
+
+	void* buf = kmalloc(sizeof(path), KMALLOC_ZEROED);
+	if (buf == nullptr) {
+		LOG_ERROR("failed to allocate memory");
+		return;
+	}
+
+	path p = init_path(ROOT_DIR);
+	memcpy(buf, &p, sizeof(path));
+	reply.data.fs_op.buf = buf;
+
+	send_message(KERNEL_TASK_ID, &reply);
 }
 
 void fat32_task()
@@ -540,6 +562,7 @@ void fat32_task()
 	t->add_msg_handler(msg_t::FS_READ, handle_fs_read);
 	t->add_msg_handler(msg_t::FS_CLOSE, handle_fs_close);
 	t->add_msg_handler(msg_t::FS_MKFILE, handle_fs_mkfile);
+	t->add_msg_handler(msg_t::FS_REGISTER_PATH, handle_fs_register_path);
 
 	process_messages(t);
 };

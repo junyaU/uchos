@@ -1,5 +1,6 @@
 #pragma once
 
+#include "file_system/path.hpp"
 #include "list.hpp"
 #include "memory/paging.hpp"
 #include "memory/slab.hpp"
@@ -22,6 +23,7 @@ struct task {
 	int priority;
 	bool is_initilized;
 	task_state state;
+	path fs_path;
 	uint64_t* stack;
 	size_t stack_size;
 	uint64_t kernel_stack_ptr;

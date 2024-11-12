@@ -14,9 +14,9 @@ int main(int argc, char** argv)
 
 	message m = { .type = msg_t::GET_DIRECTORY_CONTENTS, .sender = pid };
 	if (input != nullptr) {
-		memcpy(m.data.fs_op.path, input, strlen(input));
+		memcpy(m.data.fs_op.name, input, strlen(input));
 	} else {
-		memcpy(m.data.fs_op.path, "/", 1);
+		memcpy(m.data.fs_op.name, "/", 1);
 	}
 
 	send_message(FS_FAT32_TASK_ID, &m);
