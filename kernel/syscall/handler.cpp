@@ -142,7 +142,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	copy_args[args_len] = '\0';
 
 	message msg{ .type = msg_t::IPC_GET_FILE_INFO, .sender = CURRENT_TASK->id };
-	memcpy(msg.data.fs_op.path, copy_path, path_len + 1);
+	memcpy(msg.data.fs_op.name, copy_path, path_len + 1);
 	send_message(FS_FAT32_TASK_ID, &msg);
 
 	message info_m = wait_for_message(msg_t::IPC_GET_FILE_INFO);

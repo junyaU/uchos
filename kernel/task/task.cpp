@@ -1,5 +1,6 @@
 #include "task/task.hpp"
 #include "file_system/fat.hpp"
+#include "file_system/path.hpp"
 #include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
 #include "interrupt/vector.hpp"
@@ -277,6 +278,7 @@ task::task(int id,
 	  priority{ 2 }, // TODO: Implement priority scheduling
 	  is_initilized{ is_initilized },
 	  state{ state },
+	  fs_path({ nullptr, nullptr, nullptr }),
 	  stack{ nullptr },
 	  messages{ std::queue<message>() },
 	  message_handlers({ std::array<message_handler_t, total_message_types>() })
@@ -303,11 +305,10 @@ task::task(int id,
 
 	const uint64_t stack_end = reinterpret_cast<uint64_t>(stack) + stack_size;
 
-	memset(&ctx, 0, sizeof(ctx));
-
 	page_table_entry* page_table = new_page_table();
 	copy_kernel_space(page_table);
 
+	ctx = {};
 	ctx.cr3 = reinterpret_cast<uint64_t>(page_table);
 	ctx.rsp = (stack_end & ~0xfLU) - 8;
 	ctx.rflags = 0x202;

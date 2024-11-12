@@ -33,6 +33,7 @@ enum class msg_t : int32_t {
 	FS_READ,
 	FS_WRITE,
 	FS_MKFILE,
+	FS_REGISTER_PATH,
 	MAX_MESSAGE_TYPE, // must be the last
 };
 
@@ -109,7 +110,7 @@ struct message {
 			fs_id_t request_id;
 			fd_t fd;
 			void* buf;
-			char path[30];
+			char name[30];
 			size_t len;
 			int operation;
 		} fs_op;

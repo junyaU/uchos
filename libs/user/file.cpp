@@ -9,7 +9,7 @@ fd_t fs_open(const char* path, int flags)
 {
 	pid_t pid = sys_getpid();
 	message m = { .type = msg_t::FS_OPEN, .sender = pid };
-	memcpy(m.data.fs_op.path, path, strlen(path));
+	memcpy(m.data.fs_op.name, path, strlen(path));
 	m.data.fs_op.operation = flags;
 
 	send_message(FS_FAT32_TASK_ID, &m);
@@ -50,7 +50,7 @@ fd_t fs_create(const char* path)
 {
 	pid_t pid = sys_getpid();
 	message m = { .type = msg_t::FS_MKFILE, .sender = pid };
-	memcpy(m.data.fs_op.path, path, strlen(path));
+	memcpy(m.data.fs_op.name, path, strlen(path));
 
 	send_message(FS_FAT32_TASK_ID, &m);
 
