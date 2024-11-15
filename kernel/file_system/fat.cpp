@@ -528,7 +528,7 @@ void handle_fs_register_path(const message& m)
 		return;
 	}
 
-	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = FS_FAT32_TASK_ID };
+	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = m.sender };
 
 	void* buf = kmalloc(sizeof(path), KMALLOC_ZEROED);
 	if (buf == nullptr) {
@@ -541,6 +541,25 @@ void handle_fs_register_path(const message& m)
 	reply.data.fs_op.buf = buf;
 
 	send_message(KERNEL_TASK_ID, &reply);
+}
+
+void handle_fs_get_cwd(const message& m)
+{
+	message reply = { .type = msg_t::FS_GET_CWD, .sender = FS_FAT32_TASK_ID };
+
+	task* t = get_task(m.sender);
+	if (t->fs_path.current_dir == nullptr) {
+		send_message(m.sender, &reply);
+		return;
+	}
+
+	if (t->fs_path.is_root()) {
+		memcpy(reply.data.fs_op.name, "/", 2);
+	} else {
+		read_dir_entry_name(*t->fs_path.current_dir, reply.data.fs_op.name);
+	}
+
+	send_message(m.sender, &reply);
 }
 
 void fat32_task()
@@ -563,6 +582,7 @@ void fat32_task()
 	t->add_msg_handler(msg_t::FS_CLOSE, handle_fs_close);
 	t->add_msg_handler(msg_t::FS_MKFILE, handle_fs_mkfile);
 	t->add_msg_handler(msg_t::FS_REGISTER_PATH, handle_fs_register_path);
+	t->add_msg_handler(msg_t::FS_GET_CWD, handle_fs_get_cwd);
 
 	process_messages(t);
 };

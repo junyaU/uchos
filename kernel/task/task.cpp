@@ -57,6 +57,15 @@ pid_t get_task_id_by_name(const char* name)
 	return -1;
 }
 
+task* get_task(pid_t id)
+{
+	if (id < 0 || id >= MAX_TASKS) {
+		return nullptr;
+	}
+
+	return tasks[id];
+}
+
 task* create_task(const char* name,
 				  uint64_t task_addr,
 				  bool setup_context,

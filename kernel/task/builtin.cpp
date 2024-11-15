@@ -22,7 +22,7 @@ void handle_initialize_task(const message& m)
 {
 	message send_m = { .type = msg_t::INITIALIZE_TASK, .sender = KERNEL_TASK_ID };
 	send_m.data.init.task_id = m.sender;
-	send_message(SHELL_TASK_ID, &send_m);
+	send_message(m.sender, &send_m);
 }
 
 void handle_memory_usage(const message& m)
@@ -68,9 +68,19 @@ void handle_fs_register_path(const message& m)
 		return;
 	}
 
-	memcpy(&CURRENT_TASK->fs_path, p, sizeof(path));
+	task* t = get_task(m.sender);
+	if (t->parent_id != -1) {
+		auto* parent = get_task(t->parent_id);
+		memcpy(&t->fs_path, &parent->fs_path, sizeof(path));
+	} else {
+		memcpy(&t->fs_path, p, sizeof(path));
+	}
 
 	kfree(p);
+
+	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = KERNEL_TASK_ID };
+	reply.data.fs_op.result = 0;
+	send_message(m.sender, &reply);
 };
 } // namespace
 

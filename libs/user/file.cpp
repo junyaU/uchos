@@ -58,3 +58,15 @@ fd_t fs_create(const char* path)
 
 	return res.data.fs_op.fd;
 }
+
+void get_cwd(char* buf, size_t size)
+{
+	pid_t pid = sys_getpid();
+	message m = { .type = msg_t::FS_GET_CWD, .sender = pid };
+
+	send_message(FS_FAT32_TASK_ID, &m);
+
+	message res = wait_for_message(msg_t::FS_GET_CWD);
+
+	memcpy(buf, res.data.fs_op.name, size);
+}
