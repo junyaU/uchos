@@ -83,6 +83,8 @@ task* copy_task(task* parent, context* parent_ctx);
 
 task* get_scheduled_task();
 
+task* get_task(pid_t id);
+
 pid_t get_task_id_by_name(const char* name);
 
 pid_t get_available_task_id();
