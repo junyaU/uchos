@@ -49,7 +49,9 @@ error_t send_message(pid_t dst_id, message* m)
 
 	task* dst = tasks[dst_id];
 	if (dst == nullptr) {
-		LOG_ERROR("send_message: task %d is not found", dst_id);
+		if (m->type != msg_t::INITIALIZE_TASK) {
+			LOG_ERROR("send_message: task %d is not found", dst_id);
+		}
 		return ERR_INVALID_TASK;
 	}
 
