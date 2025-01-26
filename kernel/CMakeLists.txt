@@ -95,6 +95,7 @@ add_subdirectory(task)
 add_subdirectory(hardware)
 add_subdirectory(file_system)
 add_subdirectory(syscall)
+add_subdirectory(tests)
 
 # Define the main target and link it with the necessary libraries.
 add_executable(UchosKernel ${SOURCE_FILES})
@@ -114,4 +115,5 @@ target_link_libraries(
         UchosHardware
         UchosFileSystem
         UchosSyscall
+        UchosTest
 )
