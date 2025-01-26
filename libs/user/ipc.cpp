@@ -28,10 +28,6 @@ void initialize_task()
 	pid_t pid = sys_getpid();
 	message m = { .sender = pid };
 
-	m.type = msg_t::FS_REGISTER_PATH;
-	send_message(FS_FAT32_TASK_ID, &m);
-	wait_for_message(msg_t::FS_REGISTER_PATH);
-
 	m.type = msg_t::INITIALIZE_TASK;
 	send_message(KERNEL_TASK_ID, &m);
 }
