@@ -1,5 +1,6 @@
 #include "framework.hpp"
 #include "graphics/log.hpp"
+#include <cstring>
 
 struct test_case_t {
 	const char* name;
@@ -25,6 +26,7 @@ void test_init()
 	test_count = 0;
 	stats = { 0, 0, 0 };
 	current_test_failed = false;
+	memset(test_cases, 0, sizeof(test_cases));
 }
 
 void test_register(const char* name, test_func_t func)
@@ -48,4 +50,11 @@ void test_run()
 			stats.passed++;
 		}
 	}
+}
+
+void run_test_suite(void (*test_suite)())
+{
+	test_init();
+	test_suite();
+	test_run();
 }

@@ -1,8 +1,10 @@
-#include "bootstrap_allocator.hpp"
+#include "memory/bootstrap_allocator.hpp"
 #include "../../UchLoaderPkg/memory_map.hpp"
-#include "buddy_system.hpp"
 #include "graphics/log.hpp"
-#include "page.hpp"
+#include "memory/buddy_system.hpp"
+#include "memory/page.hpp"
+#include "tests/framework.hpp"
+#include "tests/test_cases/memory_test.hpp"
 #include <libs/common/types.hpp>
 
 #include <sys/types.h>
@@ -104,11 +106,17 @@ void initialize_bootstrap_allocator(const MemoryMap& mem_map)
 			continue;
 		}
 
+		if (desc->physical_start == 0) {
+			continue;
+		}
+
 		boot_allocator->mark_available(reinterpret_cast<void*>(desc->physical_start),
 									   desc->number_of_pages * PAGE_SIZE);
 	}
 
 	boot_allocator->show_available_memory();
+
+	run_test_suite(register_bootstrap_allocator_tests);
 
 	LOG_INFO("Bootstrap allocator initialized successfully.");
 }
