@@ -1,7 +1,9 @@
 #include "buddy_system.hpp"
 #include "bit_utils.hpp"
 #include "graphics/log.hpp"
-#include "page.hpp"
+#include "memory/page.hpp"
+#include "tests/framework.hpp"
+#include "tests/test_cases/memory_test.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <libs/common/types.hpp>
@@ -52,7 +54,6 @@ void* buddy_system::allocate(size_t size)
 		}
 
 		if (next_order == -1) {
-			LOG_ERROR("failed to allocate memory: order=%d", order);
 			return nullptr;
 		}
 
@@ -225,6 +226,8 @@ void initialize_memory_manager()
 	if (num_total_pages > 0) {
 		memory_manager->register_memory_blocks(num_total_pages, &pages[start_index]);
 	}
+
+	run_test_suite(register_buddy_system_tests);
 
 	LOG_INFO("Memory manager initialized successfully.");
 }
