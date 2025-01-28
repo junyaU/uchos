@@ -3,6 +3,8 @@
 #include "buddy_system.hpp"
 #include "graphics/log.hpp"
 #include "page.hpp"
+#include "tests/framework.hpp"
+#include "tests/test_cases/memory_test.hpp"
 #include <cstring>
 #include <iterator>
 #include <libs/common/types.hpp>
@@ -275,6 +277,8 @@ void initialize_slab_allocator()
 	aligned_to_raw_addr_map = std::unordered_map<void*, void*>();
 
 	cache_chain.clear();
+
+	run_test_suite(register_slab_tests);
 
 	LOG_INFO("Initializing slab allocator successfully.");
 }
