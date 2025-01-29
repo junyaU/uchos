@@ -1,9 +1,17 @@
-#include "timer.hpp"
+#include "timers/timer.hpp"
 #include "graphics/log.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
+#include "tests/framework.hpp"
+#include "tests/test_cases/timer_test.hpp"
+#include <cstdint>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
+
+namespace
+{
+constexpr int SWITCH_TASK_MILLISEC = 20;
+}
 
 uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 {
@@ -53,22 +61,26 @@ uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
 	return e.id;
 }
 
-void kernel_timer::add_switch_task_event(unsigned long millisec)
+uint64_t kernel_timer::add_switch_task_event(unsigned long millisec)
 {
 	auto e = timer_event{};
 	e.action = timeout_action_t::SWITCH_TASK;
 	e.timeout = calculate_timeout_ticks(millisec);
 	events_.push(e);
+
+	return e.id;
 }
 
-void kernel_timer::remove_timer_event(uint64_t id)
+error_t kernel_timer::remove_timer_event(uint64_t id)
 {
 	if (id == 0 || last_id_ < id) {
 		LOG_ERROR("invalid timer id: %lu", id);
-		return;
+		return ERR_INVALID_ARG;
 	}
 
 	ignore_events_.insert(id);
+
+	return OK;
 }
 
 bool kernel_timer::increment_tick()
@@ -116,6 +128,8 @@ void initialize_timer()
 	}
 
 	ktimer = new (addr) kernel_timer;
+
+	run_test_suite(register_timer_tests);
 
 	LOG_INFO("Logical timer initialized successfully.");
 }

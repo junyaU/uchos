@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <libs/common/message.hpp>
+#include <libs/common/types.hpp>
 #include <queue>
 #include <unordered_set>
 
@@ -20,7 +21,6 @@ inline bool operator<(const timer_event& lhs, const timer_event& rhs)
 }
 
 static constexpr int TIMER_FREQUENCY = 100;
-static constexpr int SWITCH_TASK_MILLISEC = 20;
 
 class kernel_timer
 {
@@ -46,9 +46,9 @@ public:
 									  pid_t task_id,
 									  uint64_t id = 0);
 
-	void add_switch_task_event(unsigned long millisec);
+	uint64_t add_switch_task_event(unsigned long millisec);
 
-	void remove_timer_event(uint64_t id);
+	error_t remove_timer_event(uint64_t id);
 
 	bool increment_tick();
 
