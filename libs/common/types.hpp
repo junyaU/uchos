@@ -39,12 +39,6 @@ constexpr int FS_FAT32_TASK_ID = 4;
 constexpr int SHELL_TASK_ID = 5;
 constexpr int INTERRUPT_TASK = 100;
 
-// log levels
-constexpr int KERN_DEBUG = 0;
-constexpr int KERN_ERROR = 1;
-constexpr int KERN_INFO = 2;
-constexpr int KERN_TEST = 3;
-
 // file descriptor
 constexpr int NO_FD = -1;
 constexpr int STDIN_FILENO = 0;

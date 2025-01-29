@@ -1,5 +1,5 @@
-#include "page.hpp"
-#include "bootstrap_allocator.hpp"
+#include "memory/page.hpp"
+#include "memory/bootstrap_allocator.hpp"
 #include <libs/common/types.hpp>
 #include <vector>
 
@@ -14,11 +14,6 @@ void initialize_pages()
 
 	for (size_t i = memory_start_index; i < memory_end_index; ++i) {
 		const size_t page_index = i - memory_start_index;
-
-		if (i == 0) {
-			pages[page_index].set_used();
-			continue;
-		}
 
 		pages[page_index].set_ptr(reinterpret_cast<void*>(i * PAGE_SIZE));
 		if (boot_allocator->is_bit_set(i)) {
