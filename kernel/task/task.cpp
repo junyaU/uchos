@@ -12,6 +12,8 @@
 #include "task/builtin.hpp"
 #include "task/context_switch.h"
 #include "task/ipc.hpp"
+#include "tests/framework.hpp"
+#include "tests/test_cases/task_test.hpp"
 #include "timers/timer.hpp"
 #include <array>
 #include <cstdint>
@@ -274,6 +276,8 @@ void initialize_task()
 	CURRENT_TASK->state = TASK_RUNNING;
 
 	ktimer->add_switch_task_event(200);
+
+	run_test_suite(register_task_tests);
 }
 
 task::task(int id,
