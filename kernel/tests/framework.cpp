@@ -1,4 +1,4 @@
-#include "framework.hpp"
+#include "tests/framework.hpp"
 #include "graphics/log.hpp"
 #include <cstring>
 
@@ -54,7 +54,9 @@ void test_run()
 
 void run_test_suite(void (*test_suite)())
 {
+	change_log_level(log_level::TEST);
 	test_init();
 	test_suite();
 	test_run();
+	change_log_level(log_level::ERROR);
 }
