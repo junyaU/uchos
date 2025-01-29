@@ -43,6 +43,7 @@ constexpr int INTERRUPT_TASK = 100;
 constexpr int KERN_DEBUG = 0;
 constexpr int KERN_ERROR = 1;
 constexpr int KERN_INFO = 2;
+constexpr int KERN_TEST = 3;
 
 // file descriptor
 constexpr int NO_FD = -1;

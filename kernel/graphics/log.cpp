@@ -1,12 +1,21 @@
-#include "log.hpp"
-#include "font.hpp"
-#include "screen.hpp"
+#include "graphics/log.hpp"
+#include "graphics/font.hpp"
+#include "graphics/screen.hpp"
 #include <cstddef>
 #include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
 
-void printk(int level, const char* format, ...)
+namespace
+{
+log_level CURRENT_LOG_LEVEL = log_level::ERROR;
+int kernel_cursor_x = 0;
+int kernel_cursor_y = 5;
+} // namespace
+
+void change_log_level(log_level level) { CURRENT_LOG_LEVEL = level; }
+
+void printk(log_level level, const char* format, ...)
 {
 	if (level != CURRENT_LOG_LEVEL || format == nullptr) {
 		return;

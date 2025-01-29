@@ -15,16 +15,22 @@
 
 #include <libs/common/types.hpp>
 
-static int kernel_cursor_x = 0;
-static int kernel_cursor_y = 5;
-static int CURRENT_LOG_LEVEL = KERN_ERROR;
+enum class log_level : uint8_t {
+	DEBUG,
+	ERROR,
+	INFO,
+	TEST,
+};
+
+void change_log_level(log_level level);
 
 __attribute__((no_caller_saved_registers)) void
-printk(int level, const char* format, ...);
+printk(log_level level, const char* format, ...);
 
 #define LOG(level, fmt, ...)                                                        \
 	printk(level, "[%s:%d] " fmt "", __func__, __LINE__, ##__VA_ARGS__)
 
-#define LOG_DEBUG(fmt, ...) LOG(KERN_DEBUG, fmt, ##__VA_ARGS__)
-#define LOG_INFO(fmt, ...) LOG(KERN_INFO, fmt, ##__VA_ARGS__)
-#define LOG_ERROR(fmt, ...) LOG(KERN_ERROR, fmt, ##__VA_ARGS__)
+#define LOG_DEBUG(fmt, ...) LOG(log_level::DEBUG, fmt, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...) LOG(log_level::INFO, fmt, ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) LOG(log_level::ERROR, fmt, ##__VA_ARGS__)
+#define LOG_TEST(fmt, ...) LOG(log_level::TEST, fmt, ##__VA_ARGS__)
