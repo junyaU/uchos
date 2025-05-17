@@ -10,6 +10,8 @@
 #include "syscall/syscall.hpp"
 #include "task/builtin.hpp"
 #include "task/task.hpp"
+#include "tests/framework.hpp"
+#include "tests/test_cases/virtio_blk_test.hpp"
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"
@@ -58,6 +60,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	syscall::initialize();
 
 	initialize_task();
+
+	run_test_suite(register_virtio_blk_tests);
 
 	task_kernel();
 }

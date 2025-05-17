@@ -26,6 +26,8 @@ void handle_read_request(const message& m)
 
 	if (IS_ERR(read_from_blk_device(buf, sector, len))) {
 		LOG_ERROR("failed to read from blk device");
+		kfree(buf);
+		send_message(m.sender, &send_m);
 	}
 
 	send_m.data.blk_io.buf = buf;
