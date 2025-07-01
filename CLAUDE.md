@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Please respond in Japanese.
+
 ## 🎯 プロジェクト概要
 
 **UCHos** - シンプルなマイクロカーネル OS (x86_64 ホビープロジェクト)
