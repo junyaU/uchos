@@ -1,8 +1,10 @@
-# UCHos 開発ガイド
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## 🎯 プロジェクト概要
 
-**UCHos** - シンプルなマイクロカーネル OS
+**UCHos** - シンプルなマイクロカーネル OS (x86_64 ホビープロジェクト)
 
 ### 基本方針
 - **とにかくシンプルに** - 複雑さを排除し、理解しやすい設計
@@ -13,9 +15,10 @@
 - **対応アーキテクチャ**: x86_64
 - **カーネルアーキテクチャ**: マイクロカーネル（ぽいもの）
 - **プロセッサ**: シングルプロセッサ対応
-- **最終更新**: 2025年1月26日
+- **ブートローダー**: UEFI (EDK2)
+- **エミュレータ**: QEMU
 
-## 🏗️ システム構成
+## システム構成
 
 ### コアカーネル機能
 ```
@@ -51,17 +54,21 @@
 # カーネルのみビルド
 cmake -B build kernel && cmake --build build
 
-# コード品質チェック
+# ユーザーランドプログラムビルド（個別）
+cd userland/commands/[コマンド名]
+make clean && make
+
+# コード品質チェック (clang-tidy)
 ./lint.sh
 ```
 
-### 便利なエイリアス
-```bash
-# .bashrc や .zshrc に追加推奨
-alias ub='./run_qemu.sh'    # UCHos Build & Run
-alias ul='./lint.sh'        # UCHos Lint
-alias uk='cmake -B build kernel && cmake --build build'  # UCHos Kernel build
-```
+### QEMU起動オプション
+run_qemu.sh は以下の設定でQEMUを起動:
+- メモリ: 1GB
+- UEFI: OVMF
+- USB: XHCI + キーボード
+- ストレージ: virtio-blk
+- デバッグ: GDBサーバー (tcp::12345)
 
 ## 🧪 テスト戦略
 
@@ -69,56 +76,44 @@ alias uk='cmake -B build kernel && cmake --build build'  # UCHos Kernel build
 バグ修正による開発停滞を避けるため、包括的なテスト機構を構築する。
 
 ### 1. カーネル内部テスト
-```cpp
-// kernel/tests/ ディレクトリ構成
-kernel/tests/
-├── memory_tests.cpp      // メモリ管理テスト
-├── process_tests.cpp     // プロセス管理テスト
-├── ipc_tests.cpp         // IPC テスト
-└── fs_tests.cpp          // ファイルシステムテスト
 
-// 機能セットアップ時のテスト例
-void memory_init() {
-    setup_buddy_system();
-    setup_slab_allocator();
-    
-    // 初期化後に即座にテスト実行
-    run_test_suite(memory_tests);
-}
+#### テストフレームワーク
+```cpp
+// kernel/tests/framework.hpp - シンプルなテストフレームワーク
+test_register("test_name", test_function);  // テスト登録
+run_test_suite(test_suite_function);        // テストスイート実行
+
+// kernel/tests/macros.hpp - アサーションマクロ
+ASSERT_EQ(x, y)    // 失敗時は即座にreturn
+ASSERT_TRUE(x)
+ASSERT_NOT_NULL(x)
+EXPECT_EQ(x, y)    // 失敗してもテスト継続
 ```
 
-### 2. 機能テストの実行タイミング
+#### 実装済みテストケース
+```
+kernel/tests/test_cases/
+├── memory_test.cpp      // メモリ管理テスト
+├── task_test.cpp        // タスク管理テスト
+├── timer_test.cpp       // タイマーテスト
+└── virtio_blk_test.cpp  // VirtIO ブロックデバイステスト
+```
+
+### 2. テスト実行
 ```cpp
-// kernel/main.cpp での実行例
+// kernel/main.cpp でのテスト実行例
+run_test_suite(register_virtio_blk_tests);  // 個別テスト実行
 
-// 個別機能テスト（初期化時）
-memory_init();     // → memory_tests 自動実行
-process_init();    // → process_tests 自動実行
-
-// 複合機能テスト（全セットアップ完了後）
-run_integration_tests();
-
-// 特定テストのみ実行する場合
-run_test_suite(memory_tests);        // メモリテストのみ
-run_test_suite(filesystem_tests);    // ファイルシステムテストのみ
+// 新しいテストスイート追加時
+void register_my_tests() {
+    test_register("test_basic", test_basic_function);
+    test_register("test_advanced", test_advanced_function);
+}
+run_test_suite(register_my_tests);
 ```
 
 ### 3. ユーザーランドからのテスト
-```cpp
-// システムコール経由での機能テスト
-// user/test_app/ でカーネル機能を検証
-
-// 例：メモリ管理のシステムコールテスト
-void test_memory_syscalls() {
-    void* ptr = sys_mmap(size);
-    assert(ptr != nullptr);
-    sys_munmap(ptr, size);
-}
-```
-
-### 4. CI自動テスト（予定）
-- GitHub Actions での自動ビルド・テスト
-- QEMU環境での自動実行テスト
+将来的にユーザーランドテストアプリケーションを実装予定
 
 ## 📝 コーディング規約
 
@@ -139,8 +134,11 @@ inline void cpu_halt() {
 
 ### 基本設定
 - **C++標準**: C++17
+- **コンパイラ**: Clang
+- **リンカー**: ld.lld
 - **アーキテクチャ**: x86_64
 - **文字エンコーディング**: UTF-8
+- **ビルドシステム**: CMake
 
 ### フォーマット規則
 ```cpp
@@ -173,10 +171,7 @@ namespace kernel {
 ```
 
 ### システムコール設計
-```cpp
-システムコールは最小限に抑える
-
-```
+システムコールは最小限に抑える方針
 
 ### エラーハンドリング
 ```cpp
@@ -192,29 +187,81 @@ uchos/
 ├── kernel/              # カーネルソースコード
 │   ├── main.cpp        # カーネルエントリーポイント
 │   ├── memory/         # メモリ管理（buddy, slab）
-│   ├── process/        # プロセス管理
-│   ├── ipc/            # プロセス間通信
-│   ├── fs/             # ファイルシステム（FAT64）
-│   ├── drivers/        # デバイスドライバ
-│   │   ├── virtio_blk.cpp
-│   │   └── xhci_kbd.cpp
+│   ├── task/           # タスク管理・IPC
+│   ├── file_system/    # ファイルシステム
+│   ├── hardware/       # ハードウェアドライバ
+│   │   ├── usb/        # USB (XHCI)
+│   │   └── virtio/     # VirtIO デバイス
+│   ├── interrupt/      # 割り込み処理 (IDT)
+│   ├── syscall/        # システムコール
+│   ├── timers/         # タイマー (ACPI, LAPIC)
+│   ├── graphics/       # 画面描画・フォント
 │   └── tests/          # カーネル内部テスト
-├── loader/             # ブートローダー
-├── user/               # ユーザーランド
-│   ├── terminal/       # ターミナルアプリ
-│   ├── commands/       # コマンド群
-│   └── test_app/       # テスト用アプリ
-└── docs/               # ドキュメント
+├── UchLoaderPkg/       # UEFI ブートローダー
+├── userland/           # ユーザーランド
+│   ├── shell/          # シェル
+│   ├── commands/       # コマンド群 (ls, cat, echo等)
+│   └── sandbox/        # テスト用プログラム
+├── libs/               # 共有ライブラリ
+│   ├── common/         # カーネル・ユーザー共通
+│   └── user/           # ユーザーランド用
+├── x86_64-elf/         # クロスコンパイル環境
+│   ├── include/        # newlib, libc++ ヘッダ
+│   └── lib/            # ライブラリファイル
+└── build/              # ビルド出力ディレクトリ
 ```
+
+## 🏗️ アーキテクチャ詳細
+
+### メモリ管理
+- **物理メモリ**: Buddy System でページ管理
+- **カーネルヒープ**: Slab Allocator (オブジェクトキャッシュ)
+- **仮想メモリ**: 4レベルページング (PML4)
+- **ブートストラップ**: 初期化時の一時的アロケータ
+
+### タスク管理
+- **スケジューリング**: ラウンドロビン
+- **コンテキストスイッチ**: context_switch.asm
+- **IPC**: メッセージパッシング方式
+- **タスク状態**: 実行中/待機/スリープ
+
+### ファイルシステム
+- **フォーマット**: FAT (カスタム実装)
+- **VFS**: 未実装（直接FAT操作）
+- **ファイル記述子**: プロセス毎に管理
+
+### デバイスドライバ
+- **USB**: XHCI コントローラ (キーボードのみ)
+- **ストレージ**: VirtIO Block Device
+- **PCI**: 基本的な列挙とコンフィグレーション
 
 ## ⚡ 開発Tips
 
 ### デバッグ
-```cpp
-// QEMU + GDB でのカーネルデバッグ
-// ブレークポイント設定
-asm volatile("int3");  // x86_64 ブレークポイント
-
-// メモリダンプ
-void dump_page_table(uint64_t cr3);
+```bash
+# GDBでカーネルデバッグ (別ターミナルで)
+gdb build/UchosKernel
+target remote :12345
+break KernelMain
+continue
 ```
+
+### ログ出力
+```cpp
+LOG_INFO("メッセージ");
+LOG_WARN("警告: %d", value);
+LOG_ERROR("エラー: %s", error_msg);
+LOG_TEST("テスト結果");  // テスト専用
+```
+
+### 新機能追加時の注意点
+1. カーネル機能は最小限に - 複雑な処理はユーザーランドへ
+2. システムコールは慎重に追加 - インターフェースは変更困難
+3. テストを必ず書く - kernel/tests/test_cases/ に追加
+4. lint.sh でコード品質チェック
+
+## 📌 重要な開発指針
+- **既存ファイル優先**: 新規ファイル作成より既存ファイル編集を優先
+- **ドキュメント作成**: 明示的に要求された場合のみ .md ファイルを作成
+- **シンプルさ重視**: UCHosの基本方針「とにかくシンプルに」を常に意識
+- **マイクロカーネル**: 機能追加時は「カーネルに本当に必要か？」を再考
