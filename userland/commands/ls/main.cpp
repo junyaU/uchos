@@ -3,6 +3,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/stat.hpp>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 #include <libs/user/console.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/syscall.hpp>
@@ -12,14 +13,14 @@ int main(int argc, char** argv)
 	pid_t pid = sys_getpid();
 	char* input = argv[1];
 
-	message m = { .type = msg_t::GET_DIRECTORY_CONTENTS, .sender = pid };
+	message m = { .type = msg_t::GET_DIRECTORY_CONTENTS, .sender = ProcessId::from_raw(pid) };
 	if (input != nullptr) {
 		memcpy(m.data.fs_op.name, input, strlen(input));
 	} else {
 		memcpy(m.data.fs_op.name, "/", 1);
 	}
 
-	send_message(FS_FAT32_TASK_ID, &m);
+	send_message(process_ids::FS_FAT32, &m);
 
 	message msg = wait_for_message(msg_t::GET_DIRECTORY_CONTENTS);
 
@@ -48,7 +49,7 @@ int main(int argc, char** argv)
 
 	printu(buf);
 
-	deallocate_ool_memory(pid, msg.tool_desc.addr, msg.tool_desc.size);
+	deallocate_ool_memory(ProcessId::from_raw(pid), msg.tool_desc.addr, msg.tool_desc.size);
 
 	return 0;
 }

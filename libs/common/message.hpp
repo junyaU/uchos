@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "process_id.hpp"
 #include <cstddef>
 #include <cstdint>
 
@@ -54,7 +55,7 @@ struct msg_ool_desc_t {
 
 struct message {
 	msg_t type;
-	pid_t sender;
+	ProcessId sender;
 	msg_ool_desc_t tool_desc;
 	bool is_end_of_message = true;
 

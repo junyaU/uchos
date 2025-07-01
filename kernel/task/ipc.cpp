@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 
 error_t handle_ool_memory_dealloc(const message& m)
@@ -39,18 +40,19 @@ error_t handle_ool_memory_alloc(message& m, task* dst)
 	return OK;
 }
 
-error_t send_message(pid_t dst_id, message* m)
+error_t send_message(ProcessId dst_id, message* m)
 {
-	if (dst_id == -1 || m->sender == dst_id) {
-		LOG_ERROR("invalid destination task id : dest = %d, sender = %d", dst_id,
-				  m->sender);
+	pid_t dst_raw = dst_id.raw();
+	if (dst_raw == -1 || m->sender.raw() == dst_raw) {
+		LOG_TEST("invalid destination task id : dest = %d, sender = %d", dst_raw,
+				 m->sender.raw());
 		return ERR_INVALID_ARG;
 	}
 
-	task* dst = tasks[dst_id];
+	task* dst = tasks[dst_raw];
 	if (dst == nullptr) {
 		if (m->type != msg_t::INITIALIZE_TASK) {
-			LOG_ERROR("send_message: task %d is not found", dst_id);
+			LOG_TEST("send_message: task %d is not found", dst_raw);
 		}
 		return ERR_INVALID_TASK;
 	}

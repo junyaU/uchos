@@ -1,18 +1,19 @@
 #include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 #include <libs/user/file.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/syscall.hpp>
 
 fd_t fs_open(const char* path, int flags)
 {
-	pid_t pid = sys_getpid();
+	ProcessId pid = ProcessId::from_raw(sys_getpid());
 	message m = { .type = msg_t::FS_OPEN, .sender = pid };
 	memcpy(m.data.fs_op.name, path, strlen(path));
 	m.data.fs_op.operation = flags;
 
-	send_message(FS_FAT32_TASK_ID, &m);
+	send_message(process_ids::FS_FAT32, &m);
 
 	message res = wait_for_message(msg_t::FS_OPEN);
 
@@ -21,12 +22,12 @@ fd_t fs_open(const char* path, int flags)
 
 size_t fs_read(fd_t fd, void* buf, size_t count)
 {
-	pid_t pid = sys_getpid();
+	ProcessId pid = ProcessId::from_raw(sys_getpid());
 	message m = { .type = msg_t::FS_READ, .sender = pid };
 	m.data.fs_op.fd = fd;
 	m.data.fs_op.len = count;
 
-	send_message(FS_FAT32_TASK_ID, &m);
+	send_message(process_ids::FS_FAT32, &m);
 
 	message res = wait_for_message(msg_t::FS_READ);
 
@@ -39,20 +40,20 @@ size_t fs_read(fd_t fd, void* buf, size_t count)
 
 void fs_close(fd_t fd)
 {
-	pid_t pid = sys_getpid();
+	ProcessId pid = ProcessId::from_raw(sys_getpid());
 	message m = { .type = msg_t::FS_CLOSE, .sender = pid };
 	m.data.fs_op.fd = fd;
 
-	send_message(FS_FAT32_TASK_ID, &m);
+	send_message(process_ids::FS_FAT32, &m);
 }
 
 fd_t fs_create(const char* path)
 {
-	pid_t pid = sys_getpid();
+	ProcessId pid = ProcessId::from_raw(sys_getpid());
 	message m = { .type = msg_t::FS_MKFILE, .sender = pid };
 	memcpy(m.data.fs_op.name, path, strlen(path));
 
-	send_message(FS_FAT32_TASK_ID, &m);
+	send_message(process_ids::FS_FAT32, &m);
 
 	message res = wait_for_message(msg_t::FS_MKFILE);
 
@@ -61,10 +62,10 @@ fd_t fs_create(const char* path)
 
 void get_cwd(char* buf, size_t size)
 {
-	pid_t pid = sys_getpid();
+	ProcessId pid = ProcessId::from_raw(sys_getpid());
 	message m = { .type = msg_t::FS_GET_CWD, .sender = pid };
 
-	send_message(FS_FAT32_TASK_ID, &m);
+	send_message(process_ids::FS_FAT32, &m);
 
 	message res = wait_for_message(msg_t::FS_GET_CWD);
 

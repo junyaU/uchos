@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 #include <stdint.h>
 
 namespace syscall
@@ -55,7 +56,7 @@ error_t sys_time(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	const uint64_t ms = arg1;
 	const int is_periodic = arg2;
 	const timeout_action_t action = static_cast<timeout_action_t>(arg3);
-	const pid_t task_id = arg4;
+	const ProcessId task_id = ProcessId::from_raw(arg4);
 
 	if (is_periodic == 1) {
 		ktimer->add_periodic_timer_event(ms, action, task_id);
@@ -98,13 +99,13 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 			copy_m.sender = t->id;
 		}
 
-		send_message(dest, &copy_m);
+		send_message(ProcessId::from_raw(dest), &copy_m);
 	}
 
 	return OK;
 }
 
-pid_t sys_fork(void)
+ProcessId sys_fork(void)
 {
 	context current_ctx;
 	memset(&current_ctx, 0, sizeof(current_ctx));
@@ -112,13 +113,13 @@ pid_t sys_fork(void)
 	get_current_context(&current_ctx);
 
 	task* t = CURRENT_TASK;
-	if (t->parent_id != -1) {
-		return 0;
+	if (t->parent_id.raw() != -1) {
+		return ProcessId::from_raw(0);
 	}
 
 	task* child = copy_task(t, &current_ctx);
 	if (child == nullptr) {
-		return ERR_FORK_FAILED;
+		return ProcessId::from_raw(ERR_FORK_FAILED);
 	}
 
 	schedule_task(child->id);
@@ -143,7 +144,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	message msg{ .type = msg_t::IPC_GET_FILE_INFO, .sender = CURRENT_TASK->id };
 	memcpy(msg.data.fs_op.name, copy_path, path_len + 1);
-	send_message(FS_FAT32_TASK_ID, &msg);
+	send_message(process_ids::FS_FAT32, &msg);
 
 	message info_m = wait_for_message(msg_t::IPC_GET_FILE_INFO);
 
@@ -156,7 +157,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	message read_msg{ .type = msg_t::IPC_READ_FILE_DATA,
 					  .sender = CURRENT_TASK->id };
 	read_msg.data.fs_op.buf = entry;
-	send_message(FS_FAT32_TASK_ID, &read_msg);
+	send_message(process_ids::FS_FAT32, &read_msg);
 
 	message data_m = wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	kfree(entry);
@@ -179,7 +180,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 void sys_exit(uint64_t arg1) { exit_task(arg1); }
 
-pid_t sys_wait(uint64_t arg1)
+ProcessId sys_wait(uint64_t arg1)
 {
 	auto __user* status = reinterpret_cast<int*>(arg1);
 
@@ -208,12 +209,12 @@ pid_t sys_wait(uint64_t arg1)
 		return m.sender;
 	}
 
-	return -1;
+	return ProcessId::from_raw(-1);
 }
 
-pid_t sys_getpid(void) { return CURRENT_TASK->id; }
+ProcessId sys_getpid(void) { return CURRENT_TASK->id; }
 
-pid_t sys_getppid(void) { return CURRENT_TASK->parent_id; }
+ProcessId sys_getppid(void) { return CURRENT_TASK->parent_id; }
 
 extern "C" uint64_t handle_syscall(uint64_t arg1,
 								   uint64_t arg2,
@@ -241,19 +242,19 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 			result = sys_ipc(arg1, arg2, arg3, arg4);
 			break;
 		case SYS_FORK:
-			result = sys_fork();
+			result = sys_fork().raw();
 			break;
 		case SYS_EXEC:
 			result = sys_exec(arg1, arg2, arg3);
 			break;
 		case SYS_WAIT:
-			result = sys_wait(arg1);
+			result = sys_wait(arg1).raw();
 			break;
 		case SYS_GETPID:
-			result = sys_getpid();
+			result = sys_getpid().raw();
 			break;
 		case SYS_GETPPID:
-			result = sys_getppid();
+			result = sys_getppid().raw();
 			break;
 		default:
 			LOG_ERROR("Unknown syscall number: %d", syscall_number);

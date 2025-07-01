@@ -25,6 +25,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 #include <unordered_map>
 #include <vector>
 
@@ -71,13 +72,13 @@ struct file_info {
 
 struct file_cache {
 	fs_id_t id;
-	pid_t requester;
+	ProcessId requester;
 	std::vector<uint8_t> buffer;
 	size_t total_size;
 	size_t read_size;
 	char path[11];
 
-	file_cache(size_t total_size, fs_id_t id, pid_t requester)
+	file_cache(size_t total_size, fs_id_t id, ProcessId requester)
 		: id(id), requester(requester), total_size(total_size), read_size(0)
 	{
 		buffer.resize(total_size);
@@ -90,7 +91,7 @@ extern std::unordered_map<fs_id_t, file_cache> file_caches;
 
 file_cache* find_file_cache_by_path(const char* path);
 
-file_cache* create_file_cache(const char* path, size_t total_size, pid_t requester);
+file_cache* create_file_cache(const char* path, size_t total_size, ProcessId requester);
 
 fs_id_t generate_fs_id();
 

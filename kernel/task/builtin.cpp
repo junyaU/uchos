@@ -13,6 +13,7 @@
 #include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 
 namespace
 {
@@ -20,14 +21,14 @@ void notify_xhci_handler(const message& m) { usb::xhci::process_events(); }
 
 void handle_initialize_task(const message& m)
 {
-	message send_m = { .type = msg_t::INITIALIZE_TASK, .sender = KERNEL_TASK_ID };
-	send_m.data.init.task_id = m.sender;
+	message send_m = { .type = msg_t::INITIALIZE_TASK, .sender = process_ids::KERNEL };
+	send_m.data.init.task_id = m.sender.raw();
 	send_message(m.sender, &send_m);
 }
 
 void handle_memory_usage(const message& m)
 {
-	message send_m = { .type = msg_t::IPC_MEMORY_USAGE, .sender = KERNEL_TASK_ID };
+	message send_m = { .type = msg_t::IPC_MEMORY_USAGE, .sender = process_ids::KERNEL };
 
 	size_t used_mem = 0;
 	size_t total_mem = 0;
@@ -43,7 +44,7 @@ void handle_memory_usage(const message& m)
 void handle_pci(const message& m)
 {
 	message send_m = { .type = msg_t::IPC_PCI,
-					   .sender = KERNEL_TASK_ID,
+					   .sender = process_ids::KERNEL,
 					   .is_end_of_message = false };
 
 	for (size_t i = 0; i < pci::num_devices; ++i) {
@@ -69,7 +70,7 @@ void handle_fs_register_path(const message& m)
 	}
 
 	task* t = get_task(m.sender);
-	if (t->parent_id != -1) {
+	if (t->parent_id.raw() != -1) {
 		auto* parent = get_task(t->parent_id);
 		memcpy(&t->fs_path, &parent->fs_path, sizeof(path));
 	} else {
@@ -78,7 +79,7 @@ void handle_fs_register_path(const message& m)
 
 	kfree(p);
 
-	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = KERNEL_TASK_ID };
+	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = process_ids::KERNEL };
 	reply.data.fs_op.result = 0;
 	send_message(m.sender, &reply);
 };
@@ -105,10 +106,10 @@ void task_kernel()
 
 void task_shell()
 {
-	message m = { .type = msg_t::IPC_GET_FILE_INFO, .sender = SHELL_TASK_ID };
+	message m = { .type = msg_t::IPC_GET_FILE_INFO, .sender = process_ids::SHELL };
 	char path[6] = "shell";
 	memcpy(m.data.fs_op.name, path, 6);
-	send_message(FS_FAT32_TASK_ID, &m);
+	send_message(process_ids::FS_FAT32, &m);
 
 	message info_m = wait_for_message(msg_t::IPC_GET_FILE_INFO);
 	auto* entry =
@@ -120,9 +121,9 @@ void task_shell()
 		}
 	}
 
-	message read_m = { .type = msg_t::IPC_READ_FILE_DATA, .sender = SHELL_TASK_ID };
+	message read_m = { .type = msg_t::IPC_READ_FILE_DATA, .sender = process_ids::SHELL };
 	read_m.data.fs_op.buf = info_m.data.fs_op.buf;
-	send_message(FS_FAT32_TASK_ID, &read_m);
+	send_message(process_ids::FS_FAT32, &read_m);
 
 	message data_m = wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	CURRENT_TASK->is_initilized = true;

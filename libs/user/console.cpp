@@ -5,6 +5,7 @@
 #include <libs/user/console.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/syscall.hpp>
+#include <libs/common/process_id.hpp>
 
 void printu(const char* format, ...)
 {
@@ -14,12 +15,12 @@ void printu(const char* format, ...)
 	vsprintf(buffer, format, args);
 	va_end(args);
 
-	pid_t pid = sys_getpid();
+	ProcessId pid = ProcessId::from_raw(sys_getpid());
 
 	message m = { .type = msg_t::NOTIFY_WRITE,
 				  .sender = pid,
 				  .is_end_of_message = true };
 	memcpy(m.data.write_shell.buf, buffer, sizeof(buffer));
 
-	send_message(SHELL_TASK_ID, &m);
+	send_message(process_ids::SHELL, &m);
 }

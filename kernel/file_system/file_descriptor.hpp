@@ -7,11 +7,12 @@
 #include <array>
 #include <cstddef>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 
 struct file_descriptor {
 	fd_t fd;
 	char name[11];
-	pid_t pid;
+	ProcessId pid;
 	size_t size;
 	size_t offset;
 };
@@ -21,6 +22,6 @@ extern std::array<file_descriptor, MAX_FILE_DESCRIPTORS> fds;
 
 file_descriptor* get_fd(int fd);
 
-file_descriptor* register_fd(const char* name, size_t size, pid_t pid);
+file_descriptor* register_fd(const char* name, size_t size, ProcessId pid);
 
 void init_fds();

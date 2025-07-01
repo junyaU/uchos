@@ -3,6 +3,7 @@
 #include "task/ipc.hpp"
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 
 namespace
 {
@@ -61,13 +62,13 @@ void initialize_keyboard()
 		const char ascii =
 				shift ? keycode_map_shifted[keycode] : keycode_map[keycode];
 
-		message m{ .type = msg_t::NOTIFY_KEY_INPUT, .sender = INTERRUPT_TASK };
+		message m{ .type = msg_t::NOTIFY_KEY_INPUT, .sender = process_ids::INTERRUPT };
 		m.data.key_input.key_code = keycode;
 		m.data.key_input.modifier = modifier;
 		m.data.key_input.ascii = static_cast<uint8_t>(ascii);
 		m.data.key_input.press = static_cast<int>(press);
 
-		send_message(SHELL_TASK_ID, &m);
+		send_message(process_ids::SHELL, &m);
 	};
 }
 

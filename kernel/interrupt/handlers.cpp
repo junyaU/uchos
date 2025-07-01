@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 
 namespace
 {
@@ -20,8 +21,8 @@ namespace
 
 __attribute__((interrupt)) void on_xhci_interrupt(interrupt_frame* frame)
 {
-	message m = { msg_t::NOTIFY_XHCI, INTERRUPT_TASK, {} };
-	send_message(XHCI_TASK_ID, &m);
+	message m = { msg_t::NOTIFY_XHCI, process_ids::INTERRUPT, {} };
+	send_message(process_ids::XHCI, &m);
 	notify_end_of_interrupt();
 }
 
@@ -33,7 +34,7 @@ __attribute__((interrupt)) void on_virtio_interrupt(interrupt_frame* frame)
 
 __attribute__((interrupt)) void on_virtio_blk_queue_interrupt(interrupt_frame* frame)
 {
-	schedule_task(VIRTIO_BLK_TASK_ID);
+	schedule_task(process_ids::VIRTIO_BLK);
 	notify_end_of_interrupt();
 }
 

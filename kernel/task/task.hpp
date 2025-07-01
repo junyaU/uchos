@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 #include <queue>
 
 void initialize_task();
@@ -17,8 +18,8 @@ void initialize_task();
 enum task_state : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING, TASK_EXITED };
 
 struct task {
-	pid_t id;
-	pid_t parent_id;
+	ProcessId id;
+	ProcessId parent_id;
 	char name[32];
 	int priority;
 	bool is_initilized;
@@ -52,7 +53,7 @@ struct task {
 
 	void add_msg_handler(msg_t type, message_handler_t handler);
 
-	bool has_parent() const { return parent_id != -1; }
+	bool has_parent() const { return parent_id.raw() != -1; }
 
 	page_table_entry* get_page_table() const
 	{
@@ -83,13 +84,13 @@ task* copy_task(task* parent, context* parent_ctx);
 
 task* get_scheduled_task();
 
-task* get_task(pid_t id);
+task* get_task(ProcessId id);
 
-pid_t get_task_id_by_name(const char* name);
+ProcessId get_task_id_by_name(const char* name);
 
-pid_t get_available_task_id();
+ProcessId get_available_task_id();
 
-void schedule_task(pid_t id);
+void schedule_task(ProcessId id);
 
 void switch_task(const context& current_ctx);
 

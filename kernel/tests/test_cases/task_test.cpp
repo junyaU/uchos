@@ -3,6 +3,7 @@
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
 #include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
 
 void test_task_creation_basic()
 {
@@ -15,7 +16,7 @@ void test_task_creation_basic()
 	ASSERT_EQ(strcmp(t->name, task_name), 0);
 	ASSERT_EQ(t->state, TASK_WAITING);
 	ASSERT_TRUE(t->is_initilized);
-	ASSERT_EQ(t->parent_id, -1);
+	ASSERT_EQ(t->parent_id.raw(), -1);
 	ASSERT_NOT_NULL(t->stack);
 	ASSERT_TRUE(t->stack_size > 0);
 	ASSERT_NOT_NULL(t->get_page_table());
@@ -24,34 +25,34 @@ void test_task_creation_basic()
 void test_task_id_management()
 {
 	// Test getting available task ID
-	pid_t id1 = get_available_task_id();
-	ASSERT_TRUE(id1 >= 0);
-	ASSERT_TRUE(id1 < MAX_TASKS);
+	ProcessId id1 = get_available_task_id();
+	ASSERT_TRUE(id1.raw() >= 0);
+	ASSERT_TRUE(id1.raw() < MAX_TASKS);
 
 	// Create first task
 	task* t1 = create_task("id_test1", 0, true, true);
 	ASSERT_NOT_NULL(t1);
-	ASSERT_EQ(t1->id, id1);
+	ASSERT_TRUE(t1->id == id1);
 
 	// Get next available ID
-	pid_t id2 = get_available_task_id();
-	ASSERT_TRUE(id2 >= 0);
-	ASSERT_TRUE(id2 < MAX_TASKS);
-	ASSERT_NE(id1, id2);
+	ProcessId id2 = get_available_task_id();
+	ASSERT_TRUE(id2.raw() >= 0);
+	ASSERT_TRUE(id2.raw() < MAX_TASKS);
+	ASSERT_FALSE(id1 == id2);
 
 	// Create second task
 	task* t2 = create_task("id_test2", 0, true, true);
 	ASSERT_NOT_NULL(t2);
-	ASSERT_EQ(t2->id, id2);
+	ASSERT_TRUE(t2->id == id2);
 
 	// Test getting task by ID
 	ASSERT_EQ(get_task(id1), t1);
 	ASSERT_EQ(get_task(id2), t2);
 
 	// Test getting task by name
-	ASSERT_EQ(get_task_id_by_name("id_test1"), id1);
-	ASSERT_EQ(get_task_id_by_name("id_test2"), id2);
-	ASSERT_EQ(get_task_id_by_name("nonexistent"), -1);
+	ASSERT_TRUE(get_task_id_by_name("id_test1") == id1);
+	ASSERT_TRUE(get_task_id_by_name("id_test2") == id2);
+	ASSERT_EQ(get_task_id_by_name("nonexistent").raw(), -1);
 }
 
 namespace
@@ -73,7 +74,7 @@ void test_task_message_handling()
 
 	// Test message queue
 	ASSERT_TRUE(t->messages.empty());
-	message test_msg = { .type = msg_t::IPC_EXIT_TASK, .sender = 0 };
+	message test_msg = { .type = msg_t::IPC_EXIT_TASK, .sender = ProcessId::from_raw(0) };
 	t->messages.push(test_msg);
 	ASSERT_FALSE(t->messages.empty());
 
@@ -100,7 +101,7 @@ void test_task_copy()
 	ASSERT_NOT_NULL(child);
 
 	// Verify child task properties
-	ASSERT_EQ(child->parent_id, parent->id);
+	ASSERT_TRUE(child->parent_id == parent->id);
 	ASSERT_TRUE(child->has_parent());
 	ASSERT_NOT_NULL(child->stack);
 	ASSERT_EQ(child->stack_size, parent->stack_size);
@@ -115,7 +116,7 @@ void test_task_memory_management()
 	ASSERT_NOT_NULL(t);
 
 	// Verify task properties after allocation
-	ASSERT_EQ(t->id, 0);
+	ASSERT_EQ(t->id.raw(), 0);
 	ASSERT_EQ(strcmp(t->name, "memory_test"), 0);
 	ASSERT_EQ(t->state, TASK_WAITING);
 	ASSERT_TRUE(t->is_initilized);
