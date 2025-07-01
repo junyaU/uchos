@@ -20,6 +20,7 @@
 #include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 #include <queue>
 
 list_t run_queue;
@@ -37,18 +38,18 @@ const initial_task_info initial_tasks[] = {
 	{ "shell", reinterpret_cast<uint64_t>(&task_shell), true, false },
 };
 
-pid_t get_available_task_id()
+ProcessId get_available_task_id()
 {
 	for (pid_t i = 0; i < MAX_TASKS; i++) {
 		if (tasks[i] == nullptr) {
-			return i;
+			return ProcessId::from_raw(i);
 		}
 	}
 
-	return -1;
+	return ProcessId::from_raw(-1);
 }
 
-pid_t get_task_id_by_name(const char* name)
+ProcessId get_task_id_by_name(const char* name)
 {
 	for (task* t : tasks) {
 		if (t != nullptr && strcmp(t->name, name) == 0) {
@@ -56,16 +57,17 @@ pid_t get_task_id_by_name(const char* name)
 		}
 	}
 
-	return -1;
+	return ProcessId::from_raw(-1);
 }
 
-task* get_task(pid_t id)
+task* get_task(ProcessId id)
 {
-	if (id < 0 || id >= MAX_TASKS) {
+	pid_t raw_id = id.raw();
+	if (raw_id < 0 || raw_id >= MAX_TASKS) {
 		return nullptr;
 	}
 
-	return tasks[id];
+	return tasks[raw_id];
 }
 
 task* create_task(const char* name,
@@ -73,21 +75,21 @@ task* create_task(const char* name,
 				  bool setup_context,
 				  bool is_init)
 {
-	const pid_t task_id = get_available_task_id();
-	if (task_id == -1) {
+	const ProcessId task_id = get_available_task_id();
+	if (task_id.raw() == -1) {
 		LOG_ERROR("failed to allocate task id");
 		return nullptr;
 	}
 
-	tasks[task_id] =
-			new task(task_id, name, task_addr, TASK_WAITING, setup_context, is_init);
+	tasks[task_id.raw()] =
+			new task(task_id.raw(), name, task_addr, TASK_WAITING, setup_context, is_init);
 
-	return tasks[task_id];
+	return tasks[task_id.raw()];
 }
 
 error_t task::copy_parent_stack(const context& parent_ctx)
 {
-	task* parent = tasks[parent_id];
+	task* parent = tasks[parent_id.raw()];
 	if (parent == nullptr) {
 		return ERR_NO_TASK;
 	}
@@ -118,7 +120,7 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 
 error_t task::copy_parent_page_table()
 {
-	task* parent = tasks[parent_id];
+	task* parent = tasks[parent_id.raw()];
 	if (parent == nullptr) {
 		return ERR_NO_TASK;
 	}
@@ -182,27 +184,28 @@ task* get_scheduled_task()
 	return scheduled_task;
 }
 
-void schedule_task(pid_t id)
+void schedule_task(ProcessId id)
 {
-	if (tasks.size() <= id || tasks[id] == nullptr) {
-		LOG_ERROR("schedule_task: task %d is not found", id);
+	pid_t raw_id = id.raw();
+	if (tasks.size() <= raw_id || tasks[raw_id] == nullptr) {
+		LOG_ERROR("schedule_task: task %d is not found", raw_id);
 		return;
 	}
 
-	tasks[id]->state = TASK_READY;
+	tasks[raw_id]->state = TASK_READY;
 
-	if (list_contains(&run_queue, &tasks[id]->run_queue_elem)) {
+	if (list_contains(&run_queue, &tasks[raw_id]->run_queue_elem)) {
 		return;
 	}
 
-	list_push_back(&run_queue, &tasks[id]->run_queue_elem);
+	list_push_back(&run_queue, &tasks[raw_id]->run_queue_elem);
 }
 
 void switch_task(const context& current_ctx)
 {
 	if (CURRENT_TASK->state == TASK_EXITED) {
-		delete tasks[CURRENT_TASK->id];
-		tasks[CURRENT_TASK->id] = nullptr;
+		delete tasks[CURRENT_TASK->id.raw()];
+		tasks[CURRENT_TASK->id.raw()] = nullptr;
 	} else {
 		memcpy(&CURRENT_TASK->ctx, &current_ctx, sizeof(context));
 		if (CURRENT_TASK->state != TASK_WAITING) {
@@ -280,14 +283,14 @@ void initialize_task()
 	run_test_suite(register_task_tests);
 }
 
-task::task(int id,
+task::task(int raw_id,
 		   const char* task_name,
 		   uint64_t task_addr,
 		   task_state state,
 		   bool setup_context,
 		   bool is_initilized)
-	: id{ id },
-	  parent_id{ -1 },
+	: id{ ProcessId::from_raw(raw_id) },
+	  parent_id{ ProcessId::from_raw(-1) },
 	  priority{ 2 }, // TODO: Implement priority scheduling
 	  is_initilized{ is_initilized },
 	  state{ state },

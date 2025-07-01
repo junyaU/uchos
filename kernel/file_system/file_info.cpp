@@ -1,6 +1,7 @@
 #include "file_info.hpp"
 #include <cstddef>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 
 const size_t MAX_FILE_ID = 50;
 std::unordered_map<fs_id_t, file_cache> file_caches;
@@ -17,7 +18,7 @@ file_cache* find_file_cache_by_path(const char* path)
 	return nullptr;
 }
 
-file_cache* create_file_cache(const char* path, size_t total_size, pid_t requester)
+file_cache* create_file_cache(const char* path, size_t total_size, ProcessId requester)
 {
 	fs_id_t id = generate_fs_id();
 

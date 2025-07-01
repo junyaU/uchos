@@ -3,14 +3,15 @@
 #include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/syscall.hpp>
 
 int main(int argc, char** argv)
 {
 	pid_t pid = sys_getpid();
-	message m = { .type = msg_t::IPC_PCI, .sender = pid };
-	send_message(KERNEL_TASK_ID, &m);
+	message m = { .type = msg_t::IPC_PCI, .sender = ProcessId::from_raw(pid) };
+	send_message(process_ids::KERNEL, &m);
 
 	message msg;
 	while (true) {
@@ -24,7 +25,7 @@ int main(int argc, char** argv)
 		}
 
 		message send_m = { .type = msg_t::NOTIFY_WRITE,
-						   .sender = pid,
+						   .sender = ProcessId::from_raw(pid),
 						   .is_end_of_message = msg.is_end_of_message };
 
 		char device_buf[100];
@@ -35,7 +36,7 @@ int main(int argc, char** argv)
 		sprintf(buf, "%s %s\n", msg.data.pci.bus_address, device_buf);
 		memcpy(send_m.data.write_shell.buf, buf, strlen(buf));
 
-		send_message(SHELL_TASK_ID, &send_m);
+		send_message(process_ids::SHELL, &send_m);
 
 		if (msg.is_end_of_message) {
 			return 0;

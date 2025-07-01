@@ -16,6 +16,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/stat.hpp>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 #include <queue>
 #include <string.h>
 #include <utility>
@@ -188,24 +189,24 @@ void send_read_req_to_blk_device(unsigned int sector,
 								 size_t sequence = 0)
 {
 	message m = { .type = msg_t::IPC_READ_FROM_BLK_DEVICE,
-				  .sender = FS_FAT32_TASK_ID };
+				  .sender = process_ids::FS_FAT32 };
 	m.data.blk_io.sector = sector;
 	m.data.blk_io.len = len;
 	m.data.blk_io.dst_type = dst_type;
 	m.data.blk_io.request_id = request_id;
 	m.data.blk_io.sequence = sequence;
 
-	send_message(VIRTIO_BLK_TASK_ID, &m);
+	send_message(process_ids::VIRTIO_BLK, &m);
 }
 
 void send_file_data(fs_id_t id,
 					void* buf,
 					size_t size,
-					pid_t requester,
+					ProcessId requester,
 					msg_t type,
 					bool for_user)
 {
-	message m = { .type = type, .sender = FS_FAT32_TASK_ID };
+	message m = { .type = type, .sender = process_ids::FS_FAT32 };
 	m.data.fs_op.request_id = id;
 
 	if (for_user) {
@@ -328,7 +329,7 @@ void handle_get_file_info(const message& m)
 	const auto* name = m.data.fs_op.name;
 	to_upper(const_cast<char*>(name));
 
-	message sm = { .type = msg_t::IPC_GET_FILE_INFO, .sender = FS_FAT32_TASK_ID };
+	message sm = { .type = msg_t::IPC_GET_FILE_INFO, .sender = process_ids::FS_FAT32 };
 	sm.data.fs_op.buf = nullptr;
 
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
@@ -362,7 +363,7 @@ void handle_read_file_data(const message& m)
 		return;
 	}
 
-	if (m.sender == VIRTIO_BLK_TASK_ID) {
+	if (m.sender == process_ids::VIRTIO_BLK) {
 		process_read_data_response(m, false);
 		return;
 	}
@@ -421,7 +422,7 @@ void handle_get_directory_contents(const message& m)
 	}
 
 	message sm = { .type = msg_t::GET_DIRECTORY_CONTENTS,
-				   .sender = FS_FAT32_TASK_ID };
+				   .sender = process_ids::FS_FAT32 };
 	sm.tool_desc.addr = buf;
 	sm.tool_desc.size = entries_count * sizeof(stat);
 	sm.tool_desc.present = true;
@@ -431,7 +432,7 @@ void handle_get_directory_contents(const message& m)
 
 void handle_fs_open(const message& m)
 {
-	message req = { .type = msg_t::FS_OPEN, .sender = FS_FAT32_TASK_ID };
+	message req = { .type = msg_t::FS_OPEN, .sender = process_ids::FS_FAT32 };
 
 	const char* name = reinterpret_cast<const char*>(m.data.fs_op.name);
 	to_upper(const_cast<char*>(name));
@@ -451,12 +452,12 @@ void handle_fs_open(const message& m)
 
 void handle_fs_read(const message& m)
 {
-	if (m.sender == VIRTIO_BLK_TASK_ID) {
+	if (m.sender == process_ids::VIRTIO_BLK) {
 		process_read_data_response(m, true);
 		return;
 	}
 
-	message req = { .type = msg_t::FS_READ, .sender = FS_FAT32_TASK_ID };
+	message req = { .type = msg_t::FS_READ, .sender = process_ids::FS_FAT32 };
 
 	file_descriptor* fd = get_fd(m.data.fs_op.fd);
 	if (fd == nullptr) {
@@ -491,7 +492,7 @@ void handle_fs_close(const message& m)
 
 void handle_fs_mkfile(const message& m)
 {
-	message reply = { .type = msg_t::FS_MKFILE, .sender = FS_FAT32_TASK_ID };
+	message reply = { .type = msg_t::FS_MKFILE, .sender = process_ids::FS_FAT32 };
 
 	const char* name = reinterpret_cast<const char*>(m.data.fs_op.name);
 	to_upper(const_cast<char*>(name));
@@ -540,12 +541,12 @@ void handle_fs_register_path(const message& m)
 	memcpy(buf, &p, sizeof(path));
 	reply.data.fs_op.buf = buf;
 
-	send_message(KERNEL_TASK_ID, &reply);
+	send_message(process_ids::KERNEL, &reply);
 }
 
 void handle_fs_get_cwd(const message& m)
 {
-	message reply = { .type = msg_t::FS_GET_CWD, .sender = FS_FAT32_TASK_ID };
+	message reply = { .type = msg_t::FS_GET_CWD, .sender = process_ids::FS_FAT32 };
 
 	task* t = get_task(m.sender);
 	if (t->fs_path.current_dir == nullptr) {

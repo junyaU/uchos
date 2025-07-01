@@ -1,5 +1,6 @@
 #include "file_system/file_descriptor.hpp"
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 
 std::array<file_descriptor, MAX_FILE_DESCRIPTORS> fds;
 
@@ -12,7 +13,7 @@ file_descriptor* get_fd(int fd)
 	return &fds[fd];
 }
 
-file_descriptor* register_fd(const char* name, size_t size, pid_t pid)
+file_descriptor* register_fd(const char* name, size_t size, ProcessId pid)
 {
 	for (size_t i = 0; i < MAX_FILE_DESCRIPTORS; ++i) {
 		if (fds[i].fd == -1) {

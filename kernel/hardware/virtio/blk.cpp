@@ -6,6 +6,7 @@
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 #include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 
 namespace
@@ -13,7 +14,7 @@ namespace
 void handle_read_request(const message& m)
 {
 	message send_m = { .type = m.data.blk_io.dst_type,
-					   .sender = VIRTIO_BLK_TASK_ID };
+					   .sender = process_ids::VIRTIO_BLK };
 
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len;
@@ -59,7 +60,8 @@ virtio_pci_device* blk_dev = nullptr;
 error_t validate_length(uint32_t len)
 {
 	if (len < SECTOR_SIZE) {
-		LOG_ERROR("Data size is too small.");
+		LOG_ERROR("Data size is too small: %d bytes. Minimum is %d bytes.", len,
+				  SECTOR_SIZE);
 		return ERR_INVALID_ARG;
 	}
 

@@ -3,12 +3,13 @@
 #include <cstdint>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 #include <queue>
 #include <unordered_set>
 
 struct timer_event {
 	uint64_t id;
-	pid_t task_id;
+	ProcessId task_id;
 	uint64_t timeout;
 	unsigned int period;
 	int periodical;
@@ -39,11 +40,11 @@ public:
 	}
 
 	uint64_t
-	add_timer_event(unsigned long millisec, timeout_action_t action, pid_t task_id);
+	add_timer_event(unsigned long millisec, timeout_action_t action, ProcessId task_id);
 
 	uint64_t add_periodic_timer_event(unsigned long millisec,
 									  timeout_action_t action,
-									  pid_t task_id,
+									  ProcessId task_id,
 									  uint64_t id = 0);
 
 	uint64_t add_switch_task_event(unsigned long millisec);

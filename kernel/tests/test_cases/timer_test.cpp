@@ -3,25 +3,26 @@
 #include "tests/macros.hpp"
 #include "timers/timer.hpp"
 #include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
 
 void test_timer_initialization() { ASSERT_EQ(ktimer->current_tick(), 0); }
 
 void test_add_timer_event()
 {
-	constexpr pid_t test_task_id = 1;
+	constexpr ProcessId test_task_id = ProcessId::from_raw(1);
 
 	uint64_t event_id = ktimer->add_timer_event(1000, timeout_action_t::SWITCH_TASK,
 												test_task_id);
 	ASSERT_NE(event_id, 0);
 
 	uint64_t invalid_event_id =
-			ktimer->add_timer_event(1000, timeout_action_t::SWITCH_TASK, -1);
+			ktimer->add_timer_event(1000, timeout_action_t::SWITCH_TASK, ProcessId::from_raw(-1));
 	ASSERT_NE(invalid_event_id, 0);
 }
 
 void test_remove_timer_event()
 {
-	constexpr pid_t test_task_id = 1;
+	constexpr ProcessId test_task_id = ProcessId::from_raw(1);
 
 	uint64_t event_id = ktimer->add_timer_event(1000, timeout_action_t::SWITCH_TASK,
 												test_task_id);

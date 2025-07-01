@@ -30,15 +30,6 @@ constexpr int ERR_NO_DEVICE = -8;
 constexpr int ERR_FAILED_INIT_DEVICE = -9;
 constexpr int ERR_FAILED_WRITE_TO_DEVICE = -10;
 
-// task ids
-constexpr int KERNEL_TASK_ID = 0;
-constexpr int IDLE_TASK_ID = 1;
-constexpr int XHCI_TASK_ID = 2;
-constexpr int VIRTIO_BLK_TASK_ID = 3;
-constexpr int FS_FAT32_TASK_ID = 4;
-constexpr int SHELL_TASK_ID = 5;
-constexpr int INTERRUPT_TASK = 100;
-
 // file descriptor
 constexpr int NO_FD = -1;
 constexpr int STDIN_FILENO = 0;

@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
+#include <libs/common/process_id.hpp>
 
 namespace
 {
@@ -20,7 +21,7 @@ uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 
 uint64_t kernel_timer::add_timer_event(unsigned long millisec,
 									   timeout_action_t action,
-									   pid_t task_id)
+									   ProcessId task_id)
 {
 	auto e = timer_event{
 		.id = last_id_++,
@@ -37,7 +38,7 @@ uint64_t kernel_timer::add_timer_event(unsigned long millisec,
 
 uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
 												timeout_action_t action,
-												pid_t task_id,
+												ProcessId task_id,
 												uint64_t id)
 {
 	if (id == 0) {
@@ -63,9 +64,14 @@ uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
 
 uint64_t kernel_timer::add_switch_task_event(unsigned long millisec)
 {
-	auto e = timer_event{};
-	e.action = timeout_action_t::SWITCH_TASK;
-	e.timeout = calculate_timeout_ticks(millisec);
+	auto e = timer_event{
+		.id = last_id_++,
+		.task_id = process_ids::KERNEL,  // Switch task events use kernel task
+		.timeout = calculate_timeout_ticks(millisec),
+		.period = 0,
+		.periodical = 0,
+		.action = timeout_action_t::SWITCH_TASK,
+	};
 	events_.push(e);
 
 	return e.id;
@@ -101,9 +107,8 @@ bool kernel_timer::increment_tick()
 			continue;
 		}
 
-		message m;
-		m.type = msg_t::NOTIFY_TIMER_TIMEOUT;
-		m.sender = KERNEL_TASK_ID;
+		message m = { .type = msg_t::NOTIFY_TIMER_TIMEOUT,
+					  .sender = process_ids::KERNEL };
 		m.data.timer.action = e.action;
 		send_message(e.task_id, &m);
 
