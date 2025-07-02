@@ -15,7 +15,7 @@
 
 #include <array>
 
-namespace usb
+namespace kernel::hw::usb
 {
 class hid_driver : public class_driver
 {
@@ -48,4 +48,4 @@ private:
 
 	std::array<uint8_t, BUFFER_SIZE> buffer_{}, prev_buffer_{};
 };
-} // namespace usb
+} // namespace kernel::hw::usb

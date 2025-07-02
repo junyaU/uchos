@@ -15,7 +15,7 @@
 #include <cstdint>
 #include <cstring>
 
-namespace usb
+namespace kernel::hw::usb
 {
 struct device_descriptor {
 	static const uint8_t TYPE = 1;
@@ -174,4 +174,4 @@ private:
 	const uint8_t* p_;
 };
 
-} // namespace usb
+} // namespace kernel::hw::usb

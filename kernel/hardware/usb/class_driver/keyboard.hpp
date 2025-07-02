@@ -18,7 +18,7 @@
 
 const int KEYBOARD_INTERFACE_PROTOCOL = 1;
 
-namespace usb
+namespace kernel::hw::usb
 {
 class keyboard_driver : public hid_driver
 {
@@ -40,4 +40,4 @@ private:
 
 	void notify_key_push(uint8_t modifier, uint8_t keycode, bool press);
 };
-} // namespace usb
+} // namespace kernel::hw::usb

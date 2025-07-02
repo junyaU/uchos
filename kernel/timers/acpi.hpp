@@ -4,7 +4,7 @@
 #include <cstdint>
 
 // Advanced Configuration and Power Interface
-namespace acpi
+namespace kernel::timers::acpi
 {
 struct root_system_description_pointer {
 	char signature[8];
@@ -69,4 +69,4 @@ void wait_by_pm_timer(unsigned long millisec);
 uint32_t get_pm_timer_count();
 
 float pm_timer_count_to_millisec(uint32_t count);
-} // namespace acpi
+} // namespace kernel::timers::acpi

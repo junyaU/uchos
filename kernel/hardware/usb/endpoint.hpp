@@ -13,7 +13,7 @@
 
 #include "descriptor.hpp"
 
-namespace usb
+namespace kernel::hw::usb
 {
 enum class endpoint_type {
 	CONTROL = 0,
@@ -58,4 +58,4 @@ struct endpoint_config {
 
 endpoint_config make_endpoint_config(const endpoint_descriptor& desc);
 
-} // namespace usb
+} // namespace kernel::hw::usb

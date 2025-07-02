@@ -1,7 +1,7 @@
 #include "base.hpp"
 #include "keyboard.hpp"
 
-namespace usb
+namespace kernel::hw::usb
 {
 class_driver::class_driver(device* dev) : device_(dev) {}
 
@@ -29,4 +29,4 @@ class_driver* new_class_driver(device* dev, const interface_descriptor& if_desc)
 	return nullptr;
 }
 
-} // namespace usb
+} // namespace kernel::hw::usb

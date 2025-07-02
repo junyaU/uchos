@@ -3,7 +3,7 @@
 #include <array>
 #include <optional>
 
-namespace usb
+namespace kernel::hw::usb
 {
 template<class K, class V, size_t N = 16>
 class array_map
@@ -44,4 +44,4 @@ public:
 private:
 	std::array<std::pair<std::optional<K>, V>, N> table_{};
 };
-} // namespace usb
+} // namespace kernel::hw::usb

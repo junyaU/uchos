@@ -12,10 +12,10 @@ namespace kernel::hw::virtio {
 
 error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
 {
-	pci::device* dev = nullptr;
-	for (int i = 0; i < pci::num_devices; ++i) {
-		if (pci::devices[i].is_virtio()) {
-			dev = &pci::devices[i];
+	kernel::hw::pci::device* dev = nullptr;
+	for (int i = 0; i < kernel::hw::pci::num_devices; ++i) {
+		if (kernel::hw::pci::devices[i].is_virtio()) {
+			dev = &kernel::hw::pci::devices[i];
 			break;
 		}
 	}
@@ -26,12 +26,12 @@ error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
 	}
 
 	const uint8_t bsp_lapic_id = *reinterpret_cast<uint32_t*>(0xfee00020) >> 24;
-	pci::configure_msi_fixed_destination(
-			*dev, bsp_lapic_id, pci::msi_trigger_mode::EDGE,
-			pci::msi_delivery_mode::FIXED, kernel::interrupt::interrupt_vector::VIRTIO, 0);
-	pci::configure_msi_fixed_destination(
-			*dev, bsp_lapic_id, pci::msi_trigger_mode::EDGE,
-			pci::msi_delivery_mode::FIXED, kernel::interrupt::interrupt_vector::VIRTQUEUE, 0);
+	kernel::hw::pci::configure_msi_fixed_destination(
+			*dev, bsp_lapic_id, kernel::hw::pci::msi_trigger_mode::EDGE,
+			kernel::hw::pci::msi_delivery_mode::FIXED, kernel::interrupt::interrupt_vector::VIRTIO, 0);
+	kernel::hw::pci::configure_msi_fixed_destination(
+			*dev, bsp_lapic_id, kernel::hw::pci::msi_trigger_mode::EDGE,
+			kernel::hw::pci::msi_delivery_mode::FIXED, kernel::interrupt::interrupt_vector::VIRTQUEUE, 0);
 
 	virtio_dev->dev = dev;
 

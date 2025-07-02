@@ -3,7 +3,7 @@
 #include "ring.hpp"
 #include <libs/common/types.hpp>
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 device::device(uint8_t slot_id, doorbell_register* doorbell_register)
 	: slot_id_{ slot_id }, doorbell_register_{ doorbell_register }
@@ -29,7 +29,7 @@ ring* device::alloc_transfer_ring(device_context_index index, size_t buf_size)
 
 void device::control_in(const control_transfer_data& data)
 {
-	usb::device::control_in(data);
+	kernel::hw::usb::device::control_in(data);
 
 	if (data.ep_id.number() < 0 || data.ep_id.number() > 15) {
 		LOG_ERROR("invalid endpoint id");
@@ -71,7 +71,7 @@ void device::control_in(const control_transfer_data& data)
 
 void device::control_out(const control_transfer_data& data)
 {
-	usb::device::control_out(data);
+	kernel::hw::usb::device::control_out(data);
 
 	if (data.ep_id.number() < 0 || data.ep_id.number() > 15) {
 		LOG_ERROR("invalid endpoint id");
@@ -113,7 +113,7 @@ void device::control_out(const control_transfer_data& data)
 
 void device::interrupt_in(const interrupt_transfer_data& data)
 {
-	usb::device::interrupt_in(data);
+	kernel::hw::usb::device::interrupt_in(data);
 
 	const device_context_index dc_index{ data.ep_id };
 	ring* transfer_ring = transfer_rings_[dc_index.value - 1];
@@ -134,7 +134,7 @@ void device::interrupt_in(const interrupt_transfer_data& data)
 
 void device::interrupt_out(const interrupt_transfer_data& data)
 {
-	usb::device::interrupt_out(data);
+	kernel::hw::usb::device::interrupt_out(data);
 
 	LOG_DEBUG("interrupt_out: ep_id: %d, buf: %p, len: %d\n", data.ep_id.number(),
 			  data.buf, data.len);
@@ -194,4 +194,4 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 										data_stage_buf, transfer_length });
 }
 
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

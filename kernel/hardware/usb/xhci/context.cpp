@@ -1,6 +1,6 @@
 #include "context.hpp"
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 void initialize_slot_context(slot_context& ctx, uint8_t port_id, int port_speed)
 {
@@ -24,4 +24,4 @@ void initialize_endpoint0_context(endpoint_context& ctx,
 	ctx.bits.mult = 0;
 	ctx.bits.error_count = 3;
 }
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

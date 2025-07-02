@@ -15,7 +15,7 @@
 #include "trb.hpp"
 #include <cstdint>
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 // Command/Transfer ring
 class ring
@@ -89,4 +89,4 @@ private:
 };
 
 void register_command_ring(ring* r, memory_mapped_register<crcr_bitmap>* crcr);
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

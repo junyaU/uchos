@@ -15,7 +15,7 @@
 #include "context.hpp"
 #include "device.hpp"
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 class device_manager
 {
@@ -35,4 +35,4 @@ private:
 	size_t max_slots_;
 	device** devices_;
 };
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

@@ -5,7 +5,7 @@
 #include "timers/timer.hpp"
 #include <libs/common/types.hpp>
 
-namespace local_apic
+namespace kernel::timers::local_apic
 {
 // register for setting operating mode and interrupts
 volatile uint32_t& LVT_TIMER = *reinterpret_cast<uint32_t*>(0xfee00320);
@@ -27,7 +27,7 @@ void initialize()
 
 	INITIAL_COUNT = COUNT_MAX;
 
-	acpi::wait_by_pm_timer(100);
+	kernel::timers::acpi::wait_by_pm_timer(100);
 	const uint32_t elapsed = COUNT_MAX - CURRENT_COUNT;
 
 	INITIAL_COUNT = 0;
@@ -45,4 +45,4 @@ void initialize()
 	LOG_INFO("Local APIC initialized successfully.");
 }
 
-} // namespace local_apic
+} // namespace kernel::timers::local_apic

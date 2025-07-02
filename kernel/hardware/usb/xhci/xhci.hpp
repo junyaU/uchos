@@ -18,7 +18,7 @@
 #include <cstdint>
 #include <cstring>
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 class controller
 {
@@ -72,4 +72,4 @@ void process_event(controller& xhc);
 extern controller* host_controller;
 void initialize();
 void process_events();
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

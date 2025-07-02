@@ -1,7 +1,7 @@
 #include "endpoint.hpp"
 #include "descriptor.hpp"
 
-namespace usb
+namespace kernel::hw::usb
 {
 endpoint_config make_endpoint_config(const endpoint_descriptor& desc)
 {
@@ -15,4 +15,4 @@ endpoint_config make_endpoint_config(const endpoint_descriptor& desc)
 	return config;
 }
 
-} // namespace usb
+} // namespace kernel::hw::usb

@@ -16,9 +16,9 @@
 #include <array>
 #include <cstdint>
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
-class device : public usb::device
+class device : public kernel::hw::usb::device
 {
 public:
 	enum class slot_state {
@@ -60,4 +60,4 @@ private:
 	array_map<const void*, const setup_stage_trb*, 16> setup_stages_{};
 };
 
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

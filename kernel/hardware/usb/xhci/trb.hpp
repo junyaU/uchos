@@ -21,7 +21,7 @@
 #include <array>
 #include <cstdint>
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 union trb {
 	std::array<uint32_t, 4> data{};
@@ -335,7 +335,7 @@ union transfer_event_trb {
 		bits.trb_pointer = reinterpret_cast<uint64_t>(p);
 	}
 
-	endpoint_id endpoint_id() const { return usb::endpoint_id{ bits.endpoint_id }; }
+	kernel::hw::usb::endpoint_id endpoint_id() const { return kernel::hw::usb::endpoint_id{ bits.endpoint_id }; }
 };
 
 union command_completion_event_trb {
@@ -403,4 +403,4 @@ to_type* trb_dynamic_cast(from_type* trb)
 setup_stage_trb make_setup_stage_trb(setup_stage_data setup_data, int transfer_type);
 
 data_stage_trb make_data_stage_trb(const void* buf, int len, bool dir_in);
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

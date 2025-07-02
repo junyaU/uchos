@@ -3,7 +3,7 @@
 #include "registers.hpp"
 #include <libs/common/types.hpp>
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 uint8_t port::number() const { return port_num_; }
 
@@ -71,4 +71,4 @@ void configure_port(port& p)
 	}
 }
 
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

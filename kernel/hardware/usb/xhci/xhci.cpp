@@ -11,7 +11,7 @@
 
 namespace
 {
-using namespace usb::xhci;
+using namespace kernel::hw::usb::xhci;
 
 unsigned int determine_max_packet_size_for_control_pipe(int port_speed)
 {
@@ -227,7 +227,7 @@ void request_hc_ownership(uintptr_t mmio_base, hcc_params1_register hccp)
 }
 } // namespace
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 controller::controller(uintptr_t mmio_base)
 	: mmio_base_(mmio_base),
@@ -426,10 +426,10 @@ void initialize()
 {
 	LOG_INFO("Initializing xHCI...");
 
-	pci::device* xhc_dev = nullptr;
-	for (int i = 0; i < pci::num_devices; i++) {
-		if (pci::devices[i].is_xhci()) {
-			xhc_dev = &pci::devices[i];
+	kernel::hw::pci::device* xhc_dev = nullptr;
+	for (int i = 0; i < kernel::hw::pci::num_devices; i++) {
+		if (kernel::hw::pci::devices[i].is_xhci()) {
+			xhc_dev = &kernel::hw::pci::devices[i];
 
 			if (xhc_dev->is_intel()) {
 				break;
@@ -443,11 +443,11 @@ void initialize()
 	}
 
 	const uint8_t bsp_lapic_id = *reinterpret_cast<uint32_t*>(0xfee00020) >> 24;
-	pci::configure_msi_fixed_destination(
-			*xhc_dev, bsp_lapic_id, pci::msi_trigger_mode::LEVEL,
-			pci::msi_delivery_mode::FIXED, kernel::interrupt::interrupt_vector::XHCI, 0);
+	kernel::hw::pci::configure_msi_fixed_destination(
+			*xhc_dev, bsp_lapic_id, kernel::hw::pci::msi_trigger_mode::LEVEL,
+			kernel::hw::pci::msi_delivery_mode::FIXED, kernel::interrupt::interrupt_vector::XHCI, 0);
 
-	const uint64_t bar = pci::read_base_address_register(*xhc_dev, 0);
+	const uint64_t bar = kernel::hw::pci::read_base_address_register(*xhc_dev, 0);
 	const uint64_t xhc_mmio_base = bar & ~static_cast<uint64_t>(0xf);
 
 	host_controller = new controller(xhc_mmio_base);
@@ -477,4 +477,4 @@ void process_events()
 		process_event(*host_controller);
 	}
 }
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

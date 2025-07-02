@@ -3,7 +3,7 @@
 #include "memory/slab.hpp"
 #include <libs/common/types.hpp>
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 ring::~ring() {}
 
@@ -120,4 +120,4 @@ void register_command_ring(ring* r, memory_mapped_register<crcr_bitmap>* crcr)
 	value.set_pointer(reinterpret_cast<uint64_t>(r->buffer()));
 	crcr->write(value);
 }
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

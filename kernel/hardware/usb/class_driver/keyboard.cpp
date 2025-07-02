@@ -5,7 +5,7 @@
 
 #include <bitset>
 
-namespace usb
+namespace kernel::hw::usb
 {
 keyboard_driver::keyboard_driver(usb::device* dev, int interface_index)
 	: hid_driver{ dev, interface_index, 8 }
@@ -55,4 +55,4 @@ void keyboard_driver::notify_key_push(uint8_t modifier, uint8_t keycode, bool pr
 	}
 }
 
-} // namespace usb
+} // namespace kernel::hw::usb

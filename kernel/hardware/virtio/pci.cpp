@@ -14,24 +14,24 @@ namespace kernel::hw::virtio {
 size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev)
 {
 	uint8_t cap_id, cap_next;
-	uint32_t cap_addr = pci::get_capability_pointer(*virtio_dev.dev);
+	uint32_t cap_addr = kernel::hw::pci::get_capability_pointer(*virtio_dev.dev);
 	virtio_pci_cap* prev_cap = nullptr;
 	size_t num_caps = 0;
 	virtio_dev.caps = nullptr;
 
 	while (cap_addr != 0) {
-		auto header = pci::read_capability_header(*virtio_dev.dev, cap_addr);
+		auto header = kernel::hw::pci::read_capability_header(*virtio_dev.dev, cap_addr);
 		cap_id = header.bits.cap_id;
 		cap_next = header.bits.next_ptr;
 
-		if (cap_id == pci::CAP_VIRTIO) {
+		if (cap_id == kernel::hw::pci::CAP_VIRTIO) {
 			void* addr = kmalloc(sizeof(virtio_pci_cap), kernel::memory::KMALLOC_ZEROED);
 			virtio_pci_cap* cap = new (addr) virtio_pci_cap;
-			cap->first_dword.data = pci::read_conf_reg(*virtio_dev.dev, cap_addr);
+			cap->first_dword.data = kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr);
 			cap->second_dword.data =
-					pci::read_conf_reg(*virtio_dev.dev, cap_addr + 4);
-			cap->offset = pci::read_conf_reg(*virtio_dev.dev, cap_addr + 8);
-			cap->length = pci::read_conf_reg(*virtio_dev.dev, cap_addr + 12);
+					kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr + 4);
+			cap->offset = kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr + 8);
+			cap->length = kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr + 12);
 
 			if (prev_cap != nullptr) {
 				prev_cap->next = cap;
@@ -157,7 +157,7 @@ error_t configure_pci_common_cfg(virtio_pci_device& virtio_dev)
 error_t configure_pci_notify_cfg(virtio_pci_device& virtio_dev)
 {
 
-	uint64_t bar_addr = pci::read_base_address_register(
+	uint64_t bar_addr = kernel::hw::pci::read_base_address_register(
 			*virtio_dev.dev, virtio_dev.notify_cfg->cap.second_dword.fields.bar);
 
 	bar_addr = bar_addr & ~0xfff;

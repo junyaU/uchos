@@ -3,7 +3,7 @@
 #include "memory/slab.hpp"
 #include <libs/common/types.hpp>
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 void device_manager::initialize(size_t max_slots)
 {
@@ -78,7 +78,7 @@ device* device_manager::find_by_slot_id(uint8_t slot_id) const
 }
 
 void device_manager::allocate_device(uint8_t slot_id,
-									 usb::xhci::doorbell_register* dbreg)
+									 kernel::hw::usb::xhci::doorbell_register* dbreg)
 {
 	if (slot_id > max_slots_) {
 		LOG_ERROR("slot_id %d is out of range", slot_id);
@@ -112,4 +112,4 @@ void device_manager::remove(uint8_t slot_id)
 	kfree(devices_[slot_id]);
 	devices_[slot_id] = nullptr;
 }
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

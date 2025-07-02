@@ -24,7 +24,7 @@
 		regs_.port_sc.write(portsc);                                                \
 	}()
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 class controller;
 struct port_register_set;
@@ -73,4 +73,4 @@ inline uint8_t addressing_port{ 0 };
 void reset_port(port& p);
 
 void configure_port(port& p);
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

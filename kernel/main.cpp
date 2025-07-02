@@ -25,7 +25,7 @@ char kernel_stack[1024 * 1024];
 
 extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 					 const MemoryMap& memory_map,
-					 const acpi::root_system_description_pointer& rsdp)
+					 const kernel::timers::acpi::root_system_description_pointer& rsdp)
 {
 	initialize_screen(frame_buffer_conf, { 0, 0, 0 });
 
@@ -51,11 +51,11 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_tss();
 
-	acpi::initialize(rsdp);
+	kernel::timers::acpi::initialize(rsdp);
 
 	initialize_timer();
 
-	local_apic::initialize();
+	kernel::timers::local_apic::initialize();
 
 	kernel::syscall::initialize();
 

@@ -17,7 +17,7 @@
 
 namespace
 {
-void notify_xhci_handler(const message& m) { usb::xhci::process_events(); }
+void notify_xhci_handler(const message& m) { kernel::hw::usb::xhci::process_events(); }
 
 void handle_initialize_task(const message& m)
 {
@@ -47,13 +47,13 @@ void handle_pci(const message& m)
 					   .sender = process_ids::KERNEL,
 					   .is_end_of_message = false };
 
-	for (size_t i = 0; i < pci::num_devices; ++i) {
-		auto& device = pci::devices[i];
+	for (size_t i = 0; i < kernel::hw::pci::num_devices; ++i) {
+		auto& device = kernel::hw::pci::devices[i];
 		send_m.data.pci.vendor_id = device.vendor_id;
 		send_m.data.pci.device_id = device.device_id;
 		device.address(send_m.data.pci.bus_address, 8);
 
-		if (i == pci::num_devices - 1) {
+		if (i == kernel::hw::pci::num_devices - 1) {
 			send_m.is_end_of_message = true;
 		}
 
@@ -137,9 +137,9 @@ void task_usb_handler()
 {
 	task* t = kernel::task::CURRENT_TASK;
 
-	initialize_pci();
+	kernel::hw::pci::initialize();
 
-	usb::xhci::initialize();
+	kernel::hw::usb::xhci::initialize();
 
 	kernel::hw::initialize_keyboard();
 
