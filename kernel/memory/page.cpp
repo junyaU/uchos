@@ -7,8 +7,8 @@ std::vector<kernel::memory::page> pages;
 
 void initialize_pages()
 {
-	const size_t memory_start_index = boot_allocator->start_index();
-	const size_t memory_end_index = boot_allocator->end_index();
+	const size_t memory_start_index = kernel::memory::boot_allocator->start_index();
+	const size_t memory_end_index = kernel::memory::boot_allocator->end_index();
 
 	pages.resize(memory_end_index - memory_start_index);
 
@@ -16,7 +16,7 @@ void initialize_pages()
 		const size_t page_index = i - memory_start_index;
 
 		pages[page_index].set_ptr(reinterpret_cast<void*>(i * kernel::memory::PAGE_SIZE));
-		if (boot_allocator->is_bit_set(i)) {
+		if (kernel::memory::boot_allocator->is_bit_set(i)) {
 			pages[page_index].set_used();
 		} else {
 			pages[page_index].set_free();

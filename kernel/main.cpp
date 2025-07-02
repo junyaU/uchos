@@ -21,7 +21,9 @@ struct FrameBufferConf;
 struct MemoryMap;
 
 // 1MiB　
+extern "C" {
 char kernel_stack[1024 * 1024];
+}
 
 extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 					 const MemoryMap& memory_map,

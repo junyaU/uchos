@@ -9,6 +9,9 @@
 #include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
 
+namespace kernel::fs
+{
+
 struct file_descriptor {
 	fd_t fd;
 	char name[11];
@@ -25,3 +28,5 @@ file_descriptor* get_fd(int fd);
 file_descriptor* register_fd(const char* name, size_t size, ProcessId pid);
 
 void init_fds();
+
+} // namespace kernel::fs

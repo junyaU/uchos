@@ -7,55 +7,55 @@
 
 void test_boot_allocator_basic()
 {
-	void* single_page = boot_allocator->allocate(kernel::memory::PAGE_SIZE);
+	void* single_page = kernel::memory::boot_allocator->allocate(kernel::memory::PAGE_SIZE);
 	ASSERT_NOT_NULL(single_page);
-	boot_allocator->free(single_page, kernel::memory::PAGE_SIZE);
+	kernel::memory::boot_allocator->free(single_page, kernel::memory::PAGE_SIZE);
 }
 
 void test_boot_allocator_multi_page()
 {
 	constexpr size_t NUM_PAGES = 3;
-	void* multi_page = boot_allocator->allocate(kernel::memory::PAGE_SIZE * NUM_PAGES);
+	void* multi_page = kernel::memory::boot_allocator->allocate(kernel::memory::PAGE_SIZE * NUM_PAGES);
 	ASSERT_NOT_NULL(multi_page);
 
 	// check if all pages are marked as allocated
 	auto page_index = reinterpret_cast<uintptr_t>(multi_page) / kernel::memory::PAGE_SIZE;
 	for (size_t i = 0; i < NUM_PAGES; i++) {
-		ASSERT_TRUE(boot_allocator->is_bit_set(page_index + i));
+		ASSERT_TRUE(kernel::memory::boot_allocator->is_bit_set(page_index + i));
 	}
 
-	boot_allocator->free(multi_page, kernel::memory::PAGE_SIZE * NUM_PAGES);
+	kernel::memory::boot_allocator->free(multi_page, kernel::memory::PAGE_SIZE * NUM_PAGES);
 
 	// check if all pages are marked as free
 	for (size_t i = 0; i < NUM_PAGES; i++) {
-		ASSERT_FALSE(boot_allocator->is_bit_set(page_index + i));
+		ASSERT_FALSE(kernel::memory::boot_allocator->is_bit_set(page_index + i));
 	}
 }
 
 void test_boot_allocator_allocation_and_free()
 {
-	void* region1 = boot_allocator->allocate(kernel::memory::PAGE_SIZE * 2);
-	void* region2 = boot_allocator->allocate(kernel::memory::PAGE_SIZE * 2);
+	void* region1 = kernel::memory::boot_allocator->allocate(kernel::memory::PAGE_SIZE * 2);
+	void* region2 = kernel::memory::boot_allocator->allocate(kernel::memory::PAGE_SIZE * 2);
 	ASSERT_NOT_NULL(region1);
 	ASSERT_NOT_NULL(region2);
 
-	boot_allocator->free(region1, kernel::memory::PAGE_SIZE * 2);
+	kernel::memory::boot_allocator->free(region1, kernel::memory::PAGE_SIZE * 2);
 
 	// allocate the same region again
-	void* region3 = boot_allocator->allocate(kernel::memory::PAGE_SIZE * 2);
+	void* region3 = kernel::memory::boot_allocator->allocate(kernel::memory::PAGE_SIZE * 2);
 	ASSERT_EQ(region1, region3);
 
-	boot_allocator->free(region2, kernel::memory::PAGE_SIZE * 2);
-	boot_allocator->free(region3, kernel::memory::PAGE_SIZE * 2);
+	kernel::memory::boot_allocator->free(region2, kernel::memory::PAGE_SIZE * 2);
+	kernel::memory::boot_allocator->free(region3, kernel::memory::PAGE_SIZE * 2);
 }
 
 void test_boot_allocator_alignment()
 {
-	void* aligned_mem = boot_allocator->allocate(100);
+	void* aligned_mem = kernel::memory::boot_allocator->allocate(100);
 	ASSERT_NOT_NULL(aligned_mem);
 	ASSERT_EQ(reinterpret_cast<uintptr_t>(aligned_mem) % kernel::memory::PAGE_SIZE, 0);
 
-	boot_allocator->free(aligned_mem, kernel::memory::PAGE_SIZE);
+	kernel::memory::boot_allocator->free(aligned_mem, kernel::memory::PAGE_SIZE);
 }
 
 void register_bootstrap_allocator_tests()

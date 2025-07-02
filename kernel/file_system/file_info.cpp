@@ -3,6 +3,9 @@
 #include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
 
+namespace kernel::fs
+{
+
 const size_t MAX_FILE_ID = 50;
 std::unordered_map<fs_id_t, file_cache> file_caches;
 size_t id_offset = 0;
@@ -47,3 +50,5 @@ void init_read_contexts()
 {
 	file_caches = std::unordered_map<fs_id_t, file_cache>();
 }
+
+} // namespace kernel::fs

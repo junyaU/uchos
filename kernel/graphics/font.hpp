@@ -44,9 +44,9 @@ void to_lower(char* s);
 
 void to_upper(char* s);
 
-} // namespace kernel::graphics
+extern bitmap_font* kfont;
 
-extern kernel::graphics::bitmap_font* kfont;
+} // namespace kernel::graphics
 
 FT_Face new_face();
 

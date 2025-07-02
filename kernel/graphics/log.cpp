@@ -33,7 +33,7 @@ void printk(kernel::graphics::log_level level, const char* format, ...)
 	va_end(ap);
 
 	for (size_t i = 0; i < strlen(s) && s[i] != '\0'; ++i) {
-		kernel::graphics::write_ascii(*kscreen, { kernel_cursor_x++ * 8, kernel_cursor_y * 16 }, s[i],
+		kernel::graphics::write_ascii(*kernel::graphics::kscreen, { kernel_cursor_x++ * 8, kernel_cursor_y * 16 }, s[i],
 					0xffff00);
 
 		if (s[i] == '\n') {

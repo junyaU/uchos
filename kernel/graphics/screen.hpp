@@ -30,8 +30,8 @@ private:
 	uint32_t* frame_buffer_;
 };
 
-} // namespace kernel::graphics
+extern screen* kscreen;
 
-extern kernel::graphics::screen* kscreen;
+} // namespace kernel::graphics
 
 void initialize_screen(const FrameBufferConf& frame_buffer_conf, kernel::graphics::Color bg_color);

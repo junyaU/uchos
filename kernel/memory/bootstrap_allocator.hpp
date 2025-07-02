@@ -7,9 +7,12 @@ struct MemoryMap;
 #include <cstdint>
 #include <stddef.h>
 
+namespace kernel::memory
+{
+
 // 64 GiB
 static const uint64_t MAX_PHYS_MEM_BYTES = 64UL * 1024 * 1024 * 1024;
-const uint64_t TOTAL_PAGES = MAX_PHYS_MEM_BYTES / kernel::memory::PAGE_SIZE;
+const uint64_t TOTAL_PAGES = MAX_PHYS_MEM_BYTES / PAGE_SIZE;
 const size_t BITMAP_ENTRY_SIZE = sizeof(unsigned long) * 8;
 
 class bootstrap_allocator
@@ -31,12 +34,12 @@ public:
 
 	size_t start_index() const
 	{
-		return reinterpret_cast<uintptr_t>(memory_start_) / kernel::memory::PAGE_SIZE;
+		return reinterpret_cast<uintptr_t>(memory_start_) / PAGE_SIZE;
 	}
 
 	size_t end_index() const
 	{
-		return reinterpret_cast<uintptr_t>(memory_end_) / kernel::memory::PAGE_SIZE;
+		return reinterpret_cast<uintptr_t>(memory_end_) / PAGE_SIZE;
 	}
 
 private:
@@ -45,6 +48,8 @@ private:
 };
 
 extern bootstrap_allocator* boot_allocator;
+
+} // namespace kernel::memory
 
 void initialize_bootstrap_allocator(const MemoryMap& mem_map);
 

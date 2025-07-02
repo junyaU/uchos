@@ -35,15 +35,15 @@ void screen::fill_rectangle(point2d position,
 	}
 }
 
-} // namespace kernel::graphics
+screen* kscreen;
+alignas(screen) char screen_buffer[sizeof(screen)];
 
-kernel::graphics::screen* kscreen;
-alignas(kernel::graphics::screen) char screen_buffer[sizeof(kernel::graphics::screen)];
+} // namespace kernel::graphics
 
 void initialize_screen(const FrameBufferConf& frame_buffer_conf, kernel::graphics::Color bg_color)
 {
-	kscreen = new (screen_buffer) kernel::graphics::screen{ frame_buffer_conf, bg_color };
+	kernel::graphics::kscreen = new (kernel::graphics::screen_buffer) kernel::graphics::screen{ frame_buffer_conf, bg_color };
 
-	kscreen->fill_rectangle(point2d{ 0, 0 }, kscreen->size(),
-							kscreen->bg_color().GetCode());
+	kernel::graphics::kscreen->fill_rectangle(point2d{ 0, 0 }, kernel::graphics::kscreen->size(),
+							kernel::graphics::kscreen->bg_color().GetCode());
 }
