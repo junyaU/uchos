@@ -7,6 +7,8 @@
 #include <queue>
 #include <unordered_set>
 
+namespace kernel::timers {
+
 struct timer_event {
 	uint64_t id;
 	ProcessId task_id;
@@ -63,5 +65,7 @@ private:
 };
 
 extern kernel_timer* ktimer;
+
+} // namespace kernel::timers
 
 void initialize_timer();

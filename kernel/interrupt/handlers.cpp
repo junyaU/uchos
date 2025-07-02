@@ -40,7 +40,7 @@ __attribute__((interrupt)) void on_virtio_blk_queue_interrupt(interrupt_frame* f
 
 extern "C" void switch_task_by_timer_interrupt(context* ctx)
 {
-	const bool need_switch_task = ktimer->increment_tick();
+	const bool need_switch_task = kernel::timers::ktimer->increment_tick();
 	notify_end_of_interrupt();
 
 	if (need_switch_task) {

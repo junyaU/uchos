@@ -40,7 +40,7 @@ void initialize()
 
 	LVT_TIMER = (0b010 << 16) | interrupt_vector::LOCAL_APIC_TIMER;
 
-	INITIAL_COUNT = freq / TIMER_FREQUENCY;
+	INITIAL_COUNT = freq / kernel::timers::TIMER_FREQUENCY;
 
 	LOG_INFO("Local APIC initialized successfully.");
 }

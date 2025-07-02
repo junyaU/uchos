@@ -278,7 +278,7 @@ void initialize_task()
 
 	CURRENT_TASK->state = TASK_RUNNING;
 
-	ktimer->add_switch_task_event(200);
+	kernel::timers::ktimer->add_switch_task_event(200);
 
 	run_test_suite(register_task_tests);
 }

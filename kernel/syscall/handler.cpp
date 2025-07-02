@@ -59,9 +59,9 @@ error_t sys_time(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	const ProcessId task_id = ProcessId::from_raw(arg4);
 
 	if (is_periodic == 1) {
-		ktimer->add_periodic_timer_event(ms, action, task_id);
+		kernel::timers::ktimer->add_periodic_timer_event(ms, action, task_id);
 	} else {
-		ktimer->add_timer_event(ms, action, task_id);
+		kernel::timers::ktimer->add_timer_event(ms, action, task_id);
 	}
 
 	return OK;

@@ -14,6 +14,8 @@ namespace
 constexpr int SWITCH_TASK_MILLISEC = 20;
 }
 
+namespace kernel::timers {
+
 uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 {
 	return tick_ + (millisec * TIMER_FREQUENCY) / 1000;
@@ -122,17 +124,20 @@ bool kernel_timer::increment_tick()
 }
 
 kernel_timer* ktimer;
+
+} // namespace kernel::timers
+
 void initialize_timer()
 {
 	LOG_INFO("Initializing logical timer...");
 
-	void* addr = kmalloc(sizeof(kernel_timer), kernel::memory::KMALLOC_ZEROED);
+	void* addr = kmalloc(sizeof(kernel::timers::kernel_timer), kernel::memory::KMALLOC_ZEROED);
 	if (addr == nullptr) {
 		LOG_ERROR("Failed to allocate memory for kernel timer.");
 		return;
 	}
 
-	ktimer = new (addr) kernel_timer;
+	kernel::timers::ktimer = new (addr) kernel::timers::kernel_timer;
 
 	run_test_suite(register_timer_tests);
 
