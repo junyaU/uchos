@@ -8,6 +8,8 @@
 
 #include <cstdint>
 
+namespace kernel::interrupt {
+
 enum exception_code {
 	DIVIDE_ERROR = 0,
 	DEBUG = 1,
@@ -82,3 +84,5 @@ struct fault_handler<error_code, true> {
 		}
 	}
 };
+
+} // namespace kernel::interrupt

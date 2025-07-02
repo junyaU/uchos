@@ -3,6 +3,8 @@
 #include <array>
 #include <cstdint>
 
+namespace kernel::interrupt {
+
 enum gate_type {
 	kTaskGate = 0x5,
 	kInterruptGate = 0xE,
@@ -39,3 +41,5 @@ constexpr int IST_FOR_XHCI = 2;
 constexpr int IST_FOR_SWITCH_TASK = 3;
 
 void initialize_interrupt();
+
+} // namespace kernel::interrupt

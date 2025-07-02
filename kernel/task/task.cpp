@@ -222,7 +222,7 @@ void switch_next_task(bool sleep_current_task)
 		CURRENT_TASK->state = TASK_WAITING;
 	}
 
-	asm("int %0" : : "i"(interrupt_vector::SWITCH_TASK));
+	asm("int %0" : : "i"(kernel::interrupt::interrupt_vector::SWITCH_TASK));
 }
 
 void exit_task(int status)

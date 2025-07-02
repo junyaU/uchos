@@ -35,7 +35,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	kernel::memory::initialize_paging();
 
-	initialize_interrupt();
+	kernel::interrupt::initialize_interrupt();
 
 	initialize_bootstrap_allocator(memory_map);
 

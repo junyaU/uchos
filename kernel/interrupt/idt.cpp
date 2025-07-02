@@ -8,6 +8,8 @@
 #include <array>
 #include <libs/common/types.hpp>
 
+namespace kernel::interrupt {
+
 std::array<idt_entry, 256> idt;
 
 void set_idt_entry(idt_entry& entry,
@@ -76,3 +78,5 @@ void initialize_interrupt()
 
 	LOG_INFO("Interrupt initialized successfully.");
 }
+
+} // namespace kernel::interrupt

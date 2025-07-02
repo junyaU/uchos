@@ -19,6 +19,8 @@ namespace
 }
 } // namespace
 
+namespace kernel::interrupt {
+
 __attribute__((interrupt)) void on_xhci_interrupt(interrupt_frame* frame)
 {
 	message m = { msg_t::NOTIFY_XHCI, process_ids::INTERRUPT, {} };
@@ -38,6 +40,10 @@ __attribute__((interrupt)) void on_virtio_blk_queue_interrupt(interrupt_frame* f
 	notify_end_of_interrupt();
 }
 
+} // namespace kernel::interrupt
+
+using kernel::interrupt::interrupt_frame;
+
 extern "C" void switch_task_by_timer_interrupt(context* ctx)
 {
 	const bool need_switch_task = kernel::timers::ktimer->increment_tick();
@@ -54,6 +60,8 @@ extern "C" void switch_task_by_interrupt(context* ctx)
 	switch_task(*ctx);
 }
 
+namespace kernel::interrupt {
+
 void kill_userland(interrupt_frame* frame)
 {
 	auto cpl = frame->cs & 0x3;
@@ -65,3 +73,5 @@ void kill_userland(interrupt_frame* frame)
 
 	exit_userland(CURRENT_TASK->kernel_stack_ptr, 128);
 }
+
+} // namespace kernel::interrupt

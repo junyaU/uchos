@@ -28,10 +28,10 @@ error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
 	const uint8_t bsp_lapic_id = *reinterpret_cast<uint32_t*>(0xfee00020) >> 24;
 	pci::configure_msi_fixed_destination(
 			*dev, bsp_lapic_id, pci::msi_trigger_mode::EDGE,
-			pci::msi_delivery_mode::FIXED, interrupt_vector::VIRTIO, 0);
+			pci::msi_delivery_mode::FIXED, kernel::interrupt::interrupt_vector::VIRTIO, 0);
 	pci::configure_msi_fixed_destination(
 			*dev, bsp_lapic_id, pci::msi_trigger_mode::EDGE,
-			pci::msi_delivery_mode::FIXED, interrupt_vector::VIRTQUEUE, 0);
+			pci::msi_delivery_mode::FIXED, kernel::interrupt::interrupt_vector::VIRTQUEUE, 0);
 
 	virtio_dev->dev = dev;
 
