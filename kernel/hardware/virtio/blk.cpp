@@ -28,7 +28,7 @@ void handle_read_request(const message& m)
 	if (IS_ERR(read_from_blk_device(buf, sector, len))) {
 		LOG_ERROR("failed to read from blk device");
 		kfree(buf);
-		send_message(m.sender, &send_m);
+		send_message(m.sender, send_m);
 	}
 
 	send_m.data.blk_io.buf = buf;
@@ -37,7 +37,7 @@ void handle_read_request(const message& m)
 	send_m.data.blk_io.sequence = m.data.blk_io.sequence;
 	send_m.data.blk_io.request_id = m.data.blk_io.request_id;
 
-	send_message(m.sender, &send_m);
+	send_message(m.sender, send_m);
 }
 
 void handle_write_request(const message& m)

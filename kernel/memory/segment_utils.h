@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 extern "C" {
 void load_code_segment(uint16_t cs);
 

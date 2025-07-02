@@ -232,7 +232,7 @@ void exit_task(int status)
 	if (t->has_parent()) {
 		message m = { .type = msg_t::IPC_EXIT_TASK, .sender = t->id };
 		m.data.exit_task.status = status;
-		send_message(t->parent_id, &m);
+		send_message(t->parent_id, m);
 	}
 
 	t->state = TASK_EXITED;

@@ -22,7 +22,7 @@ namespace
 __attribute__((interrupt)) void on_xhci_interrupt(interrupt_frame* frame)
 {
 	message m = { msg_t::NOTIFY_XHCI, process_ids::INTERRUPT, {} };
-	send_message(process_ids::XHCI, &m);
+	send_message(process_ids::XHCI, m);
 	notify_end_of_interrupt();
 }
 

@@ -23,7 +23,7 @@ void handle_initialize_task(const message& m)
 {
 	message send_m = { .type = msg_t::INITIALIZE_TASK, .sender = process_ids::KERNEL };
 	send_m.data.init.task_id = m.sender.raw();
-	send_message(m.sender, &send_m);
+	send_message(m.sender, send_m);
 }
 
 void handle_memory_usage(const message& m)
@@ -38,7 +38,7 @@ void handle_memory_usage(const message& m)
 	send_m.data.memory_usage.total = total_mem;
 	send_m.data.memory_usage.used = used_mem;
 
-	send_message(m.sender, &send_m);
+	send_message(m.sender, send_m);
 }
 
 void handle_pci(const message& m)
@@ -57,7 +57,7 @@ void handle_pci(const message& m)
 			send_m.is_end_of_message = true;
 		}
 
-		send_message(m.sender, &send_m);
+		send_message(m.sender, send_m);
 	}
 }
 
@@ -81,7 +81,7 @@ void handle_fs_register_path(const message& m)
 
 	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = process_ids::KERNEL };
 	reply.data.fs_op.result = 0;
-	send_message(m.sender, &reply);
+	send_message(m.sender, reply);
 };
 } // namespace
 
@@ -109,7 +109,7 @@ void task_shell()
 	message m = { .type = msg_t::IPC_GET_FILE_INFO, .sender = process_ids::SHELL };
 	char path[6] = "shell";
 	memcpy(m.data.fs_op.name, path, 6);
-	send_message(process_ids::FS_FAT32, &m);
+	send_message(process_ids::FS_FAT32, m);
 
 	message info_m = wait_for_message(msg_t::IPC_GET_FILE_INFO);
 	auto* entry =
@@ -123,7 +123,7 @@ void task_shell()
 
 	message read_m = { .type = msg_t::IPC_READ_FILE_DATA, .sender = process_ids::SHELL };
 	read_m.data.fs_op.buf = info_m.data.fs_op.buf;
-	send_message(process_ids::FS_FAT32, &read_m);
+	send_message(process_ids::FS_FAT32, read_m);
 
 	message data_m = wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	CURRENT_TASK->is_initilized = true;

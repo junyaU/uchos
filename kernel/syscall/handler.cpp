@@ -99,7 +99,7 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 			copy_m.sender = t->id;
 		}
 
-		send_message(ProcessId::from_raw(dest), &copy_m);
+		send_message(ProcessId::from_raw(dest), copy_m);
 	}
 
 	return OK;
@@ -144,7 +144,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	message msg{ .type = msg_t::IPC_GET_FILE_INFO, .sender = CURRENT_TASK->id };
 	memcpy(msg.data.fs_op.name, copy_path, path_len + 1);
-	send_message(process_ids::FS_FAT32, &msg);
+	send_message(process_ids::FS_FAT32, msg);
 
 	message info_m = wait_for_message(msg_t::IPC_GET_FILE_INFO);
 
@@ -157,7 +157,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	message read_msg{ .type = msg_t::IPC_READ_FILE_DATA,
 					  .sender = CURRENT_TASK->id };
 	read_msg.data.fs_op.buf = entry;
-	send_message(process_ids::FS_FAT32, &read_msg);
+	send_message(process_ids::FS_FAT32, read_msg);
 
 	message data_m = wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	kfree(entry);

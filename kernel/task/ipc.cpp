@@ -40,34 +40,34 @@ error_t handle_ool_memory_alloc(message& m, task* dst)
 	return OK;
 }
 
-error_t send_message(ProcessId dst_id, message* m)
+error_t send_message(ProcessId dst_id, message& m)
 {
 	pid_t dst_raw = dst_id.raw();
-	if (dst_raw == -1 || m->sender.raw() == dst_raw) {
+	if (dst_raw == -1 || m.sender.raw() == dst_raw) {
 		LOG_TEST("invalid destination task id : dest = %d, sender = %d", dst_raw,
-				 m->sender.raw());
+				 m.sender.raw());
 		return ERR_INVALID_ARG;
 	}
 
 	task* dst = tasks[dst_raw];
 	if (dst == nullptr) {
-		if (m->type != msg_t::INITIALIZE_TASK) {
+		if (m.type != msg_t::INITIALIZE_TASK) {
 			LOG_TEST("send_message: task %d is not found", dst_raw);
 		}
 		return ERR_INVALID_TASK;
 	}
 
-	if (m->type == msg_t::IPC_OOL_MEMORY_DEALLOC) {
-		ASSERT_OK(handle_ool_memory_dealloc(*m));
-	} else if (m->tool_desc.present) {
-		ASSERT_OK(handle_ool_memory_alloc(*m, dst));
+	if (m.type == msg_t::IPC_OOL_MEMORY_DEALLOC) {
+		ASSERT_OK(handle_ool_memory_dealloc(m));
+	} else if (m.tool_desc.present) {
+		ASSERT_OK(handle_ool_memory_alloc(m, dst));
 	}
 
 	if (dst->state == TASK_WAITING) {
 		schedule_task(dst_id);
 	}
 
-	dst->messages.push(*m);
+	dst->messages.push(m);
 
 	return OK;
 }
