@@ -17,6 +17,8 @@
 #include <memory>
 #include <vector>
 
+namespace kernel::memory {
+
 constexpr int KMALLOC_UNINITIALIZED = 0;
 constexpr int KMALLOC_ZEROED = (1 << 0);
 
@@ -105,6 +107,8 @@ extern std::list<std::unique_ptr<m_cache>> cache_chain;
 m_cache* get_cache_in_chain(char* name);
 
 m_cache& m_cache_create(const char* name, size_t obj_size);
+
+} // namespace kernel::memory
 
 void* kmalloc(size_t size, unsigned flags, int align = 1);
 

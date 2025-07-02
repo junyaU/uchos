@@ -19,7 +19,7 @@ void handle_read_request(const message& m)
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len;
 
-	char* buf = static_cast<char*>(kmalloc(len, KMALLOC_ZEROED));
+	char* buf = static_cast<char*>(kmalloc(len, kernel::memory::KMALLOC_ZEROED));
 	if (buf == nullptr) {
 		LOG_ERROR("failed to allocate buffer");
 		return;
@@ -73,7 +73,7 @@ error_t write_to_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 	ASSERT_OK(validate_length(len));
 
 	virtio_blk_req* req =
-			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), KMALLOC_ZEROED);
+			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), kernel::memory::KMALLOC_ZEROED);
 	if (req == nullptr) {
 		return ERR_NO_MEMORY;
 	}
@@ -117,7 +117,7 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 	ASSERT_OK(validate_length(len));
 
 	virtio_blk_req* req =
-			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), KMALLOC_ZEROED);
+			(virtio_blk_req*)kmalloc(sizeof(virtio_blk_req), kernel::memory::KMALLOC_ZEROED);
 	if (req == nullptr) {
 		return ERR_NO_MEMORY;
 	}
@@ -158,7 +158,7 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 
 error_t init_blk_device()
 {
-	void* buffer = kmalloc(sizeof(virtio_pci_device), KMALLOC_ZEROED);
+	void* buffer = kmalloc(sizeof(virtio_pci_device), kernel::memory::KMALLOC_ZEROED);
 	if (buffer == nullptr) {
 		return ERR_NO_MEMORY;
 	}

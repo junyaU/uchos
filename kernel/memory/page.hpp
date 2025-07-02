@@ -1,11 +1,13 @@
 #pragma once
 
-class m_cache;
-class m_slab;
-
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+
+namespace kernel::memory {
+
+class m_cache;
+class m_slab;
 
 constexpr size_t PAGE_SIZE = 4096;
 
@@ -39,10 +41,12 @@ private:
 	void* ptr_;
 };
 
-extern std::vector<page> pages;
+} // namespace kernel::memory
+
+extern std::vector<kernel::memory::page> pages;
 
 void initialize_pages();
 
-page* get_page(void* ptr);
+kernel::memory::page* get_page(void* ptr);
 
 void get_memory_usage(size_t* total_mem, size_t* used_mem);

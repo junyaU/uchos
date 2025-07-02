@@ -162,10 +162,10 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	message data_m = wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	kfree(entry);
 
-	page_table_entry* current_page_table = get_active_page_table();
-	clean_page_tables(current_page_table);
+	kernel::memory::page_table_entry* current_page_table = kernel::memory::get_active_page_table();
+	kernel::memory::clean_page_tables(current_page_table);
 
-	page_table_entry* new_page_table = config_new_page_table();
+	kernel::memory::page_table_entry* new_page_table = kernel::memory::config_new_page_table();
 	if (new_page_table == nullptr) {
 		return ERR_NO_MEMORY;
 	}

@@ -33,7 +33,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_segmentation();
 
-	initialize_paging();
+	kernel::memory::initialize_paging();
 
 	initialize_interrupt();
 
@@ -43,7 +43,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	initialize_pages();
 
-	initialize_memory_manager();
+	kernel::memory::initialize_memory_manager();
 
 	disable_bootstrap_allocator();
 

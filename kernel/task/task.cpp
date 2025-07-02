@@ -96,7 +96,7 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 
 	stack_size = parent->stack_size;
 
-	stack = static_cast<uint64_t*>(kmalloc(stack_size, KMALLOC_ZEROED, PAGE_SIZE));
+	stack = static_cast<uint64_t*>(kmalloc(stack_size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE));
 	if (stack == nullptr) {
 		LOG_ERROR("Failed to allocate stack for child task");
 		return ERR_NO_MEMORY;
@@ -126,14 +126,14 @@ error_t task::copy_parent_page_table()
 	}
 
 	parent->page_table_snapshot =
-			reinterpret_cast<page_table_entry*>(parent->ctx.cr3);
+			reinterpret_cast<kernel::memory::page_table_entry*>(parent->ctx.cr3);
 
-	page_table_entry* parent_table =
-			clone_page_table(parent->page_table_snapshot, false);
+	kernel::memory::page_table_entry* parent_table =
+			kernel::memory::clone_page_table(parent->page_table_snapshot, false);
 	set_cr3(reinterpret_cast<uint64_t>(parent_table));
 
-	page_table_entry* child_table =
-			clone_page_table(parent->page_table_snapshot, false);
+	kernel::memory::page_table_entry* child_table =
+			kernel::memory::clone_page_table(parent->page_table_snapshot, false);
 	ctx.cr3 = reinterpret_cast<uint64_t>(child_table);
 
 	return OK;
@@ -312,8 +312,8 @@ task::task(int raw_id,
 		return;
 	}
 
-	stack_size = PAGE_SIZE * 8;
-	stack = static_cast<uint64_t*>(kmalloc(stack_size, KMALLOC_ZEROED, PAGE_SIZE));
+	stack_size = kernel::memory::PAGE_SIZE * 8;
+	stack = static_cast<uint64_t*>(kmalloc(stack_size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE));
 	if (stack == nullptr) {
 		LOG_ERROR("Failed to allocate stack for task %s", name);
 		return;
@@ -321,8 +321,8 @@ task::task(int raw_id,
 
 	const uint64_t stack_end = reinterpret_cast<uint64_t>(stack) + stack_size;
 
-	page_table_entry* page_table = new_page_table();
-	copy_kernel_space(page_table);
+	kernel::memory::page_table_entry* page_table = kernel::memory::new_page_table();
+	kernel::memory::copy_kernel_space(page_table);
 
 	ctx = {};
 	ctx.cr3 = reinterpret_cast<uint64_t>(page_table);

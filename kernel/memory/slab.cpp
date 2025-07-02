@@ -14,6 +14,8 @@
 #include <unordered_map>
 #include <utility>
 
+namespace kernel::memory {
+
 m_cache* get_cache_in_chain(char* name)
 {
 	if (cache_chain.empty()) {
@@ -40,10 +42,10 @@ m_cache::m_cache(char name[20], size_t object_size)
 	strncpy(name_, name, sizeof(name_) - 1);
 	name[sizeof(name_) - 1] = '\0';
 
-	if (object_size <= PAGE_SIZE) {
+	if (object_size <= kernel::memory::PAGE_SIZE) {
 		num_pages_per_slab_ = 1;
 	} else {
-		num_pages_per_slab_ = object_size / PAGE_SIZE;
+		num_pages_per_slab_ = object_size / kernel::memory::PAGE_SIZE;
 	}
 }
 
@@ -68,15 +70,15 @@ m_cache& m_cache_create(const char* name, size_t obj_size)
 	}
 
 	cache_chain.push_back(
-			std::make_unique<m_cache>(const_cast<char*>(name), obj_size));
+			std::make_unique<kernel::memory::m_cache>(const_cast<char*>(name), obj_size));
 
 	return *cache_chain.back();
 }
 
 bool m_cache::grow()
 {
-	size_t const bytes_per_slab = num_pages_per_slab_ * PAGE_SIZE;
-	void* addr = memory_manager->allocate(bytes_per_slab);
+	size_t const bytes_per_slab = num_pages_per_slab_ * kernel::memory::PAGE_SIZE;
+	void* addr = kernel::memory::memory_manager->allocate(bytes_per_slab);
 	if (addr == nullptr) {
 		LOG_ERROR("failed to allocate memory");
 		return false;
@@ -197,6 +199,8 @@ void m_slab::free_object(void* addr, size_t obj_size)
 	--num_in_use_;
 }
 
+} // namespace kernel::memory
+
 std::unordered_map<void*, void*> aligned_to_raw_addr_map;
 
 void* kmalloc(size_t size, unsigned flags, int align)
@@ -210,9 +214,9 @@ void* kmalloc(size_t size, unsigned flags, int align)
 	char name[20];
 	sprintf(name, "cache-%d", static_cast<int>(size));
 
-	auto* cache = get_cache_in_chain(name);
+	auto* cache = kernel::memory::get_cache_in_chain(name);
 	if (cache == nullptr) {
-		cache = &m_cache_create(name, size);
+		cache = &kernel::memory::m_cache_create(name, size);
 	}
 
 	void* addr = cache->alloc();
@@ -232,7 +236,7 @@ void* kmalloc(size_t size, unsigned flags, int align)
 		addr = aligned_addr;
 	}
 
-	if ((flags & KMALLOC_ZEROED) != 0) {
+	if ((flags & kernel::memory::KMALLOC_ZEROED) != 0) {
 		memset(addr, 0, size);
 	}
 
@@ -247,36 +251,39 @@ void kfree(void* addr)
 		aligned_to_raw_addr_map.erase(it);
 	}
 
-	page* page = get_page(addr);
+	kernel::memory::page* page = get_page(addr);
 	if (page == nullptr) {
 		LOG_ERROR("invalid address");
 		return;
 	}
 
-	m_cache* cache = page->cache();
-	m_slab* slab = page->slab();
+	kernel::memory::m_cache* cache = page->cache();
+	kernel::memory::m_slab* slab = page->slab();
 
 	slab->free_object(addr, cache->object_size());
 	cache->decrease_num_active_objects();
 
-	if (slab->status() == slab_status::FULL) {
-		slab->move_list(*cache, slab_status::PARTIAL);
+	if (slab->status() == kernel::memory::slab_status::FULL) {
+		slab->move_list(*cache, kernel::memory::slab_status::PARTIAL);
 	}
 
 	if (slab->is_empty()) {
-		slab->move_list(*cache, slab_status::FREE);
+		slab->move_list(*cache, kernel::memory::slab_status::FREE);
 		cache->decrease_num_active_slabs();
 	}
 };
 
+namespace kernel::memory {
 std::list<std::unique_ptr<m_cache>> cache_chain;
+} // namespace kernel::memory
+
 void initialize_slab_allocator()
 {
 	LOG_INFO("Initializing slab allocator...");
 
 	aligned_to_raw_addr_map = std::unordered_map<void*, void*>();
 
-	cache_chain.clear();
+	kernel::memory::cache_chain.clear();
 
 	run_test_suite(register_slab_tests);
 

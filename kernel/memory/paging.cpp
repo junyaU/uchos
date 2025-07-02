@@ -8,6 +8,8 @@
 #include <cstring>
 #include <libs/common/types.hpp>
 
+namespace kernel::memory {
+
 namespace
 {
 constexpr uint64_t PAGE_2MIB = 512 * PAGE_SIZE;
@@ -21,7 +23,7 @@ alignas(PAGE_SIZE)
 		std::array<std::array<uint64_t, 512>, PAGE_DIRECTORY_COUNT> page_directory;
 } // namespace
 
-void setup_identity_mapping()
+static void setup_identity_mapping()
 {
 	pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table) | 0x003;
 	for (size_t i_pdpt = 0; i_pdpt < PAGE_DIRECTORY_COUNT; i_pdpt++) {
@@ -168,7 +170,7 @@ void setup_page_tables(vaddr_t addr, size_t num_pages, bool writable)
 	}
 
 	for (size_t i = 0; i < num_pages; i++) {
-		flush_tlb(addr.data + i * PAGE_SIZE);
+		flush_tlb(addr.data + i * kernel::memory::PAGE_SIZE);
 	}
 }
 
@@ -273,7 +275,7 @@ error_t copy_target_page(uint64_t addr)
 	}
 
 	const auto aligned_addr = addr & ~0xfff;
-	memcpy(page, reinterpret_cast<void*>(aligned_addr), PAGE_SIZE);
+	memcpy(page, reinterpret_cast<void*>(aligned_addr), kernel::memory::PAGE_SIZE);
 
 	set_page_table_entry(get_active_page_table(), vaddr_t{ addr }, page);
 
@@ -363,7 +365,7 @@ error_t map_frame_to_vaddr(page_table_entry* table,
 					table[i + j].bits.present = 1;
 					table[i + j].bits.writable = 0;
 					table[i + j].bits.user_accessible = 1;
-					table[i + j].bits.address = (frame + j * PAGE_SIZE) >> 12;
+					table[i + j].bits.address = (frame + j * kernel::memory::PAGE_SIZE) >> 12;
 
 					indices[4 - level] = i;
 
@@ -396,7 +398,7 @@ error_t map_frame_to_vaddr(page_table_entry* table,
 error_t unmap_frame(page_table_entry* table, vaddr_t addr, size_t num_pages)
 {
 	for (size_t i = 0; i < num_pages; i++) {
-		vaddr_t target_addr{ addr.data + i * PAGE_SIZE };
+		vaddr_t target_addr{ addr.data + i * kernel::memory::PAGE_SIZE };
 		auto* pte = get_pte(table, target_addr, 1);
 		if (pte == nullptr) {
 			return ERR_INVALID_ARG;
@@ -413,8 +415,8 @@ size_t calc_required_pages(vaddr_t start, size_t size)
 {
 	vaddr_t end{ start.data + size };
 	vaddr_t start_page{ start.data - start.part(0) };
-	vaddr_t end_page{ end.data - end.part(0) + PAGE_SIZE };
-	return (end_page.data - start_page.data) / PAGE_SIZE;
+	vaddr_t end_page{ end.data - end.part(0) + kernel::memory::PAGE_SIZE };
+	return (end_page.data - start_page.data) / kernel::memory::PAGE_SIZE;
 }
 
 void initialize_paging()
@@ -424,3 +426,5 @@ void initialize_paging()
 	set_cr3(reinterpret_cast<uint64_t>(&pml4_table));
 	LOG_INFO("Paging initialized successfully.");
 }
+
+} // namespace kernel::memory

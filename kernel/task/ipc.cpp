@@ -11,18 +11,18 @@
 
 error_t handle_ool_memory_dealloc(const message& m)
 {
-	vaddr_t addr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
-	vaddr_t start_addr{ addr.data - addr.part(0) };
-	size_t pages_to_unmap = calc_required_pages(addr, m.tool_desc.size);
+	kernel::memory::vaddr_t addr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
+	kernel::memory::vaddr_t start_addr{ addr.data - addr.part(0) };
+	size_t pages_to_unmap = kernel::memory::calc_required_pages(addr, m.tool_desc.size);
 
-	return unmap_frame(get_active_page_table(), start_addr, pages_to_unmap);
+	return kernel::memory::unmap_frame(kernel::memory::get_active_page_table(), start_addr, pages_to_unmap);
 }
 
 error_t handle_ool_memory_alloc(message& m, task* dst)
 {
-	vaddr_t src_vaddr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
-	size_t num_pages = calc_required_pages(src_vaddr, m.tool_desc.size);
-	paddr_t src_paddr = get_paddr(get_active_page_table(), src_vaddr);
+	kernel::memory::vaddr_t src_vaddr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
+	size_t num_pages = kernel::memory::calc_required_pages(src_vaddr, m.tool_desc.size);
+	paddr_t src_paddr = kernel::memory::get_paddr(kernel::memory::get_active_page_table(), src_vaddr);
 	int data_offset = src_vaddr.part(0);
 
 	// kernel → userspace
@@ -31,8 +31,8 @@ error_t handle_ool_memory_alloc(message& m, task* dst)
 		data_offset = 0;
 	}
 
-	vaddr_t dst_vaddr;
-	ASSERT_OK(map_frame_to_vaddr(dst->get_page_table(), src_paddr, num_pages,
+	kernel::memory::vaddr_t dst_vaddr;
+	ASSERT_OK(kernel::memory::map_frame_to_vaddr(dst->get_page_table(), src_paddr, num_pages,
 								 &dst_vaddr));
 
 	m.tool_desc.addr = reinterpret_cast<void*>(dst_vaddr.data + data_offset);

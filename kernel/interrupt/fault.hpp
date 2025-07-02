@@ -64,7 +64,7 @@ struct fault_handler<error_code, true> {
 	{
 		if (error_code == PAGE_FAULT) {
 			uint64_t fault_addr = get_cr2();
-			if (auto err = handle_page_fault(code, fault_addr); !IS_ERR(err)) {
+			if (auto err = kernel::memory::handle_page_fault(code, fault_addr); !IS_ERR(err)) {
 				return;
 			}
 
