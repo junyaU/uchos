@@ -25,7 +25,7 @@ void handle_read_request(const message& m)
 		return;
 	}
 
-	if (IS_ERR(read_from_blk_device(buf, sector, len))) {
+	if (IS_ERR(kernel::hw::virtio::read_from_blk_device(buf, sector, len))) {
 		LOG_ERROR("failed to read from blk device");
 		kfree(buf);
 		send_message(m.sender, send_m);
@@ -44,16 +44,18 @@ void handle_write_request(const message& m)
 {
 	const int sector = m.data.blk_io.sector;
 	const int len =
-			m.data.blk_io.len < SECTOR_SIZE ? SECTOR_SIZE : m.data.blk_io.len;
+			m.data.blk_io.len < kernel::hw::virtio::SECTOR_SIZE ? kernel::hw::virtio::SECTOR_SIZE : m.data.blk_io.len;
 
 	char buf[512];
 	memcpy(buf, m.data.blk_io.buf, len);
 
-	if (IS_ERR(write_to_blk_device(buf, sector, len))) {
+	if (IS_ERR(kernel::hw::virtio::write_to_blk_device(buf, sector, len))) {
 		LOG_ERROR("failed to write to blk device");
 	}
 }
 } // namespace
+
+namespace kernel::hw::virtio {
 
 virtio_pci_device* blk_dev = nullptr;
 
@@ -185,3 +187,5 @@ void virtio_blk_task()
 
 	process_messages(t);
 }
+
+} // namespace kernel::hw::virtio

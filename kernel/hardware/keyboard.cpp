@@ -50,6 +50,8 @@ const char keycode_map_shifted[256] = {
 };
 } // namespace
 
+namespace kernel::hw {
+
 void initialize_keyboard()
 {
 	usb::keyboard_driver::default_observer = [](uint8_t modifier, uint8_t keycode,
@@ -76,3 +78,5 @@ bool is_EOT(uint8_t modifier, uint8_t keycode)
 {
 	return ((modifier & (L_CONTROL | R_CONTROL)) != 0) && keycode == 7;
 }
+
+} // namespace kernel::hw

@@ -297,7 +297,7 @@ void handle_initialize(const message& m)
 		FAT_TABLE_SECTOR = VOLUME_BPB->reserved_sector_count;
 
 		size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
-							static_cast<size_t>(SECTOR_SIZE);
+							static_cast<size_t>(kernel::hw::virtio::SECTOR_SIZE);
 
 		send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size,
 									msg_t::INITIALIZE_TASK);
@@ -572,7 +572,7 @@ void fat32_task()
 	init_read_contexts();
 	init_fds();
 
-	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE, msg_t::INITIALIZE_TASK);
+	send_read_req_to_blk_device(BOOT_SECTOR, kernel::hw::virtio::SECTOR_SIZE, msg_t::INITIALIZE_TASK);
 
 	t->add_msg_handler(msg_t::INITIALIZE_TASK, handle_initialize);
 	t->add_msg_handler(msg_t::IPC_GET_FILE_INFO, handle_get_file_info);

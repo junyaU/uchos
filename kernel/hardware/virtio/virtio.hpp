@@ -14,6 +14,8 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
+namespace kernel::hw::virtio {
+
 // Forward declaration
 struct virtio_pci_device;
 
@@ -162,3 +164,5 @@ int push_virtio_entry(virtio_virtqueue* queue,
 int pop_virtio_entry(virtio_virtqueue* queue,
 					 virtio_entry* entry_chain,
 					 size_t num_entries);
+
+} // namespace kernel::hw::virtio

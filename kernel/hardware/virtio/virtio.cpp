@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
+namespace kernel::hw::virtio {
+
 error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
 {
 	pci::device* dev = nullptr;
@@ -170,3 +172,5 @@ error_t init_virtqueue(virtio_virtqueue* queue,
 
 	return OK;
 }
+
+} // namespace kernel::hw::virtio

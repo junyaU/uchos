@@ -20,6 +20,8 @@ namespace pci
 struct device;
 }
 
+namespace kernel::hw::virtio {
+
 // https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
 /* Common configuration */
 constexpr int VIRTIO_PCI_CAP_COMMON_CFG = 1;
@@ -170,3 +172,5 @@ size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev);
 error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev);
 
 void notify_virtqueue(virtio_pci_device& virtio_dev, size_t queue_idx);
+
+} // namespace kernel::hw::virtio

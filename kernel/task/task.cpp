@@ -33,7 +33,7 @@ const initial_task_info initial_tasks[] = {
 	{ "main", 0, false, true },
 	{ "idle", reinterpret_cast<uint64_t>(&task_idle), true, true },
 	{ "usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), true, true },
-	{ "virtio", reinterpret_cast<uint64_t>(&virtio_blk_task), true, false },
+	{ "virtio", reinterpret_cast<uint64_t>(&kernel::hw::virtio::virtio_blk_task), true, false },
 	{ "fat32", reinterpret_cast<uint64_t>(&file_system::fat32_task), true, true },
 	{ "shell", reinterpret_cast<uint64_t>(&task_shell), true, false },
 };

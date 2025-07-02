@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
+namespace kernel::hw::virtio {
+
 size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev)
 {
 	uint8_t cap_id, cap_next;
@@ -211,3 +213,5 @@ void notify_virtqueue(virtio_pci_device& virtio_dev, size_t queue_idx)
 	asm volatile("sfence" ::: "memory");
 	*(volatile uint32_t*)virtio_dev.notify_base = queue_idx;
 }
+
+} // namespace kernel::hw::virtio

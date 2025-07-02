@@ -138,7 +138,7 @@ void task_usb_handler()
 
 	usb::xhci::initialize();
 
-	initialize_keyboard();
+	kernel::hw::initialize_keyboard();
 
 	t->add_msg_handler(msg_t::NOTIFY_XHCI, notify_xhci_handler);
 
