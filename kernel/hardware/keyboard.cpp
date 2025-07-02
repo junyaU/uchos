@@ -70,7 +70,7 @@ void initialize_keyboard()
 		m.data.key_input.ascii = static_cast<uint8_t>(ascii);
 		m.data.key_input.press = static_cast<int>(press);
 
-		send_message(process_ids::SHELL, m);
+		kernel::task::send_message(process_ids::SHELL, m);
 	};
 }
 

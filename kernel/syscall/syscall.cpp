@@ -5,7 +5,7 @@
 #include "msr.hpp"
 #include <cstdint>
 
-namespace syscall
+namespace kernel::syscall
 {
 void initialize()
 {
@@ -22,4 +22,4 @@ void initialize()
 	// Set syscall/sysret RFLAGS
 	write_msr(IA32_FMASK, 0);
 }
-} // namespace syscall
+} // namespace kernel::syscall

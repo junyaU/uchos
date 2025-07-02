@@ -57,11 +57,11 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	local_apic::initialize();
 
-	syscall::initialize();
+	kernel::syscall::initialize();
 
-	initialize_task();
+	kernel::task::initialize();
 
 	run_test_suite(register_virtio_blk_tests);
 
-	task_kernel();
+	kernel::task::task_kernel();
 }

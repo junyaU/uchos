@@ -23,7 +23,7 @@ void handle_initialize_task(const message& m)
 {
 	message send_m = { .type = msg_t::INITIALIZE_TASK, .sender = process_ids::KERNEL };
 	send_m.data.init.task_id = m.sender.raw();
-	send_message(m.sender, send_m);
+	kernel::task::send_message(m.sender, send_m);
 }
 
 void handle_memory_usage(const message& m)
@@ -38,7 +38,7 @@ void handle_memory_usage(const message& m)
 	send_m.data.memory_usage.total = total_mem;
 	send_m.data.memory_usage.used = used_mem;
 
-	send_message(m.sender, send_m);
+	kernel::task::send_message(m.sender, send_m);
 }
 
 void handle_pci(const message& m)
@@ -57,7 +57,7 @@ void handle_pci(const message& m)
 			send_m.is_end_of_message = true;
 		}
 
-		send_message(m.sender, send_m);
+		kernel::task::send_message(m.sender, send_m);
 	}
 }
 
@@ -69,9 +69,9 @@ void handle_fs_register_path(const message& m)
 		return;
 	}
 
-	task* t = get_task(m.sender);
+	kernel::task::task* t = kernel::task::get_task(m.sender);
 	if (t->parent_id.raw() != -1) {
-		auto* parent = get_task(t->parent_id);
+		auto* parent = kernel::task::get_task(t->parent_id);
 		memcpy(&t->fs_path, &parent->fs_path, sizeof(path));
 	} else {
 		memcpy(&t->fs_path, p, sizeof(path));
@@ -81,9 +81,12 @@ void handle_fs_register_path(const message& m)
 
 	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = process_ids::KERNEL };
 	reply.data.fs_op.result = 0;
-	send_message(m.sender, reply);
+	kernel::task::send_message(m.sender, reply);
 };
 } // namespace
+
+namespace kernel::task
+{
 
 void task_idle()
 {
@@ -94,14 +97,14 @@ void task_idle()
 
 void task_kernel()
 {
-	task* t = CURRENT_TASK;
+	task* t = kernel::task::CURRENT_TASK;
 
 	t->add_msg_handler(msg_t::INITIALIZE_TASK, handle_initialize_task);
 	t->add_msg_handler(msg_t::IPC_MEMORY_USAGE, handle_memory_usage);
 	t->add_msg_handler(msg_t::IPC_PCI, handle_pci);
 	t->add_msg_handler(msg_t::FS_REGISTER_PATH, handle_fs_register_path);
 
-	process_messages(t);
+	kernel::task::process_messages(t);
 }
 
 void task_shell()
@@ -109,11 +112,11 @@ void task_shell()
 	message m = { .type = msg_t::IPC_GET_FILE_INFO, .sender = process_ids::SHELL };
 	char path[6] = "shell";
 	memcpy(m.data.fs_op.name, path, 6);
-	send_message(process_ids::FS_FAT32, m);
+	kernel::task::send_message(process_ids::FS_FAT32, m);
 
-	message info_m = wait_for_message(msg_t::IPC_GET_FILE_INFO);
+	message info_m = kernel::task::wait_for_message(msg_t::IPC_GET_FILE_INFO);
 	auto* entry =
-			reinterpret_cast<file_system::directory_entry*>(info_m.data.fs_op.buf);
+			reinterpret_cast<kernel::fs::directory_entry*>(info_m.data.fs_op.buf);
 	if (entry == nullptr) {
 		LOG_ERROR("failed to find shell");
 		while (true) {
@@ -123,16 +126,16 @@ void task_shell()
 
 	message read_m = { .type = msg_t::IPC_READ_FILE_DATA, .sender = process_ids::SHELL };
 	read_m.data.fs_op.buf = info_m.data.fs_op.buf;
-	send_message(process_ids::FS_FAT32, read_m);
+	kernel::task::send_message(process_ids::FS_FAT32, read_m);
 
-	message data_m = wait_for_message(msg_t::IPC_READ_FILE_DATA);
+	message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	CURRENT_TASK->is_initilized = true;
-	file_system::execute_file(data_m.data.fs_op.buf, "shell", nullptr);
+	kernel::fs::execute_file(data_m.data.fs_op.buf, "shell", nullptr);
 }
 
 void task_usb_handler()
 {
-	task* t = CURRENT_TASK;
+	task* t = kernel::task::CURRENT_TASK;
 
 	initialize_pci();
 
@@ -142,5 +145,7 @@ void task_usb_handler()
 
 	t->add_msg_handler(msg_t::NOTIFY_XHCI, notify_xhci_handler);
 
-	process_messages(t);
+	kernel::task::process_messages(t);
 }
+
+} // namespace kernel::task

@@ -13,7 +13,10 @@
 #include <libs/common/process_id.hpp>
 #include <queue>
 
-void initialize_task();
+namespace kernel::task
+{
+
+void initialize();
 
 enum task_state : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING, TASK_EXITED };
 
@@ -101,3 +104,8 @@ void exit_task(int status);
 [[noreturn]] void process_messages(task* t);
 
 message wait_for_message(msg_t type);
+
+} // namespace kernel::task
+
+// For assembly and extern "C" compatibility
+using kernel::task::CURRENT_TASK;

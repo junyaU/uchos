@@ -9,6 +9,9 @@
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 
+namespace kernel::task
+{
+
 error_t handle_ool_memory_dealloc(const message& m)
 {
 	kernel::memory::vaddr_t addr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
@@ -71,3 +74,5 @@ error_t send_message(ProcessId dst_id, message& m)
 
 	return OK;
 }
+
+} // namespace kernel::task

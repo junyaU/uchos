@@ -159,5 +159,5 @@ void exec_elf(void* buffer, const char* name, const char* args)
 
 	enter_user_mode(argc, argv, USER_SS, elf_header->e_entry,
 					stack_addr.data + stack_size - 8,
-					&CURRENT_TASK->kernel_stack_ptr);
+					&kernel::task::CURRENT_TASK->kernel_stack_ptr);
 }

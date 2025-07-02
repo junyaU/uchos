@@ -11,6 +11,8 @@
 
 #pragma once
 
+namespace kernel::syscall
+{
 // system call number
 constexpr int SYS_DRAW_TEXT = 4;
 constexpr int SYS_FILL_RECT = 5;
@@ -23,7 +25,5 @@ constexpr int SYS_EXEC = 59;
 constexpr int SYS_EXIT = 60;
 constexpr int SYS_WAIT = 61;
 
-namespace syscall
-{
 void initialize();
-} // namespace syscall
+} // namespace kernel::syscall

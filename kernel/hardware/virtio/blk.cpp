@@ -28,7 +28,7 @@ void handle_read_request(const message& m)
 	if (IS_ERR(kernel::hw::virtio::read_from_blk_device(buf, sector, len))) {
 		LOG_ERROR("failed to read from blk device");
 		kfree(buf);
-		send_message(m.sender, send_m);
+		kernel::task::send_message(m.sender, send_m);
 	}
 
 	send_m.data.blk_io.buf = buf;
@@ -37,7 +37,7 @@ void handle_read_request(const message& m)
 	send_m.data.blk_io.sequence = m.data.blk_io.sequence;
 	send_m.data.blk_io.request_id = m.data.blk_io.request_id;
 
-	send_message(m.sender, send_m);
+	kernel::task::send_message(m.sender, send_m);
 }
 
 void handle_write_request(const message& m)
@@ -100,7 +100,7 @@ error_t write_to_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 
 	notify_virtqueue(*blk_dev, 0);
 
-	switch_next_task(true);
+	kernel::task::switch_next_task(true);
 
 	if (req->status != VIRTIO_BLK_S_OK) {
 		LOG_ERROR("Failed to write to block device.");
@@ -144,7 +144,7 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 
 	notify_virtqueue(*blk_dev, 0);
 
-	switch_next_task(true);
+	kernel::task::switch_next_task(true);
 
 	if (req->status != VIRTIO_BLK_S_OK) {
 		LOG_ERROR("Failed to read from block device. status: %d", req->status);
@@ -169,14 +169,14 @@ error_t init_blk_device()
 
 	ASSERT_OK(init_virtio_pci_device(blk_dev, VIRTIO_BLK));
 
-	CURRENT_TASK->is_initilized = true;
+	kernel::task::CURRENT_TASK->is_initilized = true;
 
 	return OK;
 }
 
 void virtio_blk_task()
 {
-	task* t = CURRENT_TASK;
+	kernel::task::task* t = kernel::task::CURRENT_TASK;
 
 	init_blk_device();
 
@@ -185,7 +185,7 @@ void virtio_blk_task()
 
 	t->is_initilized = true;
 
-	process_messages(t);
+	kernel::task::process_messages(t);
 }
 
 } // namespace kernel::hw::virtio

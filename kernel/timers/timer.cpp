@@ -112,7 +112,7 @@ bool kernel_timer::increment_tick()
 		message m = { .type = msg_t::NOTIFY_TIMER_TIMEOUT,
 					  .sender = process_ids::KERNEL };
 		m.data.timer.action = e.action;
-		send_message(e.task_id, m);
+		kernel::task::send_message(e.task_id, m);
 
 		if (e.periodical == 1) {
 			e.timeout = calculate_timeout_ticks(e.period);

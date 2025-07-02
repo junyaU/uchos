@@ -23,6 +23,9 @@
 #include <libs/common/process_id.hpp>
 #include <queue>
 
+namespace kernel::task
+{
+
 list_t run_queue;
 std::array<task*, MAX_TASKS> tasks;
 
@@ -31,11 +34,11 @@ task* IDLE_TASK = nullptr;
 
 const initial_task_info initial_tasks[] = {
 	{ "main", 0, false, true },
-	{ "idle", reinterpret_cast<uint64_t>(&task_idle), true, true },
-	{ "usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), true, true },
+	{ "idle", reinterpret_cast<uint64_t>(&kernel::task::task_idle), true, true },
+	{ "usb_handler", reinterpret_cast<uint64_t>(&kernel::task::task_usb_handler), true, true },
 	{ "virtio", reinterpret_cast<uint64_t>(&kernel::hw::virtio::virtio_blk_task), true, false },
-	{ "fat32", reinterpret_cast<uint64_t>(&file_system::fat32_task), true, true },
-	{ "shell", reinterpret_cast<uint64_t>(&task_shell), true, false },
+	{ "fat32", reinterpret_cast<uint64_t>(&kernel::fs::fat32_task), true, true },
+	{ "shell", reinterpret_cast<uint64_t>(&kernel::task::task_shell), true, false },
 };
 
 ProcessId get_available_task_id()
@@ -260,7 +263,7 @@ void exit_task(int status)
 	}
 }
 
-void initialize_task()
+void initialize()
 {
 	tasks = std::array<task*, MAX_TASKS>();
 	list_init(&run_queue);
@@ -360,7 +363,9 @@ message wait_for_message(msg_t type)
 	}
 }
 
+} // namespace kernel::task
+
 extern "C" uint64_t get_current_task_stack()
 {
-	return CURRENT_TASK->kernel_stack_ptr;
+	return kernel::task::CURRENT_TASK->kernel_stack_ptr;
 }

@@ -5,6 +5,18 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 
+using kernel::task::task;
+using kernel::task::create_task;
+using kernel::task::TASK_WAITING;
+using kernel::task::get_available_task_id;
+using kernel::task::MAX_TASKS;
+using kernel::task::get_task_id_by_name;
+using kernel::task::get_task;
+using kernel::task::schedule_task;
+using kernel::task::tasks;
+using kernel::task::context;
+using kernel::task::TASK_READY;
+
 void test_task_creation_basic()
 {
 	// Test basic task creation
@@ -90,14 +102,14 @@ void test_task_copy()
 	ASSERT_NOT_NULL(parent);
 
 	// Setup parent context
-	context parent_ctx = {};
+	kernel::task::context parent_ctx = {};
 	parent_ctx.rsp =
 			reinterpret_cast<uint64_t>(parent->stack) + parent->stack_size - 8;
 	parent_ctx.rbp = parent_ctx.rsp;
 	parent_ctx.cr3 = reinterpret_cast<uint64_t>(parent->get_page_table());
 
 	// Copy task
-	task* child = copy_task(parent, &parent_ctx);
+	task* child = kernel::task::copy_task(parent, &parent_ctx);
 	ASSERT_NOT_NULL(child);
 
 	// Verify child task properties

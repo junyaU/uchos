@@ -22,7 +22,7 @@
 #include <utility>
 #include <vector>
 
-namespace file_system
+namespace kernel::fs
 {
 bios_parameter_block* VOLUME_BPB;
 unsigned long BYTES_PER_CLUSTER;
@@ -196,7 +196,7 @@ void send_read_req_to_blk_device(unsigned int sector,
 	m.data.blk_io.request_id = request_id;
 	m.data.blk_io.sequence = sequence;
 
-	send_message(process_ids::VIRTIO_BLK, m);
+	kernel::task::send_message(process_ids::VIRTIO_BLK, m);
 }
 
 void send_file_data(fs_id_t id,
@@ -225,7 +225,7 @@ void send_file_data(fs_id_t id,
 		m.data.fs_op.len = size;
 	}
 
-	send_message(requester, m);
+	kernel::task::send_message(requester, m);
 }
 
 error_t process_read_data_response(const message& m, bool for_user)
@@ -309,19 +309,19 @@ void handle_initialize(const message& m)
 									BYTES_PER_CLUSTER, msg_t::INITIALIZE_TASK);
 	} else {
 		ROOT_DIR = reinterpret_cast<directory_entry*>(m.data.blk_io.buf);
-		CURRENT_TASK->is_initilized = true;
+		kernel::task::CURRENT_TASK->is_initilized = true;
 
 		while (!pending_messages.empty()) {
 			auto msg = pending_messages.front();
 			pending_messages.pop();
-			CURRENT_TASK->messages.push(msg);
+			kernel::task::CURRENT_TASK->messages.push(msg);
 		}
 	}
 }
 
 void handle_get_file_info(const message& m)
 {
-	if (!CURRENT_TASK->is_initilized) {
+	if (!kernel::task::CURRENT_TASK->is_initilized) {
 		pending_messages.push(m);
 		return;
 	}
@@ -353,12 +353,12 @@ void handle_get_file_info(const message& m)
 		}
 	}
 
-	send_message(m.sender, sm);
+	kernel::task::send_message(m.sender, sm);
 }
 
 void handle_read_file_data(const message& m)
 {
-	if (!CURRENT_TASK->is_initilized) {
+	if (!kernel::task::CURRENT_TASK->is_initilized) {
 		pending_messages.push(m);
 		return;
 	}
@@ -427,7 +427,7 @@ void handle_get_directory_contents(const message& m)
 	sm.tool_desc.size = entries_count * sizeof(stat);
 	sm.tool_desc.present = true;
 
-	send_message(m.sender, sm);
+	kernel::task::send_message(m.sender, sm);
 }
 
 void handle_fs_open(const message& m)
@@ -440,14 +440,14 @@ void handle_fs_open(const message& m)
 	directory_entry* entry = find_dir_entry(name);
 	if (entry == nullptr) {
 		req.data.fs_op.fd = -1;
-		send_message(m.sender, req);
+		kernel::task::send_message(m.sender, req);
 		return;
 	}
 
 	file_descriptor* fd = register_fd(name, entry->file_size, m.sender);
 	req.data.fs_op.fd = fd == nullptr ? -1 : fd->fd;
 
-	send_message(m.sender, req);
+	kernel::task::send_message(m.sender, req);
 }
 
 void handle_fs_read(const message& m)
@@ -463,7 +463,7 @@ void handle_fs_read(const message& m)
 	if (fd == nullptr) {
 		LOG_ERROR("fd not found");
 		req.data.fs_op.len = 0;
-		send_message(m.sender, req);
+		kernel::task::send_message(m.sender, req);
 		return;
 	}
 
@@ -471,7 +471,7 @@ void handle_fs_read(const message& m)
 	if (entry == nullptr) {
 		LOG_ERROR("entry not found");
 		req.data.fs_op.len = 0;
-		send_message(m.sender, req);
+		kernel::task::send_message(m.sender, req);
 		return;
 	}
 
@@ -500,14 +500,14 @@ void handle_fs_mkfile(const message& m)
 	directory_entry* existing_entry = find_dir_entry(name);
 	if (existing_entry != nullptr) {
 		reply.data.fs_op.fd = -1;
-		send_message(m.sender, reply);
+		kernel::task::send_message(m.sender, reply);
 		return;
 	}
 
 	directory_entry* entry = find_empty_dir_entry();
 	if (entry == nullptr) {
 		reply.data.fs_op.fd = -1;
-		send_message(m.sender, reply);
+		kernel::task::send_message(m.sender, reply);
 		return;
 	}
 
@@ -519,12 +519,12 @@ void handle_fs_mkfile(const message& m)
 
 	reply.data.fs_op.fd = fd == nullptr ? -1 : fd->fd;
 
-	send_message(m.sender, reply);
+	kernel::task::send_message(m.sender, reply);
 }
 
 void handle_fs_register_path(const message& m)
 {
-	if (!CURRENT_TASK->is_initilized) {
+	if (!kernel::task::CURRENT_TASK->is_initilized) {
 		pending_messages.push(m);
 		return;
 	}
@@ -541,16 +541,16 @@ void handle_fs_register_path(const message& m)
 	memcpy(buf, &p, sizeof(path));
 	reply.data.fs_op.buf = buf;
 
-	send_message(process_ids::KERNEL, reply);
+	kernel::task::send_message(process_ids::KERNEL, reply);
 }
 
 void handle_fs_get_cwd(const message& m)
 {
 	message reply = { .type = msg_t::FS_GET_CWD, .sender = process_ids::FS_FAT32 };
 
-	task* t = get_task(m.sender);
+	kernel::task::task* t = kernel::task::get_task(m.sender);
 	if (t->fs_path.current_dir == nullptr) {
-		send_message(m.sender, reply);
+		kernel::task::send_message(m.sender, reply);
 		return;
 	}
 
@@ -560,12 +560,12 @@ void handle_fs_get_cwd(const message& m)
 		read_dir_entry_name(*t->fs_path.current_dir, reply.data.fs_op.name);
 	}
 
-	send_message(m.sender, reply);
+	kernel::task::send_message(m.sender, reply);
 }
 
 void fat32_task()
 {
-	task* t = CURRENT_TASK;
+	kernel::task::task* t = kernel::task::CURRENT_TASK;
 	t->is_initilized = false;
 	pending_messages = std::queue<message>();
 
@@ -585,7 +585,7 @@ void fat32_task()
 	t->add_msg_handler(msg_t::FS_REGISTER_PATH, handle_fs_register_path);
 	t->add_msg_handler(msg_t::FS_GET_CWD, handle_fs_get_cwd);
 
-	process_messages(t);
+	kernel::task::process_messages(t);
 };
 
-} // namespace file_system
+} // namespace kernel::fs
