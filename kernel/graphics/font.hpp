@@ -7,6 +7,8 @@
 
 #include "../point2d.hpp"
 
+namespace kernel::graphics {
+
 class bitmap_font
 {
 public:
@@ -42,7 +44,9 @@ void to_lower(char* s);
 
 void to_upper(char* s);
 
-extern bitmap_font* kfont;
+} // namespace kernel::graphics
+
+extern kernel::graphics::bitmap_font* kfont;
 
 FT_Face new_face();
 

@@ -327,7 +327,7 @@ void handle_get_file_info(const message& m)
 	}
 
 	const auto* name = m.data.fs_op.name;
-	to_upper(const_cast<char*>(name));
+	kernel::graphics::to_upper(const_cast<char*>(name));
 
 	message sm = { .type = msg_t::IPC_GET_FILE_INFO, .sender = process_ids::FS_FAT32 };
 	sm.data.fs_op.buf = nullptr;
@@ -435,7 +435,7 @@ void handle_fs_open(const message& m)
 	message req = { .type = msg_t::FS_OPEN, .sender = process_ids::FS_FAT32 };
 
 	const char* name = reinterpret_cast<const char*>(m.data.fs_op.name);
-	to_upper(const_cast<char*>(name));
+	kernel::graphics::to_upper(const_cast<char*>(name));
 
 	directory_entry* entry = find_dir_entry(name);
 	if (entry == nullptr) {
@@ -495,7 +495,7 @@ void handle_fs_mkfile(const message& m)
 	message reply = { .type = msg_t::FS_MKFILE, .sender = process_ids::FS_FAT32 };
 
 	const char* name = reinterpret_cast<const char*>(m.data.fs_op.name);
-	to_upper(const_cast<char*>(name));
+	kernel::graphics::to_upper(const_cast<char*>(name));
 
 	directory_entry* existing_entry = find_dir_entry(name);
 	if (existing_entry != nullptr) {

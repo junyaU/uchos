@@ -13,6 +13,8 @@ extern const uint8_t _binary_hankaku_bin_size;
 FT_Library ft_library;
 std::vector<uint8_t>* nihongo_font_data;
 
+namespace kernel::graphics {
+
 bitmap_font::bitmap_font(int width, int height)
 	: font_data_{ &_binary_hankaku_bin_start }, width_{ width }, height_{ height }
 {
@@ -205,8 +207,10 @@ void to_upper(char* s)
 	}
 }
 
-bitmap_font* kfont;
-alignas(bitmap_font) char bitmap_font_buffer[sizeof(bitmap_font)];
+} // namespace kernel::graphics
+
+kernel::graphics::bitmap_font* kfont;
+alignas(kernel::graphics::bitmap_font) char bitmap_font_buffer[sizeof(kernel::graphics::bitmap_font)];
 
 FT_Face new_face()
 {
@@ -226,7 +230,7 @@ FT_Face new_face()
 	return face;
 }
 
-void initialize_font() { kfont = new (bitmap_font_buffer) bitmap_font{ 8, 16 }; }
+void initialize_font() { kfont = new (bitmap_font_buffer) kernel::graphics::bitmap_font{ 8, 16 }; }
 
 void initialize_freetype()
 {
