@@ -11,13 +11,15 @@
 
 #pragma once
 
+#include "error.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <list>
 #include <memory>
 #include <vector>
 
-namespace kernel::memory {
+namespace kernel::memory
+{
 
 constexpr int KMALLOC_UNINITIALIZED = 0;
 constexpr int KMALLOC_ZEROED = (1 << 0);
@@ -122,9 +124,19 @@ void initialize_slab_allocator();
 
 #define KMALLOC_OR_RETURN(ptr, size, flags)                                         \
 	do {                                                                            \
-		(ptr) = kmalloc(size, flags);                                               \
+		(ptr) = kernel::memory::kmalloc(size, flags);                               \
 		if ((ptr) == nullptr) {                                                     \
 			LOG_ERROR("failed to allocate memory: %s", #ptr);                       \
 			return;                                                                 \
+		}                                                                           \
+	} while (0)
+
+// エラーコードを返すバージョン
+#define KMALLOC_OR_RETURN_ERROR(ptr, size, flags)                                   \
+	do {                                                                            \
+		(ptr) = kernel::memory::kmalloc(size, flags);                               \
+		if ((ptr) == nullptr) {                                                     \
+			LOG_ERROR_CODE(ERR_NO_MEMORY, "failed to allocate memory: %s", #ptr);   \
+			return ERR_NO_MEMORY;                                                   \
 		}                                                                           \
 	} while (0)

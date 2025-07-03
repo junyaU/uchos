@@ -19,16 +19,16 @@ using message_handler_t = void (*)(const message&);
 #define IS_ERR(err) (((long)(err)) < 0)
 constexpr int OK = 0;
 constexpr int ERR_FORK_FAILED = -1;
-constexpr int ERR_NO_MEMORY = -1;
-constexpr int ERR_INVALID_ARG = -2;
-constexpr int ERR_INVALID_TASK = -3;
-constexpr int ERR_INVALID_FD = -4;
-constexpr int ERR_PAGE_NOT_PRESENT = -5;
-constexpr int ERR_NO_TASK = -6;
-constexpr int ERR_NO_FILE = -7;
-constexpr int ERR_NO_DEVICE = -8;
-constexpr int ERR_FAILED_INIT_DEVICE = -9;
-constexpr int ERR_FAILED_WRITE_TO_DEVICE = -10;
+constexpr int ERR_NO_MEMORY = -2;
+constexpr int ERR_INVALID_ARG = -3;
+constexpr int ERR_INVALID_TASK = -4;
+constexpr int ERR_INVALID_FD = -5;
+constexpr int ERR_PAGE_NOT_PRESENT = -6;
+constexpr int ERR_NO_TASK = -7;
+constexpr int ERR_NO_FILE = -8;
+constexpr int ERR_NO_DEVICE = -9;
+constexpr int ERR_FAILED_INIT_DEVICE = -10;
+constexpr int ERR_FAILED_WRITE_TO_DEVICE = -11;
 
 // file descriptor
 constexpr int NO_FD = -1;
