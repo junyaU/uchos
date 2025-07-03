@@ -1,3 +1,13 @@
+/**
+ * @file error.hpp
+ * @brief Unified kernel error handling interface
+ * 
+ * This file provides a unified error handling mechanism used throughout the UCHos kernel.
+ * It includes various utilities for error code processing, logging, and error propagation.
+ * 
+ * @date 2024
+ */
+
 #pragma once
 
 #include <libs/common/types.hpp>
@@ -6,18 +16,31 @@
 
 namespace kernel {
 
-// エラーハンドリング用ユーティリティ関数
+/**
+ * @brief Check if an error code indicates success
+ * @param err Error code to check
+ * @return true if success, false if error
+ */
 inline bool is_ok(error_t err)
 {
 	return !IS_ERR(err);
 }
 
+/**
+ * @brief Check if an error code indicates an error
+ * @param err Error code to check
+ * @return true if error, false if success
+ */
 inline bool is_error(error_t err)
 {
 	return IS_ERR(err);
 }
 
-// エラーコードの文字列表現を取得
+/**
+ * @brief Convert error code to human-readable string
+ * @param err Error code to convert
+ * @return String representation of the error code
+ */
 inline const char* error_to_string(error_t err)
 {
 	switch (err) {
@@ -50,13 +73,21 @@ inline const char* error_to_string(error_t err)
 	}
 }
 
-// エラーログマクロ
+/**
+ * @brief Log an error message with error code
+ * @param err Error code
+ * @param fmt Printf-style format string
+ * @param ... Format arguments
+ */
 #define LOG_ERROR_CODE(err, fmt, ...)                                             \
 	do {                                                                          \
 		LOG_ERROR(fmt " (error: %s)", ##__VA_ARGS__, error_to_string(err));      \
 	} while (0)
 
-// 条件付きエラーリターンマクロ
+/**
+ * @brief Return immediately if expression evaluates to an error
+ * @param expression Expression to evaluate (must return error_t)
+ */
 #define RETURN_IF_ERROR(expression)                                               \
 	do {                                                                          \
 		error_t __err = (expression);                                             \
@@ -65,7 +96,12 @@ inline const char* error_to_string(error_t err)
 		}                                                                         \
 	} while (0)
 
-// エラーをログ出力してリターンするマクロ
+/**
+ * @brief Log and return if expression evaluates to an error
+ * @param expression Expression to evaluate (must return error_t)
+ * @param fmt Format string for error message
+ * @param ... Format arguments
+ */
 #define LOG_AND_RETURN_IF_ERROR(expression, fmt, ...)                            \
 	do {                                                                          \
 		error_t __err = (expression);                                             \
@@ -75,7 +111,16 @@ inline const char* error_to_string(error_t err)
 		}                                                                         \
 	} while (0)
 
-// 結果型（成功時は値、失敗時はエラーコード）
+/**
+ * @brief Result type that holds either a value on success or an error code on failure
+ * @tparam T Type of the success value
+ * 
+ * @example
+ * result<int> divide(int a, int b) {
+ *     if (b == 0) return ERR_INVALID_ARG;
+ *     return a / b;
+ * }
+ */
 template<typename T>
 class result {
 public:
@@ -97,7 +142,18 @@ private:
 	error_t error_;
 };
 
-// Optional型（存在するかどうか）
+/**
+ * @brief Optional type that represents whether a value exists or not
+ * @tparam T Type of the held value
+ * 
+ * @example
+ * optional<int> find_index(int* arr, int size, int target) {
+ *     for (int i = 0; i < size; i++) {
+ *         if (arr[i] == target) return i;
+ *     }
+ *     return {}; // empty optional
+ * }
+ */
 template<typename T>
 class optional {
 public:
@@ -117,7 +173,13 @@ private:
 	T value_;
 };
 
-// エラーハンドリングのためのヘルパー関数
+/**
+ * @brief Helper function that executes cleanup on error
+ * @tparam T Type of the function to execute
+ * @param func Function to execute (must return error_t)
+ * @param cleanup Cleanup function to execute on error
+ * @return Result of func execution
+ */
 template<typename T>
 inline error_t try_with_cleanup(T&& func, std::function<void()> cleanup)
 {
@@ -128,7 +190,16 @@ inline error_t try_with_cleanup(T&& func, std::function<void()> cleanup)
 	return result;
 }
 
-// チェイン可能なエラーハンドリング
+/**
+ * @brief Class for chaining multiple operations with concise error handling
+ * 
+ * @example
+ * error_t result = error_chain()
+ *     .then([]() { return step1(); })
+ *     .then([]() { return step2(); })
+ *     .on_error([](error_t err) { LOG_ERROR("Failed: %s", error_to_string(err)); })
+ *     .result();
+ */
 class error_chain {
 public:
 	error_chain() : error_(OK) {}

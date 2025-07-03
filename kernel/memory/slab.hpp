@@ -1,12 +1,13 @@
-/*
+/**
  * @file memory/slab.hpp
- *
- * @brief slab allocator
+ * @brief Slab allocator implementation
  *
  * This file contains the implementation of a slab allocator for efficient
  * memory management in a kernel environment. The slab allocator is designed to
  * minimize fragmentation by managing memory in fixed-size blocks called slabs.
- *
+ * 
+ * @note Uses the unified error handling interface (see error.hpp)
+ * @date 2024
  */
 
 #pragma once
@@ -106,18 +107,46 @@ private:
 
 extern std::list<std::unique_ptr<m_cache>> cache_chain;
 
+/**
+ * @brief Get a cache by name from the cache chain
+ * @param name Name of the cache to retrieve
+ * @return Pointer to the found cache, or nullptr if not found
+ */
 m_cache* get_cache_in_chain(char* name);
 
+/**
+ * @brief Create a new memory cache
+ * @param name Name of the cache
+ * @param obj_size Size of objects in the cache
+ * @return Reference to the created cache
+ */
 m_cache& m_cache_create(const char* name, size_t obj_size);
 
+/**
+ * @brief Allocate kernel memory
+ * @param size Size to allocate
+ * @param flags Allocation flags (e.g., KMALLOC_ZEROED)
+ * @param align Alignment requirement (default: 1)
+ * @return Pointer to allocated memory, or nullptr on failure
+ * @note Returns nullptr on failure. Consider using KMALLOC_OR_RETURN_ERROR macro
+ */
 void* kmalloc(size_t size, unsigned flags, int align = 1);
 
+/**
+ * @brief Free kernel memory
+ * @param addr Address of memory to free
+ * @note Does nothing if addr is nullptr
+ */
 void kfree(void* addr);
 
 struct kfree_deleter {
 	void operator()(void* p) { kfree(p); }
 };
 
+/**
+ * @brief Initialize the slab allocator
+ * @note Must be called once during kernel initialization
+ */
 void initialize_slab_allocator();
 
 } // namespace kernel::memory
@@ -131,7 +160,13 @@ void initialize_slab_allocator();
 		}                                                                           \
 	} while (0)
 
-// エラーコードを返すバージョン
+/**
+ * @brief Macro to allocate memory and return error code on failure
+ * @param ptr Variable to store allocated pointer
+ * @param size Size to allocate
+ * @param flags Allocation flags
+ * @note Returns ERR_NO_MEMORY if allocation fails
+ */
 #define KMALLOC_OR_RETURN_ERROR(ptr, size, flags)                                   \
 	do {                                                                            \
 		(ptr) = kernel::memory::kmalloc(size, flags);                               \
