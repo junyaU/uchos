@@ -32,6 +32,6 @@ private:
 
 extern screen* kscreen;
 
-} // namespace kernel::graphics
+void initialize(const FrameBufferConf& frame_buffer_conf, Color bg_color);
 
-void initialize_screen(const FrameBufferConf& frame_buffer_conf, kernel::graphics::Color bg_color);
+} // namespace kernel::graphics

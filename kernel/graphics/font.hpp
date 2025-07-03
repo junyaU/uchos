@@ -46,10 +46,10 @@ void to_upper(char* s);
 
 extern bitmap_font* kfont;
 
-} // namespace kernel::graphics
-
 FT_Face new_face();
 
 void initialize_font();
 
 void initialize_freetype();
+
+} // namespace kernel::graphics

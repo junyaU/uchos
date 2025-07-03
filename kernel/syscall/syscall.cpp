@@ -16,7 +16,7 @@ void initialize()
 	write_msr(IA32_LSTAR, reinterpret_cast<uint64_t>(syscall_entry));
 
 	// Set syscall/sysret CS and SS
-	write_msr(IA32_STAR, (static_cast<uint64_t>(KERNEL_CS) << 32) |
+	write_msr(IA32_STAR, (static_cast<uint64_t>(kernel::memory::KERNEL_CS) << 32) |
 								 (static_cast<uint64_t>(16 | 3) << 48));
 
 	// Set syscall/sysret RFLAGS

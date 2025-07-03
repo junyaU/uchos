@@ -9,6 +9,9 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
+namespace kernel::memory
+{
+
 namespace
 {
 std::array<segment_descriptor, 7> gdt;
@@ -89,7 +92,7 @@ void set_tss(int index, void* addr)
 
 void* allocate_stack(size_t size)
 {
-	void* stack = kmalloc(size, kernel::memory::KMALLOC_UNINITIALIZED);
+	void* stack = kernel::memory::kmalloc(size, KMALLOC_UNINITIALIZED);
 	if (stack == nullptr) {
 		return nullptr;
 	}
@@ -99,7 +102,7 @@ void* allocate_stack(size_t size)
 
 void initialize_tss()
 {
-	const size_t stack_size = kernel::memory::PAGE_SIZE * 8;
+	const size_t stack_size = PAGE_SIZE * 8;
 	void* stack1 = allocate_stack(stack_size);
 	void* stack2 = allocate_stack(stack_size);
 	void* stack3 = allocate_stack(stack_size);
@@ -120,3 +123,5 @@ void initialize_tss()
 
 	load_tr(TSS);
 }
+
+} // namespace kernel::memory

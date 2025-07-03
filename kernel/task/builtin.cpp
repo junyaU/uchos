@@ -33,7 +33,7 @@ void handle_memory_usage(const message& m)
 	size_t used_mem = 0;
 	size_t total_mem = 0;
 
-	get_memory_usage(&total_mem, &used_mem);
+	kernel::memory::get_memory_usage(&total_mem, &used_mem);
 
 	send_m.data.memory_usage.total = total_mem;
 	send_m.data.memory_usage.used = used_mem;
@@ -77,7 +77,7 @@ void handle_fs_register_path(const message& m)
 		memcpy(&t->fs_path, p, sizeof(path));
 	}
 
-	kfree(p);
+	kernel::memory::kfree(p);
 
 	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = process_ids::KERNEL };
 	reply.data.fs_op.result = 0;

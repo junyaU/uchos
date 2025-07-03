@@ -49,10 +49,10 @@ void render_unicode(char32_t c, FT_Face face)
 
 void write_ascii(screen& scr, point2d position, char c, uint32_t color_code)
 {
-	const uint8_t* font = kernel::graphics::kfont->get_font(c);
+	const uint8_t* font = kfont->get_font(c);
 	if (font != nullptr) {
-		for (int dy = 0; dy < kernel::graphics::kfont->height(); dy++) {
-			for (int dx = 0; dx < kernel::graphics::kfont->width(); dx++) {
+		for (int dy = 0; dy < kfont->height(); dy++) {
+			for (int dx = 0; dx < kfont->width(); dx++) {
 				if ((font[dy] << dx & 0x80) != 0) {
 					scr.put_pixel(position + point2d{ dx, dy }, color_code);
 				}
@@ -93,7 +93,7 @@ void write_unicode(screen& scr, point2d position, char32_t c, uint32_t color_cod
 		auto face = nullptr; // new_face();
 		if (face == nullptr) {
 			write_ascii(scr, position, '?', color_code);
-			write_ascii(scr, position + point2d{ kernel::graphics::kfont->width(), 0 }, '?',
+			write_ascii(scr, position + point2d{ kfont->width(), 0 }, '?',
 						color_code);
 			return;
 		}
@@ -175,7 +175,7 @@ void write_string(screen& scr, point2d position, const char* s, uint32_t color_c
 		const int size = utf8_size(*s);
 		const char32_t c = utf8_to_unicode(s);
 
-		write_unicode(scr, position + point2d{ font_position * kernel::graphics::kfont->width(), 0 },
+		write_unicode(scr, position + point2d{ font_position * kfont->width(), 0 },
 					  c, color_code);
 
 		font_position += is_ascii_code(c) ? 1 : 2;
@@ -207,10 +207,8 @@ void to_upper(char* s)
 	}
 }
 
-bitmap_font* kernel::graphics::kfont;
+bitmap_font* kfont;
 alignas(bitmap_font) char bitmap_font_buffer[sizeof(bitmap_font)];
-
-} // namespace kernel::graphics
 
 FT_Face new_face()
 {
@@ -230,7 +228,7 @@ FT_Face new_face()
 	return face;
 }
 
-void initialize_font() { kernel::graphics::kfont = new (kernel::graphics::bitmap_font_buffer) kernel::graphics::bitmap_font{ 8, 16 }; }
+void initialize_font() { kfont = new (bitmap_font_buffer) bitmap_font{ 8, 16 }; }
 
 void initialize_freetype()
 {
@@ -239,3 +237,5 @@ void initialize_freetype()
 		return;
 	}
 }
+
+} // namespace kernel::graphics

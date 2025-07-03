@@ -99,7 +99,7 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 
 	stack_size = parent->stack_size;
 
-	stack = static_cast<uint64_t*>(kmalloc(stack_size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE));
+	stack = static_cast<uint64_t*>(kernel::memory::kmalloc(stack_size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE));
 	if (stack == nullptr) {
 		LOG_ERROR("Failed to allocate stack for child task");
 		return ERR_NO_MEMORY;
@@ -316,7 +316,7 @@ task::task(int raw_id,
 	}
 
 	stack_size = kernel::memory::PAGE_SIZE * 8;
-	stack = static_cast<uint64_t*>(kmalloc(stack_size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE));
+	stack = static_cast<uint64_t*>(kernel::memory::kmalloc(stack_size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE));
 	if (stack == nullptr) {
 		LOG_ERROR("Failed to allocate stack for task %s", name);
 		return;
@@ -332,8 +332,8 @@ task::task(int raw_id,
 	ctx.rsp = (stack_end & ~0xfLU) - 8;
 	ctx.rflags = 0x202;
 	ctx.rip = task_addr;
-	ctx.cs = KERNEL_CS;
-	ctx.ss = KERNEL_SS;
+	ctx.cs = kernel::memory::KERNEL_CS;
+	ctx.ss = kernel::memory::KERNEL_SS;
 	*reinterpret_cast<uint32_t*>(&ctx.fxsave_area[24]) = 0x1f80;
 }
 

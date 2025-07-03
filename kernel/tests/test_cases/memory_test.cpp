@@ -131,9 +131,9 @@ void register_buddy_system_tests()
 void test_slab_basic()
 {
 	// Test basic allocation and free
-	void* ptr = kmalloc(64, kernel::memory::KMALLOC_UNINITIALIZED);
+	void* ptr = kernel::memory::kmalloc(64, kernel::memory::KMALLOC_UNINITIALIZED);
 	ASSERT_NOT_NULL(ptr);
-	kfree(ptr);
+	kernel::memory::kfree(ptr);
 }
 
 void test_slab_cache_creation()
@@ -156,17 +156,17 @@ void test_slab_aligned_allocation()
 {
 	// Test allocation with alignment
 	constexpr size_t ALIGN = 16;
-	void* ptr = kmalloc(64, kernel::memory::KMALLOC_UNINITIALIZED, ALIGN);
+	void* ptr = kernel::memory::kmalloc(64, kernel::memory::KMALLOC_UNINITIALIZED, ALIGN);
 	ASSERT_NOT_NULL(ptr);
 	ASSERT_EQ(reinterpret_cast<uintptr_t>(ptr) % ALIGN, 0);
-	kfree(ptr);
+	kernel::memory::kfree(ptr);
 }
 
 void test_slab_zeroed_allocation()
 {
 	// Test zero-initialized allocation
 	constexpr size_t SIZE = 64;
-	void* ptr = kmalloc(SIZE, kernel::memory::KMALLOC_ZEROED);
+	void* ptr = kernel::memory::kmalloc(SIZE, kernel::memory::KMALLOC_ZEROED);
 	ASSERT_NOT_NULL(ptr);
 
 	// Verify memory is zeroed
@@ -175,17 +175,17 @@ void test_slab_zeroed_allocation()
 		ASSERT_EQ(bytes[i], 0);
 	}
 
-	kfree(ptr);
+	kernel::memory::kfree(ptr);
 }
 
 void test_slab_error_handling()
 {
 	// Test invalid alignment (not power of 2)
-	void* ptr = kmalloc(64, kernel::memory::KMALLOC_UNINITIALIZED, 3);
+	void* ptr = kernel::memory::kmalloc(64, kernel::memory::KMALLOC_UNINITIALIZED, 3);
 	ASSERT_NULL(ptr);
 
 	// Test allocation with size 0
-	ptr = kmalloc(0, kernel::memory::KMALLOC_UNINITIALIZED);
+	ptr = kernel::memory::kmalloc(0, kernel::memory::KMALLOC_UNINITIALIZED);
 	ASSERT_NULL(ptr);
 }
 

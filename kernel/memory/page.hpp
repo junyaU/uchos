@@ -41,12 +41,10 @@ private:
 	void* ptr_;
 };
 
-} // namespace kernel::memory
-
-extern std::vector<kernel::memory::page> pages;
+extern std::vector<page> pages;
 
 void initialize_pages();
-
-kernel::memory::page* get_page(void* ptr);
-
+page* get_page(void* ptr);
 void get_memory_usage(size_t* total_mem, size_t* used_mem);
+
+} // namespace kernel::memory

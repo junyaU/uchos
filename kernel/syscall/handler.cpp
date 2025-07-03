@@ -160,7 +160,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::task::send_message(process_ids::FS_FAT32, read_msg);
 
 	message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
-	kfree(entry);
+	kernel::memory::kfree(entry);
 
 	kernel::memory::page_table_entry* current_page_table = kernel::memory::get_active_page_table();
 	kernel::memory::clean_page_tables(current_page_table);

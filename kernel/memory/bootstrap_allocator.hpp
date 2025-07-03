@@ -49,10 +49,8 @@ private:
 
 extern bootstrap_allocator* boot_allocator;
 
-} // namespace kernel::memory
-
-void initialize_bootstrap_allocator(const MemoryMap& mem_map);
-
+void initialize(const MemoryMap& mem_map);
 void initialize_heap();
+void disable();
 
-void disable_bootstrap_allocator();
+} // namespace kernel::memory

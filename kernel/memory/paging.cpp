@@ -91,7 +91,7 @@ void dump_page_tables(vaddr_t addr)
 
 page_table_entry* new_page_table()
 {
-	void* addr = kmalloc(PAGE_SIZE, KMALLOC_ZEROED, PAGE_SIZE);
+	void* addr = kernel::memory::kmalloc(PAGE_SIZE, KMALLOC_ZEROED, PAGE_SIZE);
 	if (addr == nullptr) {
 		LOG_ERROR("Failed to allocate memory for page table.");
 		return nullptr;
@@ -204,7 +204,7 @@ void clean_page_table(page_table_entry* table, int page_table_level)
 			continue;
 		}
 
-		kfree(entry.get_next_level_table());
+		kernel::memory::kfree(entry.get_next_level_table());
 		table[i].data = 0;
 	}
 }
@@ -218,11 +218,11 @@ void clean_page_tables(page_table_entry* table)
 		}
 
 		clean_page_table(entry.get_next_level_table(), 3);
-		kfree(entry.get_next_level_table());
+		kernel::memory::kfree(entry.get_next_level_table());
 		table[i].data = 0;
 	}
 
-	kfree(table);
+	kernel::memory::kfree(table);
 }
 
 void copy_page_tables(page_table_entry* dst,

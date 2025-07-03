@@ -38,7 +38,7 @@ void initialize_interrupt()
 
 	auto set_entry = [](int irq, auto handler, uint16_t ist = 0) {
 		set_idt_entry(idt[irq], reinterpret_cast<uint64_t>(handler),
-					  type_attr{ ist, gate_type::kInterruptGate, 0, 1 }, KERNEL_CS);
+					  type_attr{ ist, gate_type::kInterruptGate, 0, 1 }, kernel::memory::KERNEL_CS);
 	};
 
 	set_entry(interrupt_vector::LOCAL_APIC_TIMER, on_timer_interrupt, IST_FOR_TIMER);

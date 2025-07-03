@@ -78,10 +78,10 @@ public:
 		if (n > std::numeric_limits<std::size_t>::max() / sizeof(T)) {
 			return nullptr; // オーバーフローチェック
 		}
-		return static_cast<T*>(::kmalloc(n * sizeof(T), KMALLOC_ZEROED));
+		return static_cast<T*>(kmalloc(n * sizeof(T), KMALLOC_ZEROED));
 	}
 
-	void deallocate(T* p, std::size_t) noexcept { ::kfree(p); }
+	void deallocate(T* p, std::size_t) noexcept { kfree(p); }
 };
 
 template<typename T, typename U>

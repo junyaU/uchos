@@ -125,21 +125,21 @@ bool kernel_timer::increment_tick()
 
 kernel_timer* ktimer;
 
-} // namespace kernel::timers
-
-void initialize_timer()
+void initialize()
 {
 	LOG_INFO("Initializing logical timer...");
 
-	void* addr = kmalloc(sizeof(kernel::timers::kernel_timer), kernel::memory::KMALLOC_ZEROED);
+	void* addr = kernel::memory::kmalloc(sizeof(kernel_timer), kernel::memory::KMALLOC_ZEROED);
 	if (addr == nullptr) {
 		LOG_ERROR("Failed to allocate memory for kernel timer.");
 		return;
 	}
 
-	kernel::timers::ktimer = new (addr) kernel::timers::kernel_timer;
+	ktimer = new (addr) kernel_timer;
 
 	run_test_suite(register_timer_tests);
 
 	LOG_INFO("Logical timer initialized successfully.");
 }
+
+} // namespace kernel::timers

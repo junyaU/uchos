@@ -3,20 +3,23 @@
 #include <libs/common/types.hpp>
 #include <vector>
 
-std::vector<kernel::memory::page> pages;
+namespace kernel::memory
+{
+
+std::vector<page> pages;
 
 void initialize_pages()
 {
-	const size_t memory_start_index = kernel::memory::boot_allocator->start_index();
-	const size_t memory_end_index = kernel::memory::boot_allocator->end_index();
+	const size_t memory_start_index = boot_allocator->start_index();
+	const size_t memory_end_index = boot_allocator->end_index();
 
 	pages.resize(memory_end_index - memory_start_index);
 
 	for (size_t i = memory_start_index; i < memory_end_index; ++i) {
 		const size_t page_index = i - memory_start_index;
 
-		pages[page_index].set_ptr(reinterpret_cast<void*>(i * kernel::memory::PAGE_SIZE));
-		if (kernel::memory::boot_allocator->is_bit_set(i)) {
+		pages[page_index].set_ptr(reinterpret_cast<void*>(i * PAGE_SIZE));
+		if (boot_allocator->is_bit_set(i)) {
 			pages[page_index].set_used();
 		} else {
 			pages[page_index].set_free();
@@ -24,14 +27,14 @@ void initialize_pages()
 	}
 }
 
-kernel::memory::page* get_page(void* ptr)
+page* get_page(void* ptr)
 {
 	if (ptr == nullptr ||
-		pages.size() < reinterpret_cast<uintptr_t>(ptr) / kernel::memory::PAGE_SIZE) {
+		pages.size() < reinterpret_cast<uintptr_t>(ptr) / PAGE_SIZE) {
 		return nullptr;
 	}
 
-	return &pages[reinterpret_cast<uintptr_t>(ptr) / kernel::memory::PAGE_SIZE];
+	return &pages[reinterpret_cast<uintptr_t>(ptr) / PAGE_SIZE];
 }
 
 void get_memory_usage(size_t* total_mem, size_t* used_mem)
@@ -44,6 +47,8 @@ void get_memory_usage(size_t* total_mem, size_t* used_mem)
 		}
 	}
 
-	*used_mem = (pages.size() - available_pages) * kernel::memory::PAGE_SIZE;
-	*total_mem = pages.size() * kernel::memory::PAGE_SIZE;
+	*used_mem = (pages.size() - available_pages) * PAGE_SIZE;
+	*total_mem = pages.size() * PAGE_SIZE;
 }
+
+} // namespace kernel::memory

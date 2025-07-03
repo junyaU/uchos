@@ -157,7 +157,7 @@ void exec_elf(void* buffer, const char* name, const char* args)
 	const kernel::memory::vaddr_t stack_addr{ 0xffff'ffff'ffff'f000 - stack_size };
 	kernel::memory::setup_page_tables(stack_addr, stack_size / kernel::memory::PAGE_SIZE, true);
 
-	enter_user_mode(argc, argv, USER_SS, elf_header->e_entry,
+	enter_user_mode(argc, argv, kernel::memory::USER_SS, elf_header->e_entry,
 					stack_addr.data + stack_size - 8,
 					&kernel::task::CURRENT_TASK->kernel_stack_ptr);
 }

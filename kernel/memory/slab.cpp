@@ -203,6 +203,8 @@ void m_slab::free_object(void* addr, size_t obj_size)
 
 std::unordered_map<void*, void*> aligned_to_raw_addr_map;
 
+namespace kernel::memory {
+
 void* kmalloc(size_t size, unsigned flags, int align)
 {
 	if (align != 1 && (align & (align - 1)) != 0) {
@@ -214,9 +216,9 @@ void* kmalloc(size_t size, unsigned flags, int align)
 	char name[20];
 	sprintf(name, "cache-%d", static_cast<int>(size));
 
-	auto* cache = kernel::memory::get_cache_in_chain(name);
+	auto* cache = get_cache_in_chain(name);
 	if (cache == nullptr) {
-		cache = &kernel::memory::m_cache_create(name, size);
+		cache = &m_cache_create(name, size);
 	}
 
 	void* addr = cache->alloc();
@@ -236,7 +238,7 @@ void* kmalloc(size_t size, unsigned flags, int align)
 		addr = aligned_addr;
 	}
 
-	if ((flags & kernel::memory::KMALLOC_ZEROED) != 0) {
+	if ((flags & KMALLOC_ZEROED) != 0) {
 		memset(addr, 0, size);
 	}
 
@@ -251,31 +253,29 @@ void kfree(void* addr)
 		aligned_to_raw_addr_map.erase(it);
 	}
 
-	kernel::memory::page* page = get_page(addr);
-	if (page == nullptr) {
+	page* p = get_page(addr);
+	if (p == nullptr) {
 		LOG_ERROR("invalid address");
 		return;
 	}
 
-	kernel::memory::m_cache* cache = page->cache();
-	kernel::memory::m_slab* slab = page->slab();
+	m_cache* cache = p->cache();
+	m_slab* slab = p->slab();
 
 	slab->free_object(addr, cache->object_size());
 	cache->decrease_num_active_objects();
 
-	if (slab->status() == kernel::memory::slab_status::FULL) {
-		slab->move_list(*cache, kernel::memory::slab_status::PARTIAL);
+	if (slab->status() == slab_status::FULL) {
+		slab->move_list(*cache, slab_status::PARTIAL);
 	}
 
 	if (slab->is_empty()) {
-		slab->move_list(*cache, kernel::memory::slab_status::FREE);
+		slab->move_list(*cache, slab_status::FREE);
 		cache->decrease_num_active_slabs();
 	}
-};
+}
 
-namespace kernel::memory {
 std::list<std::unique_ptr<m_cache>> cache_chain;
-} // namespace kernel::memory
 
 void initialize_slab_allocator()
 {
@@ -283,9 +283,11 @@ void initialize_slab_allocator()
 
 	aligned_to_raw_addr_map = std::unordered_map<void*, void*>();
 
-	kernel::memory::cache_chain.clear();
+	cache_chain.clear();
 
 	run_test_suite(register_slab_tests);
 
 	LOG_INFO("Initializing slab allocator successfully.");
 }
+
+} // namespace kernel::memory

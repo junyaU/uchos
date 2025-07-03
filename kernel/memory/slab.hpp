@@ -108,8 +108,6 @@ m_cache* get_cache_in_chain(char* name);
 
 m_cache& m_cache_create(const char* name, size_t obj_size);
 
-} // namespace kernel::memory
-
 void* kmalloc(size_t size, unsigned flags, int align = 1);
 
 void kfree(void* addr);
@@ -119,6 +117,8 @@ struct kfree_deleter {
 };
 
 void initialize_slab_allocator();
+
+} // namespace kernel::memory
 
 #define KMALLOC_OR_RETURN(ptr, size, flags)                                         \
 	do {                                                                            \

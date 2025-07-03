@@ -210,7 +210,7 @@ void send_file_data(fs_id_t id,
 	m.data.fs_op.request_id = id;
 
 	if (for_user) {
-		void* user_buf = kmalloc(size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE);
+		void* user_buf = kernel::memory::kmalloc(size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE);
 		if (user_buf == nullptr) {
 			LOG_ERROR("failed to allocate memory");
 			return;
@@ -248,7 +248,7 @@ error_t process_read_data_response(const message& m, bool for_user)
 					   ctx.requester, m.type, for_user);
 	}
 
-	kfree(m.data.blk_io.buf);
+	kernel::memory::kfree(m.data.blk_io.buf);
 
 	return OK;
 }
@@ -346,7 +346,7 @@ void handle_get_file_info(const message& m)
 		}
 
 		if (entry_name_is_equal(ROOT_DIR[i], name)) {
-			void* buf = kmalloc(sizeof(directory_entry), kernel::memory::KMALLOC_ZEROED);
+			void* buf = kernel::memory::kmalloc(sizeof(directory_entry), kernel::memory::KMALLOC_ZEROED);
 			memcpy(buf, &ROOT_DIR[i], sizeof(directory_entry));
 			sm.data.fs_op.buf = buf;
 			break;
@@ -404,7 +404,7 @@ void handle_get_directory_contents(const message& m)
 		++entries_count;
 	}
 
-	void* buf = kmalloc(entries_count * sizeof(stat), kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE);
+	void* buf = kernel::memory::kmalloc(entries_count * sizeof(stat), kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE);
 	if (buf == nullptr) {
 		LOG_ERROR("failed to allocate memory");
 		return;
@@ -531,7 +531,7 @@ void handle_fs_register_path(const message& m)
 
 	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = m.sender };
 
-	void* buf = kmalloc(sizeof(path), kernel::memory::KMALLOC_ZEROED);
+	void* buf = kernel::memory::kmalloc(sizeof(path), kernel::memory::KMALLOC_ZEROED);
 	if (buf == nullptr) {
 		LOG_ERROR("failed to allocate memory");
 		return;

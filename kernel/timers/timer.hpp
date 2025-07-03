@@ -66,6 +66,6 @@ private:
 
 extern kernel_timer* ktimer;
 
-} // namespace kernel::timers
+void initialize();
 
-void initialize_timer();
+} // namespace kernel::timers

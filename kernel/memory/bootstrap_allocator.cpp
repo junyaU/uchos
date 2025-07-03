@@ -93,9 +93,7 @@ alignas(bootstrap_allocator) char bootstrap_allocator_buffer[sizeof(
 		bootstrap_allocator)];
 bootstrap_allocator* boot_allocator;
 
-} // namespace kernel::memory
-
-void initialize_bootstrap_allocator(const MemoryMap& mem_map)
+void initialize(const MemoryMap& mem_map)
 {
 	LOG_INFO("Initializing bootstrap allocator...");
 	kernel::memory::boot_allocator = new (kernel::memory::bootstrap_allocator_buffer) kernel::memory::bootstrap_allocator();
@@ -144,7 +142,7 @@ void initialize_heap()
 	program_break_end = program_break + heap_size;
 }
 
-void disable_bootstrap_allocator()
+void disable()
 {
 	if (kernel::memory::boot_allocator != nullptr) {
 		kernel::memory::memory_manager->free(kernel::memory::boot_allocator, sizeof(kernel::memory::bootstrap_allocator));
@@ -153,3 +151,5 @@ void disable_bootstrap_allocator()
 
 	LOG_INFO("Bootstrap allocator disabled.");
 }
+
+} // namespace kernel::memory

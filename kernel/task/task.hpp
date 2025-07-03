@@ -46,9 +46,9 @@ struct task {
 
 	~task() { kernel::memory::clean_page_tables(reinterpret_cast<kernel::memory::page_table_entry*>(ctx.cr3)); }
 
-	static void* operator new(size_t size) { return kmalloc(size, kernel::memory::KMALLOC_ZEROED); }
+	static void* operator new(size_t size) { return kernel::memory::kmalloc(size, kernel::memory::KMALLOC_ZEROED); }
 
-	static void operator delete(void* p) { kfree(p); }
+	static void operator delete(void* p) { kernel::memory::kfree(p); }
 
 	error_t copy_parent_stack(const context& parent_ctx);
 

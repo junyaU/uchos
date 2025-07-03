@@ -8,7 +8,6 @@ set(MEMORY_SOURCE_FILES
     segment.cpp
     buddy_system.cpp
     user.cpp
-    memory.cpp
 )
 
 add_library(UchosMemory ${MEMORY_SOURCE_FILES})
