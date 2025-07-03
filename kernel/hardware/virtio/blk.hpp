@@ -14,6 +14,8 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
+namespace kernel::hw::virtio {
+
 // Forward declaration
 struct virtio_pci_device;
 
@@ -74,3 +76,5 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len);
 error_t init_blk_device();
 
 void virtio_blk_task();
+
+} // namespace kernel::hw::virtio

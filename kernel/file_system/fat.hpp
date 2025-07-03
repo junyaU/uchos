@@ -16,7 +16,7 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
-namespace file_system
+namespace kernel::fs
 {
 struct bios_parameter_block {
 	uint8_t jump_boot[3];
@@ -90,4 +90,4 @@ void read_dir_entry_name(const directory_entry& entry, char* dest);
 
 void fat32_task();
 
-} // namespace file_system
+} // namespace kernel::fs

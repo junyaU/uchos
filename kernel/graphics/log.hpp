@@ -15,6 +15,8 @@
 
 #include <libs/common/types.hpp>
 
+namespace kernel::graphics {
+
 enum class log_level : uint8_t {
 	DEBUG,
 	ERROR,
@@ -24,13 +26,15 @@ enum class log_level : uint8_t {
 
 void change_log_level(log_level level);
 
+} // namespace kernel::graphics
+
 __attribute__((no_caller_saved_registers)) void
-printk(log_level level, const char* format, ...);
+printk(kernel::graphics::log_level level, const char* format, ...);
 
 #define LOG(level, fmt, ...)                                                        \
 	printk(level, "[%s:%d] " fmt "", __func__, __LINE__, ##__VA_ARGS__)
 
-#define LOG_DEBUG(fmt, ...) LOG(log_level::DEBUG, fmt, ##__VA_ARGS__)
-#define LOG_INFO(fmt, ...) LOG(log_level::INFO, fmt, ##__VA_ARGS__)
-#define LOG_ERROR(fmt, ...) LOG(log_level::ERROR, fmt, ##__VA_ARGS__)
-#define LOG_TEST(fmt, ...) LOG(log_level::TEST, fmt, ##__VA_ARGS__)
+#define LOG_DEBUG(fmt, ...) LOG(kernel::graphics::log_level::DEBUG, fmt, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...) LOG(kernel::graphics::log_level::INFO, fmt, ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) LOG(kernel::graphics::log_level::ERROR, fmt, ##__VA_ARGS__)
+#define LOG_TEST(fmt, ...) LOG(kernel::graphics::log_level::TEST, fmt, ##__VA_ARGS__)

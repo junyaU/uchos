@@ -9,7 +9,7 @@ ptr add_or_null(ptr p, disp d)
 }
 } // namespace
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 extended_register_list::iterator& extended_register_list::iterator::operator++()
 {
@@ -21,9 +21,9 @@ extended_register_list::iterator& extended_register_list::iterator::operator++()
 }
 
 extended_register_list::extended_register_list(uint64_t mmio_base,
-											   usb::xhci::hcc_params1_register hccp)
+											   kernel::hw::usb::xhci::hcc_params1_register hccp)
 	: begin_(add_or_null(reinterpret_cast<value_type*>(mmio_base),
 						 hccp.bits.xhci_extended_capabilities_pointer))
 {
 }
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

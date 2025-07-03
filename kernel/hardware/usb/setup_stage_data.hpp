@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace usb
+namespace kernel::hw::usb
 {
 namespace request_type
 {
@@ -94,4 +94,4 @@ inline bool operator==(setup_stage_data lhs, setup_stage_data rhs)
 		   lhs.request == rhs.request && lhs.value == rhs.value &&
 		   lhs.index == rhs.index && lhs.length == rhs.length;
 }
-}; // namespace usb
+}; // namespace kernel::hw::usb

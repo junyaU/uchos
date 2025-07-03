@@ -7,6 +7,9 @@ struct MemoryMap;
 #include <cstdint>
 #include <stddef.h>
 
+namespace kernel::memory
+{
+
 // 64 GiB
 static const uint64_t MAX_PHYS_MEM_BYTES = 64UL * 1024 * 1024 * 1024;
 const uint64_t TOTAL_PAGES = MAX_PHYS_MEM_BYTES / PAGE_SIZE;
@@ -46,8 +49,8 @@ private:
 
 extern bootstrap_allocator* boot_allocator;
 
-void initialize_bootstrap_allocator(const MemoryMap& mem_map);
-
+void initialize(const MemoryMap& mem_map);
 void initialize_heap();
+void disable();
 
-void disable_bootstrap_allocator();
+} // namespace kernel::memory

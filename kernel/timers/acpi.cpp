@@ -4,7 +4,7 @@
 #include <libs/common/types.hpp>
 #include <string.h>
 
-namespace acpi
+namespace kernel::timers::acpi
 {
 bool root_system_description_pointer::is_valid() const
 {
@@ -108,4 +108,4 @@ float pm_timer_count_to_millisec(uint32_t count)
 	return static_cast<float>(count) * 1000 / PM_TIMER_FREQUENCY;
 }
 
-} // namespace acpi
+} // namespace kernel::timers::acpi

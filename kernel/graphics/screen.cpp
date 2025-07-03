@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <new>
 
+namespace kernel::graphics {
+
 screen::screen(const FrameBufferConf& frame_buffer_conf, Color bg_color)
 	: pixels_per_scan_line_(frame_buffer_conf.pixels_per_scan_line),
 	  horizontal_resolution_(frame_buffer_conf.horizontal_resolution),
@@ -36,10 +38,12 @@ void screen::fill_rectangle(point2d position,
 screen* kscreen;
 alignas(screen) char screen_buffer[sizeof(screen)];
 
-void initialize_screen(const FrameBufferConf& frame_buffer_conf, Color bg_color)
+void initialize(const FrameBufferConf& frame_buffer_conf, Color bg_color)
 {
 	kscreen = new (screen_buffer) screen{ frame_buffer_conf, bg_color };
 
 	kscreen->fill_rectangle(point2d{ 0, 0 }, kscreen->size(),
 							kscreen->bg_color().GetCode());
 }
+
+} // namespace kernel::graphics

@@ -10,7 +10,7 @@
 
 #pragma once
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 // USB 1.1 Full Speed (12 Mbps)
 const int FULL_SPEED = 1;
@@ -26,4 +26,4 @@ const int SUPER_SPEED = 4;
 
 // USB 3.1 Super Speed Plus (10 Gbps)
 const int SUPER_SPEED_PLUS = 5;
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

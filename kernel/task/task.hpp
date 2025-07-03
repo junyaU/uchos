@@ -13,7 +13,10 @@
 #include <libs/common/process_id.hpp>
 #include <queue>
 
-void initialize_task();
+namespace kernel::task
+{
+
+void initialize();
 
 enum task_state : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING, TASK_EXITED };
 
@@ -29,7 +32,7 @@ struct task {
 	size_t stack_size;
 	uint64_t kernel_stack_ptr;
 	alignas(16) context ctx;
-	page_table_entry* page_table_snapshot;
+	kernel::memory::page_table_entry* page_table_snapshot;
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;
 	std::array<message_handler_t, total_message_types> message_handlers;
@@ -41,11 +44,11 @@ struct task {
 		 bool setup_context,
 		 bool is_initilized);
 
-	~task() { clean_page_tables(reinterpret_cast<page_table_entry*>(ctx.cr3)); }
+	~task() { kernel::memory::clean_page_tables(reinterpret_cast<kernel::memory::page_table_entry*>(ctx.cr3)); }
 
-	static void* operator new(size_t size) { return kmalloc(size, KMALLOC_ZEROED); }
+	static void* operator new(size_t size) { return kernel::memory::kmalloc(size, kernel::memory::KMALLOC_ZEROED); }
 
-	static void operator delete(void* p) { kfree(p); }
+	static void operator delete(void* p) { kernel::memory::kfree(p); }
 
 	error_t copy_parent_stack(const context& parent_ctx);
 
@@ -55,9 +58,9 @@ struct task {
 
 	bool has_parent() const { return parent_id.raw() != -1; }
 
-	page_table_entry* get_page_table() const
+	kernel::memory::page_table_entry* get_page_table() const
 	{
-		return reinterpret_cast<page_table_entry*>(ctx.cr3);
+		return reinterpret_cast<kernel::memory::page_table_entry*>(ctx.cr3);
 	}
 };
 
@@ -101,3 +104,8 @@ void exit_task(int status);
 [[noreturn]] void process_messages(task* t);
 
 message wait_for_message(msg_t type);
+
+} // namespace kernel::task
+
+// For assembly and extern "C" compatibility
+using kernel::task::CURRENT_TASK;

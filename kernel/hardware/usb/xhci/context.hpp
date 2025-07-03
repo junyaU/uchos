@@ -17,7 +17,7 @@
 
 #include <cstdint>
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 union trb;
 union slot_context {
@@ -143,4 +143,4 @@ void initialize_endpoint0_context(endpoint_context& ctx,
 								  trb* transfer_ring_buffer,
 								  int max_packet_size);
 
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

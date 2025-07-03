@@ -3,7 +3,7 @@
 #include "memory/slab.hpp"
 #include <libs/common/types.hpp>
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 void device_manager::initialize(size_t max_slots)
 {
@@ -11,8 +11,8 @@ void device_manager::initialize(size_t max_slots)
 
 	devices_ =
 			// NOLINTNEXTLINE(bugprone-sizeof-expression)
-			reinterpret_cast<device**>(kmalloc(sizeof(device*) * (max_slots_ + 1),
-											   KMALLOC_UNINITIALIZED));
+			reinterpret_cast<device**>(kernel::memory::kmalloc(sizeof(device*) * (max_slots_ + 1),
+											   kernel::memory::KMALLOC_UNINITIALIZED));
 	if (devices_ == nullptr) {
 		LOG_ERROR("failed to allocate memory for devices");
 		return;
@@ -20,10 +20,10 @@ void device_manager::initialize(size_t max_slots)
 
 	contexts_ = reinterpret_cast<device_context**>(
 			// NOLINTNEXTLINE(bugprone-sizeof-expression)
-			kmalloc(sizeof(device_context*) * (max_slots_ + 1),
-					KMALLOC_UNINITIALIZED, 64));
+			kernel::memory::kmalloc(sizeof(device_context*) * (max_slots_ + 1),
+					kernel::memory::KMALLOC_UNINITIALIZED, 64));
 	if (contexts_ == nullptr) {
-		kfree(devices_);
+		kernel::memory::kfree(devices_);
 		LOG_ERROR("failed to allocate memory for device contexts");
 		return;
 	}
@@ -78,7 +78,7 @@ device* device_manager::find_by_slot_id(uint8_t slot_id) const
 }
 
 void device_manager::allocate_device(uint8_t slot_id,
-									 usb::xhci::doorbell_register* dbreg)
+									 kernel::hw::usb::xhci::doorbell_register* dbreg)
 {
 	if (slot_id > max_slots_) {
 		LOG_ERROR("slot_id %d is out of range", slot_id);
@@ -91,7 +91,7 @@ void device_manager::allocate_device(uint8_t slot_id,
 	}
 
 	devices_[slot_id] = reinterpret_cast<device*>(
-			kmalloc(sizeof(device), KMALLOC_UNINITIALIZED, 64));
+			kernel::memory::kmalloc(sizeof(device), kernel::memory::KMALLOC_UNINITIALIZED, 64));
 	new (devices_[slot_id]) device(slot_id, dbreg);
 }
 
@@ -109,7 +109,7 @@ void device_manager::load_dcbaa(uint8_t slot_id)
 void device_manager::remove(uint8_t slot_id)
 {
 	contexts_[slot_id] = nullptr;
-	kfree(devices_[slot_id]);
+	kernel::memory::kfree(devices_[slot_id]);
 	devices_[slot_id] = nullptr;
 }
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

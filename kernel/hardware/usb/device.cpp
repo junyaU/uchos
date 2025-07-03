@@ -3,7 +3,7 @@
 #include "class_driver/base.hpp"
 #include "descriptor.hpp"
 
-namespace usb
+namespace kernel::hw::usb
 {
 device::~device() {}
 
@@ -186,4 +186,4 @@ void set_configuration(device& dev,
 	return dev.control_out({ ep_id, setup_data, nullptr, 0, nullptr });
 }
 
-} // namespace usb
+} // namespace kernel::hw::usb

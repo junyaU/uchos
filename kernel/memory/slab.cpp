@@ -14,6 +14,8 @@
 #include <unordered_map>
 #include <utility>
 
+namespace kernel::memory {
+
 m_cache* get_cache_in_chain(char* name)
 {
 	if (cache_chain.empty()) {
@@ -40,10 +42,10 @@ m_cache::m_cache(char name[20], size_t object_size)
 	strncpy(name_, name, sizeof(name_) - 1);
 	name[sizeof(name_) - 1] = '\0';
 
-	if (object_size <= PAGE_SIZE) {
+	if (object_size <= kernel::memory::PAGE_SIZE) {
 		num_pages_per_slab_ = 1;
 	} else {
-		num_pages_per_slab_ = object_size / PAGE_SIZE;
+		num_pages_per_slab_ = object_size / kernel::memory::PAGE_SIZE;
 	}
 }
 
@@ -68,15 +70,15 @@ m_cache& m_cache_create(const char* name, size_t obj_size)
 	}
 
 	cache_chain.push_back(
-			std::make_unique<m_cache>(const_cast<char*>(name), obj_size));
+			std::make_unique<kernel::memory::m_cache>(const_cast<char*>(name), obj_size));
 
 	return *cache_chain.back();
 }
 
 bool m_cache::grow()
 {
-	size_t const bytes_per_slab = num_pages_per_slab_ * PAGE_SIZE;
-	void* addr = memory_manager->allocate(bytes_per_slab);
+	size_t const bytes_per_slab = num_pages_per_slab_ * kernel::memory::PAGE_SIZE;
+	void* addr = kernel::memory::memory_manager->allocate(bytes_per_slab);
 	if (addr == nullptr) {
 		LOG_ERROR("failed to allocate memory");
 		return false;
@@ -197,7 +199,11 @@ void m_slab::free_object(void* addr, size_t obj_size)
 	--num_in_use_;
 }
 
+} // namespace kernel::memory
+
 std::unordered_map<void*, void*> aligned_to_raw_addr_map;
+
+namespace kernel::memory {
 
 void* kmalloc(size_t size, unsigned flags, int align)
 {
@@ -247,14 +253,14 @@ void kfree(void* addr)
 		aligned_to_raw_addr_map.erase(it);
 	}
 
-	page* page = get_page(addr);
-	if (page == nullptr) {
+	page* p = get_page(addr);
+	if (p == nullptr) {
 		LOG_ERROR("invalid address");
 		return;
 	}
 
-	m_cache* cache = page->cache();
-	m_slab* slab = page->slab();
+	m_cache* cache = p->cache();
+	m_slab* slab = p->slab();
 
 	slab->free_object(addr, cache->object_size());
 	cache->decrease_num_active_objects();
@@ -267,9 +273,10 @@ void kfree(void* addr)
 		slab->move_list(*cache, slab_status::FREE);
 		cache->decrease_num_active_slabs();
 	}
-};
+}
 
 std::list<std::unique_ptr<m_cache>> cache_chain;
+
 void initialize_slab_allocator()
 {
 	LOG_INFO("Initializing slab allocator...");
@@ -282,3 +289,5 @@ void initialize_slab_allocator()
 
 	LOG_INFO("Initializing slab allocator successfully.");
 }
+
+} // namespace kernel::memory

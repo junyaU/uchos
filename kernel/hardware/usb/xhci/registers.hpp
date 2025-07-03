@@ -9,7 +9,7 @@
 
 #include <cstdint>
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 // hcs = host controller structural
 
@@ -509,4 +509,4 @@ union usb_legacy_support_bitmap {
 
 // void register_command_ring(ring* r, memory_mapped_register<crcr_bitmap>* crcr);
 
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

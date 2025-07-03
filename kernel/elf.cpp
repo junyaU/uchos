@@ -99,13 +99,13 @@ void copy_load_segment(elf64_ehdr_t* elf_header)
 			continue;
 		}
 
-		vaddr_t dest_addr;
+		kernel::memory::vaddr_t dest_addr;
 		dest_addr.data = program_header[i].p_vaddr;
 
 		const auto num_pages =
-				(program_header[i].p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
+				(program_header[i].p_memsz + kernel::memory::PAGE_SIZE - 1) / kernel::memory::PAGE_SIZE;
 
-		setup_page_tables(dest_addr, num_pages, true);
+		kernel::memory::setup_page_tables(dest_addr, num_pages, true);
 
 		auto* const src =
 				reinterpret_cast<uint8_t*>(elf_header) + program_header[i].p_offset;
@@ -142,22 +142,22 @@ void exec_elf(void* buffer, const char* name, const char* args)
 
 	load_elf(elf_header);
 
-	const vaddr_t argv_addr{ 0xffff'ffff'ffff'f000 };
-	setup_page_tables(argv_addr, 1, true);
+	const kernel::memory::vaddr_t argv_addr{ 0xffff'ffff'ffff'f000 };
+	kernel::memory::setup_page_tables(argv_addr, 1, true);
 
 	auto* argv = reinterpret_cast<char**>(argv_addr.data);
 	const int arg_v_len = 32;
 	auto* arg_buf =
 			reinterpret_cast<char*>(argv_addr.data + arg_v_len * sizeof(char**));
-	const int arg_buf_len = PAGE_SIZE - arg_v_len * sizeof(char**);
+	const int arg_buf_len = kernel::memory::PAGE_SIZE - arg_v_len * sizeof(char**);
 	const int argc = make_args(const_cast<char*>(name), const_cast<char*>(args),
 							   argv, arg_v_len, arg_buf, arg_buf_len);
 
-	const int stack_size = PAGE_SIZE * 8;
-	const vaddr_t stack_addr{ 0xffff'ffff'ffff'f000 - stack_size };
-	setup_page_tables(stack_addr, stack_size / PAGE_SIZE, true);
+	const int stack_size = kernel::memory::PAGE_SIZE * 8;
+	const kernel::memory::vaddr_t stack_addr{ 0xffff'ffff'ffff'f000 - stack_size };
+	kernel::memory::setup_page_tables(stack_addr, stack_size / kernel::memory::PAGE_SIZE, true);
 
-	enter_user_mode(argc, argv, USER_SS, elf_header->e_entry,
+	enter_user_mode(argc, argv, kernel::memory::USER_SS, elf_header->e_entry,
 					stack_addr.data + stack_size - 8,
-					&CURRENT_TASK->kernel_stack_ptr);
+					&kernel::task::CURRENT_TASK->kernel_stack_ptr);
 }

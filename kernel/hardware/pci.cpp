@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
-namespace pci
+namespace kernel::hw::pci
 {
 uint32_t calc_config_addr(uint8_t bus, uint8_t device, uint8_t func, uint8_t offset)
 {
@@ -111,17 +111,17 @@ void load_devices()
 {
 	auto host_bridge_header_type = read_header_type(0, 0, 0);
 
-	if (pci::is_single_function_device(host_bridge_header_type)) {
-		pci::read_bus(0);
+	if (is_single_function_device(host_bridge_header_type)) {
+		read_bus(0);
 		return;
 	}
 
 	for (uint8_t func = 0; func < 8; func++) {
-		if (pci::read_vendor_id(0, 0, func) == 0xffffU) {
+		if (read_vendor_id(0, 0, func) == 0xffffU) {
 			continue;
 		}
 
-		pci::read_bus(func);
+		read_bus(func);
 	}
 }
 
@@ -321,6 +321,6 @@ void configure_msi_fixed_destination(const device& dev,
 	configure_msi(dev, msg_addr, msg_data, num_vector_exponent);
 }
 
-} // namespace pci
+void initialize() { load_devices(); }
 
-void initialize_pci() { pci::load_devices(); }
+} // namespace kernel::hw::pci

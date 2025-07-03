@@ -13,6 +13,8 @@ extern const uint8_t _binary_hankaku_bin_size;
 FT_Library ft_library;
 std::vector<uint8_t>* nihongo_font_data;
 
+namespace kernel::graphics {
+
 bitmap_font::bitmap_font(int width, int height)
 	: font_data_{ &_binary_hankaku_bin_start }, width_{ width }, height_{ height }
 {
@@ -235,3 +237,5 @@ void initialize_freetype()
 		return;
 	}
 }
+
+} // namespace kernel::graphics

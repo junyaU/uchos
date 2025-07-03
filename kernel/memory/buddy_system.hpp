@@ -18,6 +18,8 @@
 #include <cstddef>
 #include <list>
 
+namespace kernel::memory {
+
 static const auto MAX_ORDER = 18;
 
 class buddy_system
@@ -94,3 +96,5 @@ private:
 extern buddy_system* memory_manager;
 
 void initialize_memory_manager();
+
+} // namespace kernel::memory

@@ -14,6 +14,8 @@ namespace
 constexpr int SWITCH_TASK_MILLISEC = 20;
 }
 
+namespace kernel::timers {
+
 uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
 {
 	return tick_ + (millisec * TIMER_FREQUENCY) / 1000;
@@ -110,7 +112,7 @@ bool kernel_timer::increment_tick()
 		message m = { .type = msg_t::NOTIFY_TIMER_TIMEOUT,
 					  .sender = process_ids::KERNEL };
 		m.data.timer.action = e.action;
-		send_message(e.task_id, &m);
+		kernel::task::send_message(e.task_id, m);
 
 		if (e.periodical == 1) {
 			e.timeout = calculate_timeout_ticks(e.period);
@@ -122,11 +124,12 @@ bool kernel_timer::increment_tick()
 }
 
 kernel_timer* ktimer;
-void initialize_timer()
+
+void initialize()
 {
 	LOG_INFO("Initializing logical timer...");
 
-	void* addr = kmalloc(sizeof(kernel_timer), KMALLOC_ZEROED);
+	void* addr = kernel::memory::kmalloc(sizeof(kernel_timer), kernel::memory::KMALLOC_ZEROED);
 	if (addr == nullptr) {
 		LOG_ERROR("Failed to allocate memory for kernel timer.");
 		return;
@@ -138,3 +141,5 @@ void initialize_timer()
 
 	LOG_INFO("Logical timer initialized successfully.");
 }
+
+} // namespace kernel::timers

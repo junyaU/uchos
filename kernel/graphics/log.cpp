@@ -8,14 +8,18 @@
 
 namespace
 {
-log_level CURRENT_LOG_LEVEL = log_level::ERROR;
+kernel::graphics::log_level CURRENT_LOG_LEVEL = kernel::graphics::log_level::ERROR;
 int kernel_cursor_x = 0;
 int kernel_cursor_y = 5;
 } // namespace
 
+namespace kernel::graphics {
+
 void change_log_level(log_level level) { CURRENT_LOG_LEVEL = level; }
 
-void printk(log_level level, const char* format, ...)
+} // namespace kernel::graphics
+
+void printk(kernel::graphics::log_level level, const char* format, ...)
 {
 	if (level != CURRENT_LOG_LEVEL || format == nullptr) {
 		return;
@@ -29,7 +33,7 @@ void printk(log_level level, const char* format, ...)
 	va_end(ap);
 
 	for (size_t i = 0; i < strlen(s) && s[i] != '\0'; ++i) {
-		write_ascii(*kscreen, { kernel_cursor_x++ * 8, kernel_cursor_y * 16 }, s[i],
+		kernel::graphics::write_ascii(*kernel::graphics::kscreen, { kernel_cursor_x++ * 8, kernel_cursor_y * 16 }, s[i],
 					0xffff00);
 
 		if (s[i] == '\n') {

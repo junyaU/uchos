@@ -10,6 +10,8 @@
 
 #include <cstdint>
 
+namespace kernel::interrupt {
+
 struct interrupt_frame {
 	uint64_t rip;
 	uint64_t cs;
@@ -25,3 +27,5 @@ void on_virtio_interrupt(interrupt_frame* frame);
 void on_virtio_blk_queue_interrupt(interrupt_frame* frame);
 
 [[gnu::no_caller_saved_registers]] void kill_userland(interrupt_frame* frame);
+
+} // namespace kernel::interrupt

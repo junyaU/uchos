@@ -2,6 +2,8 @@
 #include "graphics/log.hpp"
 #include "task/task.hpp"
 
+namespace kernel::interrupt {
+
 void get_fault_name(uint64_t code, char* buf)
 {
 	switch (code) {
@@ -76,7 +78,7 @@ void get_fault_name(uint64_t code, char* buf)
 
 void log_fault_info(const char* fault_type, interrupt_frame* frame)
 {
-	task* t = CURRENT_TASK;
+	kernel::task::task* t = kernel::task::CURRENT_TASK;
 	LOG_ERROR("Error in task %d (%s)", t->id, t->name);
 	LOG_ERROR("Fault type: %s", fault_type);
 	LOG_ERROR("RIP: 0x%016lx", frame->rip);
@@ -85,3 +87,5 @@ void log_fault_info(const char* fault_type, interrupt_frame* frame)
 	LOG_ERROR("CS: 0x%016lx", frame->cs);
 	LOG_ERROR("SS: 0x%016lx", frame->ss);
 }
+
+} // namespace kernel::interrupt

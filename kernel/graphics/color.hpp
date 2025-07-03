@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+namespace kernel::graphics {
+
 constexpr int kBytesPerPixel = 4;
 
 class Color
@@ -24,3 +26,5 @@ constexpr Color BLACK = Color(0, 0, 0);
 constexpr Color RED = Color(255, 0, 0);
 constexpr Color GREEN = Color(0, 255, 0);
 constexpr Color BLUE = Color(0, 0, 255);
+
+} // namespace kernel::graphics

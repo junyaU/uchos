@@ -1,5 +1,7 @@
 #pragma once
 
+namespace kernel::interrupt {
+
 class interrupt_vector
 {
 public:
@@ -11,3 +13,5 @@ public:
 		SWITCH_TASK = 0x44,
 	};
 };
+
+} // namespace kernel::interrupt

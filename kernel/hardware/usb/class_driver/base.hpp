@@ -14,7 +14,7 @@
 #include "../endpoint.hpp"
 #include "../setup_stage_data.hpp"
 
-namespace usb
+namespace kernel::hw::usb
 {
 class device;
 
@@ -41,4 +41,4 @@ private:
 
 class_driver* new_class_driver(device* dev, const interface_descriptor& if_desc);
 
-} // namespace usb
+} // namespace kernel::hw::usb

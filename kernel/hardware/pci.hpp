@@ -17,7 +17,7 @@
 #include <cstdint>
 #include <stdio.h>
 
-namespace pci
+namespace kernel::hw::pci
 {
 const uint16_t CONFIG_ADDRESS_PORT = 0x0cf8;
 const uint16_t CONFIG_DATA_PORT = 0x0cfc;
@@ -158,6 +158,6 @@ void configure_msi_fixed_destination(const device& dev,
 									 uint8_t vector,
 									 unsigned int num_vector_exponent);
 
-} // namespace pci
+void initialize();
 
-void initialize_pci();
+} // namespace kernel::hw::pci

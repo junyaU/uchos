@@ -2,6 +2,9 @@
 #include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
 
+namespace kernel::fs
+{
+
 std::array<file_descriptor, MAX_FILE_DESCRIPTORS> fds;
 
 file_descriptor* get_fd(int fd)
@@ -37,3 +40,5 @@ void init_fds()
 		fds[i].fd = -1;
 	}
 }
+
+} // namespace kernel::fs

@@ -29,6 +29,9 @@
 #include <unordered_map>
 #include <vector>
 
+namespace kernel::fs
+{
+
 constexpr uint32_t ATTR_READ_ONLY = 0x00000001;
 constexpr uint32_t ATTR_HIDDEN = 0x00000002;
 constexpr uint32_t ATTR_SYSTEM = 0x00000004;
@@ -96,3 +99,5 @@ file_cache* create_file_cache(const char* path, size_t total_size, ProcessId req
 fs_id_t generate_fs_id();
 
 void init_read_contexts();
+
+} // namespace kernel::fs

@@ -9,7 +9,7 @@ void test_virtio_blk_task_creation()
 {
 	// virtio_blk_taskはinitial_tasksで自動的に作成されるため、
 	// 存在確認とプロパティの検証を行う
-	task* t = get_task(process_ids::VIRTIO_BLK);
+	kernel::task::task* t = kernel::task::get_task(process_ids::VIRTIO_BLK);
 	ASSERT_NOT_NULL(t);
 	ASSERT_EQ(strcmp(t->name, "virtio"), 0);
 }

@@ -2,7 +2,7 @@
 
 #include "../device.hpp"
 
-namespace usb
+namespace kernel::hw::usb
 {
 hid_driver::hid_driver(device* dev, int interface_index, int in_packet_size)
 	: class_driver(dev),
@@ -66,4 +66,4 @@ void hid_driver::on_interrupt_completed(endpoint_id ep_id, void* buf, int len)
 				{ ep_interrupt_in_, buffer_.data(), in_packet_size_ });
 	}
 }
-} // namespace usb
+} // namespace kernel::hw::usb

@@ -10,6 +10,8 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
+namespace kernel::memory {
+
 constexpr size_t USER_SPACE_START_INDEX = 256;
 constexpr size_t PT_ENTRIES = 512;
 
@@ -135,3 +137,5 @@ error_t unmap_frame(page_table_entry* table, vaddr_t addr, size_t num_pages);
 size_t calc_required_pages(vaddr_t start, size_t size);
 
 void initialize_paging();
+
+} // namespace kernel::memory

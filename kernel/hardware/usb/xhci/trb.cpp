@@ -1,6 +1,6 @@
 #include "trb.hpp"
 
-namespace usb::xhci
+namespace kernel::hw::usb::xhci
 {
 setup_stage_trb make_setup_stage_trb(setup_stage_data setup_data, int transfer_type)
 {
@@ -26,4 +26,4 @@ data_stage_trb make_data_stage_trb(const void* buf, int len, bool dir_in)
 	return trb;
 }
 
-} // namespace usb::xhci
+} // namespace kernel::hw::usb::xhci

@@ -1,8 +1,8 @@
 #pragma once
 
-namespace local_apic
+namespace kernel::timers::local_apic
 {
 
 void initialize();
 
-} // namespace local_apic
+} // namespace kernel::timers::local_apic

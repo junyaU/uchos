@@ -84,6 +84,7 @@ set(SOURCE_FILES
         bit_utils.cpp
         elf.cpp
         list.cpp
+        panic.cpp
 )
 
 # Add subdirectories that contain their own CMakeLists.txt files.

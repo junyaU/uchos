@@ -18,7 +18,7 @@
 
 #include <array>
 
-namespace usb
+namespace kernel::hw::usb
 {
 class class_driver;
 
@@ -92,4 +92,4 @@ void set_configuration(device& dev,
 					   const endpoint_id& ep_id,
 					   uint8_t config_value,
 					   bool debug = false);
-} // namespace usb
+} // namespace kernel::hw::usb

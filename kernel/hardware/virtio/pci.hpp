@@ -15,10 +15,12 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
-namespace pci
+namespace kernel::hw::pci
 {
 struct device;
 }
+
+namespace kernel::hw::virtio {
 
 // https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
 /* Common configuration */
@@ -146,7 +148,7 @@ struct virtio_pci_cfg_cap {
  * configurations, and associated Virtqueues.
  */
 struct virtio_pci_device {
-	pci::device* dev;				   /* PCI device. */
+	kernel::hw::pci::device* dev;				   /* PCI device. */
 	virtio_pci_cap* caps;			   /* Capabilities. */
 	virtio_pci_common_cfg* common_cfg; /* Common configuration. */
 	virtio_pci_notify_cap* notify_cfg; /* Notifications. */
@@ -158,7 +160,7 @@ struct virtio_pci_device {
 template<typename T>
 T* get_virtio_pci_capability(virtio_pci_device& virtio_dev)
 {
-	uint64_t bar_addr = pci::read_base_address_register(
+	uint64_t bar_addr = kernel::hw::pci::read_base_address_register(
 			*virtio_dev.dev, virtio_dev.caps->second_dword.fields.bar);
 	bar_addr &= ~0xfff;
 
@@ -170,3 +172,5 @@ size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev);
 error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev);
 
 void notify_virtqueue(virtio_pci_device& virtio_dev, size_t queue_idx);
+
+} // namespace kernel::hw::virtio

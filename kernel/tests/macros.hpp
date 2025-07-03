@@ -1,7 +1,24 @@
+/**
+ * @file tests/macros.hpp
+ * @brief Test assertion macros for kernel unit testing
+ * 
+ * This file provides assertion and expectation macros for writing unit tests.
+ * ASSERT macros will cause the test to return immediately on failure, while
+ * EXPECT macros will log the failure but continue test execution.
+ * 
+ * @date 2024
+ */
+
 #pragma once
 
 #include "graphics/log.hpp"
 
+/**
+ * @brief Assert that two values are equal
+ * @param x First value to compare
+ * @param y Second value to compare
+ * @note Test returns immediately if assertion fails
+ */
 #define ASSERT_EQ(x, y)                                                             \
 	do {                                                                            \
 		if ((x) != (y)) {                                                           \
@@ -10,6 +27,12 @@
 		}                                                                           \
 	} while (0)
 
+/**
+ * @brief Assert that two values are not equal
+ * @param x First value to compare
+ * @param y Second value to compare
+ * @note Test returns immediately if assertion fails
+ */
 #define ASSERT_NE(x, y)                                                             \
 	do {                                                                            \
 		if ((x) == (y)) {                                                           \
@@ -18,6 +41,12 @@
 		}                                                                           \
 	} while (0)
 
+/**
+ * @brief Assert that x is greater than y
+ * @param x Value that should be greater
+ * @param y Value that should be less
+ * @note Test returns immediately if assertion fails
+ */
 #define ASSERT_GT(x, y)                                                             \
 	do {                                                                            \
 		if ((x) <= (y)) {                                                           \
@@ -26,6 +55,12 @@
 		}                                                                           \
 	} while (0)
 
+/**
+ * @brief Assert that x is less than y
+ * @param x Value that should be less
+ * @param y Value that should be greater
+ * @note Test returns immediately if assertion fails
+ */
 #define ASSERT_LT(x, y)                                                             \
 	do {                                                                            \
 		if ((x) >= (y)) {                                                           \
@@ -34,6 +69,11 @@
 		}                                                                           \
 	} while (0)
 
+/**
+ * @brief Assert that a condition is true
+ * @param x Condition to test
+ * @note Test returns immediately if assertion fails
+ */
 #define ASSERT_TRUE(x)                                                              \
 	do {                                                                            \
 		if (!(x)) {                                                                 \
@@ -42,6 +82,11 @@
 		}                                                                           \
 	} while (0)
 
+/**
+ * @brief Assert that a condition is false
+ * @param x Condition to test
+ * @note Test returns immediately if assertion fails
+ */
 #define ASSERT_FALSE(x)                                                             \
 	do {                                                                            \
 		if (x) {                                                                    \
@@ -50,6 +95,11 @@
 		}                                                                           \
 	} while (0)
 
+/**
+ * @brief Assert that a pointer is NULL
+ * @param x Pointer to test
+ * @note Test returns immediately if assertion fails
+ */
 #define ASSERT_NULL(x)                                                              \
 	do {                                                                            \
 		if ((x) != NULL) {                                                          \
@@ -58,6 +108,11 @@
 		}                                                                           \
 	} while (0)
 
+/**
+ * @brief Assert that a pointer is not NULL
+ * @param x Pointer to test
+ * @note Test returns immediately if assertion fails
+ */
 #define ASSERT_NOT_NULL(x)                                                          \
 	do {                                                                            \
 		if ((x) == NULL) {                                                          \
@@ -66,6 +121,12 @@
 		}                                                                           \
 	} while (0)
 
+/**
+ * @brief Expect that two values are equal
+ * @param x First value to compare
+ * @param y Second value to compare
+ * @note Test continues even if expectation fails
+ */
 #define EXPECT_EQ(x, y)                                                             \
 	do {                                                                            \
 		if ((x) != (y)) {                                                           \
@@ -73,6 +134,12 @@
 		}                                                                           \
 	} while (0)
 
+/**
+ * @brief Expect that two values are not equal
+ * @param x First value to compare
+ * @param y Second value to compare
+ * @note Test continues even if expectation fails
+ */
 #define EXPECT_NE(x, y)                                                             \
 	do {                                                                            \
 		if ((x) == (y)) {                                                           \
@@ -115,6 +182,11 @@
 		}                                                                           \
 	} while (0)
 
+/**
+ * @brief Expect that a pointer is not NULL
+ * @param x Pointer to test
+ * @note Test continues even if expectation fails
+ */
 #define EXPECT_NOT_NULL(x)                                                          \
 	do {                                                                            \
 		if ((x) == NULL) {                                                          \

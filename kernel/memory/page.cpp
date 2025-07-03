@@ -3,6 +3,9 @@
 #include <libs/common/types.hpp>
 #include <vector>
 
+namespace kernel::memory
+{
+
 std::vector<page> pages;
 
 void initialize_pages()
@@ -47,3 +50,5 @@ void get_memory_usage(size_t* total_mem, size_t* used_mem)
 	*used_mem = (pages.size() - available_pages) * PAGE_SIZE;
 	*total_mem = pages.size() * PAGE_SIZE;
 }
+
+} // namespace kernel::memory

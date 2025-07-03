@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
+namespace kernel::memory {
+
 buddy_system* memory_manager;
 
 size_t buddy_system::calculate_order(size_t num_pages)
@@ -27,7 +29,7 @@ void buddy_system::split_memory_block(int order)
 	free_lists_[order].pop_front();
 
 	const int lower_order = order - 1;
-	const auto block_size = (1 << lower_order) * PAGE_SIZE;
+	const auto block_size = (1 << lower_order) * kernel::memory::PAGE_SIZE;
 
 	auto buddy_addr = reinterpret_cast<uintptr_t>(block->ptr()) ^ block_size;
 	auto* buddy_block = get_page(reinterpret_cast<void*>(buddy_addr));
@@ -38,7 +40,7 @@ void buddy_system::split_memory_block(int order)
 
 void* buddy_system::allocate(size_t size)
 {
-	const int order = calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
+	const int order = calculate_order((size + kernel::memory::PAGE_SIZE - 1) / kernel::memory::PAGE_SIZE);
 	if (order == -1) {
 		LOG_ERROR("invalid size: %d", size);
 		return nullptr;
@@ -82,13 +84,13 @@ void* buddy_system::allocate(size_t size)
 
 void buddy_system::free(void* addr, size_t size)
 {
-	auto* start_page = &pages[reinterpret_cast<uintptr_t>(addr) / PAGE_SIZE];
+	auto* start_page = &pages[reinterpret_cast<uintptr_t>(addr) / kernel::memory::PAGE_SIZE];
 	if (start_page->is_free()) {
 		LOG_ERROR("double free detected at address: %p", addr);
 		return;
 	}
 
-	int order = calculate_order((size + PAGE_SIZE - 1) / PAGE_SIZE);
+	int order = calculate_order((size + kernel::memory::PAGE_SIZE - 1) / kernel::memory::PAGE_SIZE);
 	if (order == -1) {
 		LOG_ERROR("invalid size: %d", size);
 		return;
@@ -106,7 +108,7 @@ void buddy_system::free(void* addr, size_t size)
 		}
 
 		auto buddy_addr = reinterpret_cast<uintptr_t>(start_page->ptr()) ^
-						  (num_order_pages * PAGE_SIZE);
+						  (num_order_pages * kernel::memory::PAGE_SIZE);
 
 		page* buddy_block = get_page(reinterpret_cast<void*>(buddy_addr));
 
@@ -146,13 +148,13 @@ void buddy_system::register_memory_blocks(size_t num_total_pages, page* start_pa
 
 	size_t order = calc_max_order_in_total_pages(num_total_pages);
 
-	const uintptr_t alignment_size = (1 << order) * PAGE_SIZE;
+	const uintptr_t alignment_size = (1 << order) * kernel::memory::PAGE_SIZE;
 	const uintptr_t page_addr = reinterpret_cast<uintptr_t>(start_page->ptr());
 	if ((page_addr % alignment_size) != 0) {
 		const auto aligned_addr =
 				static_cast<uintptr_t>(align_up(page_addr, alignment_size));
 
-		const size_t num_rounded_up_pages = (aligned_addr - page_addr) / PAGE_SIZE;
+		const size_t num_rounded_up_pages = (aligned_addr - page_addr) / kernel::memory::PAGE_SIZE;
 		if ((num_total_pages - num_rounded_up_pages) < (1 << order)) {
 			--order;
 		}
@@ -231,3 +233,5 @@ void initialize_memory_manager()
 
 	LOG_INFO("Memory manager initialized successfully.");
 }
+
+} // namespace kernel::memory

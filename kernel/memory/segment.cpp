@@ -9,6 +9,9 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
+namespace kernel::memory
+{
+
 namespace
 {
 std::array<segment_descriptor, 7> gdt;
@@ -89,7 +92,7 @@ void set_tss(int index, void* addr)
 
 void* allocate_stack(size_t size)
 {
-	void* stack = kmalloc(size, KMALLOC_UNINITIALIZED);
+	void* stack = kernel::memory::kmalloc(size, KMALLOC_UNINITIALIZED);
 	if (stack == nullptr) {
 		return nullptr;
 	}
@@ -109,9 +112,9 @@ void initialize_tss()
 	}
 
 	set_tss(1, stack1);
-	set_tss(7 + 2 * IST_FOR_TIMER, stack2);
-	set_tss(7 + 2 * IST_FOR_XHCI, stack3);
-	set_tss(7 + 2 * IST_FOR_SWITCH_TASK, stack3);
+	set_tss(7 + 2 * kernel::interrupt::IST_FOR_TIMER, stack2);
+	set_tss(7 + 2 * kernel::interrupt::IST_FOR_XHCI, stack3);
+	set_tss(7 + 2 * kernel::interrupt::IST_FOR_SWITCH_TASK, stack3);
 
 	const uint64_t tss_addr = reinterpret_cast<uint64_t>(tss.data());
 	set_system_segment(gdt[TSS >> 3], descriptor_type::TSS_AVAILABLE, 0,
@@ -120,3 +123,5 @@ void initialize_tss()
 
 	load_tr(TSS);
 }
+
+} // namespace kernel::memory

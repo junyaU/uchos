@@ -54,9 +54,9 @@ void test_run()
 
 void run_test_suite(void (*test_suite)())
 {
-	change_log_level(log_level::TEST);
+	kernel::graphics::change_log_level(kernel::graphics::log_level::TEST);
 	test_init();
 	test_suite();
 	test_run();
-	change_log_level(log_level::ERROR);
+	kernel::graphics::change_log_level(kernel::graphics::log_level::ERROR);
 }

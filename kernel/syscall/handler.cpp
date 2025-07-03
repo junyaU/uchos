@@ -20,7 +20,7 @@
 #include <libs/common/process_id.hpp>
 #include <stdint.h>
 
-namespace syscall
+namespace kernel::syscall
 {
 size_t sys_draw_text(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 {
@@ -29,7 +29,7 @@ size_t sys_draw_text(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	const int y = arg3;
 	const uint32_t color = arg4;
 
-	write_string(*kscreen, { x, y }, text, color);
+	write_string(*kernel::graphics::kscreen, { x, y }, text, color);
 
 	return strlen(text);
 }
@@ -46,7 +46,7 @@ error_t sys_fill_rect(uint64_t arg1,
 	const int height = arg4;
 	const uint32_t color = arg5;
 
-	kscreen->fill_rectangle(point2d{ x, y }, point2d{ width, height }, color);
+	kernel::graphics::kscreen->fill_rectangle(point2d{ x, y }, point2d{ width, height }, color);
 
 	return OK;
 }
@@ -59,9 +59,9 @@ error_t sys_time(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	const ProcessId task_id = ProcessId::from_raw(arg4);
 
 	if (is_periodic == 1) {
-		ktimer->add_periodic_timer_event(ms, action, task_id);
+		kernel::timers::ktimer->add_periodic_timer_event(ms, action, task_id);
 	} else {
-		ktimer->add_timer_event(ms, action, task_id);
+		kernel::timers::ktimer->add_timer_event(ms, action, task_id);
 	}
 
 	return OK;
@@ -73,8 +73,8 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	message __user& m = *reinterpret_cast<message*>(arg3);
 	const int flags = arg4;
 
-	task* t = CURRENT_TASK;
-	t->state = TASK_WAITING;
+	kernel::task::task* t = kernel::task::CURRENT_TASK;
+	t->state = kernel::task::TASK_WAITING;
 
 	if (flags == IPC_RECV) {
 		if (t->messages.empty()) {
@@ -83,7 +83,7 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 			return OK;
 		}
 
-		t->state = TASK_RUNNING;
+		t->state = kernel::task::TASK_RUNNING;
 
 		copy_to_user(&m, &t->messages.front(), sizeof(m));
 		t->messages.pop();
@@ -99,7 +99,7 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 			copy_m.sender = t->id;
 		}
 
-		send_message(ProcessId::from_raw(dest), &copy_m);
+		kernel::task::send_message(ProcessId::from_raw(dest), copy_m);
 	}
 
 	return OK;
@@ -107,22 +107,22 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 
 ProcessId sys_fork(void)
 {
-	context current_ctx;
+	kernel::task::context current_ctx;
 	memset(&current_ctx, 0, sizeof(current_ctx));
 	asm volatile("mov %%rdi, %0" : "=r"(current_ctx.rdi));
 	get_current_context(&current_ctx);
 
-	task* t = CURRENT_TASK;
+	kernel::task::task* t = kernel::task::CURRENT_TASK;
 	if (t->parent_id.raw() != -1) {
 		return ProcessId::from_raw(0);
 	}
 
-	task* child = copy_task(t, &current_ctx);
+	kernel::task::task* child = kernel::task::copy_task(t, &current_ctx);
 	if (child == nullptr) {
 		return ProcessId::from_raw(ERR_FORK_FAILED);
 	}
 
-	schedule_task(child->id);
+	kernel::task::schedule_task(child->id);
 
 	return child->id;
 }
@@ -142,58 +142,58 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	copy_from_user(copy_args, args, args_len);
 	copy_args[args_len] = '\0';
 
-	message msg{ .type = msg_t::IPC_GET_FILE_INFO, .sender = CURRENT_TASK->id };
+	message msg{ .type = msg_t::IPC_GET_FILE_INFO, .sender = kernel::task::CURRENT_TASK->id };
 	memcpy(msg.data.fs_op.name, copy_path, path_len + 1);
-	send_message(process_ids::FS_FAT32, &msg);
+	kernel::task::send_message(process_ids::FS_FAT32, msg);
 
-	message info_m = wait_for_message(msg_t::IPC_GET_FILE_INFO);
+	message info_m = kernel::task::wait_for_message(msg_t::IPC_GET_FILE_INFO);
 
 	auto* entry =
-			reinterpret_cast<file_system::directory_entry*>(info_m.data.fs_op.buf);
+			reinterpret_cast<kernel::fs::directory_entry*>(info_m.data.fs_op.buf);
 	if (entry == nullptr) {
 		return ERR_NO_FILE;
 	}
 
 	message read_msg{ .type = msg_t::IPC_READ_FILE_DATA,
-					  .sender = CURRENT_TASK->id };
+					  .sender = kernel::task::CURRENT_TASK->id };
 	read_msg.data.fs_op.buf = entry;
-	send_message(process_ids::FS_FAT32, &read_msg);
+	kernel::task::send_message(process_ids::FS_FAT32, read_msg);
 
-	message data_m = wait_for_message(msg_t::IPC_READ_FILE_DATA);
-	kfree(entry);
+	message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
+	kernel::memory::kfree(entry);
 
-	page_table_entry* current_page_table = get_active_page_table();
-	clean_page_tables(current_page_table);
+	kernel::memory::page_table_entry* current_page_table = kernel::memory::get_active_page_table();
+	kernel::memory::clean_page_tables(current_page_table);
 
-	page_table_entry* new_page_table = config_new_page_table();
+	kernel::memory::page_table_entry* new_page_table = kernel::memory::config_new_page_table();
 	if (new_page_table == nullptr) {
 		return ERR_NO_MEMORY;
 	}
 
-	CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(new_page_table);
+	kernel::task::CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(new_page_table);
 
 	// TODO: fix this
-	file_system::execute_file(data_m.data.fs_op.buf, "", copy_args);
+	kernel::fs::execute_file(data_m.data.fs_op.buf, "", copy_args);
 
 	return OK;
 }
 
-void sys_exit(uint64_t arg1) { exit_task(arg1); }
+void sys_exit(uint64_t arg1) { kernel::task::exit_task(arg1); }
 
 ProcessId sys_wait(uint64_t arg1)
 {
 	auto __user* status = reinterpret_cast<int*>(arg1);
 
-	task* t = CURRENT_TASK;
+	kernel::task::task* t = kernel::task::CURRENT_TASK;
 
 	while (true) {
 		if (t->messages.empty()) {
-			t->state = TASK_WAITING;
+			t->state = kernel::task::TASK_WAITING;
 			asm("pause");
 			continue;
 		}
 
-		t->state = TASK_RUNNING;
+		t->state = kernel::task::TASK_RUNNING;
 
 		message m = t->messages.front();
 		t->messages.pop();
@@ -212,9 +212,11 @@ ProcessId sys_wait(uint64_t arg1)
 	return ProcessId::from_raw(-1);
 }
 
-ProcessId sys_getpid(void) { return CURRENT_TASK->id; }
+ProcessId sys_getpid(void) { return kernel::task::CURRENT_TASK->id; }
 
-ProcessId sys_getppid(void) { return CURRENT_TASK->parent_id; }
+ProcessId sys_getppid(void) { return kernel::task::CURRENT_TASK->parent_id; }
+
+} // namespace kernel::syscall
 
 extern "C" uint64_t handle_syscall(uint64_t arg1,
 								   uint64_t arg2,
@@ -226,35 +228,35 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 	uint64_t result = 0;
 
 	switch (syscall_number) {
-		case SYS_EXIT:
-			sys_exit(arg1);
+		case kernel::syscall::SYS_EXIT:
+			kernel::syscall::sys_exit(arg1);
 			break;
-		case SYS_DRAW_TEXT:
-			result = sys_draw_text(arg1, arg2, arg3, arg4);
+		case kernel::syscall::SYS_DRAW_TEXT:
+			result = kernel::syscall::sys_draw_text(arg1, arg2, arg3, arg4);
 			break;
-		case SYS_FILL_RECT:
-			result = sys_fill_rect(arg1, arg2, arg3, arg4, arg5);
+		case kernel::syscall::SYS_FILL_RECT:
+			result = kernel::syscall::sys_fill_rect(arg1, arg2, arg3, arg4, arg5);
 			break;
-		case SYS_TIME:
-			result = sys_time(arg1, arg2, arg3, arg4);
+		case kernel::syscall::SYS_TIME:
+			result = kernel::syscall::sys_time(arg1, arg2, arg3, arg4);
 			break;
-		case SYS_IPC:
-			result = sys_ipc(arg1, arg2, arg3, arg4);
+		case kernel::syscall::SYS_IPC:
+			result = kernel::syscall::sys_ipc(arg1, arg2, arg3, arg4);
 			break;
-		case SYS_FORK:
-			result = sys_fork().raw();
+		case kernel::syscall::SYS_FORK:
+			result = kernel::syscall::sys_fork().raw();
 			break;
-		case SYS_EXEC:
-			result = sys_exec(arg1, arg2, arg3);
+		case kernel::syscall::SYS_EXEC:
+			result = kernel::syscall::sys_exec(arg1, arg2, arg3);
 			break;
-		case SYS_WAIT:
-			result = sys_wait(arg1).raw();
+		case kernel::syscall::SYS_WAIT:
+			result = kernel::syscall::sys_wait(arg1).raw();
 			break;
-		case SYS_GETPID:
-			result = sys_getpid().raw();
+		case kernel::syscall::SYS_GETPID:
+			result = kernel::syscall::sys_getpid().raw();
 			break;
-		case SYS_GETPPID:
-			result = sys_getppid().raw();
+		case kernel::syscall::SYS_GETPPID:
+			result = kernel::syscall::sys_getppid().raw();
 			break;
 		default:
 			LOG_ERROR("Unknown syscall number: %d", syscall_number);
@@ -263,4 +265,3 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 
 	return result;
 }
-} // namespace syscall

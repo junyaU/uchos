@@ -21,47 +21,49 @@ struct FrameBufferConf;
 struct MemoryMap;
 
 // 1MiB　
+extern "C" {
 char kernel_stack[1024 * 1024];
+}
 
 extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 					 const MemoryMap& memory_map,
-					 const acpi::root_system_description_pointer& rsdp)
+					 const kernel::timers::acpi::root_system_description_pointer& rsdp)
 {
-	initialize_screen(frame_buffer_conf, { 0, 0, 0 });
+	kernel::graphics::initialize(frame_buffer_conf, { 0, 0, 0 });
 
-	initialize_font();
+	kernel::graphics::initialize_font();
 
-	initialize_segmentation();
+	kernel::memory::initialize_segmentation();
 
-	initialize_paging();
+	kernel::memory::initialize_paging();
 
-	initialize_interrupt();
+	kernel::interrupt::initialize_interrupt();
 
-	initialize_bootstrap_allocator(memory_map);
+	kernel::memory::initialize(memory_map);
 
-	initialize_heap();
+	kernel::memory::initialize_heap();
 
-	initialize_pages();
+	kernel::memory::initialize_pages();
 
-	initialize_memory_manager();
+	kernel::memory::initialize_memory_manager();
 
-	disable_bootstrap_allocator();
+	kernel::memory::disable();
 
-	initialize_slab_allocator();
+	kernel::memory::initialize_slab_allocator();
 
-	initialize_tss();
+	kernel::memory::initialize_tss();
 
-	acpi::initialize(rsdp);
+	kernel::timers::acpi::initialize(rsdp);
 
-	initialize_timer();
+	kernel::timers::initialize();
 
-	local_apic::initialize();
+	kernel::timers::local_apic::initialize();
 
-	syscall::initialize();
+	kernel::syscall::initialize();
 
-	initialize_task();
+	kernel::task::initialize();
 
 	run_test_suite(register_virtio_blk_tests);
 
-	task_kernel();
+	kernel::task::task_kernel();
 }

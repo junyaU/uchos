@@ -5,8 +5,12 @@
 #include "libs/common/types.hpp"
 #include "memory/paging.hpp"
 #include "memory/paging_utils.h"
+#include "panic.hpp"
 
 #include <cstdint>
+
+namespace kernel::interrupt
+{
 
 enum exception_code {
 	DIVIDE_ERROR = 0,
@@ -50,9 +54,7 @@ struct fault_handler<error_code, false> {
 		get_fault_name(error_code, buf);
 		log_fault_info(buf, frame);
 
-		while (true) {
-			__asm__("hlt");
-		}
+		PANIC("Fatal exception: %s", buf);
 	}
 };
 
@@ -64,7 +66,8 @@ struct fault_handler<error_code, true> {
 	{
 		if (error_code == PAGE_FAULT) {
 			uint64_t fault_addr = get_cr2();
-			if (auto err = handle_page_fault(code, fault_addr); !IS_ERR(err)) {
+			if (auto err = kernel::memory::handle_page_fault(code, fault_addr);
+				!IS_ERR(err)) {
 				return;
 			}
 
@@ -77,8 +80,8 @@ struct fault_handler<error_code, true> {
 
 		kill_userland(frame);
 
-		while (true) {
-			__asm__("hlt");
-		}
+		PANIC("Fatal exception with error code: %s (code: 0x%lx)", buf, code);
 	}
 };
+
+} // namespace kernel::interrupt

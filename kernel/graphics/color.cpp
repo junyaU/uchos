@@ -1,6 +1,8 @@
 #include "color.hpp"
 #include <cstdint>
 
+namespace kernel::graphics {
+
 uint32_t Color::GetCode() const
 {
 	uint32_t code = 0;
@@ -11,3 +13,5 @@ uint32_t Color::GetCode() const
 	code += b_;
 	return code;
 }
+
+} // namespace kernel::graphics

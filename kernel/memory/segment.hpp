@@ -13,6 +13,8 @@
 
 #include <cstdint>
 
+namespace kernel::memory {
+
 enum descriptor_type {
 	UPPER_8_BYTES = 0,
 	LDT = 2,
@@ -60,3 +62,5 @@ constexpr uint16_t TSS = 5 << 3;
 void setup_segments();
 void initialize_segmentation();
 void initialize_tss();
+
+} // namespace kernel::memory

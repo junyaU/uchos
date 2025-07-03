@@ -6,6 +6,8 @@ struct FrameBufferConf;
 #include "point2d.hpp"
 #include <cstdint>
 
+namespace kernel::graphics {
+
 class screen
 {
 public:
@@ -30,4 +32,6 @@ private:
 
 extern screen* kscreen;
 
-void initialize_screen(const FrameBufferConf& frame_buffer_conf, Color bg_color);
+void initialize(const FrameBufferConf& frame_buffer_conf, Color bg_color);
+
+} // namespace kernel::graphics

@@ -6,6 +6,8 @@
 
 #include <cstdint>
 
+namespace kernel::hw {
+
 static const int L_CONTROL = 0b00000001U;
 static const int L_SHIFT = 0b00000010U;
 static const int L_ALT = 0b00000100U;
@@ -18,3 +20,5 @@ static const int R_GUI = 0b10000000U;
 void initialize_keyboard();
 
 bool is_EOT(uint8_t modifier, uint8_t keycode);
+
+} // namespace kernel::hw

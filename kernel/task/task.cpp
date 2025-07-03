@@ -23,6 +23,9 @@
 #include <libs/common/process_id.hpp>
 #include <queue>
 
+namespace kernel::task
+{
+
 list_t run_queue;
 std::array<task*, MAX_TASKS> tasks;
 
@@ -31,11 +34,11 @@ task* IDLE_TASK = nullptr;
 
 const initial_task_info initial_tasks[] = {
 	{ "main", 0, false, true },
-	{ "idle", reinterpret_cast<uint64_t>(&task_idle), true, true },
-	{ "usb_handler", reinterpret_cast<uint64_t>(&task_usb_handler), true, true },
-	{ "virtio", reinterpret_cast<uint64_t>(&virtio_blk_task), true, false },
-	{ "fat32", reinterpret_cast<uint64_t>(&file_system::fat32_task), true, true },
-	{ "shell", reinterpret_cast<uint64_t>(&task_shell), true, false },
+	{ "idle", reinterpret_cast<uint64_t>(&kernel::task::task_idle), true, true },
+	{ "usb_handler", reinterpret_cast<uint64_t>(&kernel::task::task_usb_handler), true, true },
+	{ "virtio", reinterpret_cast<uint64_t>(&kernel::hw::virtio::virtio_blk_task), true, false },
+	{ "fat32", reinterpret_cast<uint64_t>(&kernel::fs::fat32_task), true, true },
+	{ "shell", reinterpret_cast<uint64_t>(&kernel::task::task_shell), true, false },
 };
 
 ProcessId get_available_task_id()
@@ -96,7 +99,7 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 
 	stack_size = parent->stack_size;
 
-	stack = static_cast<uint64_t*>(kmalloc(stack_size, KMALLOC_ZEROED, PAGE_SIZE));
+	stack = static_cast<uint64_t*>(kernel::memory::kmalloc(stack_size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE));
 	if (stack == nullptr) {
 		LOG_ERROR("Failed to allocate stack for child task");
 		return ERR_NO_MEMORY;
@@ -126,14 +129,14 @@ error_t task::copy_parent_page_table()
 	}
 
 	parent->page_table_snapshot =
-			reinterpret_cast<page_table_entry*>(parent->ctx.cr3);
+			reinterpret_cast<kernel::memory::page_table_entry*>(parent->ctx.cr3);
 
-	page_table_entry* parent_table =
-			clone_page_table(parent->page_table_snapshot, false);
+	kernel::memory::page_table_entry* parent_table =
+			kernel::memory::clone_page_table(parent->page_table_snapshot, false);
 	set_cr3(reinterpret_cast<uint64_t>(parent_table));
 
-	page_table_entry* child_table =
-			clone_page_table(parent->page_table_snapshot, false);
+	kernel::memory::page_table_entry* child_table =
+			kernel::memory::clone_page_table(parent->page_table_snapshot, false);
 	ctx.cr3 = reinterpret_cast<uint64_t>(child_table);
 
 	return OK;
@@ -222,7 +225,7 @@ void switch_next_task(bool sleep_current_task)
 		CURRENT_TASK->state = TASK_WAITING;
 	}
 
-	asm("int %0" : : "i"(interrupt_vector::SWITCH_TASK));
+	asm("int %0" : : "i"(kernel::interrupt::interrupt_vector::SWITCH_TASK));
 }
 
 void exit_task(int status)
@@ -232,7 +235,7 @@ void exit_task(int status)
 	if (t->has_parent()) {
 		message m = { .type = msg_t::IPC_EXIT_TASK, .sender = t->id };
 		m.data.exit_task.status = status;
-		send_message(t->parent_id, &m);
+		send_message(t->parent_id, m);
 	}
 
 	t->state = TASK_EXITED;
@@ -260,7 +263,7 @@ void exit_task(int status)
 	}
 }
 
-void initialize_task()
+void initialize()
 {
 	tasks = std::array<task*, MAX_TASKS>();
 	list_init(&run_queue);
@@ -278,7 +281,7 @@ void initialize_task()
 
 	CURRENT_TASK->state = TASK_RUNNING;
 
-	ktimer->add_switch_task_event(200);
+	kernel::timers::ktimer->add_switch_task_event(200);
 
 	run_test_suite(register_task_tests);
 }
@@ -312,8 +315,8 @@ task::task(int raw_id,
 		return;
 	}
 
-	stack_size = PAGE_SIZE * 8;
-	stack = static_cast<uint64_t*>(kmalloc(stack_size, KMALLOC_ZEROED, PAGE_SIZE));
+	stack_size = kernel::memory::PAGE_SIZE * 8;
+	stack = static_cast<uint64_t*>(kernel::memory::kmalloc(stack_size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE));
 	if (stack == nullptr) {
 		LOG_ERROR("Failed to allocate stack for task %s", name);
 		return;
@@ -321,16 +324,16 @@ task::task(int raw_id,
 
 	const uint64_t stack_end = reinterpret_cast<uint64_t>(stack) + stack_size;
 
-	page_table_entry* page_table = new_page_table();
-	copy_kernel_space(page_table);
+	kernel::memory::page_table_entry* page_table = kernel::memory::new_page_table();
+	kernel::memory::copy_kernel_space(page_table);
 
 	ctx = {};
 	ctx.cr3 = reinterpret_cast<uint64_t>(page_table);
 	ctx.rsp = (stack_end & ~0xfLU) - 8;
 	ctx.rflags = 0x202;
 	ctx.rip = task_addr;
-	ctx.cs = KERNEL_CS;
-	ctx.ss = KERNEL_SS;
+	ctx.cs = kernel::memory::KERNEL_CS;
+	ctx.ss = kernel::memory::KERNEL_SS;
 	*reinterpret_cast<uint32_t*>(&ctx.fxsave_area[24]) = 0x1f80;
 }
 
@@ -360,7 +363,9 @@ message wait_for_message(msg_t type)
 	}
 }
 
+} // namespace kernel::task
+
 extern "C" uint64_t get_current_task_stack()
 {
-	return CURRENT_TASK->kernel_stack_ptr;
+	return kernel::task::CURRENT_TASK->kernel_stack_ptr;
 }
