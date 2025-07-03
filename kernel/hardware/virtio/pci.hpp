@@ -22,23 +22,28 @@ struct device;
 
 namespace kernel::hw::virtio {
 
-// https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
-/* Common configuration */
-constexpr int VIRTIO_PCI_CAP_COMMON_CFG = 1;
-/* Notifications */
-constexpr int VIRTIO_PCI_CAP_NOTIFY_CFG = 2;
-/* ISR access */
-constexpr int VIRTIO_PCI_CAP_ISR_CFG = 3;
-/* Device specific configuration */
-constexpr int VIRTIO_PCI_CAP_DEVICE_CFG = 4;
-/* PCI configuration access */
-constexpr int VIRTIO_PCI_CAP_PCI_CFG = 5;
-/* Shared memory region */
-constexpr int VIRTIO_PCI_CAP_SHARED_MEMORY_CFG = 8;
-/* Vendor-specific data */
-constexpr int VIRTIO_PCI_CAP_VENDOR_CFG = 9;
+/**
+ * @brief VirtIO PCI capability types
+ * 
+ * These constants identify different types of capabilities that
+ * can be present in a VirtIO PCI device.
+ * @see https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
+ * @{
+ */
+constexpr int VIRTIO_PCI_CAP_COMMON_CFG = 1;         ///< Common configuration
+constexpr int VIRTIO_PCI_CAP_NOTIFY_CFG = 2;         ///< Notifications
+constexpr int VIRTIO_PCI_CAP_ISR_CFG = 3;            ///< ISR access
+constexpr int VIRTIO_PCI_CAP_DEVICE_CFG = 4;         ///< Device specific configuration
+constexpr int VIRTIO_PCI_CAP_PCI_CFG = 5;            ///< PCI configuration access
+constexpr int VIRTIO_PCI_CAP_SHARED_MEMORY_CFG = 8;  ///< Shared memory region
+constexpr int VIRTIO_PCI_CAP_VENDOR_CFG = 9;         ///< Vendor-specific data
+/** @} */
 
-// MSIX vector for virtio notifications
+/**
+ * @brief Invalid MSI-X vector value
+ * 
+ * Used to indicate that no MSI-X vector is assigned.
+ */
 constexpr int NO_VECTOR = 0xffff;
 
 /**
@@ -157,6 +162,17 @@ struct virtio_pci_device {
 	uintptr_t notify_base;			   /* Base address for notifications. */
 };
 
+/**
+ * @brief Get a pointer to a VirtIO PCI capability
+ * 
+ * Maps a VirtIO capability structure from the PCI BAR space.
+ * 
+ * @tparam T Type of the capability structure
+ * @param virtio_dev VirtIO PCI device
+ * @return T* Pointer to the mapped capability structure
+ * 
+ * @note The BAR must be memory-mapped for this to work correctly
+ */
 template<typename T>
 T* get_virtio_pci_capability(virtio_pci_device& virtio_dev)
 {
@@ -167,10 +183,37 @@ T* get_virtio_pci_capability(virtio_pci_device& virtio_dev)
 	return reinterpret_cast<T*>(bar_addr + virtio_dev.caps->offset);
 }
 
+/**
+ * @brief Find and enumerate VirtIO PCI capabilities
+ * 
+ * Scans the PCI configuration space to find all VirtIO capabilities
+ * and builds a linked list of them.
+ * 
+ * @param virtio_dev VirtIO PCI device to scan
+ * @return size_t Number of capabilities found
+ */
 size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev);
 
+/**
+ * @brief Set up VirtIO PCI device capabilities
+ * 
+ * Configures the device based on the discovered capabilities,
+ * including common configuration, notification, and ISR structures.
+ * 
+ * @param virtio_dev VirtIO PCI device to configure
+ * @return error_t Error code (kSuccess on success)
+ */
 error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev);
 
+/**
+ * @brief Notify the device about available buffers in a virtqueue
+ * 
+ * Writes to the appropriate notification register to inform the
+ * device that new buffers are available in the specified queue.
+ * 
+ * @param virtio_dev VirtIO PCI device
+ * @param queue_idx Index of the virtqueue to notify
+ */
 void notify_virtqueue(virtio_pci_device& virtio_dev, size_t queue_idx);
 
 } // namespace kernel::hw::virtio
