@@ -50,10 +50,10 @@ Please respond in Japanese.
 
 ### 基本コマンド
 ```bash
-# 全体ビルド & QEMU実行（推奨）
+# 全体ビルド & QEMU実行（claude codeはこれを実行しない）
 ./run_qemu.sh
 
-# カーネルのみビルド
+# カーネルのみビルド（claude codeはこれを実行する）
 cmake -B build kernel && cmake --build build
 
 # ユーザーランドプログラムビルド（個別）
@@ -251,7 +251,6 @@ continue
 ### ログ出力
 ```cpp
 LOG_INFO("メッセージ");
-LOG_WARN("警告: %d", value);
 LOG_ERROR("エラー: %s", error_msg);
 LOG_TEST("テスト結果");  // テスト専用
 ```
@@ -267,3 +266,62 @@ LOG_TEST("テスト結果");  // テスト専用
 - **ドキュメント作成**: 明示的に要求された場合のみ .md ファイルを作成
 - **シンプルさ重視**: UCHosの基本方針「とにかくシンプルに」を常に意識
 - **マイクロカーネル**: 機能追加時は「カーネルに本当に必要か？」を再考
+
+## 📚 コードドキュメント規約
+
+### ドキュメントスタイル
+- **言語**: 英語（Doxygenスタイル）
+- **形式**: C++標準のDoxygenコメント
+- **必須要素**: @file, @brief, @param, @return, @note
+
+### ヘッダーファイルのドキュメント例
+```cpp
+/**
+ * @file filename.hpp
+ * @brief Brief description of the file's purpose
+ * @date YYYY-MM-DD
+ */
+```
+
+### 関数ドキュメント例
+```cpp
+/**
+ * @brief Brief description of what the function does
+ *
+ * More detailed description if needed, explaining the function's
+ * behavior, algorithms used, or important considerations.
+ *
+ * @param param1 Description of first parameter
+ * @param param2 Description of second parameter
+ * @return Description of return value
+ *
+ * @note Any important notes or warnings
+ * @example Optional usage example
+ */
+```
+
+### クラス/構造体ドキュメント例
+```cpp
+/**
+ * @brief Brief description of the class/struct
+ *
+ * Detailed description explaining the purpose, usage,
+ * and any important design decisions.
+ */
+class MyClass {
+    int member_;  ///< Brief description of member variable
+};
+```
+
+### 列挙型ドキュメント例
+```cpp
+/**
+ * @brief Brief description of the enum
+ * @{
+ */
+enum MyEnum {
+    VALUE1,  ///< Description of VALUE1
+    VALUE2   ///< Description of VALUE2
+};
+/** @} */
+```
