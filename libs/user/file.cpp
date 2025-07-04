@@ -60,14 +60,14 @@ fd_t fs_create(const char* path)
 	return res.data.fs.fd;
 }
 
-void get_cwd(char* buf, size_t size)
+void fs_pwd(char* buf, size_t size)
 {
 	ProcessId pid = ProcessId::from_raw(sys_getpid());
-	message m = { .type = msg_t::FS_GET_PWD, .sender = pid };
+	message m = { .type = msg_t::FS_PWD, .sender = pid };
 
 	send_message(process_ids::FS_FAT32, &m);
 
-	message res = wait_for_message(msg_t::FS_GET_PWD);
+	message res = wait_for_message(msg_t::FS_PWD);
 
 	memcpy(buf, res.data.fs.name, size);
 }

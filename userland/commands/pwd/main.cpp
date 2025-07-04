@@ -5,7 +5,7 @@ int main(int argc, char** argv)
 {
 	char name[20];
 
-	get_cwd(name, 20);
+	fs_pwd(name, 20);
 
 	printu(name);
 
