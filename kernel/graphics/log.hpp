@@ -61,7 +61,7 @@ printk(kernel::graphics::log_level level, const char* format, ...);
  * @param ... Format arguments
  */
 #define LOG(level, fmt, ...)                                                        \
-	printk(level, "[%s:%d] " fmt "", __func__, __LINE__, ##__VA_ARGS__)
+	printk(level, "[%s:%d] " fmt "", __FILE__, __LINE__, ##__VA_ARGS__)
 
 /**
  * @brief Debug log macro
