@@ -92,7 +92,7 @@ void set_tss(int index, void* addr)
 
 void* allocate_stack(size_t size)
 {
-	void* stack = kernel::memory::kmalloc(size, KMALLOC_UNINITIALIZED);
+	void* stack = kernel::memory::alloc(size, ALLOC_UNINITIALIZED);
 	if (stack == nullptr) {
 		return nullptr;
 	}

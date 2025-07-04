@@ -205,7 +205,7 @@ std::unordered_map<void*, void*> aligned_to_raw_addr_map;
 
 namespace kernel::memory {
 
-void* kmalloc(size_t size, unsigned flags, int align)
+void* alloc(size_t size, unsigned flags, int align)
 {
 	if (align != 1 && (align & (align - 1)) != 0) {
 		LOG_ERROR("align must be a power of 2");
@@ -238,14 +238,14 @@ void* kmalloc(size_t size, unsigned flags, int align)
 		addr = aligned_addr;
 	}
 
-	if ((flags & KMALLOC_ZEROED) != 0) {
+	if ((flags & ALLOC_ZEROED) != 0) {
 		memset(addr, 0, size);
 	}
 
 	return addr;
 }
 
-void kfree(void* addr)
+void free(void* addr)
 {
 	auto it = aligned_to_raw_addr_map.find(addr);
 	if (it != aligned_to_raw_addr_map.end()) {

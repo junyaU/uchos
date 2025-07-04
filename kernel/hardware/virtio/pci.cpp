@@ -25,7 +25,7 @@ size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev)
 		cap_next = header.bits.next_ptr;
 
 		if (cap_id == kernel::hw::pci::CAP_VIRTIO) {
-			void* addr = kernel::memory::kmalloc(sizeof(virtio_pci_cap), kernel::memory::KMALLOC_ZEROED);
+			void* addr = kernel::memory::alloc(sizeof(virtio_pci_cap), kernel::memory::ALLOC_ZEROED);
 			virtio_pci_cap* cap = new (addr) virtio_pci_cap;
 			cap->first_dword.data = kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr);
 			cap->second_dword.data =
@@ -90,8 +90,8 @@ error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 
 	size_t total_size = device_ring_offset + device_ring_size;
 	virtio_dev.queues = reinterpret_cast<virtio_virtqueue*>(
-			kernel::memory::kmalloc(sizeof(virtio_virtqueue) * virtio_dev.common_cfg->num_queues,
-					kernel::memory::KMALLOC_ZEROED));
+			kernel::memory::alloc(sizeof(virtio_virtqueue) * virtio_dev.common_cfg->num_queues,
+					kernel::memory::ALLOC_ZEROED));
 	if (virtio_dev.queues == nullptr) {
 		return ERR_NO_MEMORY;
 	}
@@ -99,7 +99,7 @@ error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 	for (int i = 0; i < virtio_dev.common_cfg->num_queues; ++i) {
 		virtio_dev.common_cfg->queue_select = i;
 
-		void* addr = kernel::memory::kmalloc(total_size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE);
+		void* addr = kernel::memory::alloc(total_size, kernel::memory::ALLOC_ZEROED, kernel::memory::PAGE_SIZE);
 		if (addr == nullptr) {
 			return ERR_NO_MEMORY;
 		}

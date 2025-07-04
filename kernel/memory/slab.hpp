@@ -22,8 +22,8 @@
 namespace kernel::memory
 {
 
-constexpr int KMALLOC_UNINITIALIZED = 0;
-constexpr int KMALLOC_ZEROED = (1 << 0);
+constexpr int ALLOC_UNINITIALIZED = 0;
+constexpr int ALLOC_ZEROED = (1 << 0);
 
 enum class slab_status : uint8_t {
 	FULL,
@@ -125,22 +125,22 @@ m_cache& m_cache_create(const char* name, size_t obj_size);
 /**
  * @brief Allocate kernel memory
  * @param size Size to allocate
- * @param flags Allocation flags (e.g., KMALLOC_ZEROED)
+ * @param flags Allocation flags (e.g., ALLOC_ZEROED)
  * @param align Alignment requirement (default: 1)
  * @return Pointer to allocated memory, or nullptr on failure
- * @note Returns nullptr on failure. Consider using KMALLOC_OR_RETURN_ERROR macro
+ * @note Returns nullptr on failure. Consider using ALLOC_OR_RETURN_ERROR macro
  */
-void* kmalloc(size_t size, unsigned flags, int align = 1);
+void* alloc(size_t size, unsigned flags, int align = 1);
 
 /**
  * @brief Free kernel memory
  * @param addr Address of memory to free
  * @note Does nothing if addr is nullptr
  */
-void kfree(void* addr);
+void free(void* addr);
 
-struct kfree_deleter {
-	void operator()(void* p) { kfree(p); }
+struct free_deleter {
+	void operator()(void* p) { free(p); }
 };
 
 /**
@@ -151,9 +151,9 @@ void initialize_slab_allocator();
 
 } // namespace kernel::memory
 
-#define KMALLOC_OR_RETURN(ptr, size, flags)                                         \
+#define ALLOC_OR_RETURN(ptr, size, flags)                                         \
 	do {                                                                            \
-		(ptr) = kernel::memory::kmalloc(size, flags);                               \
+		(ptr) = kernel::memory::alloc(size, flags);                               \
 		if ((ptr) == nullptr) {                                                     \
 			LOG_ERROR("failed to allocate memory: %s", #ptr);                       \
 			return;                                                                 \
@@ -167,9 +167,9 @@ void initialize_slab_allocator();
  * @param flags Allocation flags
  * @note Returns ERR_NO_MEMORY if allocation fails
  */
-#define KMALLOC_OR_RETURN_ERROR(ptr, size, flags)                                   \
+#define ALLOC_OR_RETURN_ERROR(ptr, size, flags)                                   \
 	do {                                                                            \
-		(ptr) = kernel::memory::kmalloc(size, flags);                               \
+		(ptr) = kernel::memory::alloc(size, flags);                               \
 		if ((ptr) == nullptr) {                                                     \
 			LOG_ERROR_CODE(ERR_NO_MEMORY, "failed to allocate memory: %s", #ptr);   \
 			return ERR_NO_MEMORY;                                                   \

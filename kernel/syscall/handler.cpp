@@ -143,24 +143,24 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	copy_args[args_len] = '\0';
 
 	message msg{ .type = msg_t::IPC_GET_FILE_INFO, .sender = kernel::task::CURRENT_TASK->id };
-	memcpy(msg.data.fs_op.name, copy_path, path_len + 1);
+	memcpy(msg.data.fs.name, copy_path, path_len + 1);
 	kernel::task::send_message(process_ids::FS_FAT32, msg);
 
 	message info_m = kernel::task::wait_for_message(msg_t::IPC_GET_FILE_INFO);
 
 	auto* entry =
-			reinterpret_cast<kernel::fs::directory_entry*>(info_m.data.fs_op.buf);
+			reinterpret_cast<kernel::fs::directory_entry*>(info_m.data.fs.buf);
 	if (entry == nullptr) {
 		return ERR_NO_FILE;
 	}
 
 	message read_msg{ .type = msg_t::IPC_READ_FILE_DATA,
 					  .sender = kernel::task::CURRENT_TASK->id };
-	read_msg.data.fs_op.buf = entry;
+	read_msg.data.fs.buf = entry;
 	kernel::task::send_message(process_ids::FS_FAT32, read_msg);
 
 	message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
-	kernel::memory::kfree(entry);
+	kernel::memory::free(entry);
 
 	kernel::memory::page_table_entry* current_page_table = kernel::memory::get_active_page_table();
 	kernel::memory::clean_page_tables(current_page_table);
@@ -173,7 +173,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::task::CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(new_page_table);
 
 	// TODO: fix this
-	kernel::fs::execute_file(data_m.data.fs_op.buf, "", copy_args);
+	kernel::fs::execute_file(data_m.data.fs.buf, "", copy_args);
 
 	return OK;
 }

@@ -14,10 +14,10 @@ keyboard_driver::keyboard_driver(usb::device* dev, int interface_index)
 
 void* keyboard_driver::operator new(size_t size)
 {
-	return kernel::memory::kmalloc(sizeof(keyboard_driver), kernel::memory::KMALLOC_UNINITIALIZED);
+	return kernel::memory::alloc(sizeof(keyboard_driver), kernel::memory::ALLOC_UNINITIALIZED);
 }
 
-void keyboard_driver::operator delete(void* ptr) noexcept { kernel::memory::kfree(ptr); }
+void keyboard_driver::operator delete(void* ptr) noexcept { kernel::memory::free(ptr); }
 
 void keyboard_driver::on_data_received()
 {

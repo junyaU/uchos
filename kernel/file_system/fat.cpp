@@ -207,11 +207,11 @@ void send_file_data(fs_id_t id,
 					bool for_user)
 {
 	message m = { .type = type, .sender = process_ids::FS_FAT32 };
-	m.data.fs_op.request_id = id;
+	m.data.fs.request_id = id;
 
 	if (for_user) {
-		void* user_buf = kernel::memory::kmalloc(
-				size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE);
+		void* user_buf = kernel::memory::alloc(
+				size, kernel::memory::ALLOC_ZEROED, kernel::memory::PAGE_SIZE);
 		if (user_buf == nullptr) {
 			LOG_ERROR("failed to allocate memory");
 			return;
@@ -222,8 +222,8 @@ void send_file_data(fs_id_t id,
 		m.tool_desc.size = size;
 		m.tool_desc.present = true;
 	} else {
-		m.data.fs_op.buf = buf;
-		m.data.fs_op.len = size;
+		m.data.fs.buf = buf;
+		m.data.fs.len = size;
 	}
 
 	kernel::task::send_message(requester, m);
@@ -249,7 +249,7 @@ error_t process_read_data_response(const message& m, bool for_user)
 					   ctx.requester, m.type, for_user);
 	}
 
-	kernel::memory::kfree(m.data.blk_io.buf);
+	kernel::memory::free(m.data.blk_io.buf);
 
 	return OK;
 }
@@ -263,7 +263,7 @@ process_file_read_request(const message& m, directory_entry* entry, bool for_use
 
 	file_cache* c = find_file_cache_by_path(file_name);
 	if (c != nullptr) {
-		send_file_data(m.data.fs_op.request_id, c->buffer.data(), c->total_size,
+		send_file_data(m.data.fs.request_id, c->buffer.data(), c->total_size,
 					   m.sender, m.type, for_user);
 		return OK;
 	}
@@ -327,12 +327,12 @@ void handle_get_file_info(const message& m)
 		return;
 	}
 
-	const auto* name = m.data.fs_op.name;
+	const auto* name = m.data.fs.name;
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
 	message sm = { .type = msg_t::IPC_GET_FILE_INFO,
 				   .sender = process_ids::FS_FAT32 };
-	sm.data.fs_op.buf = nullptr;
+	sm.data.fs.buf = nullptr;
 
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
 		if (ROOT_DIR[i].name[0] == 0x00) {
@@ -348,10 +348,10 @@ void handle_get_file_info(const message& m)
 		}
 
 		if (entry_name_is_equal(ROOT_DIR[i], name)) {
-			void* buf = kernel::memory::kmalloc(sizeof(directory_entry),
-												kernel::memory::KMALLOC_ZEROED);
+			void* buf = kernel::memory::alloc(sizeof(directory_entry),
+												kernel::memory::ALLOC_ZEROED);
 			memcpy(buf, &ROOT_DIR[i], sizeof(directory_entry));
-			sm.data.fs_op.buf = buf;
+			sm.data.fs.buf = buf;
 			break;
 		}
 	}
@@ -371,7 +371,7 @@ void handle_read_file_data(const message& m)
 		return;
 	}
 
-	directory_entry* entry = reinterpret_cast<directory_entry*>(m.data.fs_op.buf);
+	directory_entry* entry = reinterpret_cast<directory_entry*>(m.data.fs.buf);
 	if (entry == nullptr) {
 		LOG_ERROR("entry is null");
 		return;
@@ -407,8 +407,8 @@ void handle_get_directory_contents(const message& m)
 		++entries_count;
 	}
 
-	void* buf = kernel::memory::kmalloc(entries_count * sizeof(stat),
-										kernel::memory::KMALLOC_ZEROED,
+	void* buf = kernel::memory::alloc(entries_count * sizeof(stat),
+										kernel::memory::ALLOC_ZEROED,
 										kernel::memory::PAGE_SIZE);
 	if (buf == nullptr) {
 		LOG_ERROR("failed to allocate memory");
@@ -439,18 +439,18 @@ void handle_fs_open(const message& m)
 {
 	message req = { .type = msg_t::FS_OPEN, .sender = process_ids::FS_FAT32 };
 
-	const char* name = reinterpret_cast<const char*>(m.data.fs_op.name);
+	const char* name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
 	directory_entry* entry = find_dir_entry(name);
 	if (entry == nullptr) {
-		req.data.fs_op.fd = -1;
+		req.data.fs.fd = -1;
 		kernel::task::send_message(m.sender, req);
 		return;
 	}
 
 	file_descriptor* fd = register_fd(name, entry->file_size, m.sender);
-	req.data.fs_op.fd = fd == nullptr ? -1 : fd->fd;
+	req.data.fs.fd = fd == nullptr ? -1 : fd->fd;
 
 	kernel::task::send_message(m.sender, req);
 }
@@ -464,10 +464,10 @@ void handle_fs_read(const message& m)
 
 	message req = { .type = msg_t::FS_READ, .sender = process_ids::FS_FAT32 };
 
-	file_descriptor* fd = get_fd(m.data.fs_op.fd);
+	file_descriptor* fd = get_fd(m.data.fs.fd);
 	if (fd == nullptr) {
 		LOG_ERROR("fd not found");
-		req.data.fs_op.len = 0;
+		req.data.fs.len = 0;
 		kernel::task::send_message(m.sender, req);
 		return;
 	}
@@ -475,7 +475,7 @@ void handle_fs_read(const message& m)
 	directory_entry* entry = find_dir_entry(fd->name);
 	if (entry == nullptr) {
 		LOG_ERROR("entry not found");
-		req.data.fs_op.len = 0;
+		req.data.fs.len = 0;
 		kernel::task::send_message(m.sender, req);
 		return;
 	}
@@ -485,7 +485,7 @@ void handle_fs_read(const message& m)
 
 void handle_fs_close(const message& m)
 {
-	file_descriptor* fd = get_fd(m.data.fs_op.fd);
+	file_descriptor* fd = get_fd(m.data.fs.fd);
 	if (fd == nullptr) {
 		LOG_ERROR("fd not found");
 		return;
@@ -499,19 +499,19 @@ void handle_fs_mkfile(const message& m)
 {
 	message reply = { .type = msg_t::FS_MKFILE, .sender = process_ids::FS_FAT32 };
 
-	const char* name = reinterpret_cast<const char*>(m.data.fs_op.name);
+	const char* name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
 	directory_entry* existing_entry = find_dir_entry(name);
 	if (existing_entry != nullptr) {
-		reply.data.fs_op.fd = -1;
+		reply.data.fs.fd = -1;
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
 
 	directory_entry* entry = find_empty_dir_entry();
 	if (entry == nullptr) {
-		reply.data.fs_op.fd = -1;
+		reply.data.fs.fd = -1;
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
@@ -522,7 +522,7 @@ void handle_fs_mkfile(const message& m)
 
 	file_descriptor* fd = register_fd(name, 0, m.sender);
 
-	reply.data.fs_op.fd = fd == nullptr ? -1 : fd->fd;
+	reply.data.fs.fd = fd == nullptr ? -1 : fd->fd;
 
 	kernel::task::send_message(m.sender, reply);
 }
@@ -537,7 +537,7 @@ void handle_fs_register_path(const message& m)
 	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = m.sender };
 
 	void* buf =
-			kernel::memory::kmalloc(sizeof(path), kernel::memory::KMALLOC_ZEROED);
+			kernel::memory::alloc(sizeof(path), kernel::memory::ALLOC_ZEROED);
 	if (buf == nullptr) {
 		LOG_ERROR("failed to allocate memory");
 		return;
@@ -545,7 +545,7 @@ void handle_fs_register_path(const message& m)
 
 	path p = init_path(ROOT_DIR);
 	memcpy(buf, &p, sizeof(path));
-	reply.data.fs_op.buf = buf;
+	reply.data.fs.buf = buf;
 
 	kernel::task::send_message(process_ids::KERNEL, reply);
 }
@@ -561,9 +561,9 @@ void handle_fs_get_pwd(const message& m)
 	}
 
 	if (t->fs_path.is_root()) {
-		memcpy(reply.data.fs_op.name, "/", 2);
+		memcpy(reply.data.fs.name, "/", 2);
 	} else {
-		read_dir_entry_name(*t->fs_path.current_dir, reply.data.fs_op.name);
+		read_dir_entry_name(*t->fs_path.current_dir, reply.data.fs.name);
 	}
 
 	kernel::task::send_message(m.sender, reply);

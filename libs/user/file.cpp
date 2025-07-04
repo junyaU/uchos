@@ -10,22 +10,22 @@ fd_t fs_open(const char* path, int flags)
 {
 	ProcessId pid = ProcessId::from_raw(sys_getpid());
 	message m = { .type = msg_t::FS_OPEN, .sender = pid };
-	memcpy(m.data.fs_op.name, path, strlen(path));
-	m.data.fs_op.operation = flags;
+	memcpy(m.data.fs.name, path, strlen(path));
+	m.data.fs.operation = flags;
 
 	send_message(process_ids::FS_FAT32, &m);
 
 	message res = wait_for_message(msg_t::FS_OPEN);
 
-	return res.data.fs_op.fd;
+	return res.data.fs.fd;
 }
 
 size_t fs_read(fd_t fd, void* buf, size_t count)
 {
 	ProcessId pid = ProcessId::from_raw(sys_getpid());
 	message m = { .type = msg_t::FS_READ, .sender = pid };
-	m.data.fs_op.fd = fd;
-	m.data.fs_op.len = count;
+	m.data.fs.fd = fd;
+	m.data.fs.len = count;
 
 	send_message(process_ids::FS_FAT32, &m);
 
@@ -42,7 +42,7 @@ void fs_close(fd_t fd)
 {
 	ProcessId pid = ProcessId::from_raw(sys_getpid());
 	message m = { .type = msg_t::FS_CLOSE, .sender = pid };
-	m.data.fs_op.fd = fd;
+	m.data.fs.fd = fd;
 
 	send_message(process_ids::FS_FAT32, &m);
 }
@@ -51,13 +51,13 @@ fd_t fs_create(const char* path)
 {
 	ProcessId pid = ProcessId::from_raw(sys_getpid());
 	message m = { .type = msg_t::FS_MKFILE, .sender = pid };
-	memcpy(m.data.fs_op.name, path, strlen(path));
+	memcpy(m.data.fs.name, path, strlen(path));
 
 	send_message(process_ids::FS_FAT32, &m);
 
 	message res = wait_for_message(msg_t::FS_MKFILE);
 
-	return res.data.fs_op.fd;
+	return res.data.fs.fd;
 }
 
 void get_cwd(char* buf, size_t size)
@@ -69,5 +69,5 @@ void get_cwd(char* buf, size_t size)
 
 	message res = wait_for_message(msg_t::FS_GET_CWD);
 
-	memcpy(buf, res.data.fs_op.name, size);
+	memcpy(buf, res.data.fs.name, size);
 }
