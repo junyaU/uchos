@@ -14,9 +14,9 @@
 #include <cstdint>
 #include <cstring>
 #include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
 #include <libs/common/stat.hpp>
 #include <libs/common/types.hpp>
-#include <libs/common/process_id.hpp>
 #include <queue>
 #include <string.h>
 #include <utility>
@@ -210,7 +210,8 @@ void send_file_data(fs_id_t id,
 	m.data.fs_op.request_id = id;
 
 	if (for_user) {
-		void* user_buf = kernel::memory::kmalloc(size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE);
+		void* user_buf = kernel::memory::kmalloc(
+				size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE);
 		if (user_buf == nullptr) {
 			LOG_ERROR("failed to allocate memory");
 			return;
@@ -329,7 +330,8 @@ void handle_get_file_info(const message& m)
 	const auto* name = m.data.fs_op.name;
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	message sm = { .type = msg_t::IPC_GET_FILE_INFO, .sender = process_ids::FS_FAT32 };
+	message sm = { .type = msg_t::IPC_GET_FILE_INFO,
+				   .sender = process_ids::FS_FAT32 };
 	sm.data.fs_op.buf = nullptr;
 
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
@@ -346,7 +348,8 @@ void handle_get_file_info(const message& m)
 		}
 
 		if (entry_name_is_equal(ROOT_DIR[i], name)) {
-			void* buf = kernel::memory::kmalloc(sizeof(directory_entry), kernel::memory::KMALLOC_ZEROED);
+			void* buf = kernel::memory::kmalloc(sizeof(directory_entry),
+												kernel::memory::KMALLOC_ZEROED);
 			memcpy(buf, &ROOT_DIR[i], sizeof(directory_entry));
 			sm.data.fs_op.buf = buf;
 			break;
@@ -404,7 +407,9 @@ void handle_get_directory_contents(const message& m)
 		++entries_count;
 	}
 
-	void* buf = kernel::memory::kmalloc(entries_count * sizeof(stat), kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE);
+	void* buf = kernel::memory::kmalloc(entries_count * sizeof(stat),
+										kernel::memory::KMALLOC_ZEROED,
+										kernel::memory::PAGE_SIZE);
 	if (buf == nullptr) {
 		LOG_ERROR("failed to allocate memory");
 		return;
@@ -531,7 +536,8 @@ void handle_fs_register_path(const message& m)
 
 	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = m.sender };
 
-	void* buf = kernel::memory::kmalloc(sizeof(path), kernel::memory::KMALLOC_ZEROED);
+	void* buf =
+			kernel::memory::kmalloc(sizeof(path), kernel::memory::KMALLOC_ZEROED);
 	if (buf == nullptr) {
 		LOG_ERROR("failed to allocate memory");
 		return;
@@ -544,7 +550,7 @@ void handle_fs_register_path(const message& m)
 	kernel::task::send_message(process_ids::KERNEL, reply);
 }
 
-void handle_fs_get_cwd(const message& m)
+void handle_fs_get_pwd(const message& m)
 {
 	message reply = { .type = msg_t::FS_GET_CWD, .sender = process_ids::FS_FAT32 };
 
@@ -572,7 +578,8 @@ void fat32_task()
 	init_read_contexts();
 	init_fds();
 
-	send_read_req_to_blk_device(BOOT_SECTOR, kernel::hw::virtio::SECTOR_SIZE, msg_t::INITIALIZE_TASK);
+	send_read_req_to_blk_device(BOOT_SECTOR, kernel::hw::virtio::SECTOR_SIZE,
+								msg_t::INITIALIZE_TASK);
 
 	t->add_msg_handler(msg_t::INITIALIZE_TASK, handle_initialize);
 	t->add_msg_handler(msg_t::IPC_GET_FILE_INFO, handle_get_file_info);
@@ -583,7 +590,7 @@ void fat32_task()
 	t->add_msg_handler(msg_t::FS_CLOSE, handle_fs_close);
 	t->add_msg_handler(msg_t::FS_MKFILE, handle_fs_mkfile);
 	t->add_msg_handler(msg_t::FS_REGISTER_PATH, handle_fs_register_path);
-	t->add_msg_handler(msg_t::FS_GET_CWD, handle_fs_get_cwd);
+	t->add_msg_handler(msg_t::FS_GET_CWD, handle_fs_get_pwd);
 
 	kernel::task::process_messages(t);
 };

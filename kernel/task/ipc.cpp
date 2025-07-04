@@ -62,8 +62,7 @@ error_t send_message(ProcessId dst_id, message& m)
 	task* dst = tasks[dst_raw];
 	if (dst == nullptr) {
 		if (m.type != msg_t::INITIALIZE_TASK) {
-			LOG_ERROR_CODE(ERR_INVALID_TASK, "send_message: task %d is not found",
-						   dst_raw);
+			LOG_ERROR_CODE(ERR_INVALID_TASK, "task %d is not found", dst_raw);
 		}
 		return ERR_INVALID_TASK;
 	}
