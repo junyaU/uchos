@@ -1,7 +1,7 @@
 #pragma once
 
-#include "types.hpp"
 #include "process_id.hpp"
+#include "types.hpp"
 #include <cstddef>
 #include <cstdint>
 
@@ -35,7 +35,7 @@ enum class msg_t : int32_t {
 	FS_WRITE,
 	FS_MKFILE,
 	FS_REGISTER_PATH,
-	FS_GET_CWD,
+	FS_GET_PWD,
 	MAX_MESSAGE_TYPE, // must be the last
 };
 

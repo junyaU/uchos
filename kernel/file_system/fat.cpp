@@ -210,8 +210,8 @@ void send_file_data(fs_id_t id,
 	m.data.fs.request_id = id;
 
 	if (for_user) {
-		void* user_buf = kernel::memory::alloc(
-				size, kernel::memory::ALLOC_ZEROED, kernel::memory::PAGE_SIZE);
+		void* user_buf = kernel::memory::alloc(size, kernel::memory::ALLOC_ZEROED,
+											   kernel::memory::PAGE_SIZE);
 		if (user_buf == nullptr) {
 			LOG_ERROR("failed to allocate memory");
 			return;
@@ -349,7 +349,7 @@ void handle_get_file_info(const message& m)
 
 		if (entry_name_is_equal(ROOT_DIR[i], name)) {
 			void* buf = kernel::memory::alloc(sizeof(directory_entry),
-												kernel::memory::ALLOC_ZEROED);
+											  kernel::memory::ALLOC_ZEROED);
 			memcpy(buf, &ROOT_DIR[i], sizeof(directory_entry));
 			sm.data.fs.buf = buf;
 			break;
@@ -408,8 +408,8 @@ void handle_get_directory_contents(const message& m)
 	}
 
 	void* buf = kernel::memory::alloc(entries_count * sizeof(stat),
-										kernel::memory::ALLOC_ZEROED,
-										kernel::memory::PAGE_SIZE);
+									  kernel::memory::ALLOC_ZEROED,
+									  kernel::memory::PAGE_SIZE);
 	if (buf == nullptr) {
 		LOG_ERROR("failed to allocate memory");
 		return;
@@ -536,8 +536,7 @@ void handle_fs_register_path(const message& m)
 
 	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = m.sender };
 
-	void* buf =
-			kernel::memory::alloc(sizeof(path), kernel::memory::ALLOC_ZEROED);
+	void* buf = kernel::memory::alloc(sizeof(path), kernel::memory::ALLOC_ZEROED);
 	if (buf == nullptr) {
 		LOG_ERROR("failed to allocate memory");
 		return;
@@ -552,7 +551,7 @@ void handle_fs_register_path(const message& m)
 
 void handle_fs_get_pwd(const message& m)
 {
-	message reply = { .type = msg_t::FS_GET_CWD, .sender = process_ids::FS_FAT32 };
+	message reply = { .type = msg_t::FS_GET_PWD, .sender = process_ids::FS_FAT32 };
 
 	kernel::task::task* t = kernel::task::get_task(m.sender);
 	if (t->fs_path.current_dir == nullptr) {
@@ -590,7 +589,7 @@ void fat32_task()
 	t->add_msg_handler(msg_t::FS_CLOSE, handle_fs_close);
 	t->add_msg_handler(msg_t::FS_MKFILE, handle_fs_mkfile);
 	t->add_msg_handler(msg_t::FS_REGISTER_PATH, handle_fs_register_path);
-	t->add_msg_handler(msg_t::FS_GET_CWD, handle_fs_get_pwd);
+	t->add_msg_handler(msg_t::FS_GET_PWD, handle_fs_get_pwd);
 
 	kernel::task::process_messages(t);
 };
