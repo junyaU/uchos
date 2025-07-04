@@ -12,10 +12,6 @@ using kernel::task::get_available_task_id;
 using kernel::task::MAX_TASKS;
 using kernel::task::get_task_id_by_name;
 using kernel::task::get_task;
-using kernel::task::schedule_task;
-using kernel::task::tasks;
-using kernel::task::context;
-using kernel::task::TASK_READY;
 
 void test_task_creation_basic()
 {
@@ -71,7 +67,7 @@ namespace
 {
 bool g_handler_called = false;
 
-void test_message_handler(const message&) { g_handler_called = true; }
+void test_message_handler(const message& /*unused*/) { g_handler_called = true; }
 } // namespace
 
 void test_task_message_handling()
