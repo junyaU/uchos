@@ -39,10 +39,16 @@ public:
 	}
 
 	constexpr bool operator==(pid_t raw_pid) const { return value_ == raw_pid; }
+
+	constexpr bool operator!=(const ProcessId& other) const
+	{
+		return value_ != other.value_;
+	}
 };
 
 namespace process_ids
 {
+inline constexpr ProcessId INVALID{ SystemProcessId::INVALID };
 inline constexpr ProcessId KERNEL{ SystemProcessId::KERNEL };
 inline constexpr ProcessId IDLE{ SystemProcessId::IDLE };
 inline constexpr ProcessId XHCI{ SystemProcessId::XHCI };

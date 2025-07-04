@@ -12,23 +12,28 @@
 #include <cstddef>
 #include <cstring>
 #include <libs/common/message.hpp>
-#include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
+#include <libs/common/types.hpp>
 
 namespace
 {
-void notify_xhci_handler(const message& m) { kernel::hw::usb::xhci::process_events(); }
+void notify_xhci_handler(const message& m)
+{
+	kernel::hw::usb::xhci::process_events();
+}
 
 void handle_initialize_task(const message& m)
 {
-	message send_m = { .type = msg_t::INITIALIZE_TASK, .sender = process_ids::KERNEL };
+	message send_m = { .type = msg_t::INITIALIZE_TASK,
+					   .sender = process_ids::KERNEL };
 	send_m.data.init.task_id = m.sender.raw();
 	kernel::task::send_message(m.sender, send_m);
 }
 
 void handle_memory_usage(const message& m)
 {
-	message send_m = { .type = msg_t::IPC_MEMORY_USAGE, .sender = process_ids::KERNEL };
+	message send_m = { .type = msg_t::IPC_MEMORY_USAGE,
+					   .sender = process_ids::KERNEL };
 
 	size_t used_mem = 0;
 	size_t total_mem = 0;
@@ -70,7 +75,7 @@ void handle_fs_register_path(const message& m)
 	}
 
 	kernel::task::task* t = kernel::task::get_task(m.sender);
-	if (t->parent_id.raw() != -1) {
+	if (t->parent_id != process_ids::INVALID) {
 		auto* parent = kernel::task::get_task(t->parent_id);
 		memcpy(&t->fs_path, &parent->fs_path, sizeof(path));
 	} else {
@@ -79,7 +84,8 @@ void handle_fs_register_path(const message& m)
 
 	kernel::memory::kfree(p);
 
-	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = process_ids::KERNEL };
+	message reply = { .type = msg_t::FS_REGISTER_PATH,
+					  .sender = process_ids::KERNEL };
 	reply.data.fs_op.result = 0;
 	kernel::task::send_message(m.sender, reply);
 };
@@ -124,7 +130,8 @@ void task_shell()
 		}
 	}
 
-	message read_m = { .type = msg_t::IPC_READ_FILE_DATA, .sender = process_ids::SHELL };
+	message read_m = { .type = msg_t::IPC_READ_FILE_DATA,
+					   .sender = process_ids::SHELL };
 	read_m.data.fs_op.buf = info_m.data.fs_op.buf;
 	kernel::task::send_message(process_ids::FS_FAT32, read_m);
 

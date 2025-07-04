@@ -1,8 +1,8 @@
 #include "ipc.hpp"
 #include "syscall.hpp"
 #include <libs/common/message.hpp>
-#include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
+#include <libs/common/types.hpp>
 
 void receive_message(message* msg)
 {
@@ -28,6 +28,11 @@ void initialize_task()
 {
 	ProcessId pid = ProcessId::from_raw(sys_getpid());
 	message m = { .sender = pid };
+
+	m.type = msg_t::FS_REGISTER_PATH;
+	send_message(process_ids::FS_FAT32, &m);
+
+	wait_for_message(msg_t::FS_REGISTER_PATH);
 
 	m.type = msg_t::INITIALIZE_TASK;
 	send_message(process_ids::KERNEL, &m);
