@@ -19,7 +19,7 @@ void handle_read_request(const message& m)
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len;
 
-	char* buf = static_cast<char*>(kernel::memory::kmalloc(len, kernel::memory::KMALLOC_ZEROED));
+	char* buf = static_cast<char*>(kernel::memory::alloc(len, kernel::memory::ALLOC_ZEROED));
 	if (buf == nullptr) {
 		LOG_ERROR("failed to allocate buffer");
 		return;
@@ -27,7 +27,7 @@ void handle_read_request(const message& m)
 
 	if (IS_ERR(kernel::hw::virtio::read_from_blk_device(buf, sector, len))) {
 		LOG_ERROR("failed to read from blk device");
-		kernel::memory::kfree(buf);
+		kernel::memory::free(buf);
 		kernel::task::send_message(m.sender, send_m);
 	}
 
@@ -75,7 +75,7 @@ error_t write_to_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 	ASSERT_OK(validate_length(len));
 
 	virtio_blk_req* req =
-			(virtio_blk_req*)kernel::memory::kmalloc(sizeof(virtio_blk_req), kernel::memory::KMALLOC_ZEROED);
+			(virtio_blk_req*)kernel::memory::alloc(sizeof(virtio_blk_req), kernel::memory::ALLOC_ZEROED);
 	if (req == nullptr) {
 		return ERR_NO_MEMORY;
 	}
@@ -104,12 +104,12 @@ error_t write_to_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 
 	if (req->status != VIRTIO_BLK_S_OK) {
 		LOG_ERROR("Failed to write to block device.");
-		kernel::memory::kfree(req);
+		kernel::memory::free(req);
 
 		return ERR_FAILED_WRITE_TO_DEVICE;
 	}
 
-	kernel::memory::kfree(req);
+	kernel::memory::free(req);
 
 	return OK;
 }
@@ -119,7 +119,7 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 	ASSERT_OK(validate_length(len));
 
 	virtio_blk_req* req =
-			(virtio_blk_req*)kernel::memory::kmalloc(sizeof(virtio_blk_req), kernel::memory::KMALLOC_ZEROED);
+			(virtio_blk_req*)kernel::memory::alloc(sizeof(virtio_blk_req), kernel::memory::ALLOC_ZEROED);
 	if (req == nullptr) {
 		return ERR_NO_MEMORY;
 	}
@@ -148,19 +148,19 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 
 	if (req->status != VIRTIO_BLK_S_OK) {
 		LOG_ERROR("Failed to read from block device. status: %d", req->status);
-		kernel::memory::kfree(req);
+		kernel::memory::free(req);
 
 		return ERR_FAILED_WRITE_TO_DEVICE;
 	}
 
-	kernel::memory::kfree(req);
+	kernel::memory::free(req);
 
 	return OK;
 }
 
 error_t init_blk_device()
 {
-	void* buffer = kernel::memory::kmalloc(sizeof(virtio_pci_device), kernel::memory::KMALLOC_ZEROED);
+	void* buffer = kernel::memory::alloc(sizeof(virtio_pci_device), kernel::memory::ALLOC_ZEROED);
 	if (buffer == nullptr) {
 		return ERR_NO_MEMORY;
 	}

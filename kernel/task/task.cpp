@@ -99,7 +99,7 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 
 	stack_size = parent->stack_size;
 
-	stack = static_cast<uint64_t*>(kernel::memory::kmalloc(stack_size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE));
+	stack = static_cast<uint64_t*>(kernel::memory::alloc(stack_size, kernel::memory::ALLOC_ZEROED, kernel::memory::PAGE_SIZE));
 	if (stack == nullptr) {
 		LOG_ERROR("Failed to allocate stack for child task");
 		return ERR_NO_MEMORY;
@@ -316,7 +316,7 @@ task::task(int raw_id,
 	}
 
 	stack_size = kernel::memory::PAGE_SIZE * 8;
-	stack = static_cast<uint64_t*>(kernel::memory::kmalloc(stack_size, kernel::memory::KMALLOC_ZEROED, kernel::memory::PAGE_SIZE));
+	stack = static_cast<uint64_t*>(kernel::memory::alloc(stack_size, kernel::memory::ALLOC_ZEROED, kernel::memory::PAGE_SIZE));
 	if (stack == nullptr) {
 		LOG_ERROR("Failed to allocate stack for task %s", name);
 		return;

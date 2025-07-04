@@ -116,6 +116,6 @@ struct message {
 			size_t len;
 			int operation;
 			int result;
-		} fs_op;
+		} fs;
 	} data;
 };

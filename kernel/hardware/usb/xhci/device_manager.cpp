@@ -11,8 +11,8 @@ void device_manager::initialize(size_t max_slots)
 
 	devices_ =
 			// NOLINTNEXTLINE(bugprone-sizeof-expression)
-			reinterpret_cast<device**>(kernel::memory::kmalloc(sizeof(device*) * (max_slots_ + 1),
-											   kernel::memory::KMALLOC_UNINITIALIZED));
+			reinterpret_cast<device**>(kernel::memory::alloc(sizeof(device*) * (max_slots_ + 1),
+											   kernel::memory::ALLOC_UNINITIALIZED));
 	if (devices_ == nullptr) {
 		LOG_ERROR("failed to allocate memory for devices");
 		return;
@@ -20,10 +20,10 @@ void device_manager::initialize(size_t max_slots)
 
 	contexts_ = reinterpret_cast<device_context**>(
 			// NOLINTNEXTLINE(bugprone-sizeof-expression)
-			kernel::memory::kmalloc(sizeof(device_context*) * (max_slots_ + 1),
-					kernel::memory::KMALLOC_UNINITIALIZED, 64));
+			kernel::memory::alloc(sizeof(device_context*) * (max_slots_ + 1),
+					kernel::memory::ALLOC_UNINITIALIZED, 64));
 	if (contexts_ == nullptr) {
-		kernel::memory::kfree(devices_);
+		kernel::memory::free(devices_);
 		LOG_ERROR("failed to allocate memory for device contexts");
 		return;
 	}
@@ -91,7 +91,7 @@ void device_manager::allocate_device(uint8_t slot_id,
 	}
 
 	devices_[slot_id] = reinterpret_cast<device*>(
-			kernel::memory::kmalloc(sizeof(device), kernel::memory::KMALLOC_UNINITIALIZED, 64));
+			kernel::memory::alloc(sizeof(device), kernel::memory::ALLOC_UNINITIALIZED, 64));
 	new (devices_[slot_id]) device(slot_id, dbreg);
 }
 
@@ -109,7 +109,7 @@ void device_manager::load_dcbaa(uint8_t slot_id)
 void device_manager::remove(uint8_t slot_id)
 {
 	contexts_[slot_id] = nullptr;
-	kernel::memory::kfree(devices_[slot_id]);
+	kernel::memory::free(devices_[slot_id]);
 	devices_[slot_id] = nullptr;
 }
 } // namespace kernel::hw::usb::xhci

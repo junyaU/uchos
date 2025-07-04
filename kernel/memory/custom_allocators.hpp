@@ -98,11 +98,11 @@ private:
 };
 
 /**
- * @brief General-purpose kernel allocator that uses kmalloc/kfree
+ * @brief General-purpose kernel allocator that uses alloc/free
  * @tparam T Type of objects to allocate
  * 
  * This allocator provides a standard allocator interface for STL containers
- * but uses the kernel's kmalloc/kfree functions instead of standard malloc/free.
+ * but uses the kernel's alloc/free functions instead of standard malloc/free.
  * It's suitable for dynamic allocations of varying sizes.
  */
 template<typename T>
@@ -142,7 +142,7 @@ public:
 		if (n > std::numeric_limits<std::size_t>::max() / sizeof(T)) {
 			return nullptr; // Overflow check
 		}
-		return static_cast<T*>(kmalloc(n * sizeof(T), KMALLOC_ZEROED));
+		return static_cast<T*>(alloc(n * sizeof(T), ALLOC_ZEROED));
 	}
 
 	/**
@@ -150,7 +150,7 @@ public:
 	 * @param p Pointer to memory to deallocate
 	 * @param n Number of objects (ignored)
 	 */
-	void deallocate(T* p, std::size_t) noexcept { kfree(p); }
+	void deallocate(T* p, std::size_t) noexcept { free(p); }
 };
 
 /**

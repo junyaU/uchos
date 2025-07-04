@@ -276,11 +276,11 @@ void controller::initialize()
 			(hcs_params2.bits.max_scratchpad_buffers_high << 5);
 
 	if (max_scratchpad_buffers > 0) {
-		auto* scratchpad_buf_arr = reinterpret_cast<void**>(kernel::memory::kmalloc(
-				sizeof(void*) * max_scratchpad_buffers, kernel::memory::KMALLOC_UNINITIALIZED, 64));
+		auto* scratchpad_buf_arr = reinterpret_cast<void**>(kernel::memory::alloc(
+				sizeof(void*) * max_scratchpad_buffers, kernel::memory::ALLOC_UNINITIALIZED, 64));
 
 		for (int i = 0; i < max_scratchpad_buffers; i++) {
-			scratchpad_buf_arr[i] = kernel::memory::kmalloc(4096, kernel::memory::KMALLOC_UNINITIALIZED);
+			scratchpad_buf_arr[i] = kernel::memory::alloc(4096, kernel::memory::ALLOC_UNINITIALIZED);
 		}
 
 		device_manager_.device_contexts()[0] =

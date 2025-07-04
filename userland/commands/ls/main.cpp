@@ -15,9 +15,9 @@ int main(int argc, char** argv)
 
 	message m = { .type = msg_t::GET_DIRECTORY_CONTENTS, .sender = ProcessId::from_raw(pid) };
 	if (input != nullptr) {
-		memcpy(m.data.fs_op.name, input, strlen(input));
+		memcpy(m.data.fs.name, input, strlen(input));
 	} else {
-		memcpy(m.data.fs_op.name, "/", 1);
+		memcpy(m.data.fs.name, "/", 1);
 	}
 
 	send_message(process_ids::FS_FAT32, &m);
