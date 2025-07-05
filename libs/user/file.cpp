@@ -71,3 +71,22 @@ void fs_pwd(char* buf, size_t size)
 
 	memcpy(buf, res.data.fs.name, size);
 }
+
+void fs_change_dir(char* buf, const char* path)
+{
+	ProcessId pid = ProcessId::from_raw(sys_getpid());
+	message m = { .type = msg_t::FS_CHANGE_DIR, .sender = pid };
+	memcpy(m.data.fs.name, path, strlen(path));
+	m.data.fs.name[strlen(path)] = '\0';
+
+	send_message(process_ids::FS_FAT32, &m);
+
+	message res = wait_for_message(msg_t::FS_CHANGE_DIR);
+	if (res.data.fs.result == -1) {
+		buf[0] = '\0';
+		return;
+	}
+
+	memcpy(buf, res.data.fs.name, strlen(res.data.fs.name));
+	buf[strlen(res.data.fs.name)] = '\0';
+}

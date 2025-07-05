@@ -112,14 +112,14 @@ cluster_t next_cluster(cluster_t cluster_id)
 	return next;
 }
 
-directory_entry* find_dir_entry(const char* name)
+directory_entry* find_dir_entry(directory_entry* parent_dir, const char* name)
 {
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
-		if (ROOT_DIR[i].name[0] == 0) {
+		if (parent_dir[i].name[0] == 0) {
 			break;
 		}
 
-		if (entry_name_is_equal(ROOT_DIR[i], name)) {
+		if (entry_name_is_equal(parent_dir[i], name)) {
 			return &ROOT_DIR[i];
 		}
 	}
@@ -442,7 +442,7 @@ void handle_fs_open(const message& m)
 	const char* name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	directory_entry* entry = find_dir_entry(name);
+	directory_entry* entry = find_dir_entry(ROOT_DIR, name);
 	if (entry == nullptr) {
 		req.data.fs.fd = -1;
 		kernel::task::send_message(m.sender, req);
@@ -472,7 +472,7 @@ void handle_fs_read(const message& m)
 		return;
 	}
 
-	directory_entry* entry = find_dir_entry(fd->name);
+	directory_entry* entry = find_dir_entry(ROOT_DIR, fd->name);
 	if (entry == nullptr) {
 		LOG_ERROR("entry not found");
 		req.data.fs.len = 0;
@@ -502,7 +502,7 @@ void handle_fs_mkfile(const message& m)
 	const char* name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	directory_entry* existing_entry = find_dir_entry(name);
+	directory_entry* existing_entry = find_dir_entry(ROOT_DIR, name);
 	if (existing_entry != nullptr) {
 		reply.data.fs.fd = -1;
 		kernel::task::send_message(m.sender, reply);
@@ -570,17 +570,29 @@ void handle_fs_pwd(const message& m)
 
 void handle_fs_change_dir(const message& m)
 {
+	message reply = { .type = msg_t::FS_CHANGE_DIR,
+					  .sender = process_ids::FS_FAT32 };
+
 	const char* path_name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(path_name));
 
-	directory_entry* entry = find_dir_entry(path_name);
+	auto* t = kernel::task::get_task(m.sender);
+	if (t->parent_id != process_ids::INVALID) {
+		t = kernel::task::get_task(t->parent_id);
+	}
+
+	directory_entry* entry = find_dir_entry(t->fs_path.current_dir, path_name);
 	if (entry == nullptr || entry->attribute != entry_attribute::DIRECTORY) {
-		LOG_ERROR("directory not found");
+		reply.data.fs.result = -1;
+		kernel::task::send_message(m.sender, reply);
 		return;
 	}
 
-	kernel::task::task* t = kernel::task::get_task(m.sender);
 	t->fs_path.current_dir = entry;
+	memcpy(reply.data.fs.name, path_name, strlen(path_name) + 1);
+	reply.data.fs.result = 0;
+
+	kernel::task::send_message(m.sender, reply);
 }
 
 void fat32_task()
