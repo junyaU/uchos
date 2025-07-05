@@ -132,12 +132,12 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	const char __user* path = reinterpret_cast<const char*>(arg1);
 	const char __user* args = reinterpret_cast<const char*>(arg2);
 
-	size_t path_len = strlen(path);
+	const size_t path_len = strlen(path);
 	char copy_path[path_len + 1];
 	copy_from_user(copy_path, path, path_len);
 	copy_path[path_len] = '\0';
 
-	size_t args_len = strlen(args);
+	const size_t args_len = strlen(args);
 	char copy_args[args_len + 1];
 	copy_from_user(copy_args, args, args_len);
 	copy_args[args_len] = '\0';
@@ -146,7 +146,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	memcpy(msg.data.fs.name, copy_path, path_len + 1);
 	kernel::task::send_message(process_ids::FS_FAT32, msg);
 
-	message info_m = kernel::task::wait_for_message(msg_t::IPC_GET_FILE_INFO);
+	const message info_m = kernel::task::wait_for_message(msg_t::IPC_GET_FILE_INFO);
 
 	auto* entry =
 			reinterpret_cast<kernel::fs::directory_entry*>(info_m.data.fs.buf);
@@ -159,7 +159,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	read_msg.data.fs.buf = entry;
 	kernel::task::send_message(process_ids::FS_FAT32, read_msg);
 
-	message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
+	const message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	kernel::memory::free(entry);
 
 	kernel::memory::page_table_entry* current_page_table = kernel::memory::get_active_page_table();

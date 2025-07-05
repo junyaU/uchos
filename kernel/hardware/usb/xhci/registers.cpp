@@ -1,4 +1,5 @@
 #include "registers.hpp"
+#include <cstdint>
 
 namespace
 {

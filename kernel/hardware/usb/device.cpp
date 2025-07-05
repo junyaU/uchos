@@ -1,4 +1,5 @@
 #include "device.hpp"
+#include <cstdint>
 #include "../../graphics/log.hpp"
 #include "class_driver/base.hpp"
 #include "descriptor.hpp"

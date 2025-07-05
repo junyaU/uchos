@@ -1,9 +1,9 @@
 #include "local_apic.hpp"
+#include <cstdint>
 #include "graphics/log.hpp"
 #include "interrupt/vector.hpp"
 #include "timers/acpi.hpp"
 #include "timers/timer.hpp"
-#include <libs/common/types.hpp>
 
 namespace kernel::timers::local_apic
 {

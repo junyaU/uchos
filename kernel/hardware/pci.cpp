@@ -295,13 +295,15 @@ void configure_msi(const device& dev,
 	}
 
 	if (msix_capability_addr != 0) {
-		return configure_msi_x_register(dev, msix_capability_addr, msg_addr,
+		configure_msi_x_register(dev, msix_capability_addr, msg_addr,
 										msg_data);
+		return;
 	}
 
 	if (msi_capability_addr != 0) {
-		return configure_msi_register(dev, msi_capability_addr, msg_addr, msg_data,
+		configure_msi_register(dev, msi_capability_addr, msg_addr, msg_data,
 									  num_vector_exponent);
+		return;
 	}
 }
 

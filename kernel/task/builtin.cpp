@@ -7,6 +7,7 @@
 #include "hardware/usb/xhci/xhci.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "memory/page.hpp"
+#include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 #include <cstddef>
@@ -117,7 +118,7 @@ void task_shell()
 	memcpy(m.data.fs.name, path, 6);
 	kernel::task::send_message(process_ids::FS_FAT32, m);
 
-	message info_m = kernel::task::wait_for_message(msg_t::IPC_GET_FILE_INFO);
+	const message info_m = kernel::task::wait_for_message(msg_t::IPC_GET_FILE_INFO);
 	auto* entry = reinterpret_cast<kernel::fs::directory_entry*>(info_m.data.fs.buf);
 	if (entry == nullptr) {
 		LOG_ERROR("failed to find shell");
@@ -131,7 +132,7 @@ void task_shell()
 	read_m.data.fs.buf = info_m.data.fs.buf;
 	kernel::task::send_message(process_ids::FS_FAT32, read_m);
 
-	message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
+	const message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	CURRENT_TASK->is_initilized = true;
 	kernel::fs::execute_file(data_m.data.fs.buf, "shell", nullptr);
 }

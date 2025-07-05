@@ -1,4 +1,5 @@
 #include "device_manager.hpp"
+#include <cstdint>
 #include "graphics/log.hpp"
 #include "memory/slab.hpp"
 #include <libs/common/types.hpp>

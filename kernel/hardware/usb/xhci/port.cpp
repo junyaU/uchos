@@ -1,7 +1,7 @@
 #include "port.hpp"
+#include <cstdint>
 #include "graphics/log.hpp"
 #include "registers.hpp"
-#include <libs/common/types.hpp>
 
 namespace kernel::hw::usb::xhci
 {

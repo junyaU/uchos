@@ -1,4 +1,5 @@
 #include "fault.hpp"
+#include <cstdint>
 #include "graphics/log.hpp"
 #include "task/task.hpp"
 

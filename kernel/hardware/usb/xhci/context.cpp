@@ -1,4 +1,5 @@
 #include "context.hpp"
+#include <cstdint>
 
 namespace kernel::hw::usb::xhci
 {

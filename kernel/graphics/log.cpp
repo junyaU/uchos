@@ -1,10 +1,10 @@
 #include "graphics/log.hpp"
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
+#include <cstdarg>
 #include <cstddef>
+#include <cstdio>
 #include <cstring>
-#include <libs/common/message.hpp>
-#include <libs/common/types.hpp>
 
 namespace
 {

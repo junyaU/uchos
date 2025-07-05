@@ -90,7 +90,7 @@ inline const char* error_to_string(error_t err)
  */
 #define RETURN_IF_ERROR(expression)                                               \
 	do {                                                                          \
-		error_t __err = (expression);                                             \
+		const error_t __err = (expression);                                             \
 		if (IS_ERR(__err)) {                                                      \
 			return __err;                                                         \
 		}                                                                         \
@@ -104,7 +104,7 @@ inline const char* error_to_string(error_t err)
  */
 #define LOG_AND_RETURN_IF_ERROR(expression, fmt, ...)                            \
 	do {                                                                          \
-		error_t __err = (expression);                                             \
+		const error_t __err = (expression);                                             \
 		if (IS_ERR(__err)) {                                                      \
 			LOG_ERROR_CODE(__err, fmt, ##__VA_ARGS__);                           \
 			return __err;                                                         \

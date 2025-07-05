@@ -1,6 +1,7 @@
 #include "memory/page.hpp"
 #include "memory/bootstrap_allocator.hpp"
-#include <libs/common/types.hpp>
+#include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace kernel::memory

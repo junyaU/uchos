@@ -72,7 +72,7 @@ int push_virtio_entry(virtio_virtqueue* queue,
 		return ERR_NO_MEMORY;
 	}
 
-	int top_free_idx = queue->top_free_idx;
+	const int top_free_idx = queue->top_free_idx;
 	int desc_idx = top_free_idx;
 	virtq_desc* desc = nullptr;
 
