@@ -1,6 +1,5 @@
 #include "ipc.hpp"
 #include "error.hpp"
-#include "graphics/log.hpp"
 #include "memory/paging.hpp"
 #include "memory/user.hpp"
 #include "task.hpp"
@@ -15,9 +14,9 @@ namespace kernel::task
 
 error_t handle_ool_memory_dealloc(const message& m)
 {
-	kernel::memory::vaddr_t addr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
-	kernel::memory::vaddr_t start_addr{ addr.data - addr.part(0) };
-	size_t pages_to_unmap =
+	const kernel::memory::vaddr_t addr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
+	const kernel::memory::vaddr_t start_addr{ addr.data - addr.part(0) };
+	const size_t pages_to_unmap =
 			kernel::memory::calc_required_pages(addr, m.tool_desc.size);
 
 	return kernel::memory::unmap_frame(kernel::memory::get_active_page_table(),
@@ -26,9 +25,9 @@ error_t handle_ool_memory_dealloc(const message& m)
 
 error_t handle_ool_memory_alloc(message& m, task* dst)
 {
-	kernel::memory::vaddr_t src_vaddr{ reinterpret_cast<uint64_t>(
+	const kernel::memory::vaddr_t src_vaddr{ reinterpret_cast<uint64_t>(
 			m.tool_desc.addr) };
-	size_t num_pages =
+	const size_t num_pages =
 			kernel::memory::calc_required_pages(src_vaddr, m.tool_desc.size);
 	paddr_t src_paddr = kernel::memory::get_paddr(
 			kernel::memory::get_active_page_table(), src_vaddr);
@@ -51,7 +50,7 @@ error_t handle_ool_memory_alloc(message& m, task* dst)
 
 error_t send_message(ProcessId dst_id, message& m)
 {
-	pid_t dst_raw = dst_id.raw();
+	const pid_t dst_raw = dst_id.raw();
 	if (dst_raw == -1 || m.sender.raw() == dst_raw) {
 		LOG_ERROR_CODE(ERR_INVALID_ARG,
 					   "invalid destination task id : dest = %d, sender = %d",

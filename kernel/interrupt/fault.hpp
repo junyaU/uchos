@@ -65,7 +65,7 @@ struct fault_handler<error_code, true> {
 	handler(interrupt_frame* frame, uint64_t code)
 	{
 		if (error_code == PAGE_FAULT) {
-			uint64_t fault_addr = get_cr2();
+			const uint64_t fault_addr = get_cr2();
 			if (auto err = kernel::memory::handle_page_fault(code, fault_addr);
 				!IS_ERR(err)) {
 				return;

@@ -1,4 +1,7 @@
 #include "tests/test_cases/task_test.hpp"
+#include <cstdint>
+#include <cstring>
+#include "task/context.hpp"
 #include "task/task.hpp"
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
@@ -33,7 +36,7 @@ void test_task_creation_basic()
 void test_task_id_management()
 {
 	// Test getting available task ID
-	ProcessId id1 = get_available_task_id();
+	const ProcessId id1 = get_available_task_id();
 	ASSERT_TRUE(id1.raw() >= 0);
 	ASSERT_TRUE(id1.raw() < MAX_TASKS);
 
@@ -43,7 +46,7 @@ void test_task_id_management()
 	ASSERT_TRUE(t1->id == id1);
 
 	// Get next available ID
-	ProcessId id2 = get_available_task_id();
+	const ProcessId id2 = get_available_task_id();
 	ASSERT_TRUE(id2.raw() >= 0);
 	ASSERT_TRUE(id2.raw() < MAX_TASKS);
 	ASSERT_FALSE(id1 == id2);
@@ -82,7 +85,7 @@ void test_task_message_handling()
 
 	// Test message queue
 	ASSERT_TRUE(t->messages.empty());
-	message test_msg = { .type = msg_t::IPC_EXIT_TASK, .sender = ProcessId::from_raw(0) };
+	const message test_msg = { .type = msg_t::IPC_EXIT_TASK, .sender = ProcessId::from_raw(0) };
 	t->messages.push(test_msg);
 	ASSERT_FALSE(t->messages.empty());
 

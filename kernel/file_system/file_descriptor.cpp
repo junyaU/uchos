@@ -1,4 +1,5 @@
 #include "file_system/file_descriptor.hpp"
+#include <cstdint>
 #include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
 

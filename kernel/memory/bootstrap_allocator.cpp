@@ -1,4 +1,5 @@
 #include "memory/bootstrap_allocator.hpp"
+#include <cstdint>
 #include "../../UchLoaderPkg/memory_map.hpp"
 #include "graphics/log.hpp"
 #include "memory/buddy_system.hpp"

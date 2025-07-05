@@ -10,6 +10,7 @@
 #include "memory/paging_utils.h"
 #include "memory/segment.hpp"
 #include "task/builtin.hpp"
+#include "task/context.hpp"
 #include "task/context_switch.h"
 #include "task/ipc.hpp"
 #include "tests/framework.hpp"
@@ -65,7 +66,7 @@ ProcessId get_task_id_by_name(const char* name)
 
 task* get_task(ProcessId id)
 {
-	pid_t raw_id = id.raw();
+	const pid_t raw_id = id.raw();
 	if (raw_id < 0 || raw_id >= MAX_TASKS) {
 		return nullptr;
 	}
@@ -109,13 +110,13 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 
 	auto parent_stack_top = reinterpret_cast<uint64_t>(parent->stack) + stack_size;
 	auto child_stack_top = reinterpret_cast<uint64_t>(stack) + stack_size;
-	uint64_t rsp_offset = parent_stack_top - parent_ctx.rsp;
-	uint64_t rbp_offset = parent_stack_top - parent_ctx.rbp;
+	const uint64_t rsp_offset = parent_stack_top - parent_ctx.rsp;
+	const uint64_t rbp_offset = parent_stack_top - parent_ctx.rbp;
 
 	ctx.rsp = child_stack_top - rsp_offset;
 	ctx.rbp = child_stack_top - rbp_offset;
 
-	uint64_t kernel_sp_offset = parent_stack_top - parent->kernel_stack_ptr;
+	const uint64_t kernel_sp_offset = parent_stack_top - parent->kernel_stack_ptr;
 	kernel_stack_ptr = child_stack_top - kernel_sp_offset;
 
 	return OK;
@@ -189,7 +190,7 @@ task* get_scheduled_task()
 
 void schedule_task(ProcessId id)
 {
-	pid_t raw_id = id.raw();
+	const pid_t raw_id = id.raw();
 	if (tasks.size() <= raw_id || tasks[raw_id] == nullptr) {
 		LOG_ERROR("schedule_task: task %d is not found", raw_id);
 		return;

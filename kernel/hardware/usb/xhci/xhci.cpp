@@ -1,4 +1,5 @@
 #include "xhci.hpp"
+#include <cstdint>
 #include "../../pci.hpp"
 #include "asm_utils.h"
 #include "context.hpp"

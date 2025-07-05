@@ -1,4 +1,5 @@
 #include "keyboard.hpp"
+#include <cstdint>
 #include "hid.hpp"
 #include "memory/slab.hpp"
 #include <libs/common/types.hpp>

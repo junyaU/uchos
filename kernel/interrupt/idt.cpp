@@ -1,4 +1,6 @@
 #include "idt.hpp"
+#include <cstddef>
+#include <cstdint>
 #include "fault.hpp"
 #include "graphics/log.hpp"
 #include "handler.h"
@@ -6,7 +8,6 @@
 #include "memory/segment.hpp"
 #include "vector.hpp"
 #include <array>
-#include <libs/common/types.hpp>
 
 namespace kernel::interrupt {
 

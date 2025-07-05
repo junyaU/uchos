@@ -240,8 +240,8 @@ error_t process_read_data_response(const message& m, bool for_user)
 	}
 
 	auto& ctx = it->second;
-	size_t offset = m.data.blk_io.sequence * BYTES_PER_CLUSTER;
-	size_t copy_len = std::min(BYTES_PER_CLUSTER, ctx.total_size - offset);
+	const size_t offset = m.data.blk_io.sequence * BYTES_PER_CLUSTER;
+	const size_t copy_len = std::min(BYTES_PER_CLUSTER, ctx.total_size - offset);
 
 	memcpy(ctx.buffer.data() + offset, m.data.blk_io.buf, copy_len);
 	ctx.read_size += copy_len;
@@ -299,14 +299,14 @@ void handle_initialize(const message& m)
 		ENTRIES_PER_CLUSTER = BYTES_PER_CLUSTER / sizeof(directory_entry);
 		FAT_TABLE_SECTOR = VOLUME_BPB->reserved_sector_count;
 
-		size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
+		const size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
 							static_cast<size_t>(kernel::hw::virtio::SECTOR_SIZE);
 
 		send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size,
 									msg_t::INITIALIZE_TASK);
 	} else if (m.data.blk_io.sector == FAT_TABLE_SECTOR) {
 		FAT_TABLE = reinterpret_cast<uint32_t*>(m.data.blk_io.buf);
-		unsigned int root_cluster = VOLUME_BPB->root_cluster;
+		const unsigned int root_cluster = VOLUME_BPB->root_cluster;
 
 		send_read_req_to_blk_device(calc_start_sector(root_cluster),
 									BYTES_PER_CLUSTER, msg_t::INITIALIZE_TASK);
