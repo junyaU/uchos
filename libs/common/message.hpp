@@ -35,7 +35,8 @@ enum class msg_t : int32_t {
 	FS_WRITE,
 	FS_MKFILE,
 	FS_REGISTER_PATH,
-	FS_GET_PWD,
+	FS_PWD,
+	FS_CHANGE_DIR,
 	MAX_MESSAGE_TYPE, // must be the last
 };
 

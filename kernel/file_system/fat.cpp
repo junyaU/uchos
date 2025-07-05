@@ -549,9 +549,9 @@ void handle_fs_register_path(const message& m)
 	kernel::task::send_message(process_ids::KERNEL, reply);
 }
 
-void handle_fs_get_pwd(const message& m)
+void handle_fs_pwd(const message& m)
 {
-	message reply = { .type = msg_t::FS_GET_PWD, .sender = process_ids::FS_FAT32 };
+	message reply = { .type = msg_t::FS_PWD, .sender = process_ids::FS_FAT32 };
 
 	kernel::task::task* t = kernel::task::get_task(m.sender);
 	if (t->fs_path.current_dir == nullptr) {
@@ -566,6 +566,21 @@ void handle_fs_get_pwd(const message& m)
 	}
 
 	kernel::task::send_message(m.sender, reply);
+}
+
+void handle_fs_change_dir(const message& m)
+{
+	const char* path_name = reinterpret_cast<const char*>(m.data.fs.name);
+	kernel::graphics::to_upper(const_cast<char*>(path_name));
+
+	directory_entry* entry = find_dir_entry(path_name);
+	if (entry == nullptr || entry->attribute != entry_attribute::DIRECTORY) {
+		LOG_ERROR("directory not found");
+		return;
+	}
+
+	kernel::task::task* t = kernel::task::get_task(m.sender);
+	t->fs_path.current_dir = entry;
 }
 
 void fat32_task()
@@ -589,7 +604,8 @@ void fat32_task()
 	t->add_msg_handler(msg_t::FS_CLOSE, handle_fs_close);
 	t->add_msg_handler(msg_t::FS_MKFILE, handle_fs_mkfile);
 	t->add_msg_handler(msg_t::FS_REGISTER_PATH, handle_fs_register_path);
-	t->add_msg_handler(msg_t::FS_GET_PWD, handle_fs_get_pwd);
+	t->add_msg_handler(msg_t::FS_PWD, handle_fs_pwd);
+	t->add_msg_handler(msg_t::FS_CHANGE_DIR, handle_fs_change_dir);
 
 	kernel::task::process_messages(t);
 };
