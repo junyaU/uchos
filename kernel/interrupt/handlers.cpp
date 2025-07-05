@@ -42,7 +42,6 @@ __attribute__((interrupt)) void on_virtio_blk_queue_interrupt(interrupt_frame* f
 
 } // namespace kernel::interrupt
 
-using kernel::interrupt::interrupt_frame;
 
 extern "C" void switch_task_by_timer_interrupt(kernel::task::context* ctx)
 {
