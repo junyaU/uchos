@@ -75,10 +75,7 @@ void handle_fs_register_path(const message& m)
 	}
 
 	kernel::task::task* t = kernel::task::get_task(m.sender);
-	if (t->parent_id != process_ids::INVALID) {
-		auto* parent = kernel::task::get_task(t->parent_id);
-		memcpy(&t->fs_path, &parent->fs_path, sizeof(path));
-	} else {
+	if (t->parent_id == process_ids::INVALID) {
 		memcpy(&t->fs_path, p, sizeof(path));
 	}
 
@@ -121,8 +118,7 @@ void task_shell()
 	kernel::task::send_message(process_ids::FS_FAT32, m);
 
 	message info_m = kernel::task::wait_for_message(msg_t::IPC_GET_FILE_INFO);
-	auto* entry =
-			reinterpret_cast<kernel::fs::directory_entry*>(info_m.data.fs.buf);
+	auto* entry = reinterpret_cast<kernel::fs::directory_entry*>(info_m.data.fs.buf);
 	if (entry == nullptr) {
 		LOG_ERROR("failed to find shell");
 		while (true) {

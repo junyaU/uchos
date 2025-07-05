@@ -17,8 +17,10 @@
 #include <libs/common/process_id.hpp>
 #include <libs/common/stat.hpp>
 #include <libs/common/types.hpp>
+#include <map>
 #include <queue>
 #include <string.h>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -112,15 +114,15 @@ cluster_t next_cluster(cluster_t cluster_id)
 	return next;
 }
 
-directory_entry* find_dir_entry(const char* name)
+directory_entry* find_dir_entry(directory_entry* parent_dir, const char* name)
 {
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
-		if (ROOT_DIR[i].name[0] == 0) {
+		if (parent_dir[i].name[0] == 0) {
 			break;
 		}
 
-		if (entry_name_is_equal(ROOT_DIR[i], name)) {
-			return &ROOT_DIR[i];
+		if (entry_name_is_equal(parent_dir[i], name)) {
+			return &parent_dir[i];
 		}
 	}
 
@@ -386,7 +388,12 @@ void handle_get_directory_contents(const message& m)
 		return;
 	}
 
-	directory_entry* current_dir = ROOT_DIR;
+	auto* t = kernel::task::get_task(m.sender);
+	if (t->parent_id != process_ids::INVALID) {
+		t = kernel::task::get_task(t->parent_id);
+	}
+
+	directory_entry* current_dir = t->fs_path.current_dir;
 	char entries[ENTRIES_PER_CLUSTER * sizeof(directory_entry)];
 	int entries_count = 0;
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
@@ -442,7 +449,7 @@ void handle_fs_open(const message& m)
 	const char* name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	directory_entry* entry = find_dir_entry(name);
+	directory_entry* entry = find_dir_entry(ROOT_DIR, name);
 	if (entry == nullptr) {
 		req.data.fs.fd = -1;
 		kernel::task::send_message(m.sender, req);
@@ -472,7 +479,7 @@ void handle_fs_read(const message& m)
 		return;
 	}
 
-	directory_entry* entry = find_dir_entry(fd->name);
+	directory_entry* entry = find_dir_entry(ROOT_DIR, fd->name);
 	if (entry == nullptr) {
 		LOG_ERROR("entry not found");
 		req.data.fs.len = 0;
@@ -502,7 +509,7 @@ void handle_fs_mkfile(const message& m)
 	const char* name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	directory_entry* existing_entry = find_dir_entry(name);
+	directory_entry* existing_entry = find_dir_entry(ROOT_DIR, name);
 	if (existing_entry != nullptr) {
 		reply.data.fs.fd = -1;
 		kernel::task::send_message(m.sender, reply);
@@ -554,33 +561,92 @@ void handle_fs_pwd(const message& m)
 	message reply = { .type = msg_t::FS_PWD, .sender = process_ids::FS_FAT32 };
 
 	kernel::task::task* t = kernel::task::get_task(m.sender);
+	if (t->parent_id != process_ids::INVALID) {
+		t = kernel::task::get_task(t->parent_id);
+	}
+
 	if (t->fs_path.current_dir == nullptr) {
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
 
-	if (t->fs_path.is_root()) {
-		memcpy(reply.data.fs.name, "/", 2);
-	} else {
-		read_dir_entry_name(*t->fs_path.current_dir, reply.data.fs.name);
-	}
+	memcpy(reply.data.fs.name, t->fs_path.current_dir_name,
+		   strlen(t->fs_path.current_dir_name) + 1);
 
 	kernel::task::send_message(m.sender, reply);
 }
 
+static std::map<fs_id_t, ProcessId> change_dir_requests;
+static std::map<fs_id_t, std::string> change_dir_names;
+static fs_id_t next_change_dir_id = 1000000;
+
 void handle_fs_change_dir(const message& m)
 {
-	const char* path_name = reinterpret_cast<const char*>(m.data.fs.name);
-	kernel::graphics::to_upper(const_cast<char*>(path_name));
+	if (m.sender == process_ids::VIRTIO_BLK) {
+		auto it = change_dir_requests.find(m.data.blk_io.request_id);
+		if (it == change_dir_requests.end()) {
+			LOG_ERROR("request_id not found in change_dir_requests");
+			return;
+		}
 
-	directory_entry* entry = find_dir_entry(path_name);
-	if (entry == nullptr || entry->attribute != entry_attribute::DIRECTORY) {
-		LOG_ERROR("directory not found");
+		auto* t = kernel::task::get_task(it->second);
+		if (t == nullptr) {
+			LOG_ERROR("task not found");
+			change_dir_requests.erase(it);
+			return;
+		}
+
+		// free the previous current_dir if it exists
+		if (t->fs_path.current_dir != nullptr &&
+			t->fs_path.current_dir != ROOT_DIR) {
+			kernel::memory::free(t->fs_path.current_dir);
+		}
+
+		// set current_dir to the new directory entry
+		t->fs_path.current_dir =
+				reinterpret_cast<directory_entry*>(m.data.blk_io.buf);
+
+		// Update the directory name
+		auto name_it = change_dir_names.find(m.data.blk_io.request_id);
+		if (name_it != change_dir_names.end()) {
+			strncpy(t->fs_path.current_dir_name, name_it->second.c_str(), 12);
+			t->fs_path.current_dir_name[12] = '\0';
+			change_dir_names.erase(name_it);
+		}
+
+		change_dir_requests.erase(it);
 		return;
 	}
 
-	kernel::task::task* t = kernel::task::get_task(m.sender);
-	t->fs_path.current_dir = entry;
+	message reply = { .type = msg_t::FS_CHANGE_DIR,
+					  .sender = process_ids::FS_FAT32 };
+
+	const char* path_name = reinterpret_cast<const char*>(m.data.fs.name);
+	kernel::graphics::to_upper(const_cast<char*>(path_name));
+
+	auto* t = kernel::task::get_task(m.sender);
+	if (t->parent_id != process_ids::INVALID) {
+		t = kernel::task::get_task(t->parent_id);
+	}
+
+	directory_entry* entry = find_dir_entry(t->fs_path.current_dir, path_name);
+	if (entry == nullptr || entry->attribute != entry_attribute::DIRECTORY) {
+		reply.data.fs.result = -1;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+
+	fs_id_t request_id = next_change_dir_id++;
+	change_dir_requests[request_id] = t->id;
+	change_dir_names[request_id] = path_name;
+
+	send_read_req_to_blk_device(calc_start_sector(entry->first_cluster()),
+								BYTES_PER_CLUSTER, msg_t::FS_CHANGE_DIR, request_id);
+
+	memcpy(reply.data.fs.name, path_name, strlen(path_name) + 1);
+	reply.data.fs.result = 0;
+
+	kernel::task::send_message(m.sender, reply);
 }
 
 void fat32_task()
