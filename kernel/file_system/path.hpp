@@ -39,6 +39,14 @@ struct path {
 	kernel::fs::directory_entry* root_dir;
 
 	/**
+	 * @brief Current directory name
+	 *
+	 * Stores the name of the current directory for pwd command.
+	 * For root directory, this should be "/".
+	 */
+	char current_dir_name[13];
+
+	/**
 	 * @brief Check if the current directory is the root directory
 	 *
 	 * @return true if the current directory is the root directory
