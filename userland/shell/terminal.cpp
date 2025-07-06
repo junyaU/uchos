@@ -65,12 +65,12 @@ size_t terminal::print_user()
 
 	// Display current directory
 	if (current_dir[0] != '\0') {
-		print(current_dir, 0x00ffff); // Cyan color for directory
+		print(current_dir, 0x00ffff);
 		size_t dir_len = strlen(current_dir);
 		memcpy(&input[input_index], current_dir, dir_len);
 		input_index += dir_len;
 	} else {
-		print("/", 0x00ffff); // Home directory
+		print("/", 0x00ffff);
 		memcpy(&input[input_index], "/", 1);
 		input_index += 1;
 	}
