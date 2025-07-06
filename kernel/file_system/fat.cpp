@@ -586,9 +586,11 @@ std::map<fs_id_t, std::string> change_dir_names;
 std::map<fs_id_t, std::string> parent_dir_names; // Store parent directory names
 fs_id_t next_change_dir_id = 1000000;
 
-void update_directory_path_from_parent(kernel::task::task* t, const std::string& parent_path)
+void update_directory_path_from_parent(kernel::task::task* t,
+									   const std::string& parent_path)
 {
-	strcpy(t->fs_path.full_path, parent_path.c_str());
+	strncpy(t->fs_path.full_path, parent_path.c_str(), sizeof(t->fs_path.full_path) - 1);
+	t->fs_path.full_path[sizeof(t->fs_path.full_path) - 1] = '\0';
 
 	if (parent_path == "/") {
 		t->fs_path.current_dir_name[0] = '/';
@@ -597,9 +599,9 @@ void update_directory_path_from_parent(kernel::task::task* t, const std::string&
 	}
 
 	// Get the last component of the path
-	size_t last_slash = parent_path.rfind('/');
+	const size_t last_slash = parent_path.rfind('/');
 	if (last_slash != std::string::npos) {
-		std::string dir_name = parent_path.substr(last_slash + 1);
+		const std::string dir_name = parent_path.substr(last_slash + 1);
 		strncpy(t->fs_path.current_dir_name, dir_name.c_str(), 12);
 		t->fs_path.current_dir_name[12] = '\0';
 	}
@@ -612,11 +614,13 @@ void update_directory_path_append(kernel::task::task* t, const std::string& dir_
 
 	if (strcmp(t->fs_path.full_path, "/") == 0) {
 		// Append to root
-		snprintf(t->fs_path.full_path, sizeof(t->fs_path.full_path), "/%s", dir_name.c_str());
+		snprintf(t->fs_path.full_path, sizeof(t->fs_path.full_path), "/%s",
+				 dir_name.c_str());
 	} else {
 		// Append to existing path
-		size_t len = strlen(t->fs_path.full_path);
-		snprintf(t->fs_path.full_path + len, sizeof(t->fs_path.full_path) - len, "/%s", dir_name.c_str());
+		const size_t len = strlen(t->fs_path.full_path);
+		snprintf(t->fs_path.full_path + len, sizeof(t->fs_path.full_path) - len,
+				 "/%s", dir_name.c_str());
 	}
 }
 
@@ -629,7 +633,8 @@ void change_to_root_directory(kernel::task::task* t)
 	t->fs_path.current_dir = ROOT_DIR;
 	t->fs_path.current_dir_name[0] = '/';
 	t->fs_path.current_dir_name[1] = '\0';
-	strcpy(t->fs_path.full_path, "/");
+	strncpy(t->fs_path.full_path, "/", sizeof(t->fs_path.full_path) - 1);
+	t->fs_path.full_path[sizeof(t->fs_path.full_path) - 1] = '\0';
 }
 
 } // namespace
@@ -664,7 +669,8 @@ void handle_fs_change_dir(const message& m)
 		auto name_it = change_dir_names.find(m.data.blk_io.request_id);
 		if (name_it != change_dir_names.end()) {
 			if (name_it->second == "..") {
-				auto parent_name_it = parent_dir_names.find(m.data.blk_io.request_id);
+				auto parent_name_it =
+						parent_dir_names.find(m.data.blk_io.request_id);
 				if (parent_name_it != parent_dir_names.end()) {
 					update_directory_path_from_parent(t, parent_name_it->second);
 					parent_dir_names.erase(parent_name_it);
@@ -727,7 +733,8 @@ void handle_fs_change_dir(const message& m)
 			t->fs_path.current_dir = ROOT_DIR;
 			t->fs_path.current_dir_name[0] = '/';
 			t->fs_path.current_dir_name[1] = '\0';
-			strcpy(t->fs_path.full_path, "/");
+			strncpy(t->fs_path.full_path, "/", sizeof(t->fs_path.full_path) - 1);
+			t->fs_path.full_path[sizeof(t->fs_path.full_path) - 1] = '\0';
 
 			reply.data.fs.name[0] = '/';
 			reply.data.fs.name[1] = '\0';
@@ -743,8 +750,8 @@ void handle_fs_change_dir(const message& m)
 		change_dir_names[request_id] = "..";
 
 		// Calculate parent path from full path
-		std::string current_full_path = t->fs_path.full_path;
-		size_t last_slash = current_full_path.rfind('/');
+		const std::string current_full_path = t->fs_path.full_path;
+		const size_t last_slash = current_full_path.rfind('/');
 
 		if (last_slash == 0) {
 			// Parent is root
