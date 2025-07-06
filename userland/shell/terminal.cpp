@@ -1,11 +1,10 @@
 #include "terminal.hpp"
-#include "libs/common/types.hpp"
-#include <libs/common/process_id.hpp>
 #include "shell.hpp"
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <libs/common/process_id.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/print.hpp>
 #include <libs/user/time.hpp>
@@ -18,6 +17,8 @@ terminal::terminal(shell* s) : shell_(s)
 {
 	char user_name[16] = "root@uchos";
 	memcpy(this->user_name, user_name, 16);
+
+	memset(current_dir, '\0', sizeof(current_dir));
 
 	cursor_x = 0;
 	cursor_y = 0;
@@ -58,11 +59,27 @@ size_t terminal::print_user()
 	memcpy(input, user_name, user_len);
 	input_index = user_len;
 
-	print(":~$ ", 0xffffff);
-	memcpy(&input[input_index], ":~$ ", 4);
-	input_index += 4;
+	print(":", 0xffffff);
+	memcpy(&input[input_index], ":", 1);
+	input_index += 1;
 
-	prompt_len = user_len + 4;
+	// Display current directory
+	if (current_dir[0] != '\0') {
+		print(current_dir, 0x00ffff);  // Cyan color for directory
+		size_t dir_len = strlen(current_dir);
+		memcpy(&input[input_index], current_dir, dir_len);
+		input_index += dir_len;
+	} else {
+		print("~", 0x00ffff);  // Home directory
+		memcpy(&input[input_index], "~", 1);
+		input_index += 1;
+	}
+
+	print("$ ", 0xffffff);
+	memcpy(&input[input_index], "$ ", 2);
+	input_index += 2;
+
+	prompt_len = input_index;
 
 	return prompt_len;
 }
@@ -184,7 +201,21 @@ void terminal::input_char(char c)
 	print(c);
 }
 
+void terminal::register_current_dir(const char* name)
+{
+	if (name == nullptr || strlen(name) > 12) {
+		return;
+	}
+
+	memset(current_dir, '\0', sizeof(current_dir));
+	strncpy(current_dir, name, 12);
+	current_dir[11] = '\0';
+
+	print_user();
+}
+
 void set_cursor_timer(int ms)
 {
-	set_timer(ms, true, timeout_action_t::TERMINAL_CURSOR_BLINK, process_ids::SHELL.raw());
+	set_timer(ms, true, timeout_action_t::TERMINAL_CURSOR_BLINK,
+			  process_ids::SHELL.raw());
 }

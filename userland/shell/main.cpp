@@ -37,6 +37,9 @@ int main(void)
 						break;
 				};
 				break;
+			case msg_t::FS_CHANGE_DIR:
+				term->register_current_dir(msg.data.fs.name);
+				break;
 			case msg_t::INITIALIZE_TASK:
 				set_cursor_timer(500);
 				break;

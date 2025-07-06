@@ -89,4 +89,6 @@ void fs_change_dir(char* buf, const char* path)
 
 	memcpy(buf, res.data.fs.name, strlen(res.data.fs.name));
 	buf[strlen(res.data.fs.name)] = '\0';
+
+	send_message(process_ids::SHELL, &res);
 }

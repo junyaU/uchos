@@ -14,6 +14,7 @@ struct terminal {
 	static std::array<std::array<uint32_t, TERMINAL_WIDTH>, TERMINAL_HEIGHT>
 			color_buffer;
 	char user_name[16];
+	char current_dir[12];
 	int cursor_x;
 	int cursor_y;
 	char input[TERMINAL_WIDTH];
@@ -46,6 +47,8 @@ struct terminal {
 	size_t print_user();
 
 	void input_char(char c);
+
+	void register_current_dir(const char* name);
 };
 
 void set_cursor_timer(int ms);
