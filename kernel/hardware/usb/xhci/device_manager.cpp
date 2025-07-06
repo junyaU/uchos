@@ -1,11 +1,11 @@
 #include "device_manager.hpp"
-#include <cstdint>
-#include <cstddef>
+#include "context.hpp"
+#include "device.hpp"
 #include "graphics/log.hpp"
 #include "memory/slab.hpp"
-#include "device.hpp"
-#include "context.hpp"
 #include "registers.hpp"
+#include <cstddef>
+#include <cstdint>
 
 namespace kernel::hw::usb::xhci
 {
@@ -15,8 +15,9 @@ void device_manager::initialize(size_t max_slots)
 
 	devices_ =
 			// NOLINTNEXTLINE(bugprone-sizeof-expression)
-			reinterpret_cast<device**>(kernel::memory::alloc(sizeof(device*) * (max_slots_ + 1),
-											   kernel::memory::ALLOC_UNINITIALIZED));
+			reinterpret_cast<device**>(
+					kernel::memory::alloc(sizeof(device*) * (max_slots_ + 1),
+										  kernel::memory::ALLOC_UNINITIALIZED));
 	if (devices_ == nullptr) {
 		LOG_ERROR("failed to allocate memory for devices");
 		return;
@@ -25,9 +26,9 @@ void device_manager::initialize(size_t max_slots)
 	contexts_ = reinterpret_cast<device_context**>(
 			// NOLINTNEXTLINE(bugprone-sizeof-expression)
 			kernel::memory::alloc(sizeof(device_context*) * (max_slots_ + 1),
-					kernel::memory::ALLOC_UNINITIALIZED, 64));
+								  kernel::memory::ALLOC_UNINITIALIZED, 64));
 	if (contexts_ == nullptr) {
-		kernel::memory::free(static_cast<void*>(devices_));
+		kernel::memory::free(reinterpret_cast<void*>(devices_));
 		LOG_ERROR("failed to allocate memory for device contexts");
 		return;
 	}
@@ -94,8 +95,8 @@ void device_manager::allocate_device(uint8_t slot_id,
 		return;
 	}
 
-	devices_[slot_id] = reinterpret_cast<device*>(
-			kernel::memory::alloc(sizeof(device), kernel::memory::ALLOC_UNINITIALIZED, 64));
+	devices_[slot_id] = reinterpret_cast<device*>(kernel::memory::alloc(
+			sizeof(device), kernel::memory::ALLOC_UNINITIALIZED, 64));
 	new (devices_[slot_id]) device(slot_id, dbreg);
 }
 
