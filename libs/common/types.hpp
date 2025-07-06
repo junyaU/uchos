@@ -38,7 +38,7 @@ constexpr int STDERR_FILENO = 2;
 
 #define ASSERT_OK(expression)                                                       \
 	do {                                                                            \
-		error_t __err = (expression);                                               \
+		const error_t __err = (expression);                                               \
 		if (IS_ERR(__err)) {                                                        \
 			return __err;                                                           \
 		}                                                                           \

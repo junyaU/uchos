@@ -4,9 +4,9 @@
 #include "memory/page.hpp"
 #include "tests/framework.hpp"
 #include "tests/test_cases/memory_test.hpp"
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <libs/common/types.hpp>
 
 namespace kernel::memory {
 

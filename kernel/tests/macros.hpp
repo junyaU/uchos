@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include "graphics/log.hpp"
 
 /**
@@ -102,7 +103,7 @@
  */
 #define ASSERT_NULL(x)                                                              \
 	do {                                                                            \
-		if ((x) != NULL) {                                                          \
+		if ((x) != nullptr) {                                                          \
 			LOG_TEST("ASSERT_NULL failed: %d", x);                                  \
 			return;                                                                 \
 		}                                                                           \
@@ -177,7 +178,7 @@
 
 #define EXPECT_NULL(x)                                                              \
 	do {                                                                            \
-		if ((x) != NULL) {                                                          \
+		if ((x) != nullptr) {                                                          \
 			LOG_TEST("EXPECT_NULL failed: %d", x);                                  \
 		}                                                                           \
 	} while (0)

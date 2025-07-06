@@ -1,4 +1,5 @@
 #include "trb.hpp"
+#include "../setup_stage_data.hpp"
 
 namespace kernel::hw::usb::xhci
 {

@@ -1,4 +1,5 @@
 #include "usb/class_driver/keyboard.hpp"
+#include <cstdint>
 #include "keyboard.hpp"
 #include "task/ipc.hpp"
 #include <libs/common/message.hpp>

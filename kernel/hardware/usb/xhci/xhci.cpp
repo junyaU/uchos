@@ -1,13 +1,20 @@
 #include "xhci.hpp"
+#include <cstdint>
+#include <cstring>
+#include <algorithm>
 #include "../../pci.hpp"
+#include "../../mm_register.hpp"
 #include "asm_utils.h"
 #include "context.hpp"
 #include "graphics/log.hpp"
 #include "interrupt/vector.hpp"
 #include "memory/slab.hpp"
+#include "port.hpp"
+#include "registers.hpp"
+#include "ring.hpp"
 #include "speed.hpp"
 #include "trb.hpp"
-#include <libs/common/types.hpp>
+#include "../endpoint.hpp"
 
 namespace
 {
@@ -105,9 +112,11 @@ void on_event(controller& xhc, port_status_change_event_trb& trb)
 
 	switch (port_connection_states[port_id]) {
 		case port_connection_state ::DISCONNECTED:
-			return reset_port(p);
+			reset_port(p);
+			break;
 		case port_connection_state::RESETTING_PORT:
-			return enable_slot(xhc, p);
+			enable_slot(xhc, p);
+			break;
 		default:
 			LOG_ERROR("port %d is not disconnected or resetting", port_id);
 			break;
@@ -129,7 +138,7 @@ void on_event(controller& xhc, transfer_event_trb& trb)
 	if (dev->is_initialized() &&
 		port_connection_states[port_id] ==
 				port_connection_state::INITIALIZING_DEVICE) {
-		return configure_endpoints(xhc, *dev);
+		configure_endpoints(xhc, *dev);
 	}
 }
 
@@ -143,29 +152,30 @@ void on_event(controller& xhc, command_completion_event_trb& trb)
 			if (port_connection_states[addressing_port] !=
 				port_connection_state::ENABLEING_SLOT) {
 				LOG_ERROR("port %d is not enabling slot", addressing_port);
-				return;
+				break;
 			}
 
-			return address_device(xhc, addressing_port, slot_id);
+			address_device(xhc, addressing_port, slot_id);
+			break;
 
 		case address_device_command_trb::TYPE: {
 			auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 			if (dev == nullptr) {
 				LOG_ERROR("device not found for slot id %d", slot_id);
-				return;
+				break;
 			};
 
 			auto port_id = dev->context()->slot.bits.root_hub_port_num;
 			if (port_id != addressing_port) {
 				LOG_ERROR("port id %d is not equal to addressing port %d", port_id,
 						  addressing_port);
-				return;
+				break;
 			}
 
 			if (port_connection_states[port_id] !=
 				port_connection_state::ADDRESSING_DEVICE) {
 				LOG_ERROR("port %d is not addressing device", port_id);
-				return;
+				break;
 			}
 
 			addressing_port = 0;
@@ -178,24 +188,31 @@ void on_event(controller& xhc, command_completion_event_trb& trb)
 				}
 			}
 
-			return initialize_device(xhc, port_id, slot_id);
+			initialize_device(xhc, port_id, slot_id);
+			break;
 		}
 
-		case configure_endpoint_command_trb::TYPE:
+		case configure_endpoint_command_trb::TYPE: {
 			auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 			if (dev == nullptr) {
 				LOG_ERROR("device not found for slot id %d", slot_id);
-				return;
+				break;
 			}
 
 			auto port_id = dev->context()->slot.bits.root_hub_port_num;
 			if (port_connection_states[port_id] !=
 				port_connection_state::CONFIGURING_ENDPOINTS) {
 				LOG_ERROR("port %d is not configuring endpoints", port_id);
-				return;
+				break;
 			}
 
-			return complete_configuration(xhc, port_id, slot_id);
+			complete_configuration(xhc, port_id, slot_id);
+			break;
+		}
+
+		default:
+			LOG_ERROR("Unknown command completion event type: %d", issuer_type);
+			break;
 	}
 }
 

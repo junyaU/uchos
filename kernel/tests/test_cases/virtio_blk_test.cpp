@@ -2,8 +2,8 @@
 #include "task/task.hpp"
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
-#include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
+#include <cstring>
 
 void test_virtio_blk_task_creation()
 {

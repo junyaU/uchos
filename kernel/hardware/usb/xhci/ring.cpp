@@ -1,7 +1,12 @@
 #include "ring.hpp"
+#include <cstdint>
+#include <cstddef>
+#include <array>
 #include "graphics/log.hpp"
 #include "memory/slab.hpp"
-#include <libs/common/types.hpp>
+#include "trb.hpp"
+#include "registers.hpp"
+#include "../../mm_register.hpp"
 
 namespace kernel::hw::usb::xhci
 {

@@ -1,6 +1,9 @@
 #include "tests/test_cases/memory_test.hpp"
+#include <cstddef>
+#include <cstdint>
 #include "memory/bootstrap_allocator.hpp"
 #include "memory/buddy_system.hpp"
+#include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"

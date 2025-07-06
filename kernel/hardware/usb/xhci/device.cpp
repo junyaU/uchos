@@ -1,7 +1,13 @@
 #include "device.hpp"
+#include <cstdint>
+#include <cstddef>
+#include <cstdlib>
 #include "graphics/log.hpp"
 #include "ring.hpp"
-#include <libs/common/types.hpp>
+#include "registers.hpp"
+#include "trb.hpp"
+#include "context.hpp"
+#include "../device.hpp"
 
 namespace kernel::hw::usb::xhci
 {
@@ -158,9 +164,10 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 	if (auto* normal = trb_dynamic_cast<normal_trb>(issued_trb)) {
 		const auto transfer_length =
 				normal->bits.trb_transfer_length - residual_length;
-		return this->on_interrupt_completed({ event_trb.endpoint_id(),
+		this->on_interrupt_completed({ event_trb.endpoint_id(),
 											  normal->pointer(),
 											  static_cast<int>(transfer_length) });
+		return;
 	}
 
 	auto opt_setup_stage_trb = setup_stages_.get(issued_trb);
@@ -190,7 +197,7 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 		return;
 	}
 
-	return this->on_control_completed({ event_trb.endpoint_id(), setup_data,
+	this->on_control_completed({ event_trb.endpoint_id(), setup_data,
 										data_stage_buf, transfer_length });
 }
 

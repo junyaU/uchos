@@ -1,5 +1,7 @@
 #include "file_info.hpp"
 #include <cstddef>
+#include <cstring>
+#include <unordered_map>
 #include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
 
@@ -23,7 +25,7 @@ file_cache* find_file_cache_by_path(const char* path)
 
 file_cache* create_file_cache(const char* path, size_t total_size, ProcessId requester)
 {
-	fs_id_t id = generate_fs_id();
+	const fs_id_t id = generate_fs_id();
 
 	if (file_caches.size() >= MAX_FILE_ID) {
 		int oldest_id = -1;

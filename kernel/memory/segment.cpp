@@ -7,7 +7,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <libs/common/types.hpp>
 
 namespace kernel::memory
 {

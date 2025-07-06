@@ -2,6 +2,7 @@
 #include "elf.hpp"
 #include "file_system/file_descriptor.hpp"
 #include "file_system/file_info.hpp"
+#include "file_system/path.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
@@ -85,7 +86,7 @@ void read_dir_entry_name(const directory_entry& entry, char* dest)
 	}
 
 	if (extension[1] != 0) {
-		strlcat(dest, extension, 13);
+		strlcat(dest, extension, 13); // NOLINT(misc-include-cleaner)
 	}
 }
 
@@ -240,8 +241,8 @@ error_t process_read_data_response(const message& m, bool for_user)
 	}
 
 	auto& ctx = it->second;
-	size_t offset = m.data.blk_io.sequence * BYTES_PER_CLUSTER;
-	size_t copy_len = std::min(BYTES_PER_CLUSTER, ctx.total_size - offset);
+	const size_t offset = m.data.blk_io.sequence * BYTES_PER_CLUSTER;
+	const size_t copy_len = std::min(BYTES_PER_CLUSTER, ctx.total_size - offset);
 
 	memcpy(ctx.buffer.data() + offset, m.data.blk_io.buf, copy_len);
 	ctx.read_size += copy_len;
@@ -299,14 +300,14 @@ void handle_initialize(const message& m)
 		ENTRIES_PER_CLUSTER = BYTES_PER_CLUSTER / sizeof(directory_entry);
 		FAT_TABLE_SECTOR = VOLUME_BPB->reserved_sector_count;
 
-		size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
+		const size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
 							static_cast<size_t>(kernel::hw::virtio::SECTOR_SIZE);
 
 		send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size,
 									msg_t::INITIALIZE_TASK);
 	} else if (m.data.blk_io.sector == FAT_TABLE_SECTOR) {
 		FAT_TABLE = reinterpret_cast<uint32_t*>(m.data.blk_io.buf);
-		unsigned int root_cluster = VOLUME_BPB->root_cluster;
+		const unsigned int root_cluster = VOLUME_BPB->root_cluster;
 
 		send_read_req_to_blk_device(calc_start_sector(root_cluster),
 									BYTES_PER_CLUSTER, msg_t::INITIALIZE_TASK);
@@ -394,7 +395,7 @@ void handle_get_directory_contents(const message& m)
 	}
 
 	directory_entry* current_dir = t->fs_path.current_dir;
-	char entries[ENTRIES_PER_CLUSTER * sizeof(directory_entry)];
+	std::vector<char> entries(ENTRIES_PER_CLUSTER * sizeof(directory_entry));
 	int entries_count = 0;
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
 		if (current_dir[i].name[0] == 0x00) {
@@ -576,9 +577,11 @@ void handle_fs_pwd(const message& m)
 	kernel::task::send_message(m.sender, reply);
 }
 
-static std::map<fs_id_t, ProcessId> change_dir_requests;
-static std::map<fs_id_t, std::string> change_dir_names;
-static fs_id_t next_change_dir_id = 1000000;
+namespace {
+std::map<fs_id_t, ProcessId> change_dir_requests;
+std::map<fs_id_t, std::string> change_dir_names;
+fs_id_t next_change_dir_id = 1000000;
+}
 
 void handle_fs_change_dir(const message& m)
 {
@@ -636,7 +639,7 @@ void handle_fs_change_dir(const message& m)
 		return;
 	}
 
-	fs_id_t request_id = next_change_dir_id++;
+	const fs_id_t request_id = next_change_dir_id++;
 	change_dir_requests[request_id] = t->id;
 	change_dir_names[request_id] = path_name;
 

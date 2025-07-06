@@ -1,7 +1,11 @@
 #include "keyboard.hpp"
+#include <cstdint>
+#include <cstddef>
+#include <functional>
+#include <utility>
 #include "hid.hpp"
 #include "memory/slab.hpp"
-#include <libs/common/types.hpp>
+#include "../device.hpp"
 
 #include <bitset>
 

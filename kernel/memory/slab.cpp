@@ -1,4 +1,5 @@
 #include "slab.hpp"
+#include <cstdint>
 #include "bit_utils.hpp"
 #include "buddy_system.hpp"
 #include "graphics/log.hpp"
@@ -7,7 +8,6 @@
 #include "tests/test_cases/memory_test.hpp"
 #include <cstring>
 #include <iterator>
-#include <libs/common/types.hpp>
 #include <list>
 #include <memory>
 #include <stdio.h>
