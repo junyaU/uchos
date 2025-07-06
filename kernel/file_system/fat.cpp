@@ -300,8 +300,9 @@ void handle_initialize(const message& m)
 		ENTRIES_PER_CLUSTER = BYTES_PER_CLUSTER / sizeof(directory_entry);
 		FAT_TABLE_SECTOR = VOLUME_BPB->reserved_sector_count;
 
-		const size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
-							static_cast<size_t>(kernel::hw::virtio::SECTOR_SIZE);
+		const size_t table_size =
+				static_cast<size_t>(VOLUME_BPB->fat_size_32) *
+				static_cast<size_t>(kernel::hw::virtio::SECTOR_SIZE);
 
 		send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size,
 									msg_t::INITIALIZE_TASK);
@@ -577,11 +578,12 @@ void handle_fs_pwd(const message& m)
 	kernel::task::send_message(m.sender, reply);
 }
 
-namespace {
+namespace
+{
 std::map<fs_id_t, ProcessId> change_dir_requests;
 std::map<fs_id_t, std::string> change_dir_names;
 fs_id_t next_change_dir_id = 1000000;
-}
+} // namespace
 
 void handle_fs_change_dir(const message& m)
 {
@@ -625,12 +627,32 @@ void handle_fs_change_dir(const message& m)
 					  .sender = process_ids::FS_FAT32 };
 
 	const char* path_name = reinterpret_cast<const char*>(m.data.fs.name);
-	kernel::graphics::to_upper(const_cast<char*>(path_name));
 
 	auto* t = kernel::task::get_task(m.sender);
 	if (t->parent_id != process_ids::INVALID) {
 		t = kernel::task::get_task(t->parent_id);
 	}
+
+	// Handle root directory
+	if (strcmp(path_name, "/") == 0) {
+		if (t->fs_path.current_dir != nullptr &&
+			t->fs_path.current_dir != ROOT_DIR) {
+			kernel::memory::free(t->fs_path.current_dir);
+		}
+
+		t->fs_path.current_dir = ROOT_DIR;
+		t->fs_path.current_dir_name[0] = '/';
+		t->fs_path.current_dir_name[1] = '\0';
+
+		reply.data.fs.name[0] = '/';
+		reply.data.fs.name[1] = '\0';
+		reply.data.fs.result = 0;
+
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+
+	kernel::graphics::to_upper(const_cast<char*>(path_name));
 
 	directory_entry* entry = find_dir_entry(t->fs_path.current_dir, path_name);
 	if (entry == nullptr || entry->attribute != entry_attribute::DIRECTORY) {
