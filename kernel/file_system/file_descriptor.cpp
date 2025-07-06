@@ -1,6 +1,7 @@
 #include "file_system/file_descriptor.hpp"
-#include <cstdint>
-#include <libs/common/types.hpp>
+#include <array>
+#include <cstddef>
+#include <cstring>
 #include <libs/common/process_id.hpp>
 
 namespace kernel::fs

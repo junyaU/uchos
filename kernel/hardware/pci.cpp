@@ -3,7 +3,6 @@
 #include "hardware/mm_register.hpp"
 #include <cstddef>
 #include <cstdint>
-#include <libs/common/types.hpp>
 
 namespace kernel::hw::pci
 {

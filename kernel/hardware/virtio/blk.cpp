@@ -1,5 +1,6 @@
 #include "hardware/virtio/blk.hpp"
 #include <cstdint>
+#include <cstring>
 #include "graphics/log.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"

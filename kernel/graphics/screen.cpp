@@ -4,7 +4,7 @@
 #include "font.hpp"
 #include "point2d.hpp"
 #include <cstdint>
-#include <new>
+#include <new> // NOLINT(misc-include-cleaner)
 
 namespace kernel::graphics {
 

@@ -7,6 +7,7 @@
 #include "memory/user.hpp"
 #include "point2d.hpp"
 #include "syscall.hpp"
+#include "task/context.hpp"
 #include "task/context_switch.h"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
@@ -14,6 +15,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <vector>
 #include <fcntl.h>
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
@@ -133,17 +135,17 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	const char __user* args = reinterpret_cast<const char*>(arg2);
 
 	const size_t path_len = strlen(path);
-	char copy_path[path_len + 1];
-	copy_from_user(copy_path, path, path_len);
+	std::vector<char> copy_path(path_len + 1);
+	copy_from_user(copy_path.data(), path, path_len);
 	copy_path[path_len] = '\0';
 
 	const size_t args_len = strlen(args);
-	char copy_args[args_len + 1];
-	copy_from_user(copy_args, args, args_len);
+	std::vector<char> copy_args(args_len + 1);
+	copy_from_user(copy_args.data(), args, args_len);
 	copy_args[args_len] = '\0';
 
 	message msg{ .type = msg_t::IPC_GET_FILE_INFO, .sender = kernel::task::CURRENT_TASK->id };
-	memcpy(msg.data.fs.name, copy_path, path_len + 1);
+	memcpy(msg.data.fs.name, copy_path.data(), path_len + 1);
 	kernel::task::send_message(process_ids::FS_FAT32, msg);
 
 	const message info_m = kernel::task::wait_for_message(msg_t::IPC_GET_FILE_INFO);
@@ -173,7 +175,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::task::CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(new_page_table);
 
 	// TODO: fix this
-	kernel::fs::execute_file(data_m.data.fs.buf, "", copy_args);
+	kernel::fs::execute_file(data_m.data.fs.buf, "", copy_args.data());
 
 	return OK;
 }

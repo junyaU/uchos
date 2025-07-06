@@ -2,6 +2,7 @@
 #include "elf.hpp"
 #include "file_system/file_descriptor.hpp"
 #include "file_system/file_info.hpp"
+#include "file_system/path.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
@@ -85,7 +86,7 @@ void read_dir_entry_name(const directory_entry& entry, char* dest)
 	}
 
 	if (extension[1] != 0) {
-		strlcat(dest, extension, 13);
+		strlcat(dest, extension, 13); // NOLINT(misc-include-cleaner)
 	}
 }
 
@@ -394,7 +395,7 @@ void handle_get_directory_contents(const message& m)
 	}
 
 	directory_entry* current_dir = t->fs_path.current_dir;
-	char entries[ENTRIES_PER_CLUSTER * sizeof(directory_entry)];
+	std::vector<char> entries(ENTRIES_PER_CLUSTER * sizeof(directory_entry));
 	int entries_count = 0;
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
 		if (current_dir[i].name[0] == 0x00) {
@@ -576,9 +577,11 @@ void handle_fs_pwd(const message& m)
 	kernel::task::send_message(m.sender, reply);
 }
 
-static std::map<fs_id_t, ProcessId> change_dir_requests;
-static std::map<fs_id_t, std::string> change_dir_names;
-static fs_id_t next_change_dir_id = 1000000;
+namespace {
+std::map<fs_id_t, ProcessId> change_dir_requests;
+std::map<fs_id_t, std::string> change_dir_names;
+fs_id_t next_change_dir_id = 1000000;
+}
 
 void handle_fs_change_dir(const message& m)
 {
@@ -636,7 +639,7 @@ void handle_fs_change_dir(const message& m)
 		return;
 	}
 
-	fs_id_t request_id = next_change_dir_id++;
+	const fs_id_t request_id = next_change_dir_id++;
 	change_dir_requests[request_id] = t->id;
 	change_dir_names[request_id] = path_name;
 

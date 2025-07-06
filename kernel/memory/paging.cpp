@@ -21,9 +21,8 @@ alignas(PAGE_SIZE) std::array<uint64_t, 512> pml4_table;
 alignas(PAGE_SIZE) std::array<uint64_t, 512> pdp_table;
 alignas(PAGE_SIZE)
 		std::array<std::array<uint64_t, 512>, PAGE_DIRECTORY_COUNT> page_directory;
-} // namespace
 
-static void setup_identity_mapping()
+void setup_identity_mapping()
 {
 	pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table) | 0x003;
 	for (size_t i_pdpt = 0; i_pdpt < PAGE_DIRECTORY_COUNT; i_pdpt++) {
@@ -35,6 +34,7 @@ static void setup_identity_mapping()
 		}
 	}
 }
+} // anonymous namespace
 
 page_table_entry* get_active_page_table()
 {
@@ -345,7 +345,7 @@ error_t map_frame_to_vaddr(page_table_entry* table,
 	size_t consecutive_pages = 0;
 
 	for (int level = 4; level >= 1; --level) {
-		int start = (level == 4) ? USER_SPACE_START_INDEX : 0;
+		const int start = (level == 4) ? USER_SPACE_START_INDEX : 0;
 		for (int i = start; i < PT_ENTRIES; ++i) {
 			if (level == 1) {
 				for (size_t j = 0; j < num_pages; ++j) {
@@ -369,7 +369,7 @@ error_t map_frame_to_vaddr(page_table_entry* table,
 
 					indices[4 - level] = i;
 
-					vaddr_t addr = create_vaddr_from_index(indices[0], indices[1],
+					const vaddr_t addr = create_vaddr_from_index(indices[0], indices[1],
 														   indices[2], indices[3]);
 
 					if (j == 0) {
@@ -398,7 +398,7 @@ error_t map_frame_to_vaddr(page_table_entry* table,
 error_t unmap_frame(page_table_entry* table, vaddr_t addr, size_t num_pages)
 {
 	for (size_t i = 0; i < num_pages; i++) {
-		vaddr_t target_addr{ addr.data + i * kernel::memory::PAGE_SIZE };
+		const vaddr_t target_addr{ addr.data + i * kernel::memory::PAGE_SIZE };
 		auto* pte = get_pte(table, target_addr, 1);
 		if (pte == nullptr) {
 			return ERR_INVALID_ARG;
@@ -413,9 +413,9 @@ error_t unmap_frame(page_table_entry* table, vaddr_t addr, size_t num_pages)
 
 size_t calc_required_pages(vaddr_t start, size_t size)
 {
-	vaddr_t end{ start.data + size };
-	vaddr_t start_page{ start.data - start.part(0) };
-	vaddr_t end_page{ end.data - end.part(0) + kernel::memory::PAGE_SIZE };
+	const vaddr_t end{ start.data + size };
+	const vaddr_t start_page{ start.data - start.part(0) };
+	const vaddr_t end_page{ end.data - end.part(0) + kernel::memory::PAGE_SIZE };
 	return (end_page.data - start_page.data) / kernel::memory::PAGE_SIZE;
 }
 

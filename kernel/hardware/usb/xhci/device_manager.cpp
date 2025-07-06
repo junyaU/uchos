@@ -1,8 +1,11 @@
 #include "device_manager.hpp"
 #include <cstdint>
+#include <cstddef>
 #include "graphics/log.hpp"
 #include "memory/slab.hpp"
-#include <libs/common/types.hpp>
+#include "device.hpp"
+#include "context.hpp"
+#include "registers.hpp"
 
 namespace kernel::hw::usb::xhci
 {
@@ -24,7 +27,7 @@ void device_manager::initialize(size_t max_slots)
 			kernel::memory::alloc(sizeof(device_context*) * (max_slots_ + 1),
 					kernel::memory::ALLOC_UNINITIALIZED, 64));
 	if (contexts_ == nullptr) {
-		kernel::memory::free(devices_);
+		kernel::memory::free(static_cast<void*>(devices_));
 		LOG_ERROR("failed to allocate memory for device contexts");
 		return;
 	}
@@ -110,7 +113,7 @@ void device_manager::load_dcbaa(uint8_t slot_id)
 void device_manager::remove(uint8_t slot_id)
 {
 	contexts_[slot_id] = nullptr;
-	kernel::memory::free(devices_[slot_id]);
+	kernel::memory::free(static_cast<void*>(devices_[slot_id]));
 	devices_[slot_id] = nullptr;
 }
 } // namespace kernel::hw::usb::xhci

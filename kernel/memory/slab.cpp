@@ -8,7 +8,6 @@
 #include "tests/test_cases/memory_test.hpp"
 #include <cstring>
 #include <iterator>
-#include <libs/common/types.hpp>
 #include <list>
 #include <memory>
 #include <stdio.h>

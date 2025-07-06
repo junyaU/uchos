@@ -1,7 +1,9 @@
 #include "fault.hpp"
 #include <cstdint>
+#include <string.h> // NOLINT(misc-include-cleaner) - for strlcpy
 #include "graphics/log.hpp"
 #include "task/task.hpp"
+#include "handlers.hpp"
 
 namespace kernel::interrupt {
 
@@ -9,7 +11,7 @@ void get_fault_name(uint64_t code, char* buf)
 {
 	switch (code) {
 		case DIVIDE_ERROR:
-			strlcpy(buf, "Divide Error", 13);
+			strlcpy(buf, "Divide Error", 13); // NOLINT(misc-include-cleaner)
 			break;
 		case DEBUG:
 			strlcpy(buf, "Debug", 6);

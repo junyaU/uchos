@@ -3,6 +3,8 @@
 #include "../../graphics/log.hpp"
 #include "class_driver/base.hpp"
 #include "descriptor.hpp"
+#include "endpoint.hpp"
+#include "setup_stage_data.hpp"
 
 namespace kernel::hw::usb
 {
@@ -48,8 +50,9 @@ void device::on_control_completed(const control_transfer_data& data)
 {
 	if (is_initialized_) {
 		if (auto w = event_waiters_.get(data.setup_data)) {
-			return w.value()->on_control_completed(data.ep_id, data.setup_data,
+			w.value()->on_control_completed(data.ep_id, data.setup_data,
 												   data.buf, data.len);
+			return;
 		}
 		return;
 	}
@@ -59,17 +62,20 @@ void device::on_control_completed(const control_transfer_data& data)
 		case 1:
 			if (data.setup_data.request == request::GET_DESCRIPTOR &&
 				(descriptor_dynamic_cast<device_descriptor>(buf8) != nullptr)) {
-				return initialize_stage1(buf8, data.len);
+				initialize_stage1(buf8, data.len);
+				return;
 			}
 		case 2:
 			if (data.setup_data.request == request::GET_DESCRIPTOR &&
 				(descriptor_dynamic_cast<configuration_descriptor>(buf8) !=
 				 nullptr)) {
-				return initialize_stage2(buf8, data.len);
+				initialize_stage2(buf8, data.len);
+				return;
 			}
 		case 3:
 			if (data.setup_data.request == request::SET_CONFIGURATION) {
-				return initialize_stage3(buf8, data.len);
+				initialize_stage3(buf8, data.len);
+				return;
 			}
 		default:
 			LOG_ERROR("invalid stage");
@@ -80,7 +86,8 @@ void device::on_control_completed(const control_transfer_data& data)
 void device::on_interrupt_completed(const interrupt_transfer_data& data)
 {
 	if (auto* w = class_drivers_[data.ep_id.number()]; w != nullptr) {
-		return w->on_interrupt_completed(data.ep_id, data.buf, data.len);
+		w->on_interrupt_completed(data.ep_id, data.buf, data.len);
+		return;
 	}
 
 	LOG_ERROR("invalid endpoint");
@@ -135,7 +142,7 @@ void device::initialize_stage2(const uint8_t* buf, int len)
 	}
 
 	initialize_stage_ = 3;
-	return set_configuration(*this, DEFAULT_CONTROL_PIPE_ID,
+	set_configuration(*this, DEFAULT_CONTROL_PIPE_ID,
 							 conf_desc->configuration_value, true);
 }
 
@@ -184,7 +191,7 @@ void set_configuration(device& dev,
 	setup_data.index = 0;
 	setup_data.length = 0;
 
-	return dev.control_out({ ep_id, setup_data, nullptr, 0, nullptr });
+	dev.control_out({ ep_id, setup_data, nullptr, 0, nullptr });
 }
 
 } // namespace kernel::hw::usb

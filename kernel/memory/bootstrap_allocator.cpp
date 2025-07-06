@@ -1,12 +1,14 @@
 #include "memory/bootstrap_allocator.hpp"
 #include <cstdint>
+#include <cstddef>
+#include <climits>
+#include <algorithm>
 #include "../../UchLoaderPkg/memory_map.hpp"
 #include "graphics/log.hpp"
 #include "memory/buddy_system.hpp"
 #include "memory/page.hpp"
 #include "tests/framework.hpp"
 #include "tests/test_cases/memory_test.hpp"
-#include <libs/common/types.hpp>
 
 #include <sys/types.h>
 

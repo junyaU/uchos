@@ -9,6 +9,7 @@
 #include "memory/paging.hpp"
 #include "memory/paging_utils.h"
 #include "memory/segment.hpp"
+#include "memory/slab.hpp"
 #include "task/builtin.hpp"
 #include "task/context.hpp"
 #include "task/context_switch.h"

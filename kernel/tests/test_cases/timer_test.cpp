@@ -1,11 +1,11 @@
 #include "tests/test_cases/timer_test.hpp"
 #include <cstdint>
-#include "error.hpp"
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
 #include "timers/timer.hpp"
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
+#include <libs/common/types.hpp>
 
 void test_timer_initialization() { ASSERT_EQ(kernel::timers::ktimer->current_tick(), 0); }
 

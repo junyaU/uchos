@@ -1,8 +1,13 @@
 #include "device.hpp"
 #include <cstdint>
+#include <cstddef>
+#include <cstdlib>
 #include "graphics/log.hpp"
 #include "ring.hpp"
-#include <libs/common/types.hpp>
+#include "registers.hpp"
+#include "trb.hpp"
+#include "context.hpp"
+#include "../device.hpp"
 
 namespace kernel::hw::usb::xhci
 {
