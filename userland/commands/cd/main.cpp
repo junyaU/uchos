@@ -21,8 +21,5 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	// TODO: ターミナルの改行実装
-	printu("");
-
 	return 0;
 }
