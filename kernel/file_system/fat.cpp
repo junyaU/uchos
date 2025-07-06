@@ -582,6 +582,7 @@ namespace
 {
 std::map<fs_id_t, ProcessId> change_dir_requests;
 std::map<fs_id_t, std::string> change_dir_names;
+std::map<fs_id_t, std::string> parent_dir_names; // Store parent directory names
 fs_id_t next_change_dir_id = 1000000;
 } // namespace
 
@@ -614,8 +615,23 @@ void handle_fs_change_dir(const message& m)
 		// Update the directory name
 		auto name_it = change_dir_names.find(m.data.blk_io.request_id);
 		if (name_it != change_dir_names.end()) {
-			strncpy(t->fs_path.current_dir_name, name_it->second.c_str(), 12);
-			t->fs_path.current_dir_name[12] = '\0';
+			if (name_it->second == "..") {
+				// For parent directory, use the stored parent name
+				auto parent_name_it =
+						parent_dir_names.find(m.data.blk_io.request_id);
+				if (parent_name_it != parent_dir_names.end()) {
+					strncpy(t->fs_path.current_dir_name,
+							parent_name_it->second.c_str(), 12);
+					t->fs_path.current_dir_name[12] = '\0';
+					parent_dir_names.erase(parent_name_it);
+				} else if (t->fs_path.current_dir == ROOT_DIR) {
+					t->fs_path.current_dir_name[0] = '/';
+					t->fs_path.current_dir_name[1] = '\0';
+				}
+			} else {
+				strncpy(t->fs_path.current_dir_name, name_it->second.c_str(), 12);
+				t->fs_path.current_dir_name[12] = '\0';
+			}
 			change_dir_names.erase(name_it);
 		}
 
@@ -650,6 +666,78 @@ void handle_fs_change_dir(const message& m)
 
 		kernel::task::send_message(m.sender, reply);
 		return;
+	}
+
+	// Handle parent directory
+	if (strcmp(path_name, "..") == 0) {
+		if (t->fs_path.current_dir == ROOT_DIR) {
+			reply.data.fs.name[0] = '/';
+			reply.data.fs.name[1] = '\0';
+			reply.data.fs.result = 0;
+			kernel::task::send_message(m.sender, reply);
+			return;
+		}
+
+		directory_entry* parent_entry = nullptr;
+		for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
+			if (t->fs_path.current_dir[i].name[0] == 0) {
+				break;
+			}
+			if (t->fs_path.current_dir[i].name[0] == '.' &&
+				t->fs_path.current_dir[i].name[1] == '.' &&
+				t->fs_path.current_dir[i].name[2] == ' ') {
+				parent_entry = &t->fs_path.current_dir[i];
+				break;
+			}
+		}
+
+		if (parent_entry == nullptr) {
+			reply.data.fs.result = -1;
+			kernel::task::send_message(m.sender, reply);
+			return;
+		}
+
+		if (parent_entry->first_cluster() == 0) {
+			if (t->fs_path.current_dir != nullptr &&
+				t->fs_path.current_dir != ROOT_DIR) {
+				kernel::memory::free(t->fs_path.current_dir);
+			}
+
+			t->fs_path.current_dir = ROOT_DIR;
+			t->fs_path.current_dir_name[0] = '/';
+			t->fs_path.current_dir_name[1] = '\0';
+
+			reply.data.fs.name[0] = '/';
+			reply.data.fs.name[1] = '\0';
+			reply.data.fs.result = 0;
+
+			kernel::task::send_message(m.sender, reply);
+			return;
+		}
+
+		// Set up request to read parent directory
+		const fs_id_t request_id = next_change_dir_id++;
+		change_dir_requests[request_id] = t->id;
+		change_dir_names[request_id] = "..";
+
+		// For parent directory, we'll need to find the correct name
+		// For now, we'll handle simple cases
+		parent_dir_names[request_id] = "/";
+
+		send_read_req_to_blk_device(calc_start_sector(parent_entry->first_cluster()),
+									BYTES_PER_CLUSTER, msg_t::FS_CHANGE_DIR,
+									request_id);
+
+		// Return the parent directory path
+		if (parent_dir_names[request_id] == "/") {
+			memcpy(reply.data.fs.name, "/", 2);
+		} else {
+			memcpy(reply.data.fs.name, parent_dir_names[request_id].c_str(),
+				   parent_dir_names[request_id].length() + 1);
+		}
+		reply.data.fs.result = 0;
+
+		kernel::task::send_message(m.sender, reply);
 	}
 
 	kernel::graphics::to_upper(const_cast<char*>(path_name));
