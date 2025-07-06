@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
@@ -616,21 +617,48 @@ void handle_fs_change_dir(const message& m)
 		auto name_it = change_dir_names.find(m.data.blk_io.request_id);
 		if (name_it != change_dir_names.end()) {
 			if (name_it->second == "..") {
-				// For parent directory, use the stored parent name
 				auto parent_name_it =
 						parent_dir_names.find(m.data.blk_io.request_id);
 				if (parent_name_it != parent_dir_names.end()) {
-					strncpy(t->fs_path.current_dir_name,
-							parent_name_it->second.c_str(), 12);
-					t->fs_path.current_dir_name[12] = '\0';
+					strcpy(t->fs_path.full_path, parent_name_it->second.c_str());
+
+					// Extract directory name from full path
+					if (parent_name_it->second == "/") {
+						t->fs_path.current_dir_name[0] = '/';
+						t->fs_path.current_dir_name[1] = '\0';
+					} else {
+						// Get the last component of the path
+						size_t last_slash = parent_name_it->second.rfind('/');
+						if (last_slash != std::string::npos) {
+							std::string dir_name =
+									parent_name_it->second.substr(last_slash + 1);
+							strncpy(t->fs_path.current_dir_name, dir_name.c_str(),
+									12);
+							t->fs_path.current_dir_name[12] = '\0';
+						}
+					}
 					parent_dir_names.erase(parent_name_it);
 				} else if (t->fs_path.current_dir == ROOT_DIR) {
 					t->fs_path.current_dir_name[0] = '/';
 					t->fs_path.current_dir_name[1] = '\0';
+					strcpy(t->fs_path.full_path, "/");
 				}
 			} else {
 				strncpy(t->fs_path.current_dir_name, name_it->second.c_str(), 12);
 				t->fs_path.current_dir_name[12] = '\0';
+
+				// Update full path
+				if (strcmp(t->fs_path.full_path, "/") == 0) {
+					// Append to root
+					snprintf(t->fs_path.full_path, sizeof(t->fs_path.full_path),
+							 "/%s", name_it->second.c_str());
+				} else {
+					// Append to existing path
+					size_t len = strlen(t->fs_path.full_path);
+					snprintf(t->fs_path.full_path + len,
+							 sizeof(t->fs_path.full_path) - len, "/%s",
+							 name_it->second.c_str());
+				}
 			}
 			change_dir_names.erase(name_it);
 		}
@@ -659,6 +687,7 @@ void handle_fs_change_dir(const message& m)
 		t->fs_path.current_dir = ROOT_DIR;
 		t->fs_path.current_dir_name[0] = '/';
 		t->fs_path.current_dir_name[1] = '\0';
+		strcpy(t->fs_path.full_path, "/");
 
 		reply.data.fs.name[0] = '/';
 		reply.data.fs.name[1] = '\0';
@@ -678,19 +707,7 @@ void handle_fs_change_dir(const message& m)
 			return;
 		}
 
-		directory_entry* parent_entry = nullptr;
-		for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
-			if (t->fs_path.current_dir[i].name[0] == 0) {
-				break;
-			}
-			if (t->fs_path.current_dir[i].name[0] == '.' &&
-				t->fs_path.current_dir[i].name[1] == '.' &&
-				t->fs_path.current_dir[i].name[2] == ' ') {
-				parent_entry = &t->fs_path.current_dir[i];
-				break;
-			}
-		}
-
+		directory_entry* parent_entry = find_dir_entry(t->fs_path.current_dir, "..");
 		if (parent_entry == nullptr) {
 			reply.data.fs.result = -1;
 			kernel::task::send_message(m.sender, reply);
@@ -706,6 +723,7 @@ void handle_fs_change_dir(const message& m)
 			t->fs_path.current_dir = ROOT_DIR;
 			t->fs_path.current_dir_name[0] = '/';
 			t->fs_path.current_dir_name[1] = '\0';
+			strcpy(t->fs_path.full_path, "/");
 
 			reply.data.fs.name[0] = '/';
 			reply.data.fs.name[1] = '\0';
@@ -720,9 +738,17 @@ void handle_fs_change_dir(const message& m)
 		change_dir_requests[request_id] = t->id;
 		change_dir_names[request_id] = "..";
 
-		// For parent directory, we'll need to find the correct name
-		// For now, we'll handle simple cases
-		parent_dir_names[request_id] = "/";
+		// Calculate parent path from full path
+		std::string current_full_path = t->fs_path.full_path;
+		size_t last_slash = current_full_path.rfind('/');
+
+		if (last_slash == 0) {
+			// Parent is root
+			parent_dir_names[request_id] = "/";
+		} else {
+			// Remove last directory component
+			parent_dir_names[request_id] = current_full_path.substr(0, last_slash);
+		}
 
 		send_read_req_to_blk_device(calc_start_sector(parent_entry->first_cluster()),
 									BYTES_PER_CLUSTER, msg_t::FS_CHANGE_DIR,

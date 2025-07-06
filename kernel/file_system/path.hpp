@@ -47,6 +47,14 @@ struct path {
 	char current_dir_name[13];
 
 	/**
+	 * @brief Full directory path
+	 *
+	 * Stores the full path from root to current directory.
+	 * Example: "/documents/reports"
+	 */
+	char full_path[256];
+
+	/**
 	 * @brief Check if the current directory is the root directory
 	 *
 	 * @return true if the current directory is the root directory
