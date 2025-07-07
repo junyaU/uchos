@@ -134,7 +134,7 @@ void task_shell()
 
 	const message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	CURRENT_TASK->is_initilized = true;
-	kernel::fs::execute_file(data_m.data.fs.buf, "shell", nullptr);
+	kernel::fs::fat::execute_file(data_m.data.fs.buf, "shell", nullptr);
 }
 
 void task_usb_handler()
