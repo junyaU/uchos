@@ -34,6 +34,7 @@ extern fs_id_t next_change_dir_id;
 
 // Common utility functions
 std::vector<char*> parse_path(const char* path);
+void read_dir_entry_name_raw(const kernel::fs::directory_entry& entry, char* dest);
 void read_dir_entry_name(const kernel::fs::directory_entry& entry, char* dest);
 bool entry_name_is_equal(const kernel::fs::directory_entry& entry, const char* name);
 unsigned int calc_start_sector(cluster_t cluster_id);

@@ -53,7 +53,7 @@ std::vector<char*> parse_path(const char* path)
 	return result;
 }
 
-void read_dir_entry_name(const directory_entry& entry, char* dest)
+void read_dir_entry_name_raw(const directory_entry& entry, char* dest)
 {
 	char extension[5] = ".";
 
@@ -81,10 +81,22 @@ void read_dir_entry_name(const directory_entry& entry, char* dest)
 	}
 }
 
+void read_dir_entry_name(const directory_entry& entry, char* dest)
+{
+	read_dir_entry_name_raw(entry, dest);
+	
+	// Convert to lowercase for display
+	for (int i = 0; dest[i] != '\0'; i++) {
+		if (dest[i] >= 'A' && dest[i] <= 'Z') {
+			dest[i] = dest[i] + ('a' - 'A');
+		}
+	}
+}
+
 bool entry_name_is_equal(const directory_entry& entry, const char* name)
 {
 	char entry_name[13];
-	read_dir_entry_name(entry, entry_name);
+	read_dir_entry_name_raw(entry, entry_name);
 
 	return strcmp(entry_name, name) == 0;
 }
