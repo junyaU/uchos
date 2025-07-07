@@ -61,11 +61,9 @@ void update_directory_path_append(kernel::task::task* t, const std::string& dir_
 	t->fs_path.current_dir_name[12] = '\0';
 
 	if (strcmp(t->fs_path.full_path, "/") == 0) {
-		// Append to root
 		snprintf(t->fs_path.full_path, sizeof(t->fs_path.full_path), "/%s",
 				 dir_name.c_str());
 	} else {
-		// Append to existing path
 		const size_t len = strlen(t->fs_path.full_path);
 		snprintf(t->fs_path.full_path + len, sizeof(t->fs_path.full_path) - len,
 				 "/%s", dir_name.c_str());
