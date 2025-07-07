@@ -85,12 +85,10 @@ constexpr unsigned int BOOT_SECTOR = 0;
 // Main task entry point
 void fat32_service();
 
-// Namespace for FAT implementation details
+// FAT32 public API
 namespace fat {
-    // These functions are now in the fat namespace
-    cluster_t next_cluster(cluster_t cluster_id);
+    // Execute ELF file loaded from FAT32
     void execute_file(void* data, const char* name, const char* args);
-    void read_dir_entry_name(const directory_entry& entry, char* dest);
 }
 
 } // namespace kernel::fs

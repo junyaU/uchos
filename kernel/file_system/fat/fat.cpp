@@ -3,7 +3,7 @@
  * @brief FAT32 task main entry point
  */
 
-#include "file_system/fat.hpp"
+#include "fat.hpp"
 #include "file_system/file_descriptor.hpp"
 #include "file_system/file_info.hpp"
 #include "hardware/virtio/blk.hpp"

@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "file_system/fat.hpp"
+#include "file_system/fat/fat.hpp"
 
 /**
  * @brief Represents a file system path context

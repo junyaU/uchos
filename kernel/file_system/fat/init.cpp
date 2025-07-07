@@ -3,7 +3,7 @@
  * @brief FAT32 initialization implementation
  */
 
-#include "file_system/fat.hpp"
+#include "fat.hpp"
 #include "file_system/path.hpp"
 #include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"

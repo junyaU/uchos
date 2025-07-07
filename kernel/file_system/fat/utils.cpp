@@ -3,7 +3,7 @@
  * @brief FAT32 utility functions implementation
  */
 
-#include "file_system/fat.hpp"
+#include "fat.hpp"
 #include "graphics/log.hpp"
 #include "internal_common.hpp"
 #include "memory/page.hpp"

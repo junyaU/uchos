@@ -4,7 +4,7 @@
  */
 
 #include "elf.hpp"
-#include "file_system/fat.hpp"
+#include "fat.hpp"
 #include "file_system/file_descriptor.hpp"
 #include "file_system/file_info.hpp"
 #include "graphics/font.hpp"
