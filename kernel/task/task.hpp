@@ -1,6 +1,6 @@
 #pragma once
 
-#include "file_system/path.hpp"
+#include "fs/path.hpp"
 #include "list.hpp"
 #include "memory/paging.hpp"
 #include "memory/slab.hpp"

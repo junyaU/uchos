@@ -4,7 +4,7 @@
  */
 
 #include "fat.hpp"
-#include "file_system/path.hpp"
+#include "fs/path.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
 #include "internal_common.hpp"

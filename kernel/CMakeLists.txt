@@ -94,7 +94,7 @@ add_subdirectory(interrupt)
 add_subdirectory(timers)
 add_subdirectory(task)
 add_subdirectory(hardware)
-add_subdirectory(file_system)
+add_subdirectory(fs)
 add_subdirectory(syscall)
 add_subdirectory(tests)
 
