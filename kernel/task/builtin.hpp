@@ -18,7 +18,7 @@ namespace kernel::task
  * @note This function never returns
  * @note Has the lowest priority in the system
  */
-[[noreturn]] void task_idle();
+[[noreturn]] void idle_service();
 
 /**
  * @brief Main kernel task
@@ -27,7 +27,7 @@ namespace kernel::task
  * It may process deferred work, handle system maintenance, or
  * coordinate other kernel activities.
  */
-void task_kernel();
+void kernel_service();
 
 /**
  * @brief Shell task for user interaction
@@ -36,7 +36,7 @@ void task_kernel();
  * users to interact with the system, execute commands, and manage
  * processes.
  */
-void task_shell();
+void shell_service();
 
 /**
  * @brief USB event handler task
@@ -45,6 +45,6 @@ void task_shell();
  * It handles device enumeration, data transfers, and USB protocol
  * management for connected devices.
  */
-void task_usb_handler();
+void usb_handler_service();
 
 } // namespace kernel::task

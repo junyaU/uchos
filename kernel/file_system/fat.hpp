@@ -83,7 +83,7 @@ static const cluster_t END_OF_CLUSTER_CHAIN = 0x0FFFFFFFLU;
 constexpr unsigned int BOOT_SECTOR = 0;
 
 // Main task entry point
-void fat32_task();
+void fat32_service();
 
 // Namespace for FAT implementation details
 namespace fat {

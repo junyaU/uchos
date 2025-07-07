@@ -176,7 +176,7 @@ error_t init_blk_device()
 	return OK;
 }
 
-void virtio_blk_task()
+void virtio_blk_service()
 {
 	kernel::task::task* t = kernel::task::CURRENT_TASK;
 

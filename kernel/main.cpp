@@ -64,5 +64,5 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	run_test_suite(register_virtio_blk_tests);
 
-	kernel::task::task_kernel();
+	kernel::task::kernel_service();
 }

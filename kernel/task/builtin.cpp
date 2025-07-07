@@ -92,14 +92,14 @@ void handle_fs_register_path(const message& m)
 namespace kernel::task
 {
 
-void task_idle()
+void idle_service()
 {
 	while (true) {
 		__asm__("hlt");
 	}
 }
 
-void task_kernel()
+void kernel_service()
 {
 	task* t = kernel::task::CURRENT_TASK;
 
@@ -111,7 +111,7 @@ void task_kernel()
 	kernel::task::process_messages(t);
 }
 
-void task_shell()
+void shell_service()
 {
 	message m = { .type = msg_t::IPC_GET_FILE_INFO, .sender = process_ids::SHELL };
 	char path[6] = "shell";
@@ -137,7 +137,7 @@ void task_shell()
 	kernel::fs::fat::execute_file(data_m.data.fs.buf, "shell", nullptr);
 }
 
-void task_usb_handler()
+void usb_handler_service()
 {
 	task* t = kernel::task::CURRENT_TASK;
 

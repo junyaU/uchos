@@ -139,6 +139,6 @@ error_t init_blk_device();
  * completion notifications. It should be called periodically
  * or in response to device interrupts.
  */
-void virtio_blk_task();
+void virtio_blk_service();
 
 } // namespace kernel::hw::virtio

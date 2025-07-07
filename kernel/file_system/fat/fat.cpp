@@ -16,7 +16,7 @@
 namespace kernel::fs::fat
 {
 
-void fat32_task()
+void fat32_service()
 {
 	kernel::task::task* t = kernel::task::CURRENT_TASK;
 	t->is_initilized = false;
@@ -49,5 +49,5 @@ void fat32_task()
 // Export for backward compatibility
 namespace kernel::fs
 {
-void fat32_task() { kernel::fs::fat::fat32_task(); }
+void fat32_service() { kernel::fs::fat::fat32_service(); }
 } // namespace kernel::fs

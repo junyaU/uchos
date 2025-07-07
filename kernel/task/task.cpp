@@ -36,11 +36,11 @@ task* IDLE_TASK = nullptr;
 
 const initial_task_info initial_tasks[] = {
 	{ "main", 0, false, true },
-	{ "idle", reinterpret_cast<uint64_t>(&kernel::task::task_idle), true, true },
-	{ "usb_handler", reinterpret_cast<uint64_t>(&kernel::task::task_usb_handler), true, true },
-	{ "virtio", reinterpret_cast<uint64_t>(&kernel::hw::virtio::virtio_blk_task), true, false },
-	{ "fat32", reinterpret_cast<uint64_t>(&kernel::fs::fat32_task), true, true },
-	{ "shell", reinterpret_cast<uint64_t>(&kernel::task::task_shell), true, false },
+	{ "idle", reinterpret_cast<uint64_t>(&kernel::task::idle_service), true, true },
+	{ "usb_handler", reinterpret_cast<uint64_t>(&kernel::task::usb_handler_service), true, true },
+	{ "virtio", reinterpret_cast<uint64_t>(&kernel::hw::virtio::virtio_blk_service), true, false },
+	{ "fat32", reinterpret_cast<uint64_t>(&kernel::fs::fat32_service), true, true },
+	{ "shell", reinterpret_cast<uint64_t>(&kernel::task::shell_service), true, false },
 };
 
 ProcessId get_available_task_id()
