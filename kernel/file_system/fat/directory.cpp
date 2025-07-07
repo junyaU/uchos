@@ -3,7 +3,7 @@
  * @brief FAT32 directory operations implementation
  */
 
-#include "file_system/fat.hpp"
+#include "fat.hpp"
 #include "file_system/path.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
