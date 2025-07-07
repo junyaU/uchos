@@ -175,7 +175,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::task::CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(new_page_table);
 
 	// TODO: fix this
-	kernel::fs::execute_file(data_m.data.fs.buf, "", copy_args.data());
+	kernel::fs::fat::execute_file(data_m.data.fs.buf, "", copy_args.data());
 
 	return OK;
 }

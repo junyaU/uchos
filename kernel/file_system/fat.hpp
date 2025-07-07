@@ -82,12 +82,15 @@ static const cluster_t END_OF_CLUSTER_CHAIN = 0x0FFFFFFFLU;
 
 constexpr unsigned int BOOT_SECTOR = 0;
 
-cluster_t next_cluster(cluster_t cluster_id);
+// Main task entry point
+void fat32_service();
 
-void execute_file(void* data, const char* name, const char* args);
-
-void read_dir_entry_name(const directory_entry& entry, char* dest);
-
-void fat32_task();
+// Namespace for FAT implementation details
+namespace fat {
+    // These functions are now in the fat namespace
+    cluster_t next_cluster(cluster_t cluster_id);
+    void execute_file(void* data, const char* name, const char* args);
+    void read_dir_entry_name(const directory_entry& entry, char* dest);
+}
 
 } // namespace kernel::fs
