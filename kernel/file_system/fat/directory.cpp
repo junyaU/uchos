@@ -3,28 +3,25 @@
  * @brief FAT32 directory operations implementation
  */
 
-#include <cstddef>
-#include <cstdio>
-#include <cstring>
-#include <map>
-#include <string>
-#include <vector>
-
-#include <libs/common/message.hpp>
-#include <libs/common/process_id.hpp>
-#include <libs/common/stat.hpp>
-#include <libs/common/types.hpp>
-
+#include "file_system/fat.hpp"
+#include "file_system/path.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
+#include "internal_common.hpp"
 #include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
-
-#include "../fat.hpp"
-#include "../path.hpp"
-#include "internal_common.hpp"
+#include <cstddef>
+#include <cstdio>
+#include <cstring>
+#include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
+#include <libs/common/stat.hpp>
+#include <libs/common/types.hpp>
+#include <map>
+#include <string>
+#include <vector>
 
 namespace kernel::fs::fat
 {

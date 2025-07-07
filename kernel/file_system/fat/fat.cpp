@@ -3,18 +3,15 @@
  * @brief FAT32 task main entry point
  */
 
-#include <queue>
-
+#include "file_system/fat.hpp"
+#include "file_system/file_descriptor.hpp"
+#include "file_system/file_info.hpp"
+#include "hardware/virtio/blk.hpp"
+#include "internal_common.hpp"
+#include "task/task.hpp"
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
-
-#include "hardware/virtio/blk.hpp"
-#include "task/task.hpp"
-
-#include "../fat.hpp"
-#include "../file_descriptor.hpp"
-#include "../file_info.hpp"
-#include "internal_common.hpp"
+#include <queue>
 
 namespace kernel::fs::fat
 {

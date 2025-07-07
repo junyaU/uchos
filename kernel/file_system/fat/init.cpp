@@ -3,23 +3,20 @@
  * @brief FAT32 initialization implementation
  */
 
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <queue>
-
-#include <libs/common/message.hpp>
-#include <libs/common/process_id.hpp>
-
+#include "file_system/fat.hpp"
+#include "file_system/path.hpp"
 #include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
+#include "internal_common.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
-
-#include "../fat.hpp"
-#include "../path.hpp"
-#include "internal_common.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
+#include <queue>
 
 namespace kernel::fs::fat
 {

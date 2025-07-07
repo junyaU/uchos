@@ -5,16 +5,14 @@
 
 #pragma once
 
+#include "file_system/fat.hpp"
 #include <cstdint>
-#include <map>
-#include <queue>
-#include <string>
-
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
-
-#include "../fat.hpp"
+#include <map>
+#include <queue>
+#include <string>
 
 namespace kernel::fs::fat
 {

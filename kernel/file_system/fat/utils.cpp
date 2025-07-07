@@ -3,22 +3,19 @@
  * @brief FAT32 utility functions implementation
  */
 
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <vector>
-
-#include <libs/common/message.hpp>
-#include <libs/common/process_id.hpp>
-#include <libs/common/types.hpp>
-
+#include "file_system/fat.hpp"
 #include "graphics/log.hpp"
+#include "internal_common.hpp"
 #include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
-
-#include "../fat.hpp"
-#include "internal_common.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
+#include <libs/common/types.hpp>
+#include <vector>
 
 namespace kernel::fs::fat
 {
