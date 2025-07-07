@@ -210,6 +210,13 @@ void terminal::register_current_dir(const char* name)
 	memset(current_dir, '\0', sizeof(current_dir));
 	strncpy(current_dir, name, 12);
 	current_dir[11] = '\0';
+	
+	// Convert to lowercase for display
+	for (int i = 0; current_dir[i] != '\0'; i++) {
+		if (current_dir[i] >= 'A' && current_dir[i] <= 'Z') {
+			current_dir[i] = current_dir[i] + ('a' - 'A');
+		}
+	}
 }
 
 void set_cursor_timer(int ms)
