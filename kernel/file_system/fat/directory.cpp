@@ -26,7 +26,6 @@
 namespace kernel::fs::fat
 {
 
-// Change directory tracking variables
 std::map<fs_id_t, ProcessId> change_dir_requests;
 std::map<fs_id_t, std::string> change_dir_names;
 std::map<fs_id_t, std::string> parent_dir_names;
@@ -48,7 +47,6 @@ void update_directory_path_from_parent(kernel::task::task* t,
 		return;
 	}
 
-	// Get the last component of the path
 	const size_t last_slash = parent_path.rfind('/');
 	if (last_slash != std::string::npos) {
 		const std::string dir_name = parent_path.substr(last_slash + 1);
@@ -87,7 +85,6 @@ void change_to_root_directory(kernel::task::task* t)
 	t->fs_path.full_path[sizeof(t->fs_path.full_path) - 1] = '\0';
 }
 
-// ディレクトリ変更要求の検証
 bool validate_change_dir_request(const message& m, kernel::task::task*& task)
 {
 	auto it = change_dir_requests.find(m.data.blk_io.request_id);
@@ -106,7 +103,6 @@ bool validate_change_dir_request(const message& m, kernel::task::task*& task)
 	return true;
 }
 
-// ディレクトリエントリの更新
 void update_directory_entry(kernel::task::task* t, directory_entry* new_dir)
 {
 	if (t->fs_path.current_dir != nullptr && t->fs_path.current_dir != ROOT_DIR) {
@@ -115,7 +111,6 @@ void update_directory_entry(kernel::task::task* t, directory_entry* new_dir)
 	t->fs_path.current_dir = new_dir;
 }
 
-// ディレクトリ変更の完了処理
 void finalize_directory_change(const message& m, kernel::task::task* t)
 {
 	auto name_it = change_dir_names.find(m.data.blk_io.request_id);
@@ -136,7 +131,6 @@ void finalize_directory_change(const message& m, kernel::task::task* t)
 	change_dir_requests.erase(m.data.blk_io.request_id);
 }
 
-// VirtIOからの応答処理
 void handle_virtio_response(const message& m)
 {
 	kernel::task::task* task = nullptr;
@@ -149,7 +143,6 @@ void handle_virtio_response(const message& m)
 	finalize_directory_change(m, task);
 }
 
-// ルートディレクトリへの変更
 void change_to_root(const message& m, kernel::task::task* t)
 {
 	change_to_root_directory(t);
@@ -174,7 +167,6 @@ void send_error_response(const message& m, const char* error_msg = nullptr)
 	kernel::task::send_message(m.sender, reply);
 }
 
-// 親ディレクトリのクラスタ読み込み要求
 void request_parent_directory_load(const message& m,
 								   kernel::task::task* t,
 								   directory_entry* parent_entry)
@@ -183,7 +175,6 @@ void request_parent_directory_load(const message& m,
 	change_dir_requests[request_id] = t->id;
 	change_dir_names[request_id] = "..";
 
-	// 親パスの計算
 	const std::string current_full_path = t->fs_path.full_path;
 	const size_t last_slash = current_full_path.rfind('/');
 	parent_dir_names[request_id] =
@@ -192,7 +183,6 @@ void request_parent_directory_load(const message& m,
 	send_read_req_to_blk_device(calc_start_sector(parent_entry->first_cluster()),
 								BYTES_PER_CLUSTER, msg_t::FS_CHANGE_DIR, request_id);
 
-	// 成功応答を送信
 	message reply = { .type = msg_t::FS_CHANGE_DIR,
 					  .sender = process_ids::FS_FAT32 };
 	if (parent_dir_names[request_id] == "/") {
@@ -205,33 +195,27 @@ void request_parent_directory_load(const message& m,
 	kernel::task::send_message(m.sender, reply);
 }
 
-// 親ディレクトリへの変更処理
 void handle_parent_directory_change(const message& m, kernel::task::task* t)
 {
-	// すでにルートディレクトリの場合
 	if (t->fs_path.current_dir == ROOT_DIR) {
 		change_to_root(m, t);
 		return;
 	}
 
-	// 親ディレクトリエントリを検索
 	directory_entry* parent_entry = find_dir_entry(t->fs_path.current_dir, "..");
 	if (parent_entry == nullptr) {
 		send_error_response(m);
 		return;
 	}
 
-	// 親がルートディレクトリの場合
 	if (parent_entry->first_cluster() == 0) {
 		change_to_root(m, t);
 		return;
 	}
 
-	// 親ディレクトリの読み込みを要求
 	request_parent_directory_load(m, t, parent_entry);
 }
 
-// 通常のディレクトリ変更処理
 void handle_normal_directory_change(const message& m,
 									kernel::task::task* t,
 									const char* path_name)
@@ -261,7 +245,6 @@ void handle_normal_directory_change(const message& m,
 	kernel::task::send_message(m.sender, reply);
 }
 
-// タスクの取得（親タスクの考慮を含む）
 kernel::task::task* get_effective_task(ProcessId sender)
 {
 	auto* t = kernel::task::get_task(sender);

@@ -21,7 +21,6 @@
 namespace kernel::fs::fat
 {
 
-// Global variables definition
 kernel::fs::bios_parameter_block* VOLUME_BPB = nullptr;
 unsigned long BYTES_PER_CLUSTER = 0;
 unsigned long ENTRIES_PER_CLUSTER = 0;
