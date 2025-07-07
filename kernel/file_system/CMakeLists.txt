@@ -1,7 +1,6 @@
 add_subdirectory(fat)
 
 set(FILE_SYSTEM_SOURCE_FILES
-        fat.cpp  # Backward compatibility stub
         file_descriptor.cpp
         file_info.cpp
         path.cpp
