@@ -5,8 +5,8 @@
 
 #include "elf.hpp"
 #include "fat.hpp"
-#include "file_system/file_descriptor.hpp"
-#include "file_system/file_info.hpp"
+#include "fs/file_descriptor.hpp"
+#include "fs/file_info.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
 #include "internal_common.hpp"

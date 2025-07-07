@@ -1,6 +1,6 @@
 #include "task/builtin.hpp"
-#include "file_system/fat/fat.hpp"
-#include "file_system/path.hpp"
+#include "fs/fat/fat.hpp"
+#include "fs/path.hpp"
 #include "graphics/log.hpp"
 #include "hardware/keyboard.hpp"
 #include "hardware/pci.hpp"
