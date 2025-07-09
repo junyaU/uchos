@@ -229,12 +229,36 @@ void handle_fs_write(const message& m)
 		return;
 	}
 	
-	// Phase 1: Only support writing within existing clusters
-	if (entry->first_cluster() == 0 || m.data.fs.len > entry->file_size) {
-		LOG_ERROR("file has no allocated clusters or write size exceeds file size");
-		reply.data.fs.len = 0;
-		kernel::task::send_message(m.sender, reply);
-		return;
+	// Phase 2: Support file size expansion
+	const size_t new_size = fd->offset + m.data.fs.len;
+	
+	// Check if we need to allocate clusters
+	if (entry->first_cluster() == 0) {
+		// File has no clusters, allocate first cluster
+		cluster_t new_cluster = allocate_cluster_chain(1);
+		entry->first_cluster_low = new_cluster & 0xFFFF;
+		entry->first_cluster_high = (new_cluster >> 16) & 0xFFFF;
+		write_fat_table_to_disk();
+	}
+	
+	// Check if we need more clusters for the write
+	const size_t current_clusters = (entry->file_size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
+	const size_t needed_clusters = (new_size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
+	
+	if (needed_clusters > current_clusters) {
+		// Need to allocate more clusters
+		cluster_t last_cluster = entry->first_cluster();
+		cluster_t next = last_cluster;
+		
+		// Find last cluster in chain
+		while ((next = next_cluster(last_cluster)) != END_OF_CLUSTER_CHAIN) {
+			last_cluster = next;
+		}
+		
+		// Allocate new clusters
+		const size_t clusters_to_add = needed_clusters - current_clusters;
+		extend_cluster_chain(last_cluster, clusters_to_add);
+		write_fat_table_to_disk();
 	}
 	
 	// Calculate which cluster and offset within cluster
@@ -290,6 +314,12 @@ void handle_fs_write(const message& m)
 	
 	// Update file descriptor offset
 	fd->offset += write_len;
+	
+	// Update file size if expanded
+	if (new_size > entry->file_size) {
+		entry->file_size = new_size;
+		update_directory_entry_on_disk(entry, fd->name);
+	}
 	
 	// Send reply
 	reply.data.fs.len = write_len;

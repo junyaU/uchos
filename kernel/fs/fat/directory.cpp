@@ -362,4 +362,44 @@ void handle_fs_pwd(const message& m)
 	kernel::task::send_message(m.sender, reply);
 }
 
+void update_directory_entry_on_disk(directory_entry* entry, const char* name)
+{
+	if (entry == nullptr || ROOT_DIR == nullptr) {
+		LOG_ERROR("Invalid directory entry or ROOT_DIR not initialized");
+		return;
+	}
+	
+	// Find the entry in ROOT_DIR
+	directory_entry* disk_entry = nullptr;
+	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
+		if (ROOT_DIR[i].name[0] == 0x00) {
+			break;
+		}
+		
+		if (entry_name_is_equal(ROOT_DIR[i], name)) {
+			disk_entry = &ROOT_DIR[i];
+			break;
+		}
+	}
+	
+	if (disk_entry == nullptr) {
+		LOG_ERROR("Directory entry not found in ROOT_DIR");
+		return;
+	}
+	
+	// Update the entry in memory
+	memcpy(disk_entry, entry, sizeof(directory_entry));
+	
+	// Calculate which sector contains the ROOT_DIR
+	const unsigned int root_dir_sector = calc_start_sector(VOLUME_BPB->root_cluster);
+	
+	// Write the entire ROOT_DIR cluster back to disk
+	send_write_req_to_blk_device(ROOT_DIR,
+								root_dir_sector,
+								BYTES_PER_CLUSTER,
+								msg_t::INITIALIZE_TASK,
+								0,
+								0);
+}
+
 } // namespace kernel::fs::fat

@@ -59,6 +59,9 @@ void send_write_req_to_blk_device(void* buffer,
 								  fs_id_t request_id = 0,
 								  size_t sequence = 0);
 
+// FAT table persistence
+void write_fat_table_to_disk();
+
 // Send file data to requester
 void send_file_data(fs_id_t id,
 					void* buf,
@@ -66,6 +69,9 @@ void send_file_data(fs_id_t id,
 					ProcessId requester,
 					msg_t type,
 					bool for_user);
+
+// Directory entry persistence
+void update_directory_entry_on_disk(kernel::fs::directory_entry* entry, const char* name);
 
 // Message handlers declarations
 void handle_initialize(const message& m);

@@ -218,6 +218,43 @@ void send_write_req_to_blk_device(void* buffer,
 	kernel::task::send_message(process_ids::VIRTIO_BLK, m);
 }
 
+void write_fat_table_to_disk()
+{
+	if (FAT_TABLE == nullptr || VOLUME_BPB == nullptr) {
+		LOG_ERROR("FAT table or BPB not initialized");
+		return;
+	}
+
+	const size_t sectors_per_fat = VOLUME_BPB->fat_size_32;
+	const size_t bytes_per_sector = VOLUME_BPB->bytes_per_sector;
+	
+	// Write FAT table to disk sector by sector
+	for (size_t i = 0; i < sectors_per_fat; i++) {
+		void* fat_sector = reinterpret_cast<uint8_t*>(FAT_TABLE) + 
+						   (i * bytes_per_sector);
+		send_write_req_to_blk_device(fat_sector,
+									FAT_TABLE_SECTOR + i,
+									bytes_per_sector,
+									msg_t::INITIALIZE_TASK,
+									0,
+									i);
+	}
+	
+	// FAT32 typically has 2 FAT copies, write to backup FAT if needed
+	if (VOLUME_BPB->num_fats > 1) {
+		for (size_t i = 0; i < sectors_per_fat; i++) {
+			void* fat_sector = reinterpret_cast<uint8_t*>(FAT_TABLE) + 
+							   (i * bytes_per_sector);
+			send_write_req_to_blk_device(fat_sector,
+										FAT_TABLE_SECTOR + sectors_per_fat + i,
+										bytes_per_sector,
+										msg_t::INITIALIZE_TASK,
+										0,
+										i);
+		}
+	}
+}
+
 void send_file_data(fs_id_t id,
 					void* buf,
 					size_t size,

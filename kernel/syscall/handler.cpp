@@ -78,7 +78,12 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 		return copy_size;
 	}
 
-	// Other file descriptors not yet supported
+	// For file descriptors, the user process should use fs_write() through IPC
+	// The kernel doesn't directly handle file writes in Phase 2
+	// This allows proper IPC message handling in userland
+	
+	// For now, return an error indicating the operation is not supported at syscall level
+	// User should use the file system API (fs_write) instead
 	return ERR_INVALID_FD;
 }
 
