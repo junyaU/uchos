@@ -28,8 +28,8 @@ namespace kernel::syscall
 ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 {
 	const fd_t fd = static_cast<fd_t>(arg1);
-	void __user* buf = reinterpret_cast<void*>(arg2);
-	const size_t count = static_cast<size_t>(arg3);
+	// void __user* buf = reinterpret_cast<void*>(arg2);
+	// const size_t count = static_cast<size_t>(arg3);
 
 	kernel::task::task* t = kernel::task::CURRENT_TASK;
 
