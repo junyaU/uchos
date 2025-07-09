@@ -1,5 +1,4 @@
 #ifdef __cplusplus
-#include <cstddef>
 #include <cstdint>
 
 extern "C" {
@@ -8,7 +7,8 @@ extern "C" {
 #include <stdint.h>
 #endif
 
-uint64_t sys_log_string(uint64_t, uint64_t, uint64_t);
+uint64_t sys_read(int fd, uint64_t buf, uint64_t count);
+uint64_t sys_write(int fd, uint64_t buf, uint64_t count);
 void sys_exit(int exit_code);
 
 uint64_t sys_draw_text(const char* text, int x, int y, uint32_t color);

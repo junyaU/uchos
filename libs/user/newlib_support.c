@@ -28,7 +28,10 @@ off_t lseek(int fd, off_t offset, int whence)
 	return -1;
 }
 
-ssize_t read(int fd, void* buf, size_t count) { return 0; }
+ssize_t read(int fd, void* buf, size_t count) 
+{ 
+	return sys_read(fd, (uint64_t)buf, count); 
+}
 
 caddr_t sbrk(int incr)
 {
@@ -41,8 +44,7 @@ caddr_t sbrk(int incr)
 
 ssize_t write(int fd, const void* buf, size_t count)
 {
-	sys_log_string(fd, (uint64_t)buf, count);
-	return count;
+	return sys_write(fd, (uint64_t)buf, count);
 }
 
 void _exit(int status)
