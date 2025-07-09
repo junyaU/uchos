@@ -199,6 +199,25 @@ void send_read_req_to_blk_device(unsigned int sector,
 	kernel::task::send_message(process_ids::VIRTIO_BLK, m);
 }
 
+void send_write_req_to_blk_device(void* buffer,
+								  unsigned int sector,
+								  size_t len,
+								  msg_t dst_type,
+								  fs_id_t request_id,
+								  size_t sequence)
+{
+	message m = { .type = msg_t::IPC_WRITE_TO_BLK_DEVICE,
+				  .sender = process_ids::FS_FAT32 };
+	m.data.blk_io.buf = buffer;
+	m.data.blk_io.sector = sector;
+	m.data.blk_io.len = len;
+	m.data.blk_io.dst_type = dst_type;
+	m.data.blk_io.request_id = request_id;
+	m.data.blk_io.sequence = sequence;
+
+	kernel::task::send_message(process_ids::VIRTIO_BLK, m);
+}
+
 void send_file_data(fs_id_t id,
 					void* buf,
 					size_t size,

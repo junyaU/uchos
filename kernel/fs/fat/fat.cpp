@@ -35,6 +35,7 @@ void fat32_service()
 	t->add_msg_handler(msg_t::GET_DIRECTORY_CONTENTS, handle_get_directory_contents);
 	t->add_msg_handler(msg_t::FS_OPEN, handle_fs_open);
 	t->add_msg_handler(msg_t::FS_READ, handle_fs_read);
+	t->add_msg_handler(msg_t::FS_WRITE, handle_fs_write);
 	t->add_msg_handler(msg_t::FS_CLOSE, handle_fs_close);
 	t->add_msg_handler(msg_t::FS_MKFILE, handle_fs_mkfile);
 	t->add_msg_handler(msg_t::FS_REGISTER_PATH, handle_fs_register_path);

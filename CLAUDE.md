@@ -33,7 +33,7 @@ Please respond in Japanese.
 ├── 割り込み処理
 ├── タイマー
 ├── ファイルシステム
-│   └── FAT64
+│   └── FAT32
 └── デバイスドライバ
     ├── virtio-blk
     └── xhci キーボードドライバ

@@ -207,6 +207,104 @@ void handle_fs_close(const message& m)
 	fd->fd = -1;
 }
 
+void handle_fs_write(const message& m)
+{
+	message reply = { .type = msg_t::FS_WRITE, .sender = process_ids::FS_FAT32 };
+	
+	// Get file descriptor
+	file_descriptor* fd = get_fd(m.data.fs.fd);
+	if (fd == nullptr) {
+		LOG_ERROR("fd not found");
+		reply.data.fs.len = 0;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+	
+	// Find directory entry
+	directory_entry* entry = find_dir_entry(ROOT_DIR, fd->name);
+	if (entry == nullptr) {
+		LOG_ERROR("entry not found");
+		reply.data.fs.len = 0;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+	
+	// Phase 1: Only support writing within existing clusters
+	if (entry->first_cluster() == 0 || m.data.fs.len > entry->file_size) {
+		LOG_ERROR("file has no allocated clusters or write size exceeds file size");
+		reply.data.fs.len = 0;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+	
+	// Calculate which cluster and offset within cluster
+	const size_t cluster_offset = fd->offset / BYTES_PER_CLUSTER;
+	const size_t offset_in_cluster = fd->offset % BYTES_PER_CLUSTER;
+	const size_t write_len = std::min(m.data.fs.len, 
+									  BYTES_PER_CLUSTER - offset_in_cluster);
+	
+	// Find target cluster
+	cluster_t target_cluster = entry->first_cluster();
+	for (size_t i = 0; i < cluster_offset && target_cluster != END_OF_CLUSTER_CHAIN; i++) {
+		target_cluster = next_cluster(target_cluster);
+	}
+	
+	if (target_cluster == END_OF_CLUSTER_CHAIN) {
+		LOG_ERROR("invalid cluster chain");
+		reply.data.fs.len = 0;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+	
+	// Allocate buffer for cluster data
+	void* cluster_buffer = kernel::memory::alloc(BYTES_PER_CLUSTER, 
+												 kernel::memory::ALLOC_ZEROED);
+	if (cluster_buffer == nullptr) {
+		LOG_ERROR("failed to allocate cluster buffer");
+		reply.data.fs.len = 0;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+	
+	// Read existing cluster data first (if not writing full cluster)
+	if (offset_in_cluster != 0 || write_len < BYTES_PER_CLUSTER) {
+		// Need to read existing data first
+		// TODO: Implement read-modify-write for partial cluster writes
+		LOG_ERROR("partial cluster writes not yet implemented");
+		kernel::memory::free(cluster_buffer);
+		reply.data.fs.len = 0;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+	
+	// Copy write data to cluster buffer
+	void* write_data = m.tool_desc.present ? m.tool_desc.addr : m.data.fs.buf;
+	memcpy(cluster_buffer, write_data, write_len);
+	
+	// Write cluster to disk
+	send_write_req_to_blk_device(cluster_buffer,
+								calc_start_sector(target_cluster),
+								BYTES_PER_CLUSTER,
+								msg_t::FS_WRITE,
+								m.data.fs.request_id);
+	
+	// Update file descriptor offset
+	fd->offset += write_len;
+	
+	// Send reply
+	reply.data.fs.len = write_len;
+	kernel::task::send_message(m.sender, reply);
+	
+	// Free buffer after write completes
+	// TODO: This should be done after receiving write completion from block device
+	kernel::memory::free(cluster_buffer);
+	
+	// Free OOL buffer if present
+	if (m.tool_desc.present) {
+		kernel::memory::free(m.tool_desc.addr);
+	}
+}
+
 void handle_fs_mkfile(const message& m)
 {
 	message reply = { .type = msg_t::FS_MKFILE, .sender = process_ids::FS_FAT32 };

@@ -52,6 +52,13 @@ void send_read_req_to_blk_device(unsigned int sector,
 								 fs_id_t request_id = 0,
 								 size_t sequence = 0);
 
+void send_write_req_to_blk_device(void* buffer,
+								  unsigned int sector,
+								  size_t len,
+								  msg_t dst_type,
+								  fs_id_t request_id = 0,
+								  size_t sequence = 0);
+
 // Send file data to requester
 void send_file_data(fs_id_t id,
 					void* buf,
@@ -67,6 +74,7 @@ void handle_read_file_data(const message& m);
 void handle_get_directory_contents(const message& m);
 void handle_fs_open(const message& m);
 void handle_fs_read(const message& m);
+void handle_fs_write(const message& m);
 void handle_fs_close(const message& m);
 void handle_fs_mkfile(const message& m);
 void handle_fs_register_path(const message& m);
