@@ -8,6 +8,8 @@ extern "C" {
 #include <stdint.h>
 #endif
 
+uint64_t sys_read(int fd, uint64_t buf, uint64_t count);
+uint64_t sys_write(int fd, uint64_t buf, uint64_t count);
 uint64_t sys_log_string(uint64_t, uint64_t, uint64_t);
 void sys_exit(int exit_code);
 

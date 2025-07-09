@@ -20,6 +20,8 @@ void initialize();
 
 enum task_state : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING, TASK_EXITED };
 
+static constexpr int MAX_FDS_PER_PROCESS = 32;
+
 struct task {
 	ProcessId id;
 	ProcessId parent_id;
@@ -36,6 +38,7 @@ struct task {
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;
 	std::array<message_handler_t, total_message_types> message_handlers;
+	std::array<fd_t, MAX_FDS_PER_PROCESS> fd_table;
 
 	task(int id,
 		 const char* task_name,

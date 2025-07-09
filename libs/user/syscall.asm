@@ -10,6 +10,8 @@ sys_%1:
     ret
 %endmacro
 
+define_syscall read, 0
+define_syscall write, 1
 define_syscall log_string, 1
 define_syscall draw_text, 4
 define_syscall fill_rect, 5

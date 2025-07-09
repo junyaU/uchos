@@ -21,9 +21,70 @@
 #include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
 #include <stdint.h>
+#include <sys/types.h>
 
 namespace kernel::syscall
 {
+ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
+{
+	const fd_t fd = static_cast<fd_t>(arg1);
+	void __user* buf = reinterpret_cast<void*>(arg2);
+	const size_t count = static_cast<size_t>(arg3);
+	
+	kernel::task::task* t = kernel::task::CURRENT_TASK;
+	
+	// Validate file descriptor
+	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd] == NO_FD) {
+		return ERR_INVALID_FD;
+	}
+	
+	// For now, only support stdin (fd 0)
+	if (fd == STDIN_FILENO) {
+		// TODO: Implement actual keyboard input via IPC
+		// For now, return 0 (no data available)
+		return 0;
+	}
+	
+	// Other file descriptors not yet supported
+	return ERR_INVALID_FD;
+}
+
+ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
+{
+	const fd_t fd = static_cast<fd_t>(arg1);
+	const void __user* buf = reinterpret_cast<const void*>(arg2);
+	const size_t count = static_cast<size_t>(arg3);
+	
+	kernel::task::task* t = kernel::task::CURRENT_TASK;
+	
+	// Validate file descriptor
+	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd] == NO_FD) {
+		return ERR_INVALID_FD;
+	}
+	
+	// For stdout and stderr, send to terminal via IPC
+	if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
+		// Create message for shell
+		message m = { .type = msg_t::NOTIFY_WRITE,
+					  .sender = t->id,
+					  .is_end_of_message = true };
+		
+		// Copy data from user space
+		const size_t copy_size = count > sizeof(m.data.write_shell.buf) - 1 
+						   ? sizeof(m.data.write_shell.buf) - 1 : count;
+		copy_from_user(m.data.write_shell.buf, buf, copy_size);
+		m.data.write_shell.buf[copy_size] = '\0';
+		
+		// Send to shell
+		kernel::task::send_message(process_ids::SHELL, m);
+		
+		return copy_size;
+	}
+	
+	// Other file descriptors not yet supported
+	return ERR_INVALID_FD;
+}
+
 size_t sys_draw_text(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 {
 	const char* text = reinterpret_cast<const char*>(arg1);
@@ -230,6 +291,12 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 	uint64_t result = 0;
 
 	switch (syscall_number) {
+		case kernel::syscall::SYS_READ:
+			result = kernel::syscall::sys_read(arg1, arg2, arg3);
+			break;
+		case kernel::syscall::SYS_WRITE:
+			result = kernel::syscall::sys_write(arg1, arg2, arg3);
+			break;
 		case kernel::syscall::SYS_EXIT:
 			kernel::syscall::sys_exit(arg1);
 			break;

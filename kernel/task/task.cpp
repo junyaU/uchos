@@ -161,6 +161,9 @@ task* copy_task(task* parent, context* parent_ctx)
 	child->parent_id = parent->id;
 
 	memcpy(&child->ctx, parent_ctx, sizeof(context));
+	
+	// Copy parent's file descriptor table
+	child->fd_table = parent->fd_table;
 
 	if (IS_ERR(child->copy_parent_stack(*parent_ctx))) {
 		LOG_ERROR("Failed to copy parent stack : %s", parent->name);
@@ -302,13 +305,24 @@ task::task(int raw_id,
 	  fs_path({ nullptr, nullptr, nullptr }),
 	  stack{ nullptr },
 	  messages{ std::queue<message>() },
-	  message_handlers({ std::array<message_handler_t, total_message_types>() })
+	  message_handlers({ std::array<message_handler_t, total_message_types>() }),
+	  fd_table()
 {
 	list_elem_init(&run_queue_elem);
 
 	for (auto& handler : message_handlers) {
 		handler = [](const message&) {};
 	}
+
+	// Initialize file descriptor table
+	for (int i = 0; i < MAX_FDS_PER_PROCESS; ++i) {
+		fd_table[i] = NO_FD;
+	}
+	
+	// Set standard file descriptors
+	fd_table[STDIN_FILENO] = STDIN_FILENO;   // stdin
+	fd_table[STDOUT_FILENO] = STDOUT_FILENO; // stdout
+	fd_table[STDERR_FILENO] = STDERR_FILENO; // stderr
 
 	strncpy(name, task_name, sizeof(name) - 1);
 	name[sizeof(name) - 1] = '\0';
