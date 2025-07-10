@@ -84,7 +84,7 @@ void read_dir_entry_name_raw(const directory_entry& entry, char* dest)
 void read_dir_entry_name(const directory_entry& entry, char* dest)
 {
 	read_dir_entry_name_raw(entry, dest);
-	
+
 	// Convert to lowercase for display
 	for (int i = 0; dest[i] != '\0'; i++) {
 		if (dest[i] >= 'A' && dest[i] <= 'Z') {
@@ -103,9 +103,8 @@ bool entry_name_is_equal(const directory_entry& entry, const char* name)
 
 unsigned int calc_start_sector(cluster_t cluster_id)
 {
-	return VOLUME_BPB->reserved_sector_count +
-		   VOLUME_BPB->num_fats * VOLUME_BPB->fat_size_32 +
-		   (cluster_id - 2) * VOLUME_BPB->sectors_per_cluster;
+	return VOLUME_BPB->reserved_sector_count + VOLUME_BPB->num_fats * VOLUME_BPB->fat_size_32 +
+	       (cluster_id - 2) * VOLUME_BPB->sectors_per_cluster;
 }
 
 cluster_t next_cluster(cluster_t cluster_id)
@@ -182,14 +181,72 @@ cluster_t allocate_cluster_chain(size_t num_clusters)
 	return first_cluster;
 }
 
-void send_read_req_to_blk_device(unsigned int sector,
-								 size_t len,
-								 msg_t dst_type,
-								 fs_id_t request_id,
-								 size_t sequence)
+size_t count_free_clusters()
 {
-	message m = { .type = msg_t::IPC_READ_FROM_BLK_DEVICE,
-				  .sender = process_ids::FS_FAT32 };
+	if (FAT_TABLE == nullptr || VOLUME_BPB == nullptr) {
+		return 0;
+	}
+
+	size_t free_count = 0;
+	const size_t total_clusters = VOLUME_BPB->total_sectors_32 / VOLUME_BPB->sectors_per_cluster;
+
+	// Start from cluster 2 (0 and 1 are reserved)
+	for (size_t i = 2; i < total_clusters && i < 0x0FFFFFF8UL; i++) {
+		if (FAT_TABLE[i] == 0) {
+			free_count++;
+		}
+	}
+
+	return free_count;
+}
+
+void free_cluster_chain(cluster_t start_cluster, cluster_t keep_until_cluster)
+{
+	if (start_cluster == 0 || start_cluster >= 0x0FFFFFF8UL) {
+		return;
+	}
+
+	cluster_t current = start_cluster;
+	bool found_keep_until = (keep_until_cluster == 0);
+
+	while (current != END_OF_CLUSTER_CHAIN && current < 0x0FFFFFF8UL) {
+		cluster_t next = FAT_TABLE[current];
+
+		if (current == keep_until_cluster) {
+			FAT_TABLE[current] = END_OF_CLUSTER_CHAIN;
+			found_keep_until = true;
+			break;
+		}
+
+		if (found_keep_until) {
+			FAT_TABLE[current] = 0;
+		}
+
+		current = next;
+	}
+
+	// If keep_until_cluster was not found, free entire chain
+	if (!found_keep_until && keep_until_cluster != 0) {
+		LOG_INFO("keep_until_cluster {} not found in chain starting at {}",
+		         keep_until_cluster,
+		         start_cluster);
+		// Free entire chain
+		current = start_cluster;
+		while (current != END_OF_CLUSTER_CHAIN && current < 0x0FFFFFF8UL) {
+			cluster_t next = FAT_TABLE[current];
+			FAT_TABLE[current] = 0;
+			current = next;
+		}
+	}
+}
+
+void send_read_req_to_blk_device(unsigned int sector,
+                                 size_t len,
+                                 msg_t dst_type,
+                                 fs_id_t request_id,
+                                 size_t sequence)
+{
+	message m = { .type = msg_t::IPC_READ_FROM_BLK_DEVICE, .sender = process_ids::FS_FAT32 };
 	m.data.blk_io.sector = sector;
 	m.data.blk_io.len = len;
 	m.data.blk_io.dst_type = dst_type;
@@ -199,19 +256,89 @@ void send_read_req_to_blk_device(unsigned int sector,
 	kernel::task::send_message(process_ids::VIRTIO_BLK, m);
 }
 
+void send_write_req_to_blk_device(void* buffer,
+                                  unsigned int sector,
+                                  size_t len,
+                                  msg_t dst_type,
+                                  fs_id_t request_id,
+                                  size_t sequence)
+{
+	message m = { .type = msg_t::IPC_WRITE_TO_BLK_DEVICE, .sender = process_ids::FS_FAT32 };
+	m.data.blk_io.buf = buffer;
+	m.data.blk_io.sector = sector;
+	m.data.blk_io.len = len;
+	m.data.blk_io.dst_type = dst_type;
+	m.data.blk_io.request_id = request_id;
+	m.data.blk_io.sequence = sequence;
+
+	kernel::task::send_message(process_ids::VIRTIO_BLK, m);
+}
+
+void write_fat_table_to_disk()
+{
+	if (FAT_TABLE == nullptr || VOLUME_BPB == nullptr) {
+		LOG_ERROR("FAT table or BPB not initialized");
+		return;
+	}
+
+	const size_t sectors_per_fat = VOLUME_BPB->fat_size_32;
+	const size_t bytes_per_sector = VOLUME_BPB->bytes_per_sector;
+
+	// Write FAT table to disk sector by sector
+	for (size_t i = 0; i < sectors_per_fat; i++) {
+		// Allocate buffer for each sector write
+		void* sector_buffer = kernel::memory::alloc(bytes_per_sector, kernel::memory::ALLOC_ZEROED);
+		if (sector_buffer == nullptr) {
+			LOG_ERROR("Failed to allocate sector buffer for FAT write");
+			continue;
+		}
+
+		// Copy FAT sector data to buffer
+		void* fat_sector = reinterpret_cast<uint8_t*>(FAT_TABLE) + (i * bytes_per_sector);
+		memcpy(sector_buffer, fat_sector, bytes_per_sector);
+
+		send_write_req_to_blk_device(
+		    sector_buffer, FAT_TABLE_SECTOR + i, bytes_per_sector, msg_t::FS_WRITE, 0, i);
+	}
+
+	// FAT32 typically has 2 FAT copies, write to backup FAT if needed
+	if (VOLUME_BPB->num_fats > 1) {
+		for (size_t i = 0; i < sectors_per_fat; i++) {
+			// Allocate buffer for each sector write
+			void* sector_buffer =
+			    kernel::memory::alloc(bytes_per_sector, kernel::memory::ALLOC_ZEROED);
+			if (sector_buffer == nullptr) {
+				LOG_ERROR("Failed to allocate sector buffer for backup FAT write");
+				continue;
+			}
+
+			// Copy FAT sector data to buffer
+			void* fat_sector = reinterpret_cast<uint8_t*>(FAT_TABLE) + (i * bytes_per_sector);
+			memcpy(sector_buffer, fat_sector, bytes_per_sector);
+
+			send_write_req_to_blk_device(sector_buffer,
+			                             FAT_TABLE_SECTOR + sectors_per_fat + i,
+			                             bytes_per_sector,
+			                             msg_t::FS_WRITE,
+			                             0,
+			                             i);
+		}
+	}
+}
+
 void send_file_data(fs_id_t id,
-					void* buf,
-					size_t size,
-					ProcessId requester,
-					msg_t type,
-					bool for_user)
+                    void* buf,
+                    size_t size,
+                    ProcessId requester,
+                    msg_t type,
+                    bool for_user)
 {
 	message m = { .type = type, .sender = process_ids::FS_FAT32 };
 	m.data.fs.request_id = id;
 
 	if (for_user) {
-		void* user_buf = kernel::memory::alloc(size, kernel::memory::ALLOC_ZEROED,
-											   memory::PAGE_SIZE);
+		void* user_buf =
+		    kernel::memory::alloc(size, kernel::memory::ALLOC_ZEROED, memory::PAGE_SIZE);
 		if (user_buf == nullptr) {
 			LOG_ERROR("failed to allocate memory");
 			return;
@@ -229,4 +356,4 @@ void send_file_data(fs_id_t id,
 	kernel::task::send_message(requester, m);
 }
 
-} // namespace kernel::fs::fat
+}  // namespace kernel::fs::fat

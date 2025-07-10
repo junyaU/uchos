@@ -72,6 +72,29 @@ void fs_pwd(char* buf, size_t size)
 	memcpy(buf, res.data.fs.name, size);
 }
 
+size_t fs_write(fd_t fd, const void* buf, size_t count)
+{
+	ProcessId pid = ProcessId::from_raw(sys_getpid());
+	message m = { .type = msg_t::FS_WRITE, .sender = pid };
+	m.data.fs.fd = fd;
+	m.data.fs.len = count;
+	
+	// For small writes, use inline buffer
+	if (count <= sizeof(m.data.fs.buf)) {
+		memcpy(m.data.fs.buf, buf, count);
+	} else {
+		// For larger writes, use OOL (out-of-line) memory
+		// This would require allocating OOL memory - not implemented in Phase 1
+		return 0;
+	}
+
+	send_message(process_ids::FS_FAT32, &m);
+
+	message res = wait_for_message(msg_t::FS_WRITE);
+
+	return res.data.fs.len;
+}
+
 void fs_change_dir(char* buf, const char* path)
 {
 	ProcessId pid = ProcessId::from_raw(sys_getpid());
