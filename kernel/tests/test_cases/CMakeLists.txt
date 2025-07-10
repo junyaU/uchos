@@ -4,6 +4,7 @@ set(TESTCASES_SOURCE_FILES
         timer_test.cpp
         virtio_blk_test.cpp
         stdio_test.cpp
+        fs_test.cpp
 )
 
 add_library(UchosTestCases ${TESTCASES_SOURCE_FILES})

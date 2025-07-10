@@ -40,8 +40,12 @@ error_t process_read_data_response(const message& m, bool for_user)
 	ctx.read_size += copy_len;
 
 	if (ctx.is_read_complete()) {
-		send_file_data(m.data.blk_io.request_id, ctx.buffer.data(), ctx.total_size,
-					   ctx.requester, m.type, for_user);
+		send_file_data(m.data.blk_io.request_id,
+		               ctx.buffer.data(),
+		               ctx.total_size,
+		               ctx.requester,
+		               m.type,
+		               for_user);
 	}
 
 	kernel::memory::free(m.data.blk_io.buf);
@@ -49,8 +53,7 @@ error_t process_read_data_response(const message& m, bool for_user)
 	return OK;
 }
 
-error_t
-process_file_read_request(const message& m, directory_entry* entry, bool for_user)
+error_t process_file_read_request(const message& m, directory_entry* entry, bool for_user)
 {
 	char file_name[12] = { 0 };
 	memcpy(file_name, entry->name, 11);
@@ -58,8 +61,8 @@ process_file_read_request(const message& m, directory_entry* entry, bool for_use
 
 	file_cache* c = find_file_cache_by_path(file_name);
 	if (c != nullptr) {
-		send_file_data(m.data.fs.request_id, c->buffer.data(), c->total_size,
-					   m.sender, m.type, for_user);
+		send_file_data(
+		    m.data.fs.request_id, c->buffer.data(), c->total_size, m.sender, m.type, for_user);
 		return OK;
 	}
 
@@ -72,9 +75,8 @@ process_file_read_request(const message& m, directory_entry* entry, bool for_use
 	}
 
 	while (target_cluster != END_OF_CLUSTER_CHAIN) {
-		send_read_req_to_blk_device(calc_start_sector(target_cluster),
-									BYTES_PER_CLUSTER, m.type, cache->id,
-									sequence++);
+		send_read_req_to_blk_device(
+		    calc_start_sector(target_cluster), BYTES_PER_CLUSTER, m.type, cache->id, sequence++);
 
 		target_cluster = next_cluster(target_cluster);
 	}
@@ -97,8 +99,7 @@ void handle_get_file_info(const message& m)
 	const auto* name = m.data.fs.name;
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	message sm = { .type = msg_t::IPC_GET_FILE_INFO,
-				   .sender = process_ids::FS_FAT32 };
+	message sm = { .type = msg_t::IPC_GET_FILE_INFO, .sender = process_ids::FS_FAT32 };
 	sm.data.fs.buf = nullptr;
 
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
@@ -115,8 +116,8 @@ void handle_get_file_info(const message& m)
 		}
 
 		if (entry_name_is_equal(ROOT_DIR[i], name)) {
-			void* buf = kernel::memory::alloc(sizeof(directory_entry),
-											  kernel::memory::ALLOC_ZEROED);
+			void* buf =
+			    kernel::memory::alloc(sizeof(directory_entry), kernel::memory::ALLOC_ZEROED);
 			memcpy(buf, &ROOT_DIR[i], sizeof(directory_entry));
 			sm.data.fs.buf = buf;
 			break;
@@ -210,8 +211,7 @@ void handle_fs_close(const message& m)
 void handle_fs_write(const message& m)
 {
 	message reply = { .type = msg_t::FS_WRITE, .sender = process_ids::FS_FAT32 };
-	
-	// Get file descriptor
+
 	file_descriptor* fd = get_fd(m.data.fs.fd);
 	if (fd == nullptr) {
 		LOG_ERROR("fd not found");
@@ -219,8 +219,7 @@ void handle_fs_write(const message& m)
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
-	
-	// Find directory entry
+
 	directory_entry* entry = find_dir_entry(ROOT_DIR, fd->name);
 	if (entry == nullptr) {
 		LOG_ERROR("entry not found");
@@ -228,68 +227,71 @@ void handle_fs_write(const message& m)
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
-	
-	// Phase 2: Support file size expansion
+
 	const size_t new_size = fd->offset + m.data.fs.len;
-	
-	// Check if we need to allocate clusters
+
 	if (entry->first_cluster() == 0) {
-		// File has no clusters, allocate first cluster
+		if (count_free_clusters() < 1) {
+			LOG_ERROR("disk full: no free clusters available");
+			reply.data.fs.len = 0;
+			kernel::task::send_message(m.sender, reply);
+			return;
+		}
+
 		cluster_t new_cluster = allocate_cluster_chain(1);
 		entry->first_cluster_low = new_cluster & 0xFFFF;
 		entry->first_cluster_high = (new_cluster >> 16) & 0xFFFF;
 		write_fat_table_to_disk();
 	}
-	
-	// Check if we need more clusters for the write
+
 	const size_t current_clusters = (entry->file_size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
 	const size_t needed_clusters = (new_size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
-	
+
 	if (needed_clusters > current_clusters) {
-		// Need to allocate more clusters
+		const size_t clusters_to_add = needed_clusters - current_clusters;
+		if (count_free_clusters() < clusters_to_add) {
+			LOG_ERROR("disk full: need {} clusters but only {} free",
+			          clusters_to_add,
+			          count_free_clusters());
+			reply.data.fs.len = 0;
+			kernel::task::send_message(m.sender, reply);
+			return;
+		}
+
 		cluster_t last_cluster = entry->first_cluster();
 		cluster_t next = last_cluster;
-		
-		// Find last cluster in chain
 		while ((next = next_cluster(last_cluster)) != END_OF_CLUSTER_CHAIN) {
 			last_cluster = next;
 		}
-		
-		// Allocate new clusters
-		const size_t clusters_to_add = needed_clusters - current_clusters;
+
 		extend_cluster_chain(last_cluster, clusters_to_add);
 		write_fat_table_to_disk();
 	}
-	
-	// Calculate which cluster and offset within cluster
+
 	const size_t cluster_offset = fd->offset / BYTES_PER_CLUSTER;
 	const size_t offset_in_cluster = fd->offset % BYTES_PER_CLUSTER;
-	const size_t write_len = std::min(m.data.fs.len, 
-									  BYTES_PER_CLUSTER - offset_in_cluster);
-	
-	// Find target cluster
+	const size_t write_len = std::min(m.data.fs.len, BYTES_PER_CLUSTER - offset_in_cluster);
+
 	cluster_t target_cluster = entry->first_cluster();
 	for (size_t i = 0; i < cluster_offset && target_cluster != END_OF_CLUSTER_CHAIN; i++) {
 		target_cluster = next_cluster(target_cluster);
 	}
-	
+
 	if (target_cluster == END_OF_CLUSTER_CHAIN) {
 		LOG_ERROR("invalid cluster chain");
 		reply.data.fs.len = 0;
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
-	
-	// Allocate buffer for cluster data
-	void* cluster_buffer = kernel::memory::alloc(BYTES_PER_CLUSTER, 
-												 kernel::memory::ALLOC_ZEROED);
+
+	void* cluster_buffer = kernel::memory::alloc(BYTES_PER_CLUSTER, kernel::memory::ALLOC_ZEROED);
 	if (cluster_buffer == nullptr) {
 		LOG_ERROR("failed to allocate cluster buffer");
 		reply.data.fs.len = 0;
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
-	
+
 	// Read existing cluster data first (if not writing full cluster)
 	if (offset_in_cluster != 0 || write_len < BYTES_PER_CLUSTER) {
 		// Need to read existing data first
@@ -300,36 +302,61 @@ void handle_fs_write(const message& m)
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
-	
+
 	// Copy write data to cluster buffer
 	void* write_data = m.tool_desc.present ? m.tool_desc.addr : m.data.fs.buf;
 	memcpy(cluster_buffer, write_data, write_len);
-	
-	// Write cluster to disk
+
 	send_write_req_to_blk_device(cluster_buffer,
-								calc_start_sector(target_cluster),
-								BYTES_PER_CLUSTER,
-								msg_t::FS_WRITE,
-								m.data.fs.request_id);
-	
-	// Update file descriptor offset
+	                             calc_start_sector(target_cluster),
+	                             BYTES_PER_CLUSTER,
+	                             msg_t::FS_WRITE,
+	                             m.data.fs.request_id);
+
 	fd->offset += write_len;
-	
-	// Update file size if expanded
-	if (new_size > entry->file_size) {
+
+	if (new_size != entry->file_size) {
+		if (new_size < entry->file_size) {
+			// File is being truncated, free unused clusters
+			const size_t new_clusters = (new_size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
+
+			if (new_clusters < current_clusters) {
+				if (new_clusters == 0) {
+					// File is now empty, free all clusters
+					free_cluster_chain(entry->first_cluster(), 0);
+					entry->first_cluster_low = 0;
+					entry->first_cluster_high = 0;
+				} else {
+					// Find the cluster that should be the last one
+					cluster_t current = entry->first_cluster();
+					for (size_t i = 1; i < new_clusters && current != END_OF_CLUSTER_CHAIN; i++) {
+						current = next_cluster(current);
+					}
+
+					if (current != END_OF_CLUSTER_CHAIN) {
+						// Free clusters after this one
+						cluster_t next = next_cluster(current);
+						if (next != END_OF_CLUSTER_CHAIN) {
+							free_cluster_chain(next, 0);
+							FAT_TABLE[current] = END_OF_CLUSTER_CHAIN;
+						}
+					}
+				}
+				write_fat_table_to_disk();
+			}
+		}
+
 		entry->file_size = new_size;
 		update_directory_entry_on_disk(entry, fd->name);
 	}
-	
-	// Send reply
+
 	reply.data.fs.len = write_len;
 	kernel::task::send_message(m.sender, reply);
-	
+
 	// Free buffer after write completes
 	// TODO: This should be done after receiving write completion from block device
 	kernel::memory::free(cluster_buffer);
-	
-	// Free OOL buffer if present
+
 	if (m.tool_desc.present) {
 		kernel::memory::free(m.tool_desc.addr);
 	}
@@ -367,4 +394,4 @@ void handle_fs_mkfile(const message& m)
 	kernel::task::send_message(m.sender, reply);
 }
 
-} // namespace kernel::fs::fat
+}  // namespace kernel::fs::fat

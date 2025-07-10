@@ -44,6 +44,8 @@ find_dir_entry(kernel::fs::directory_entry* parent_dir, const char* name);
 kernel::fs::directory_entry* find_empty_dir_entry();
 cluster_t extend_cluster_chain(cluster_t last_cluster, int num_clusters);
 cluster_t allocate_cluster_chain(size_t num_clusters);
+void free_cluster_chain(cluster_t start_cluster, cluster_t keep_until_cluster = 0);
+size_t count_free_clusters();
 
 // Communication with block device
 void send_read_req_to_blk_device(unsigned int sector,
