@@ -286,19 +286,40 @@ void write_fat_table_to_disk()
 
 	// Write FAT table to disk sector by sector
 	for (size_t i = 0; i < sectors_per_fat; i++) {
+		// Allocate buffer for each sector write
+		void* sector_buffer = kernel::memory::alloc(bytes_per_sector, kernel::memory::ALLOC_ZEROED);
+		if (sector_buffer == nullptr) {
+			LOG_ERROR("Failed to allocate sector buffer for FAT write");
+			continue;
+		}
+
+		// Copy FAT sector data to buffer
 		void* fat_sector = reinterpret_cast<uint8_t*>(FAT_TABLE) + (i * bytes_per_sector);
+		memcpy(sector_buffer, fat_sector, bytes_per_sector);
+
 		send_write_req_to_blk_device(
-		    fat_sector, FAT_TABLE_SECTOR + i, bytes_per_sector, msg_t::INITIALIZE_TASK, 0, i);
+		    sector_buffer, FAT_TABLE_SECTOR + i, bytes_per_sector, msg_t::FS_WRITE, 0, i);
 	}
 
 	// FAT32 typically has 2 FAT copies, write to backup FAT if needed
 	if (VOLUME_BPB->num_fats > 1) {
 		for (size_t i = 0; i < sectors_per_fat; i++) {
+			// Allocate buffer for each sector write
+			void* sector_buffer =
+			    kernel::memory::alloc(bytes_per_sector, kernel::memory::ALLOC_ZEROED);
+			if (sector_buffer == nullptr) {
+				LOG_ERROR("Failed to allocate sector buffer for backup FAT write");
+				continue;
+			}
+
+			// Copy FAT sector data to buffer
 			void* fat_sector = reinterpret_cast<uint8_t*>(FAT_TABLE) + (i * bytes_per_sector);
-			send_write_req_to_blk_device(fat_sector,
+			memcpy(sector_buffer, fat_sector, bytes_per_sector);
+
+			send_write_req_to_blk_device(sector_buffer,
 			                             FAT_TABLE_SECTOR + sectors_per_fat + i,
 			                             bytes_per_sector,
-			                             msg_t::INITIALIZE_TASK,
+			                             msg_t::FS_WRITE,
 			                             0,
 			                             i);
 		}

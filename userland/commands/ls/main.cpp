@@ -12,8 +12,7 @@ int main(int argc, char** argv)
 	pid_t pid = sys_getpid();
 	char* input = argv[1];
 
-	message m = { .type = msg_t::GET_DIRECTORY_CONTENTS,
-				  .sender = ProcessId::from_raw(pid) };
+	message m = { .type = msg_t::GET_DIRECTORY_CONTENTS, .sender = ProcessId::from_raw(pid) };
 	if (input != nullptr) {
 		memcpy(m.data.fs.name, input, strlen(input));
 	} else {
@@ -37,8 +36,9 @@ int main(int argc, char** argv)
 		}
 
 		size_t name_len = strlen(s->name);
+		size_t space_needed = name_len + 5;  // name + optional '/' + 4 spaces
 
-		if (buf_pos + name_len + 1 >= buf_size) {
+		if (buf_pos + space_needed >= buf_size) {
 			break;
 		}
 
@@ -53,10 +53,10 @@ int main(int argc, char** argv)
 		buf_pos += 4;
 	}
 
+	buf[buf_pos] = '\0';  // Ensure null termination
 	printu(buf);
 
-	deallocate_ool_memory(ProcessId::from_raw(pid), msg.tool_desc.addr,
-						  msg.tool_desc.size);
+	deallocate_ool_memory(ProcessId::from_raw(pid), msg.tool_desc.addr, msg.tool_desc.size);
 
 	return 0;
 }

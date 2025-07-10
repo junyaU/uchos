@@ -353,9 +353,9 @@ void handle_fs_write(const message& m)
 	reply.data.fs.len = write_len;
 	kernel::task::send_message(m.sender, reply);
 
-	// Free buffer after write completes
-	// TODO: This should be done after receiving write completion from block device
-	kernel::memory::free(cluster_buffer);
+	// DO NOT free the cluster_buffer here - it will be freed when write completes
+	// The buffer is being used by the block device for asynchronous write
+	// TODO: Implement proper write completion handling
 
 	if (m.tool_desc.present) {
 		kernel::memory::free(m.tool_desc.addr);
