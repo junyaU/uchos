@@ -3,6 +3,8 @@
 #include "terminal.hpp"
 #include <cstring>
 #include <libs/user/syscall.hpp>
+#include <libs/user/file.hpp>
+#include <unistd.h>
 
 shell::shell() { memset(histories, 0, sizeof(histories)); }
 
@@ -12,6 +14,35 @@ void shell::process_input(char* input, terminal& term)
 
 	if (strlen(input) == 0) {
 		return;
+	}
+
+	// Check for redirection
+	char* redirect_pos = strchr(input, '>');
+	char* redirect_file = nullptr;
+	
+	if (redirect_pos != nullptr) {
+		// Null-terminate the command part
+		*redirect_pos = '\0';
+		
+		// Skip spaces after '>'
+		redirect_file = redirect_pos + 1;
+		while (*redirect_file == ' ') {
+			redirect_file++;
+		}
+		
+		// Remove trailing spaces from redirect filename
+		int len = strlen(redirect_file);
+		while (len > 0 && redirect_file[len - 1] == ' ') {
+			redirect_file[len - 1] = '\0';
+			len--;
+		}
+		
+		// Remove trailing spaces from command
+		char* end = redirect_pos - 1;
+		while (end >= input && *end == ' ') {
+			*end = '\0';
+			end--;
+		}
 	}
 
 	const char* args = strchr(input, ' ');
@@ -29,6 +60,22 @@ void shell::process_input(char* input, terminal& term)
 
 	pid_t pid = sys_fork();
 	if (pid == 0) {
+		// Handle redirection in child process
+		if (redirect_file != nullptr && strlen(redirect_file) > 0) {
+			// Create or open the file
+			fd_t file_fd = fs_create(redirect_file);
+			if (file_fd < 0) {
+				// Try opening existing file
+				file_fd = fs_open(redirect_file, 0);
+			}
+			
+			if (file_fd >= 0) {
+				// Redirect stdout to file
+				fs_dup2(file_fd, STDOUT_FILENO);
+				fs_close(file_fd);
+			}
+		}
+		
 		error_t status = sys_exec(command_name, args);
 		exit(status);
 	}

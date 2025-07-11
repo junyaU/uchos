@@ -21,8 +21,8 @@
 #include <cstdint>
 #include <cstring>
 #include <libs/common/message.hpp>
-#include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
+#include <libs/common/types.hpp>
 #include <queue>
 
 namespace kernel::task
@@ -75,10 +75,7 @@ task* get_task(ProcessId id)
 	return tasks[raw_id];
 }
 
-task* create_task(const char* name,
-				  uint64_t task_addr,
-				  bool setup_context,
-				  bool is_init)
+task* create_task(const char* name, uint64_t task_addr, bool setup_context, bool is_init)
 {
 	const ProcessId task_id = get_available_task_id();
 	if (task_id.raw() == -1) {
@@ -87,7 +84,7 @@ task* create_task(const char* name,
 	}
 
 	tasks[task_id.raw()] =
-			new task(task_id.raw(), name, task_addr, TASK_WAITING, setup_context, is_init);
+	    new task(task_id.raw(), name, task_addr, TASK_WAITING, setup_context, is_init);
 
 	return tasks[task_id.raw()];
 }
@@ -101,7 +98,8 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 
 	stack_size = parent->stack_size;
 
-	stack = static_cast<uint64_t*>(kernel::memory::alloc(stack_size, kernel::memory::ALLOC_ZEROED, kernel::memory::PAGE_SIZE));
+	stack = static_cast<uint64_t*>(
+	    kernel::memory::alloc(stack_size, kernel::memory::ALLOC_ZEROED, kernel::memory::PAGE_SIZE));
 	if (stack == nullptr) {
 		LOG_ERROR("Failed to allocate stack for child task");
 		return ERR_NO_MEMORY;
@@ -131,14 +129,14 @@ error_t task::copy_parent_page_table()
 	}
 
 	parent->page_table_snapshot =
-			reinterpret_cast<kernel::memory::page_table_entry*>(parent->ctx.cr3);
+	    reinterpret_cast<kernel::memory::page_table_entry*>(parent->ctx.cr3);
 
 	kernel::memory::page_table_entry* parent_table =
-			kernel::memory::clone_page_table(parent->page_table_snapshot, false);
+	    kernel::memory::clone_page_table(parent->page_table_snapshot, false);
 	set_cr3(reinterpret_cast<uint64_t>(parent_table));
 
 	kernel::memory::page_table_entry* child_table =
-			kernel::memory::clone_page_table(parent->page_table_snapshot, false);
+	    kernel::memory::clone_page_table(parent->page_table_snapshot, false);
 	ctx.cr3 = reinterpret_cast<uint64_t>(child_table);
 
 	return OK;
@@ -161,7 +159,7 @@ task* copy_task(task* parent, context* parent_ctx)
 	child->parent_id = parent->id;
 
 	memcpy(&child->ctx, parent_ctx, sizeof(context));
-	
+
 	// Copy parent's file descriptor table
 	child->fd_table = parent->fd_table;
 
@@ -274,8 +272,8 @@ void initialize()
 	list_init(&run_queue);
 
 	for (const auto& t_info : initial_tasks) {
-		task* new_task = create_task(t_info.name, t_info.addr, t_info.setup_context,
-									 t_info.is_initilized);
+		task* new_task =
+		    create_task(t_info.name, t_info.addr, t_info.setup_context, t_info.is_initilized);
 		if (new_task != nullptr) {
 			schedule_task(new_task->id);
 		}
@@ -292,21 +290,21 @@ void initialize()
 }
 
 task::task(int raw_id,
-		   const char* task_name,
-		   uint64_t task_addr,
-		   task_state state,
-		   bool setup_context,
-		   bool is_initilized)
-	: id{ ProcessId::from_raw(raw_id) },
-	  parent_id{ ProcessId::from_raw(-1) },
-	  priority{ 2 }, // TODO: Implement priority scheduling
-	  is_initilized{ is_initilized },
-	  state{ state },
-	  fs_path({ nullptr, nullptr, nullptr }),
-	  stack{ nullptr },
-	  messages{ std::queue<message>() },
-	  message_handlers({ std::array<message_handler_t, total_message_types>() }),
-	  fd_table()
+           const char* task_name,
+           uint64_t task_addr,
+           task_state state,
+           bool setup_context,
+           bool is_initilized)
+    : id{ ProcessId::from_raw(raw_id) },
+      parent_id{ ProcessId::from_raw(-1) },
+      priority{ 2 },  // TODO: Implement priority scheduling
+      is_initilized{ is_initilized },
+      state{ state },
+      fs_path({ nullptr, nullptr, nullptr }),
+      stack{ nullptr },
+      messages{ std::queue<message>() },
+      message_handlers({ std::array<message_handler_t, TOTAL_MESSAGE_TYPES>() }),
+      fd_table()
 {
 	list_elem_init(&run_queue_elem);
 
@@ -318,11 +316,11 @@ task::task(int raw_id,
 	for (int i = 0; i < MAX_FDS_PER_PROCESS; ++i) {
 		fd_table[i] = NO_FD;
 	}
-	
+
 	// Set standard file descriptors
-	fd_table[STDIN_FILENO] = STDIN_FILENO;   // stdin
-	fd_table[STDOUT_FILENO] = STDOUT_FILENO; // stdout
-	fd_table[STDERR_FILENO] = STDERR_FILENO; // stderr
+	fd_table[STDIN_FILENO] = STDIN_FILENO;    // stdin
+	fd_table[STDOUT_FILENO] = STDOUT_FILENO;  // stdout
+	fd_table[STDERR_FILENO] = STDERR_FILENO;  // stderr
 
 	strncpy(name, task_name, sizeof(name) - 1);
 	name[sizeof(name) - 1] = '\0';
@@ -332,7 +330,8 @@ task::task(int raw_id,
 	}
 
 	stack_size = kernel::memory::PAGE_SIZE * 8;
-	stack = static_cast<uint64_t*>(kernel::memory::alloc(stack_size, kernel::memory::ALLOC_ZEROED, kernel::memory::PAGE_SIZE));
+	stack = static_cast<uint64_t*>(
+	    kernel::memory::alloc(stack_size, kernel::memory::ALLOC_ZEROED, kernel::memory::PAGE_SIZE));
 	if (stack == nullptr) {
 		LOG_ERROR("Failed to allocate stack for task %s", name);
 		return;
@@ -379,7 +378,7 @@ message wait_for_message(msg_t type)
 	}
 }
 
-} // namespace kernel::task
+}  // namespace kernel::task
 
 extern "C" uint64_t get_current_task_stack()
 {

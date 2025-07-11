@@ -221,6 +221,9 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	const message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	kernel::memory::free(entry);
 
+	// Save current FD table before cleaning page tables
+	std::array<fd_t, kernel::task::MAX_FDS_PER_PROCESS> saved_fd_table = kernel::task::CURRENT_TASK->fd_table;
+
 	kernel::memory::page_table_entry* current_page_table = kernel::memory::get_active_page_table();
 	kernel::memory::clean_page_tables(current_page_table);
 
@@ -230,6 +233,9 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	}
 
 	kernel::task::CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(new_page_table);
+
+	// Restore FD table after page table switch
+	kernel::task::CURRENT_TASK->fd_table = saved_fd_table;
 
 	// TODO: fix this
 	kernel::fs::fat::execute_file(data_m.data.fs.buf, "", copy_args.data());

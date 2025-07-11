@@ -41,6 +41,7 @@ void fat32_service()
 	t->add_msg_handler(msg_t::FS_REGISTER_PATH, handle_fs_register_path);
 	t->add_msg_handler(msg_t::FS_PWD, handle_fs_pwd);
 	t->add_msg_handler(msg_t::FS_CHANGE_DIR, handle_fs_change_dir);
+	t->add_msg_handler(msg_t::FS_DUP2, handle_fs_dup2);
 
 	kernel::task::process_messages(t);
 }

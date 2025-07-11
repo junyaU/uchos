@@ -394,4 +394,36 @@ void handle_fs_mkfile(const message& m)
 	kernel::task::send_message(m.sender, reply);
 }
 
+void handle_fs_dup2(const message& m)
+{
+	message reply = { .type = msg_t::FS_DUP2, .sender = process_ids::FS_FAT32 };
+
+	fd_t oldfd = m.data.fs.fd;
+	fd_t newfd = m.data.fs.operation;
+
+	// For simplicity, we'll handle stdout redirection by updating the process's
+	// write messages to go to the file instead of the terminal.
+	// This is a simplified implementation for UCHos.
+
+	// Check if oldfd is a valid file descriptor
+	file_descriptor* fd = get_fd(oldfd);
+	if (fd == nullptr || fd->pid != m.sender) {
+		reply.data.fs.result = -1;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+
+	if (newfd != STDOUT_FILENO) {
+		reply.data.fs.result = -1;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+
+	// Success - the actual redirection will be handled by the syscall layer
+	// when write(1, ...) is called
+	reply.data.fs.result = newfd;
+	reply.data.fs.fd = oldfd;  // Store the file fd for later use
+	kernel::task::send_message(m.sender, reply);
+}
+
 }  // namespace kernel::fs::fat
