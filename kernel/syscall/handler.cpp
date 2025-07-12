@@ -81,7 +81,7 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	// For file descriptors, the user process should use fs_write() through IPC
 	// The kernel doesn't directly handle file writes in Phase 2
 	// This allows proper IPC message handling in userland
-	
+
 	// For now, return an error indicating the operation is not supported at syscall level
 	// User should use the file system API (fs_write) instead
 	return ERR_INVALID_FD;
@@ -222,7 +222,8 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::memory::free(entry);
 
 	// Save current FD table before cleaning page tables
-	std::array<fd_t, kernel::task::MAX_FDS_PER_PROCESS> saved_fd_table = kernel::task::CURRENT_TASK->fd_table;
+	std::array<fd_t, kernel::task::MAX_FDS_PER_PROCESS> saved_fd_table =
+	    kernel::task::CURRENT_TASK->fd_table;
 
 	kernel::memory::page_table_entry* current_page_table = kernel::memory::get_active_page_table();
 	kernel::memory::clean_page_tables(current_page_table);
