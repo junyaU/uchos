@@ -26,7 +26,12 @@ int main(void)
 				term->input_char(msg.data.key_input.ascii);
 				break;
 			case msg_t::NOTIFY_WRITE:
-				term->print_message(msg.data.write_shell.buf, msg.is_end_of_message);
+				if (msg.data.write_shell.buf[0] == '\0') {
+					term->enable_input = true;
+					term->print_user();
+				} else {
+					term->print_message(msg.data.write_shell.buf, msg.is_end_of_message);
+				}
 				break;
 			case msg_t::NOTIFY_TIMER_TIMEOUT:
 				switch (msg.data.timer.action) {

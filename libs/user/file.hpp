@@ -15,3 +15,5 @@ fd_t fs_create(const char* path);
 void fs_pwd(char* buf, size_t size);
 
 void fs_change_dir(char* buf, const char* path);
+
+int fs_dup2(fd_t oldfd, fd_t newfd);

@@ -88,5 +88,6 @@ void handle_fs_mkfile(const message& m);
 void handle_fs_register_path(const message& m);
 void handle_fs_pwd(const message& m);
 void handle_fs_change_dir(const message& m);
+void handle_fs_dup2(const message& m);
 
 } // namespace kernel::fs::fat

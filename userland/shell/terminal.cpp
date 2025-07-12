@@ -10,8 +10,7 @@
 #include <libs/user/time.hpp>
 
 std::array<std::array<char, TERMINAL_WIDTH>, TERMINAL_HEIGHT> terminal::buffer;
-std::array<std::array<uint32_t, TERMINAL_WIDTH>, TERMINAL_HEIGHT>
-		terminal::color_buffer;
+std::array<std::array<uint32_t, TERMINAL_WIDTH>, TERMINAL_HEIGHT> terminal::color_buffer;
 
 terminal::terminal(shell* s) : shell_(s)
 {
@@ -41,7 +40,10 @@ void terminal::blink_cursor()
 	cursor_visible = !cursor_visible;
 }
 
-int terminal::adjusted_x(int x) { return x * FONT_WIDTH + START_X; }
+int terminal::adjusted_x(int x)
+{
+	return x * FONT_WIDTH + START_X;
+}
 
 int terminal::adjusted_y(int y)
 {
@@ -88,15 +90,13 @@ void terminal::scroll()
 {
 	clear_screen();
 	memcpy(&buffer, &buffer[1], sizeof(buffer) - sizeof(buffer[0]));
-	memcpy(&color_buffer, &color_buffer[1],
-		   sizeof(color_buffer) - sizeof(color_buffer[0]));
+	memcpy(&color_buffer, &color_buffer[1], sizeof(color_buffer) - sizeof(color_buffer[0]));
 	memset(&buffer[TERMINAL_HEIGHT - 1], '\0', TERMINAL_WIDTH);
 	memset(&color_buffer[TERMINAL_HEIGHT - 1], 0, TERMINAL_WIDTH);
 
 	for (int y = 0; y < TERMINAL_HEIGHT - 1; ++y) {
 		for (int x = 0; x < TERMINAL_WIDTH; ++x) {
-			print_text(adjusted_x(x), adjusted_y(y), &buffer[y][x],
-					   color_buffer[y][x]);
+			print_text(adjusted_x(x), adjusted_y(y), &buffer[y][x], color_buffer[y][x]);
 		}
 	}
 
@@ -210,7 +210,7 @@ void terminal::register_current_dir(const char* name)
 	memset(current_dir, '\0', sizeof(current_dir));
 	strncpy(current_dir, name, 12);
 	current_dir[11] = '\0';
-	
+
 	// Convert to lowercase for display
 	for (int i = 0; current_dir[i] != '\0'; i++) {
 		if (current_dir[i] >= 'A' && current_dir[i] <= 'Z') {
@@ -221,6 +221,5 @@ void terminal::register_current_dir(const char* name)
 
 void set_cursor_timer(int ms)
 {
-	set_timer(ms, true, timeout_action_t::TERMINAL_CURSOR_BLINK,
-			  process_ids::SHELL.raw());
+	set_timer(ms, true, timeout_action_t::TERMINAL_CURSOR_BLINK, process_ids::SHELL.raw());
 }

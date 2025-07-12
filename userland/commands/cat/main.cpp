@@ -22,11 +22,7 @@ int main(int argc, char** argv)
 	}
 
 	char buf[1024];
-	size_t result = fs_read(fd, buf, sizeof(buf));
-	if (result == 0) {
-		printu("cat: cannot read file");
-		return 0;
-	}
+	fs_read(fd, buf, sizeof(buf));
 
 	printu(buf);
 
