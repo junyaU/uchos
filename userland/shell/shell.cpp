@@ -32,7 +32,6 @@ void shell::process_input(char* input, terminal& term)
 			redirect_file++;
 		}
 
-		// Remove trailing spaces from redirect filename
 		int len = strlen(redirect_file);
 		while (len > 0 && redirect_file[len - 1] == ' ') {
 			redirect_file[len - 1] = '\0';

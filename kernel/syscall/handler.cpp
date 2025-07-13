@@ -57,14 +57,36 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	kernel::task::task* t = kernel::task::CURRENT_TASK;
 
-	// Validate file descriptor
 	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd] == NO_FD) {
 		return ERR_INVALID_FD;
 	}
 
-	// For stdout and stderr, send to terminal via IPC
 	if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
-		// Create message for shell
+		// Check if fd is redirected to a file
+		if (t->fd_table[fd] != fd) {
+			// Redirected to a file - send to file system
+			const fd_t file_fd = t->fd_table[fd];
+
+			LOG_ERROR("Redirecting write to file descriptor %d", file_fd);
+
+			// Create FS_WRITE message
+			message m = { .type = msg_t::FS_WRITE, .sender = t->id };
+			m.data.fs.fd = file_fd;
+			m.data.fs.len = count;
+
+			// Handle buffer size limitation
+			if (count <= sizeof(m.data.fs.buf)) {
+				// Small writes can be handled inline
+				copy_from_user(m.data.fs.buf, buf, count);
+				kernel::task::send_message(process_ids::FS_FAT32, m);
+				return count;
+			}
+			// Large writes not supported in Phase 1
+			// TODO: Implement OOL (out-of-line) memory for large writes
+			return 0;
+		}
+
+		// Not redirected - send to terminal as before
 		message m = { .type = msg_t::NOTIFY_WRITE, .sender = t->id, .is_end_of_message = true };
 
 		// Copy data from user space

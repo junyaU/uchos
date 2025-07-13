@@ -43,4 +43,4 @@ void init_fds()
 	}
 }
 
-} // namespace kernel::fs
+}  // namespace kernel::fs

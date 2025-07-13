@@ -413,11 +413,21 @@ void handle_fs_dup2(const message& m)
 		return;
 	}
 
+	// TODO: Support for other file descriptors
 	if (newfd != STDOUT_FILENO) {
 		reply.data.fs.result = -1;
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
+
+	kernel::task::task* t = kernel::task::get_task(m.sender);
+	if (t == nullptr) {
+		reply.data.fs.result = -1;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+
+	t->fd_table[newfd] = oldfd;
 
 	// Success - the actual redirection will be handled by the syscall layer
 	// when write(1, ...) is called
