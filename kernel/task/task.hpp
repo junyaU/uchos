@@ -1,5 +1,6 @@
 #pragma once
 
+#include "fs/file_descriptor.hpp"
 #include "fs/path.hpp"
 #include "list.hpp"
 #include "memory/paging.hpp"
@@ -38,7 +39,7 @@ struct task {
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;
 	std::array<message_handler_t, TOTAL_MESSAGE_TYPES> message_handlers;
-	std::array<fd_t, MAX_FDS_PER_PROCESS> fd_table;
+	std::array<kernel::fs::file_descriptor_entry, MAX_FDS_PER_PROCESS> fd_table;
 
 	task(int id,
 	     const char* task_name,

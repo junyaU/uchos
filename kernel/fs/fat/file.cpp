@@ -163,7 +163,7 @@ void handle_fs_open(const message& m)
 	}
 
 	file_descriptor* fd = register_fd(name, entry->file_size, m.sender);
-	req.data.fs.fd = fd == nullptr ? -1 : fd->fd;
+	req.data.fs.fd = fd == nullptr ? -1 : (fd - kernel::fs::fds.data());
 
 	kernel::task::send_message(m.sender, req);
 }
@@ -205,7 +205,6 @@ void handle_fs_close(const message& m)
 	}
 
 	memset(fd, 0, sizeof(file_descriptor));
-	fd->fd = -1;
 }
 
 void handle_fs_write(const message& m)
@@ -389,7 +388,7 @@ void handle_fs_mkfile(const message& m)
 
 	file_descriptor* fd = register_fd(name, 0, m.sender);
 
-	reply.data.fs.fd = fd == nullptr ? -1 : fd->fd;
+	reply.data.fs.fd = fd == nullptr ? -1 : (fd - kernel::fs::fds.data());
 
 	kernel::task::send_message(m.sender, reply);
 }
@@ -407,7 +406,7 @@ void handle_fs_dup2(const message& m)
 
 	// Check if oldfd is a valid file descriptor
 	file_descriptor* fd = get_fd(oldfd);
-	if (fd == nullptr || fd->pid != m.sender) {
+	if (fd == nullptr) {
 		reply.data.fs.result = -1;
 		kernel::task::send_message(m.sender, reply);
 		return;
@@ -427,7 +426,11 @@ void handle_fs_dup2(const message& m)
 		return;
 	}
 
-	t->fd_table[newfd] = oldfd;
+	// This needs to be updated to work with the new file_descriptor_entry structure
+	// For now, just mark it as a redirect
+	if (newfd >= 0 && newfd < kernel::task::MAX_FDS_PER_PROCESS) {
+		t->fd_table[newfd].redirect_to = oldfd;
+	}
 
 	// Success - the actual redirection will be handled by the syscall layer
 	// when write(1, ...) is called

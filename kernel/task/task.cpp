@@ -161,7 +161,11 @@ task* copy_task(task* parent, context* parent_ctx)
 	memcpy(&child->ctx, parent_ctx, sizeof(context));
 
 	// Copy parent's file descriptor table
-	child->fd_table = parent->fd_table;
+	if (IS_ERR(kernel::fs::copy_fd_table(child->fd_table.data(), parent->fd_table.data(), 
+	                                     MAX_FDS_PER_PROCESS, child->id))) {
+		LOG_ERROR("Failed to copy file descriptor table : %s", parent->name);
+		return nullptr;
+	}
 
 	if (IS_ERR(child->copy_parent_stack(*parent_ctx))) {
 		LOG_ERROR("Failed to copy parent stack : %s", parent->name);
@@ -234,6 +238,9 @@ void switch_next_task(bool sleep_current_task)
 void exit_task(int status)
 {
 	task* t = CURRENT_TASK;
+
+	// Release all file descriptors before exiting
+	kernel::fs::release_all_process_fds(t->fd_table.data(), MAX_FDS_PER_PROCESS);
 
 	if (t->has_parent()) {
 		message m = { .type = msg_t::IPC_EXIT_TASK, .sender = t->id };
@@ -313,14 +320,7 @@ task::task(int raw_id,
 	}
 
 	// Initialize file descriptor table
-	for (int i = 0; i < MAX_FDS_PER_PROCESS; ++i) {
-		fd_table[i] = NO_FD;
-	}
-
-	// Set standard file descriptors
-	fd_table[STDIN_FILENO] = STDIN_FILENO;    // stdin
-	fd_table[STDOUT_FILENO] = STDOUT_FILENO;  // stdout
-	fd_table[STDERR_FILENO] = STDERR_FILENO;  // stderr
+	kernel::fs::init_process_fd_table(fd_table.data(), MAX_FDS_PER_PROCESS);
 
 	strncpy(name, task_name, sizeof(name) - 1);
 	name[sizeof(name) - 1] = '\0';

@@ -34,7 +34,7 @@ ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::task::task* t = kernel::task::CURRENT_TASK;
 
 	// Validate file descriptor
-	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd] == NO_FD) {
+	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || !t->fd_table[fd].in_use) {
 		return ERR_INVALID_FD;
 	}
 
@@ -57,15 +57,15 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	kernel::task::task* t = kernel::task::CURRENT_TASK;
 
-	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd] == NO_FD) {
+	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || !t->fd_table[fd].in_use) {
 		return ERR_INVALID_FD;
 	}
 
 	if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
 		// Check if fd is redirected to a file
-		if (t->fd_table[fd] != fd) {
+		if (t->fd_table[fd].redirect_to != NO_FD) {
 			// Redirected to a file - send to file system
-			const fd_t file_fd = t->fd_table[fd];
+			const fd_t file_fd = t->fd_table[fd].redirect_to;
 
 			LOG_ERROR("Redirecting write to file descriptor %d", file_fd);
 
@@ -244,7 +244,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::memory::free(entry);
 
 	// Save current FD table before cleaning page tables
-	std::array<fd_t, kernel::task::MAX_FDS_PER_PROCESS> saved_fd_table =
+	std::array<kernel::fs::file_descriptor_entry, kernel::task::MAX_FDS_PER_PROCESS> saved_fd_table =
 	    kernel::task::CURRENT_TASK->fd_table;
 
 	kernel::memory::page_table_entry* current_page_table = kernel::memory::get_active_page_table();
