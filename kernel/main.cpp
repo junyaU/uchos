@@ -13,6 +13,7 @@
 #include "tests/framework.hpp"
 #include "tests/test_cases/stdio_test.hpp"
 #include "tests/test_cases/virtio_blk_test.hpp"
+#include "tests/test_cases/fd_test.hpp"
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"
@@ -65,6 +66,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	run_test_suite(register_virtio_blk_tests);
 	run_test_suite(register_stdio_tests);
+	run_test_suite(register_fd_tests);
 
 	kernel::task::kernel_service();
 }

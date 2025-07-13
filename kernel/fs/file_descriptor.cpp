@@ -1,6 +1,5 @@
 #include "fs/file_descriptor.hpp"
 #include "graphics/log.hpp"
-#include <array>
 #include <cstddef>
 #include <cstring>
 #include <libs/common/process_id.hpp>
@@ -8,42 +7,6 @@
 
 namespace kernel::fs
 {
-
-std::array<file_descriptor, MAX_FILE_DESCRIPTORS> fds;
-
-file_descriptor* get_fd(int fd)
-{
-	if (fd < 0 || fd >= MAX_FILE_DESCRIPTORS) {
-		return nullptr;
-	}
-
-	return &fds[fd];
-}
-
-file_descriptor* register_fd(const char* name, size_t size, ProcessId pid)
-{
-	for (size_t i = 0; i < MAX_FILE_DESCRIPTORS; ++i) {
-		if (fds[i].name[0] == '\0') {
-			fds[i].size = size;
-			fds[i].offset = 0;
-			strncpy(fds[i].name, name, 11);
-			return &fds[i];
-		}
-	}
-
-	return nullptr;
-}
-
-void init_fds()
-{
-	fds = std::array<file_descriptor, MAX_FILE_DESCRIPTORS>();
-
-	for (size_t i = 0; i < MAX_FILE_DESCRIPTORS; ++i) {
-		memset(&fds[i], 0, sizeof(file_descriptor));
-	}
-}
-
-// Process-local file descriptor management implementation
 
 void init_process_fd_table(file_descriptor_entry* fd_table, size_t table_size)
 {

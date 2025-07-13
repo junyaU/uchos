@@ -67,8 +67,6 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 			// Redirected to a file - send to file system
 			const fd_t file_fd = t->fd_table[fd].redirect_to;
 
-			LOG_ERROR("Redirecting write to file descriptor %d", file_fd);
-
 			// Create FS_WRITE message
 			message m = { .type = msg_t::FS_WRITE, .sender = t->id };
 			m.data.fs.fd = file_fd;
@@ -244,8 +242,8 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::memory::free(entry);
 
 	// Save current FD table before cleaning page tables
-	std::array<kernel::fs::file_descriptor_entry, kernel::task::MAX_FDS_PER_PROCESS> saved_fd_table =
-	    kernel::task::CURRENT_TASK->fd_table;
+	std::array<kernel::fs::file_descriptor_entry, kernel::task::MAX_FDS_PER_PROCESS>
+	    saved_fd_table = kernel::task::CURRENT_TASK->fd_table;
 
 	kernel::memory::page_table_entry* current_page_table = kernel::memory::get_active_page_table();
 	kernel::memory::clean_page_tables(current_page_table);

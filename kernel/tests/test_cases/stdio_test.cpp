@@ -1,4 +1,5 @@
 #include "tests/test_cases/stdio_test.hpp"
+#include "fs/file_descriptor.hpp"
 #include "task/context.hpp"
 #include "task/task.hpp"
 #include "tests/framework.hpp"
@@ -22,19 +23,24 @@ extern ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3);
 
 void test_fd_table_init()
 {
-	// // Create a test task
-	// task* t = create_task("fd_test", 0, true, true);
-	// ASSERT_NOT_NULL(t);
+	// Create a test task
+	task* t = create_task("fd_test", 0, true, true);
+	ASSERT_NOT_NULL(t);
 
-	// // Check standard file descriptors are initialized
-	// ASSERT_EQ(t->fd_table[STDIN_FILENO], STDIN_FILENO);
-	// ASSERT_EQ(t->fd_table[STDOUT_FILENO], STDOUT_FILENO);
-	// ASSERT_EQ(t->fd_table[STDERR_FILENO], STDERR_FILENO);
+	// Check standard file descriptors are initialized
+	ASSERT_TRUE(t->fd_table[STDIN_FILENO].in_use);
+	ASSERT_TRUE(t->fd_table[STDOUT_FILENO].in_use);
+	ASSERT_TRUE(t->fd_table[STDERR_FILENO].in_use);
 
-	// // Check other FDs are set to NO_FD
-	// for (int i = 3; i < MAX_FDS_PER_PROCESS; ++i) {
-	// 	ASSERT_EQ(t->fd_table[i], NO_FD);
-	// }
+	// Check standard FD names
+	ASSERT_EQ(strcmp(t->fd_table[STDIN_FILENO].fd.name, "stdin"), 0);
+	ASSERT_EQ(strcmp(t->fd_table[STDOUT_FILENO].fd.name, "stdout"), 0);
+	ASSERT_EQ(strcmp(t->fd_table[STDERR_FILENO].fd.name, "stderr"), 0);
+
+	// Check other FDs are not in use
+	for (int i = 3; i < MAX_FDS_PER_PROCESS; ++i) {
+		ASSERT_FALSE(t->fd_table[i].in_use);
+	}
 }
 
 void test_write_to_stdout()
@@ -134,124 +140,142 @@ void test_invalid_fd()
 void test_fd_inheritance()
 {
 	// Create parent task
-	// task* parent = create_task("parent_task", 0, true, true);
-	// ASSERT_NOT_NULL(parent);
+	task* parent = create_task("parent_task", 0, true, true);
+	ASSERT_NOT_NULL(parent);
 
-	// // Modify parent's FD table
-	// // parent->fd_table[5] = 5;  // Simulate an open file
+	// Modify parent's FD table - allocate a file descriptor
+	fd_t fd = kernel::fs::allocate_process_fd(
+	    parent->fd_table.data(), MAX_FDS_PER_PROCESS, "test.txt", 100, parent->id);
+	ASSERT_GT(fd, -1);
 
-	// // Set parent as current task for copy_task
-	// task* prev_task = CURRENT_TASK;
-	// CURRENT_TASK = parent;
+	// Set parent as current task for copy_task
+	task* prev_task = CURRENT_TASK;
+	CURRENT_TASK = parent;
 
-	// // Create child task (this would normally be done by fork)
-	// kernel::task::context dummy_ctx = {};
-	// task* child = kernel::task::copy_task(parent, &dummy_ctx);
-	// ASSERT_NOT_NULL(child);
+	// Create child task (this would normally be done by fork)
+	kernel::task::context dummy_ctx = {};
+	task* child = kernel::task::copy_task(parent, &dummy_ctx);
+	ASSERT_NOT_NULL(child);
 
-	// // Check that child inherited parent's FD table
-	// ASSERT_EQ(child->fd_table[STDIN_FILENO], parent->fd_table[STDIN_FILENO]);
-	// ASSERT_EQ(child->fd_table[STDOUT_FILENO], parent->fd_table[STDOUT_FILENO]);
-	// ASSERT_EQ(child->fd_table[STDERR_FILENO], parent->fd_table[STDERR_FILENO]);
-	// ASSERT_EQ(child->fd_table[5], parent->fd_table[5]);
+	// Check that child inherited parent's FD table
+	ASSERT_TRUE(child->fd_table[STDIN_FILENO].in_use);
+	ASSERT_TRUE(child->fd_table[STDOUT_FILENO].in_use);
+	ASSERT_TRUE(child->fd_table[STDERR_FILENO].in_use);
+
+	// Check the allocated FD was also copied
+	ASSERT_TRUE(child->fd_table[fd].in_use);
+	ASSERT_EQ(strcmp(child->fd_table[fd].fd.name, "test.txt"), 0);
+	ASSERT_EQ(child->fd_table[fd].fd.size, 100);
 
 	// Restore previous task
-	// CURRENT_TASK = prev_task;
+	CURRENT_TASK = prev_task;
 }
 
-// void test_stdout_redirection()
-// {
-// 	// Create a test task and set it as current
-// 	task* t = create_task("redirect_test", 0, true, true);
-// 	ASSERT_NOT_NULL(t);
+void test_stdout_redirection()
+{
+	// Create a test task and set it as current
+	task* t = create_task("redirect_test", 0, true, true);
+	ASSERT_NOT_NULL(t);
 
-// 	task* prev_task = CURRENT_TASK;
-// 	CURRENT_TASK = t;
+	task* prev_task = CURRENT_TASK;
+	CURRENT_TASK = t;
 
-// 	// Simulate redirection by setting stdout to a different FD
-// 	const fd_t file_fd = 10;
-// 	t->fd_table[STDOUT_FILENO] = file_fd;
+	// Allocate a file descriptor to redirect to
+	fd_t file_fd = kernel::fs::allocate_process_fd(
+	    t->fd_table.data(), MAX_FDS_PER_PROCESS, "output.txt", 0, t->id);
+	ASSERT_GT(file_fd, -1);
 
-// 	// Clear any existing messages
-// 	while (!t->messages.empty()) {
-// 		t->messages.pop();
-// 	}
+	// Simulate redirection by setting redirect_to
+	t->fd_table[STDOUT_FILENO].redirect_to = file_fd;
 
-// 	// Test writing to redirected stdout
-// 	const char* test_msg = "Redirected output";
-// 	const ssize_t result = kernel::syscall::sys_write(
-// 	    STDOUT_FILENO, reinterpret_cast<uint64_t>(test_msg), strlen(test_msg));
+	// Clear any existing messages
+	while (!t->messages.empty()) {
+		t->messages.pop();
+	}
 
-// 	// Should return number of bytes written
-// 	ASSERT_EQ(result, strlen(test_msg));
+	// Test writing to redirected stdout
+	const char* test_msg = "Redirected output";
+	const ssize_t result = kernel::syscall::sys_write(
+	    STDOUT_FILENO, reinterpret_cast<uint64_t>(test_msg), strlen(test_msg));
 
-// 	// Verify that no message was sent to shell (since it's redirected)
-// 	// Note: In actual implementation, we'd check if FS_WRITE message was sent to FS_FAT32
-// 	// but for unit tests, we can't easily verify IPC messages
+	// Should return number of bytes written
+	ASSERT_EQ(result, strlen(test_msg));
 
-// 	// Restore stdout
-// 	t->fd_table[STDOUT_FILENO] = STDOUT_FILENO;
+	// Verify that no message was sent to shell (since it's redirected)
+	// Note: In actual implementation, we'd check if FS_WRITE message was sent to FS_FAT32
+	// but for unit tests, we can't easily verify IPC messages
 
-// 	// Restore previous task
-// 	CURRENT_TASK = prev_task;
-// }
+	// Restore stdout
+	t->fd_table[STDOUT_FILENO].redirect_to = NO_FD;
 
-// void test_stderr_redirection()
-// {
-// 	// Create a test task and set it as current
-// 	task* t = create_task("stderr_redirect_test", 0, true, true);
-// 	ASSERT_NOT_NULL(t);
+	// Restore previous task
+	CURRENT_TASK = prev_task;
+}
 
-// 	task* prev_task = CURRENT_TASK;
-// 	CURRENT_TASK = t;
+void test_stderr_redirection()
+{
+	// Create a test task and set it as current
+	task* t = create_task("stderr_redirect_test", 0, true, true);
+	ASSERT_NOT_NULL(t);
 
-// 	// Simulate redirection by setting stderr to a different FD
-// 	const fd_t file_fd = 11;
-// 	t->fd_table[STDERR_FILENO] = file_fd;
+	task* prev_task = CURRENT_TASK;
+	CURRENT_TASK = t;
 
-// 	// Test writing to redirected stderr
-// 	const char* test_msg = "Redirected error";
-// 	const ssize_t result = kernel::syscall::sys_write(
-// 	    STDERR_FILENO, reinterpret_cast<uint64_t>(test_msg), strlen(test_msg));
+	// Allocate a file descriptor to redirect to
+	fd_t file_fd = kernel::fs::allocate_process_fd(
+	    t->fd_table.data(), MAX_FDS_PER_PROCESS, "error.txt", 0, t->id);
+	ASSERT_GT(file_fd, -1);
 
-// 	// Should return number of bytes written
-// 	ASSERT_EQ(result, strlen(test_msg));
+	// Simulate redirection by setting redirect_to
+	t->fd_table[STDERR_FILENO].redirect_to = file_fd;
 
-// 	// Restore stderr
-// 	t->fd_table[STDERR_FILENO] = STDERR_FILENO;
+	// Test writing to redirected stderr
+	const char* test_msg = "Redirected error";
+	const ssize_t result = kernel::syscall::sys_write(
+	    STDERR_FILENO, reinterpret_cast<uint64_t>(test_msg), strlen(test_msg));
 
-// 	// Restore previous task
-// 	CURRENT_TASK = prev_task;
-// }
+	// Should return number of bytes written
+	ASSERT_EQ(result, strlen(test_msg));
 
-// void test_large_write_redirection()
-// {
-// 	// Create a test task and set it as current
-// 	task* t = create_task("large_redirect_test", 0, true, true);
-// 	ASSERT_NOT_NULL(t);
+	// Restore stderr
+	t->fd_table[STDERR_FILENO].redirect_to = NO_FD;
 
-// 	task* prev_task = CURRENT_TASK;
-// 	CURRENT_TASK = t;
+	// Restore previous task
+	CURRENT_TASK = prev_task;
+}
 
-// 	// Simulate redirection
-// 	const fd_t file_fd = 12;
-// 	t->fd_table[STDOUT_FILENO] = file_fd;
+void test_large_write_redirection()
+{
+	// Create a test task and set it as current
+	task* t = create_task("large_redirect_test", 0, true, true);
+	ASSERT_NOT_NULL(t);
 
-// 	// Test writing large data (exceeds inline buffer)
-// 	char large_buffer[512];
-// 	memset(large_buffer, 'A', sizeof(large_buffer));
-// 	const ssize_t result = kernel::syscall::sys_write(
-// 	    STDOUT_FILENO, reinterpret_cast<uint64_t>(large_buffer), sizeof(large_buffer));
+	task* prev_task = CURRENT_TASK;
+	CURRENT_TASK = t;
 
-// 	// Should return 0 for large writes (not supported in Phase 1)
-// 	ASSERT_EQ(result, 0);
+	// Allocate a file descriptor to redirect to
+	fd_t file_fd = kernel::fs::allocate_process_fd(
+	    t->fd_table.data(), MAX_FDS_PER_PROCESS, "large.txt", 0, t->id);
+	ASSERT_GT(file_fd, -1);
 
-// 	// Restore stdout
-// 	t->fd_table[STDOUT_FILENO] = STDOUT_FILENO;
+	// Simulate redirection
+	t->fd_table[STDOUT_FILENO].redirect_to = file_fd;
 
-// 	// Restore previous task
-// 	CURRENT_TASK = prev_task;
-// }
+	// Test writing large data (exceeds inline buffer)
+	char large_buffer[512];
+	memset(large_buffer, 'A', sizeof(large_buffer));
+	const ssize_t result = kernel::syscall::sys_write(
+	    STDOUT_FILENO, reinterpret_cast<uint64_t>(large_buffer), sizeof(large_buffer));
+
+	// Should return 0 for large writes (not supported in Phase 1)
+	ASSERT_EQ(result, 0);
+
+	// Restore stdout
+	t->fd_table[STDOUT_FILENO].redirect_to = NO_FD;
+
+	// Restore previous task
+	CURRENT_TASK = prev_task;
+}
 
 void register_stdio_tests()
 {

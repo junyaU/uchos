@@ -4,7 +4,6 @@
  */
 
 #include "fat.hpp"
-#include "fs/file_descriptor.hpp"
 #include "fs/file_info.hpp"
 #include "hardware/virtio/blk.hpp"
 #include "internal_common.hpp"
@@ -23,10 +22,9 @@ void fat32_service()
 	pending_messages = std::queue<message>();
 
 	init_read_contexts();
-	init_fds();
 
-	send_read_req_to_blk_device(BOOT_SECTOR, kernel::hw::virtio::SECTOR_SIZE,
-								msg_t::INITIALIZE_TASK);
+	send_read_req_to_blk_device(
+	    BOOT_SECTOR, kernel::hw::virtio::SECTOR_SIZE, msg_t::INITIALIZE_TASK);
 
 	// Register message handlers
 	t->add_msg_handler(msg_t::INITIALIZE_TASK, handle_initialize);
@@ -46,10 +44,13 @@ void fat32_service()
 	kernel::task::process_messages(t);
 }
 
-} // namespace kernel::fs::fat
+}  // namespace kernel::fs::fat
 
 // Export for backward compatibility
 namespace kernel::fs
 {
-void fat32_service() { kernel::fs::fat::fat32_service(); }
-} // namespace kernel::fs
+void fat32_service()
+{
+	kernel::fs::fat::fat32_service();
+}
+}  // namespace kernel::fs
