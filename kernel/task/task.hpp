@@ -1,5 +1,6 @@
 #pragma once
 
+#include "fs/file_descriptor.hpp"
 #include "fs/path.hpp"
 #include "list.hpp"
 #include "memory/paging.hpp"
@@ -9,8 +10,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <libs/common/message.hpp>
-#include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
+#include <libs/common/types.hpp>
 #include <queue>
 
 namespace kernel::task
@@ -37,19 +38,26 @@ struct task {
 	kernel::memory::page_table_entry* page_table_snapshot;
 	list_elem_t run_queue_elem;
 	std::queue<message> messages;
-	std::array<message_handler_t, total_message_types> message_handlers;
-	std::array<fd_t, MAX_FDS_PER_PROCESS> fd_table;
+	std::array<message_handler_t, TOTAL_MESSAGE_TYPES> message_handlers;
+	std::array<kernel::fs::file_descriptor_entry, MAX_FDS_PER_PROCESS> fd_table;
 
 	task(int id,
-		 const char* task_name,
-		 uint64_t task_addr,
-		 task_state state,
-		 bool setup_context,
-		 bool is_initilized);
+	     const char* task_name,
+	     uint64_t task_addr,
+	     task_state state,
+	     bool setup_context,
+	     bool is_initilized);
 
-	~task() { kernel::memory::clean_page_tables(reinterpret_cast<kernel::memory::page_table_entry*>(ctx.cr3)); }
+	~task()
+	{
+		kernel::memory::clean_page_tables(
+		    reinterpret_cast<kernel::memory::page_table_entry*>(ctx.cr3));
+	}
 
-	static void* operator new(size_t size) { return kernel::memory::alloc(size, kernel::memory::ALLOC_ZEROED); }
+	static void* operator new(size_t size)
+	{
+		return kernel::memory::alloc(size, kernel::memory::ALLOC_ZEROED);
+	}
 
 	static void operator delete(void* p) { kernel::memory::free(p); }
 
@@ -81,10 +89,7 @@ static constexpr int MAX_TASKS = 100;
 extern std::array<task*, MAX_TASKS> tasks;
 extern list_t run_queue;
 
-task* create_task(const char* name,
-				  uint64_t task_addr,
-				  bool setup_context,
-				  bool is_initilized);
+task* create_task(const char* name, uint64_t task_addr, bool setup_context, bool is_initilized);
 
 task* copy_task(task* parent, context* parent_ctx);
 
@@ -108,7 +113,7 @@ void exit_task(int status);
 
 message wait_for_message(msg_t type);
 
-} // namespace kernel::task
+}  // namespace kernel::task
 
 // For assembly and extern "C" compatibility
 using kernel::task::CURRENT_TASK;

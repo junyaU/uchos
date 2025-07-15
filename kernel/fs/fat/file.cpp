@@ -162,9 +162,20 @@ void handle_fs_open(const message& m)
 		return;
 	}
 
-	file_descriptor* fd = register_fd(name, entry->file_size, m.sender);
-	req.data.fs.fd = fd == nullptr ? -1 : fd->fd;
+	// Get the requesting process's task
+	kernel::task::task* t = kernel::task::get_task(m.sender);
+	if (t == nullptr) {
+		req.data.fs.fd = -1;
+		kernel::task::send_message(m.sender, req);
+		return;
+	}
 
+	// Allocate a file descriptor in the process's FD table
+	fd_t fd = kernel::fs::allocate_process_fd(t->fd_table.data(), 
+	                                          kernel::task::MAX_FDS_PER_PROCESS, 
+	                                          name, entry->file_size, m.sender);
+	
+	req.data.fs.fd = fd;
 	kernel::task::send_message(m.sender, req);
 }
 
@@ -177,13 +188,25 @@ void handle_fs_read(const message& m)
 
 	message req = { .type = msg_t::FS_READ, .sender = process_ids::FS_FAT32 };
 
-	file_descriptor* fd = get_fd(m.data.fs.fd);
-	if (fd == nullptr) {
+	kernel::task::task* t = kernel::task::get_task(m.sender);
+	if (t == nullptr) {
+		LOG_ERROR("Task not found: %d", m.sender.raw());
+		req.data.fs.len = 0;
+		kernel::task::send_message(m.sender, req);
+		return;
+	}
+
+	file_descriptor_entry* fd_entry = kernel::fs::get_process_fd(t->fd_table.data(),
+	                                                             kernel::task::MAX_FDS_PER_PROCESS,
+	                                                             m.data.fs.fd);
+	if (fd_entry == nullptr) {
 		LOG_ERROR("fd not found");
 		req.data.fs.len = 0;
 		kernel::task::send_message(m.sender, req);
 		return;
 	}
+	
+	file_descriptor* fd = &fd_entry->fd;
 
 	directory_entry* entry = find_dir_entry(ROOT_DIR, fd->name);
 	if (entry == nullptr) {
@@ -198,27 +221,46 @@ void handle_fs_read(const message& m)
 
 void handle_fs_close(const message& m)
 {
-	file_descriptor* fd = get_fd(m.data.fs.fd);
-	if (fd == nullptr) {
-		LOG_ERROR("fd not found");
+	// Get the requesting process's task
+	kernel::task::task* t = kernel::task::get_task(m.sender);
+	if (t == nullptr) {
+		LOG_ERROR("task not found");
 		return;
 	}
 
-	memset(fd, 0, sizeof(file_descriptor));
-	fd->fd = -1;
+	// Release the file descriptor in the process's FD table
+	error_t result = kernel::fs::release_process_fd(t->fd_table.data(), 
+	                                                kernel::task::MAX_FDS_PER_PROCESS, 
+	                                                m.data.fs.fd);
+	if (IS_ERR(result)) {
+		LOG_ERROR("Failed to close fd %d: error %d", m.data.fs.fd, result);
+		return;
+	}
 }
 
 void handle_fs_write(const message& m)
 {
 	message reply = { .type = msg_t::FS_WRITE, .sender = process_ids::FS_FAT32 };
 
-	file_descriptor* fd = get_fd(m.data.fs.fd);
-	if (fd == nullptr) {
+	kernel::task::task* t = kernel::task::get_task(m.sender);
+	if (t == nullptr) {
+		LOG_ERROR("Task not found: %d", m.sender.raw());
+		reply.data.fs.result = -1;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+
+	file_descriptor_entry* fd_entry = kernel::fs::get_process_fd(t->fd_table.data(),
+	                                                             kernel::task::MAX_FDS_PER_PROCESS,
+	                                                             m.data.fs.fd);
+	if (fd_entry == nullptr) {
 		LOG_ERROR("fd not found");
 		reply.data.fs.len = 0;
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
+	
+	file_descriptor* fd = &fd_entry->fd;
 
 	directory_entry* entry = find_dir_entry(ROOT_DIR, fd->name);
 	if (entry == nullptr) {
@@ -387,10 +429,63 @@ void handle_fs_mkfile(const message& m)
 	entry->attribute = entry_attribute::ARCHIVE;
 	entry->file_size = 0;
 
-	file_descriptor* fd = register_fd(name, 0, m.sender);
+	// Get the requesting process's task
+	kernel::task::task* t = kernel::task::get_task(m.sender);
+	if (t == nullptr) {
+		reply.data.fs.fd = -1;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
 
-	reply.data.fs.fd = fd == nullptr ? -1 : fd->fd;
+	// Allocate a file descriptor in the process's FD table
+	fd_t fd = kernel::fs::allocate_process_fd(t->fd_table.data(), 
+	                                          kernel::task::MAX_FDS_PER_PROCESS, 
+	                                          name, 0, m.sender);
 
+	reply.data.fs.fd = fd;
+	kernel::task::send_message(m.sender, reply);
+}
+
+void handle_fs_dup2(const message& m)
+{
+	message reply = { .type = msg_t::FS_DUP2, .sender = process_ids::FS_FAT32 };
+
+	fd_t oldfd = m.data.fs.fd;
+	fd_t newfd = m.data.fs.operation;
+
+	// Get the requesting process's task
+	kernel::task::task* t = kernel::task::get_task(m.sender);
+	if (t == nullptr) {
+		reply.data.fs.result = -1;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+
+	// Check if oldfd is a valid file descriptor in the process's FD table
+	kernel::fs::file_descriptor_entry* old_entry = kernel::fs::get_process_fd(
+		t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, oldfd);
+	if (old_entry == nullptr) {
+		reply.data.fs.result = -1;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+
+	// TODO: Support for other file descriptors
+	if (newfd != STDOUT_FILENO && newfd != STDERR_FILENO) {
+		reply.data.fs.result = -1;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+
+	// Set up redirection in the process's FD table
+	if (newfd >= 0 && newfd < kernel::task::MAX_FDS_PER_PROCESS) {
+		t->fd_table[newfd].redirect_to = oldfd;
+	}
+
+	// Success - the actual redirection will be handled by the syscall layer
+	// when write(newfd, ...) is called
+	reply.data.fs.result = newfd;
+	reply.data.fs.fd = oldfd;  // Store the file fd for later use
 	kernel::task::send_message(m.sender, reply);
 }
 

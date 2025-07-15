@@ -78,7 +78,7 @@ size_t fs_write(fd_t fd, const void* buf, size_t count)
 	message m = { .type = msg_t::FS_WRITE, .sender = pid };
 	m.data.fs.fd = fd;
 	m.data.fs.len = count;
-	
+
 	// For small writes, use inline buffer
 	if (count <= sizeof(m.data.fs.buf)) {
 		memcpy(m.data.fs.buf, buf, count);
@@ -114,4 +114,18 @@ void fs_change_dir(char* buf, const char* path)
 	buf[strlen(res.data.fs.name)] = '\0';
 
 	send_message(process_ids::SHELL, &res);
+}
+
+int fs_dup2(fd_t oldfd, fd_t newfd)
+{
+	ProcessId pid = ProcessId::from_raw(sys_getpid());
+	message m = { .type = msg_t::FS_DUP2, .sender = pid };
+	m.data.fs.fd = oldfd;
+	m.data.fs.operation = newfd;
+
+	send_message(process_ids::FS_FAT32, &m);
+
+	message res = wait_for_message(msg_t::FS_DUP2);
+
+	return res.data.fs.result;
 }

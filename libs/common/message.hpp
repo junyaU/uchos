@@ -37,11 +37,11 @@ enum class msg_t : int32_t {
 	FS_REGISTER_PATH,
 	FS_PWD,
 	FS_CHANGE_DIR,
-	MAX_MESSAGE_TYPE, // must be the last
+	FS_DUP2,
+	MAX_MESSAGE_TYPE,  // must be the last
 };
 
-constexpr int32_t total_message_types =
-		static_cast<int32_t>(msg_t::MAX_MESSAGE_TYPE);
+constexpr int32_t TOTAL_MESSAGE_TYPES = static_cast<int32_t>(msg_t::MAX_MESSAGE_TYPE);
 
 enum class timeout_action_t : uint8_t {
 	TERMINAL_CURSOR_BLINK,
@@ -58,7 +58,6 @@ struct message {
 	msg_t type;
 	ProcessId sender;
 	msg_ool_desc_t tool_desc;
-	bool is_end_of_message = true;
 
 	union {
 		struct {

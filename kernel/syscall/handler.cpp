@@ -34,7 +34,7 @@ ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::task::task* t = kernel::task::CURRENT_TASK;
 
 	// Validate file descriptor
-	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd] == NO_FD) {
+	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || !t->fd_table[fd].in_use) {
 		return ERR_INVALID_FD;
 	}
 
@@ -57,15 +57,35 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	kernel::task::task* t = kernel::task::CURRENT_TASK;
 
-	// Validate file descriptor
-	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd] == NO_FD) {
+	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || !t->fd_table[fd].in_use) {
 		return ERR_INVALID_FD;
 	}
 
-	// For stdout and stderr, send to terminal via IPC
 	if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
-		// Create message for shell
-		message m = { .type = msg_t::NOTIFY_WRITE, .sender = t->id, .is_end_of_message = true };
+		// Check if fd is redirected to a file
+		if (t->fd_table[fd].redirect_to != NO_FD) {
+			// Redirected to a file - send to file system
+			const fd_t file_fd = t->fd_table[fd].redirect_to;
+
+			// Create FS_WRITE message
+			message m = { .type = msg_t::FS_WRITE, .sender = t->id };
+			m.data.fs.fd = file_fd;
+			m.data.fs.len = count;
+
+			// Handle buffer size limitation
+			if (count <= sizeof(m.data.fs.buf)) {
+				// Small writes can be handled inline
+				copy_from_user(m.data.fs.buf, buf, count);
+				kernel::task::send_message(process_ids::FS_FAT32, m);
+				return count;
+			}
+			// Large writes not supported in Phase 1
+			// TODO: Implement OOL (out-of-line) memory for large writes
+			return 0;
+		}
+
+		// Not redirected - send to terminal as before
+		message m = { .type = msg_t::NOTIFY_WRITE, .sender = t->id };
 
 		// Copy data from user space
 		const size_t copy_size =
@@ -81,7 +101,7 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	// For file descriptors, the user process should use fs_write() through IPC
 	// The kernel doesn't directly handle file writes in Phase 2
 	// This allows proper IPC message handling in userland
-	
+
 	// For now, return an error indicating the operation is not supported at syscall level
 	// User should use the file system API (fs_write) instead
 	return ERR_INVALID_FD;
@@ -221,6 +241,10 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	const message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
 	kernel::memory::free(entry);
 
+	// Save current FD table before cleaning page tables
+	std::array<kernel::fs::file_descriptor_entry, kernel::task::MAX_FDS_PER_PROCESS>
+	    saved_fd_table = kernel::task::CURRENT_TASK->fd_table;
+
 	kernel::memory::page_table_entry* current_page_table = kernel::memory::get_active_page_table();
 	kernel::memory::clean_page_tables(current_page_table);
 
@@ -230,6 +254,9 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	}
 
 	kernel::task::CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(new_page_table);
+
+	// Restore FD table after page table switch
+	kernel::task::CURRENT_TASK->fd_table = saved_fd_table;
 
 	// TODO: fix this
 	kernel::fs::fat::execute_file(data_m.data.fs.buf, "", copy_args.data());
@@ -260,15 +287,15 @@ ProcessId sys_wait(uint64_t arg1)
 		message m = t->messages.front();
 		t->messages.pop();
 
-		if (m.type != msg_t::IPC_EXIT_TASK) {
-			__asm__("cli");
-			t->messages.push(m);
-			__asm__("sti");
-			continue;
+		if (m.type == msg_t::IPC_EXIT_TASK) {
+			task::send_message(process_ids::SHELL, m);
+			copy_to_user(status, &m.data.exit_task.status, sizeof(int));
+			return m.sender;
 		}
 
-		copy_to_user(status, &m.data.exit_task.status, sizeof(int));
-		return m.sender;
+		__asm__("cli");
+		t->messages.push(m);
+		__asm__("sti");
 	}
 
 	return ProcessId::from_raw(-1);

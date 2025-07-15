@@ -11,8 +11,7 @@ constexpr int LINE_SPACING = 3, START_X = 7, START_Y = 7;
 
 struct terminal {
 	static std::array<std::array<char, TERMINAL_WIDTH>, TERMINAL_HEIGHT> buffer;
-	static std::array<std::array<uint32_t, TERMINAL_WIDTH>, TERMINAL_HEIGHT>
-			color_buffer;
+	static std::array<std::array<uint32_t, TERMINAL_WIDTH>, TERMINAL_HEIGHT> color_buffer;
 	char user_name[16];
 	char current_dir[12];
 	int cursor_x;
@@ -41,8 +40,6 @@ struct terminal {
 	void print(const char* s, uint32_t color = 0xffffff);
 
 	void printf(const char* format, ...);
-
-	void print_message(char* s, bool is_end_of_message);
 
 	size_t print_user();
 

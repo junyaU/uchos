@@ -26,7 +26,7 @@ int main(void)
 				term->input_char(msg.data.key_input.ascii);
 				break;
 			case msg_t::NOTIFY_WRITE:
-				term->print_message(msg.data.write_shell.buf, msg.is_end_of_message);
+				term->printf("%s\n", msg.data.write_shell.buf);
 				break;
 			case msg_t::NOTIFY_TIMER_TIMEOUT:
 				switch (msg.data.timer.action) {
@@ -39,12 +39,13 @@ int main(void)
 				break;
 			case msg_t::FS_CHANGE_DIR:
 				term->register_current_dir(msg.data.fs.name);
-				term->enable_input = true;
-				term->print_user();
 				break;
 			case msg_t::INITIALIZE_TASK:
 				set_cursor_timer(500);
 				break;
+			case msg_t::IPC_EXIT_TASK:
+				term->enable_input = true;
+				term->print_user();
 			default:
 				break;
 		}

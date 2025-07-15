@@ -25,16 +25,14 @@ void notify_xhci_handler(const message& m)
 
 void handle_initialize_task(const message& m)
 {
-	message send_m = { .type = msg_t::INITIALIZE_TASK,
-					   .sender = process_ids::KERNEL };
+	message send_m = { .type = msg_t::INITIALIZE_TASK, .sender = process_ids::KERNEL };
 	send_m.data.init.task_id = m.sender.raw();
 	kernel::task::send_message(m.sender, send_m);
 }
 
 void handle_memory_usage(const message& m)
 {
-	message send_m = { .type = msg_t::IPC_MEMORY_USAGE,
-					   .sender = process_ids::KERNEL };
+	message send_m = { .type = msg_t::IPC_MEMORY_USAGE, .sender = process_ids::KERNEL };
 
 	size_t used_mem = 0;
 	size_t total_mem = 0;
@@ -49,9 +47,10 @@ void handle_memory_usage(const message& m)
 
 void handle_pci(const message& m)
 {
-	message send_m = { .type = msg_t::IPC_PCI,
-					   .sender = process_ids::KERNEL,
-					   .is_end_of_message = false };
+	message send_m = {
+		.type = msg_t::IPC_PCI,
+		.sender = process_ids::KERNEL,
+	};
 
 	for (size_t i = 0; i < kernel::hw::pci::num_devices; ++i) {
 		auto& device = kernel::hw::pci::devices[i];
@@ -59,9 +58,8 @@ void handle_pci(const message& m)
 		send_m.data.pci.device_id = device.device_id;
 		device.address(send_m.data.pci.bus_address, 8);
 
-		if (i == kernel::hw::pci::num_devices - 1) {
-			send_m.is_end_of_message = true;
-		}
+		// if (i == kernel::hw::pci::num_devices - 1) {
+		// }
 
 		kernel::task::send_message(m.sender, send_m);
 	}
@@ -82,12 +80,11 @@ void handle_fs_register_path(const message& m)
 
 	kernel::memory::free(p);
 
-	message reply = { .type = msg_t::FS_REGISTER_PATH,
-					  .sender = process_ids::KERNEL };
+	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = process_ids::KERNEL };
 	reply.data.fs.result = 0;
 	kernel::task::send_message(m.sender, reply);
 };
-} // namespace
+}  // namespace
 
 namespace kernel::task
 {
@@ -127,8 +124,7 @@ void shell_service()
 		}
 	}
 
-	message read_m = { .type = msg_t::IPC_READ_FILE_DATA,
-					   .sender = process_ids::SHELL };
+	message read_m = { .type = msg_t::IPC_READ_FILE_DATA, .sender = process_ids::SHELL };
 	read_m.data.fs.buf = info_m.data.fs.buf;
 	kernel::task::send_message(process_ids::FS_FAT32, read_m);
 
@@ -152,4 +148,4 @@ void usb_handler_service()
 	kernel::task::process_messages(t);
 }
 
-} // namespace kernel::task
+}  // namespace kernel::task
