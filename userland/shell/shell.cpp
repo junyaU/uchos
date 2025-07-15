@@ -73,7 +73,7 @@ void shell::process_input(char* input, terminal& term)
 			if (file_fd >= 0) {
 				// Redirect stdout to file
 				fs_dup2(file_fd, STDOUT_FILENO);
-				fs_close(file_fd);
+				// fs_close(file_fd);
 			}
 		}
 
@@ -86,7 +86,7 @@ void shell::process_input(char* input, terminal& term)
 
 	if (child_status != 0) {
 		term.printf("%s : command not found\n", command_name);
-		term.enable_input = true;
+		term.enable_input = false;
 		return;
 	}
 

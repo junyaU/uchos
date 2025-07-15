@@ -58,7 +58,6 @@ struct message {
 	msg_t type;
 	ProcessId sender;
 	msg_ool_desc_t tool_desc;
-	bool is_end_of_message = true;
 
 	union {
 		struct {
