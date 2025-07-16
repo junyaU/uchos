@@ -33,9 +33,9 @@ void test_fd_table_init()
 	ASSERT_TRUE(t->fd_table[STDERR_FILENO].is_used());
 
 	// Check standard FD names
-	ASSERT_EQ(strcmp(t->fd_table[STDIN_FILENO].name, "stdin"), 0);
-	ASSERT_EQ(strcmp(t->fd_table[STDOUT_FILENO].name, "stdout"), 0);
-	ASSERT_EQ(strcmp(t->fd_table[STDERR_FILENO].name, "stderr"), 0);
+	ASSERT_TRUE(t->fd_table[STDIN_FILENO].has_name("stdin"));
+	ASSERT_TRUE(t->fd_table[STDOUT_FILENO].has_name("stdout"));
+	ASSERT_TRUE(t->fd_table[STDERR_FILENO].has_name("stderr"));
 
 	// Check other FDs are not in use
 	for (int i = 3; i < MAX_FDS_PER_PROCESS; ++i) {

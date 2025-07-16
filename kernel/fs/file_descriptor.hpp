@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstring>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 
@@ -52,6 +53,16 @@ struct file_descriptor {
 		name[0] = '\0';
 		size = 0;
 		offset = 0;
+	}
+
+	/**
+	 * @brief Check if this file descriptor has the specified name
+	 * @param target_name The name to compare against
+	 * @return true if the name matches, false otherwise
+	 */
+	bool has_name(const char* target_name) const
+	{
+		return strcmp(name, target_name) == 0;
 	}
 };
 

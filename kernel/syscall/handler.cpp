@@ -62,15 +62,14 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	}
 
 	if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
-		// Check if fd name indicates standard output or file
-		if (strcmp(t->fd_table[fd].name, "stdout") == 0 || 
-		    strcmp(t->fd_table[fd].name, "stderr") == 0) {
+		if (t->fd_table[fd].has_name("stdout") || t->fd_table[fd].has_name("stderr")) {
 			// Standard output - send to terminal
 			message m = { .type = msg_t::NOTIFY_WRITE, .sender = t->id };
 
 			// Copy data from user space
-			const size_t copy_size =
-			    count > sizeof(m.data.write_shell.buf) - 1 ? sizeof(m.data.write_shell.buf) - 1 : count;
+			const size_t copy_size = count > sizeof(m.data.write_shell.buf) - 1
+			                             ? sizeof(m.data.write_shell.buf) - 1
+			                             : count;
 			copy_from_user(m.data.write_shell.buf, buf, copy_size);
 			m.data.write_shell.buf[copy_size] = '\0';
 
