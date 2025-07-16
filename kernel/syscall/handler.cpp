@@ -34,7 +34,7 @@ ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::task::task* t = kernel::task::CURRENT_TASK;
 
 	// Validate file descriptor
-	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || !t->fd_table[fd].in_use) {
+	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd].is_unused()) {
 		return ERR_INVALID_FD;
 	}
 
@@ -57,45 +57,45 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	kernel::task::task* t = kernel::task::CURRENT_TASK;
 
-	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || !t->fd_table[fd].in_use) {
+	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd].is_unused()) {
 		return ERR_INVALID_FD;
 	}
 
 	if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
-		// Check if fd is redirected to a file
-		if (t->fd_table[fd].redirect_to != NO_FD) {
-			// Redirected to a file - send to file system
-			const fd_t file_fd = t->fd_table[fd].redirect_to;
+		// Check if fd name indicates standard output or file
+		if (strcmp(t->fd_table[fd].name, "stdout") == 0 || 
+		    strcmp(t->fd_table[fd].name, "stderr") == 0) {
+			// Standard output - send to terminal
+			message m = { .type = msg_t::NOTIFY_WRITE, .sender = t->id };
 
-			// Create FS_WRITE message
-			message m = { .type = msg_t::FS_WRITE, .sender = t->id };
-			m.data.fs.fd = file_fd;
-			m.data.fs.len = count;
+			// Copy data from user space
+			const size_t copy_size =
+			    count > sizeof(m.data.write_shell.buf) - 1 ? sizeof(m.data.write_shell.buf) - 1 : count;
+			copy_from_user(m.data.write_shell.buf, buf, copy_size);
+			m.data.write_shell.buf[copy_size] = '\0';
 
-			// Handle buffer size limitation
-			if (count <= sizeof(m.data.fs.buf)) {
-				// Small writes can be handled inline
-				copy_from_user(m.data.fs.buf, buf, count);
-				kernel::task::send_message(process_ids::FS_FAT32, m);
-				return count;
-			}
-			// Large writes not supported in Phase 1
-			// TODO: Implement OOL (out-of-line) memory for large writes
-			return 0;
+			kernel::task::send_message(process_ids::SHELL, m);
+
+			return copy_size;
 		}
+		// File output - fd contains actual file info after dup2
+		message m = { .type = msg_t::FS_WRITE, .sender = t->id };
+		m.data.fs.fd = fd;
+		m.data.fs.len = count;
 
-		// Not redirected - send to terminal as before
-		message m = { .type = msg_t::NOTIFY_WRITE, .sender = t->id };
+		// Handle buffer size limitation
+		if (count <= sizeof(m.data.fs.buf)) {
+			// Small writes can be handled inline
+			copy_from_user(m.data.fs.buf, buf, count);
+			kernel::task::send_message(process_ids::FS_FAT32, m);
 
-		// Copy data from user space
-		const size_t copy_size =
-		    count > sizeof(m.data.write_shell.buf) - 1 ? sizeof(m.data.write_shell.buf) - 1 : count;
-		copy_from_user(m.data.write_shell.buf, buf, copy_size);
-		m.data.write_shell.buf[copy_size] = '\0';
-
-		kernel::task::send_message(process_ids::SHELL, m);
-
-		return copy_size;
+			// Wait for response from file system
+			message reply = kernel::task::wait_for_message(msg_t::FS_WRITE);
+			return reply.data.fs.len;
+		}
+		// Large writes not supported in Phase 1
+		// TODO: Implement OOL (out-of-line) memory for large writes
+		return 0;
 	}
 
 	// For file descriptors, the user process should use fs_write() through IPC
@@ -242,8 +242,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::memory::free(entry);
 
 	// Save current FD table before cleaning page tables
-	std::array<kernel::fs::file_descriptor_entry, kernel::task::MAX_FDS_PER_PROCESS>
-	    saved_fd_table = kernel::task::CURRENT_TASK->fd_table;
+	auto saved_fd_table = kernel::task::CURRENT_TASK->fd_table;
 
 	kernel::memory::page_table_entry* current_page_table = kernel::memory::get_active_page_table();
 	kernel::memory::clean_page_tables(current_page_table);

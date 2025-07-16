@@ -171,10 +171,9 @@ void handle_fs_open(const message& m)
 	}
 
 	// Allocate a file descriptor in the process's FD table
-	fd_t fd = kernel::fs::allocate_process_fd(t->fd_table.data(), 
-	                                          kernel::task::MAX_FDS_PER_PROCESS, 
-	                                          name, entry->file_size, m.sender);
-	
+	fd_t fd = kernel::fs::allocate_process_fd(
+	    t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, name, entry->file_size, m.sender);
+
 	req.data.fs.fd = fd;
 	kernel::task::send_message(m.sender, req);
 }
@@ -196,17 +195,16 @@ void handle_fs_read(const message& m)
 		return;
 	}
 
-	file_descriptor_entry* fd_entry = kernel::fs::get_process_fd(t->fd_table.data(),
-	                                                             kernel::task::MAX_FDS_PER_PROCESS,
-	                                                             m.data.fs.fd);
+	file_descriptor* fd_entry = kernel::fs::get_process_fd(
+	    t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
 	if (fd_entry == nullptr) {
 		LOG_ERROR("fd not found");
 		req.data.fs.len = 0;
 		kernel::task::send_message(m.sender, req);
 		return;
 	}
-	
-	file_descriptor* fd = &fd_entry->fd;
+
+	file_descriptor* fd = fd_entry;
 
 	directory_entry* entry = find_dir_entry(ROOT_DIR, fd->name);
 	if (entry == nullptr) {
@@ -224,14 +222,13 @@ void handle_fs_close(const message& m)
 	// Get the requesting process's task
 	kernel::task::task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
-		LOG_ERROR("task not found");
+		LOG_ERROR("Task %d not found in fs_close - likely already exited", m.sender.raw());
 		return;
 	}
 
 	// Release the file descriptor in the process's FD table
-	error_t result = kernel::fs::release_process_fd(t->fd_table.data(), 
-	                                                kernel::task::MAX_FDS_PER_PROCESS, 
-	                                                m.data.fs.fd);
+	error_t result = kernel::fs::release_process_fd(
+	    t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
 	if (IS_ERR(result)) {
 		LOG_ERROR("Failed to close fd %d: error %d", m.data.fs.fd, result);
 		return;
@@ -244,23 +241,20 @@ void handle_fs_write(const message& m)
 
 	kernel::task::task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
-		LOG_ERROR("Task not found: %d", m.sender.raw());
-		reply.data.fs.result = -1;
-		kernel::task::send_message(m.sender, reply);
+		LOG_ERROR("Task %d not found - likely already exited", m.sender.raw());
 		return;
 	}
 
-	file_descriptor_entry* fd_entry = kernel::fs::get_process_fd(t->fd_table.data(),
-	                                                             kernel::task::MAX_FDS_PER_PROCESS,
-	                                                             m.data.fs.fd);
+	file_descriptor* fd_entry = kernel::fs::get_process_fd(
+	    t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
 	if (fd_entry == nullptr) {
 		LOG_ERROR("fd not found");
 		reply.data.fs.len = 0;
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
-	
-	file_descriptor* fd = &fd_entry->fd;
+
+	file_descriptor* fd = fd_entry;
 
 	directory_entry* entry = find_dir_entry(ROOT_DIR, fd->name);
 	if (entry == nullptr) {
@@ -334,20 +328,26 @@ void handle_fs_write(const message& m)
 		return;
 	}
 
-	// Read existing cluster data first (if not writing full cluster)
+	// Handle partial cluster writes
 	if (offset_in_cluster != 0 || write_len < BYTES_PER_CLUSTER) {
-		// Need to read existing data first
-		// TODO: Implement read-modify-write for partial cluster writes
-		LOG_ERROR("partial cluster writes not yet implemented");
-		kernel::memory::free(cluster_buffer);
-		reply.data.fs.len = 0;
-		kernel::task::send_message(m.sender, reply);
-		return;
+		// For new files or empty files, we can write partial data to zero-filled buffer
+		if (entry->file_size == 0 || fd->offset == 0) {
+			// Buffer is already zero-filled, just copy the data at the right offset
+			void* write_data = m.tool_desc.present ? m.tool_desc.addr : m.data.fs.buf;
+			memcpy(static_cast<char*>(cluster_buffer) + offset_in_cluster, write_data, write_len);
+		} else {
+			// TODO: For existing data, need to read first
+			LOG_ERROR("partial cluster writes with existing data not yet implemented");
+			kernel::memory::free(cluster_buffer);
+			reply.data.fs.len = 0;
+			kernel::task::send_message(m.sender, reply);
+			return;
+		}
+	} else {
+		// Full cluster write - copy write data to cluster buffer
+		void* write_data = m.tool_desc.present ? m.tool_desc.addr : m.data.fs.buf;
+		memcpy(cluster_buffer, write_data, write_len);
 	}
-
-	// Copy write data to cluster buffer
-	void* write_data = m.tool_desc.present ? m.tool_desc.addr : m.data.fs.buf;
-	memcpy(cluster_buffer, write_data, write_len);
 
 	send_write_req_to_blk_device(cluster_buffer,
 	                             calc_start_sector(target_cluster),
@@ -413,15 +413,13 @@ void handle_fs_mkfile(const message& m)
 
 	directory_entry* existing_entry = find_dir_entry(ROOT_DIR, name);
 	if (existing_entry != nullptr) {
-		reply.data.fs.fd = -1;
-		kernel::task::send_message(m.sender, reply);
+		LOG_ERROR("File already exists: %s", name);
 		return;
 	}
 
 	directory_entry* entry = find_empty_dir_entry();
 	if (entry == nullptr) {
-		reply.data.fs.fd = -1;
-		kernel::task::send_message(m.sender, reply);
+		LOG_ERROR("No empty directory entry found");
 		return;
 	}
 
@@ -432,15 +430,13 @@ void handle_fs_mkfile(const message& m)
 	// Get the requesting process's task
 	kernel::task::task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
-		reply.data.fs.fd = -1;
-		kernel::task::send_message(m.sender, reply);
+		LOG_ERROR("Task %d not found - likely already exited", m.sender.raw());
 		return;
 	}
 
 	// Allocate a file descriptor in the process's FD table
-	fd_t fd = kernel::fs::allocate_process_fd(t->fd_table.data(), 
-	                                          kernel::task::MAX_FDS_PER_PROCESS, 
-	                                          name, 0, m.sender);
+	fd_t fd = kernel::fs::allocate_process_fd(
+	    t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, name, 0, m.sender);
 
 	reply.data.fs.fd = fd;
 	kernel::task::send_message(m.sender, reply);
@@ -462,8 +458,8 @@ void handle_fs_dup2(const message& m)
 	}
 
 	// Check if oldfd is a valid file descriptor in the process's FD table
-	kernel::fs::file_descriptor_entry* old_entry = kernel::fs::get_process_fd(
-		t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, oldfd);
+	kernel::fs::file_descriptor* old_entry =
+	    kernel::fs::get_process_fd(t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, oldfd);
 	if (old_entry == nullptr) {
 		reply.data.fs.result = -1;
 		kernel::task::send_message(m.sender, reply);
@@ -477,13 +473,14 @@ void handle_fs_dup2(const message& m)
 		return;
 	}
 
-	// Set up redirection in the process's FD table
+	// Duplicate the file descriptor (true copy, not redirection)
 	if (newfd >= 0 && newfd < kernel::task::MAX_FDS_PER_PROCESS) {
-		t->fd_table[newfd].redirect_to = oldfd;
+		// Copy the file descriptor data from oldfd to newfd
+		t->fd_table[newfd] = *old_entry;
 	}
 
-	// Success - the actual redirection will be handled by the syscall layer
-	// when write(newfd, ...) is called
+	// Success - newfd now contains a true copy of oldfd's file descriptor
+	// Independent of oldfd, following POSIX dup2 semantics
 	reply.data.fs.result = newfd;
 	reply.data.fs.fd = oldfd;  // Store the file fd for later use
 	kernel::task::send_message(m.sender, reply);
