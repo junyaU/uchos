@@ -1,6 +1,3 @@
-#include <cstddef>
-#include <cstdlib>
-#include <cstring>
 #include <libs/common/types.hpp>
 #include <libs/user/console.hpp>
 #include <libs/user/file.hpp>
@@ -22,11 +19,14 @@ int main(int argc, char** argv)
 	}
 
 	char buf[1024];
-	fs_read(fd, buf, sizeof(buf));
-
+	int result = fs_read(fd, buf, sizeof(buf));
+	if (result <= 0) {
+		// fs_close(fd);
+		return 0;
+	}
 	printu(buf);
 
-	fs_close(fd);
+	// fs_close(fd);
 
 	return 0;
 }

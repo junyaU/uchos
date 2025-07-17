@@ -1,4 +1,5 @@
 #include "fs/file_descriptor.hpp"
+#include "error.hpp"
 #include "graphics/log.hpp"
 #include <cstddef>
 #include <cstring>
@@ -8,7 +9,7 @@
 namespace kernel::fs
 {
 
-void init_process_fd_table(file_descriptor_entry* fd_table, size_t table_size)
+void init_process_fd_table(file_descriptor* fd_table, size_t table_size)
 {
 	if (fd_table == nullptr) {
 		return;
@@ -16,60 +17,50 @@ void init_process_fd_table(file_descriptor_entry* fd_table, size_t table_size)
 
 	// Initialize all entries as unused
 	for (size_t i = 0; i < table_size; ++i) {
-		fd_table[i].in_use = false;
-		memset(&fd_table[i].fd, 0, sizeof(file_descriptor));
-		fd_table[i].redirect_to = NO_FD;
+		fd_table[i].clear();
 	}
 
 	// Set up standard file descriptors
 	// stdin
 	if (STDIN_FILENO < table_size) {
-		fd_table[STDIN_FILENO].in_use = true;
-		strncpy(fd_table[STDIN_FILENO].fd.name, "stdin", 11);
-		fd_table[STDIN_FILENO].fd.size = 0;
-		fd_table[STDIN_FILENO].fd.offset = 0;
-		fd_table[STDIN_FILENO].redirect_to = NO_FD;
+		strncpy(fd_table[STDIN_FILENO].name, "stdin", 11);
+		fd_table[STDIN_FILENO].size = 0;
+		fd_table[STDIN_FILENO].offset = 0;
 	}
 
 	// stdout
 	if (STDOUT_FILENO < table_size) {
-		fd_table[STDOUT_FILENO].in_use = true;
-		strncpy(fd_table[STDOUT_FILENO].fd.name, "stdout", 11);
-		fd_table[STDOUT_FILENO].fd.size = 0;
-		fd_table[STDOUT_FILENO].fd.offset = 0;
-		fd_table[STDOUT_FILENO].redirect_to = NO_FD;
+		strncpy(fd_table[STDOUT_FILENO].name, "stdout", 11);
+		fd_table[STDOUT_FILENO].size = 0;
+		fd_table[STDOUT_FILENO].offset = 0;
 	}
 
 	// stderr
 	if (STDERR_FILENO < table_size) {
-		fd_table[STDERR_FILENO].in_use = true;
-		strncpy(fd_table[STDERR_FILENO].fd.name, "stderr", 11);
-		fd_table[STDERR_FILENO].fd.size = 0;
-		fd_table[STDERR_FILENO].fd.offset = 0;
-		fd_table[STDERR_FILENO].redirect_to = NO_FD;
+		strncpy(fd_table[STDERR_FILENO].name, "stderr", 11);
+		fd_table[STDERR_FILENO].size = 0;
+		fd_table[STDERR_FILENO].offset = 0;
 	}
 }
 
-fd_t allocate_process_fd(file_descriptor_entry* fd_table,
+fd_t allocate_process_fd(file_descriptor* fd_table,
                          size_t table_size,
                          const char* name,
                          size_t size,
                          ProcessId pid)
 {
 	if (fd_table == nullptr || name == nullptr) {
+		LOG_ERROR("Invalid arguments for allocate_process_fd");
 		return NO_FD;
 	}
 
 	// Find first unused entry
 	for (size_t i = 0; i < table_size; ++i) {
-		if (!fd_table[i].in_use) {
-			fd_table[i].in_use = true;
-			// fd number is the index itself
-			fd_table[i].fd.size = size;
-			fd_table[i].fd.offset = 0;
-			strncpy(fd_table[i].fd.name, name, 10);
-			fd_table[i].fd.name[10] = '\0';
-			fd_table[i].redirect_to = NO_FD;
+		if (fd_table[i].is_unused()) {
+			fd_table[i].size = size;
+			fd_table[i].offset = 0;
+			strncpy(fd_table[i].name, name, 10);
+			fd_table[i].name[10] = '\0';
 			return i;
 		}
 	}
@@ -78,25 +69,21 @@ fd_t allocate_process_fd(file_descriptor_entry* fd_table,
 	return NO_FD;
 }
 
-file_descriptor_entry* get_process_fd(file_descriptor_entry* fd_table, size_t table_size, fd_t fd)
+file_descriptor* get_process_fd(file_descriptor* fd_table, size_t table_size, fd_t fd)
 {
 	if (fd_table == nullptr || fd < 0 || fd >= table_size) {
 		return nullptr;
 	}
 
-	if (!fd_table[fd].in_use) {
+	if (fd_table[fd].is_unused()) {
+		LOG_ERROR("fd: %d", fd);
 		return nullptr;
-	}
-
-	// Handle redirection
-	if (fd_table[fd].redirect_to != NO_FD) {
-		return get_process_fd(fd_table, table_size, fd_table[fd].redirect_to);
 	}
 
 	return &fd_table[fd];
 }
 
-error_t release_process_fd(file_descriptor_entry* fd_table, size_t table_size, fd_t fd)
+error_t release_process_fd(file_descriptor* fd_table, size_t table_size, fd_t fd)
 {
 	if (fd_table == nullptr || fd < 0 || fd >= table_size) {
 		return ERR_INVALID_ARG;
@@ -107,20 +94,18 @@ error_t release_process_fd(file_descriptor_entry* fd_table, size_t table_size, f
 		return ERR_INVALID_FD;
 	}
 
-	if (!fd_table[fd].in_use) {
+	if (fd_table[fd].is_unused()) {
 		return ERR_INVALID_FD;
 	}
 
 	// Clear the entry
-	fd_table[fd].in_use = false;
-	fd_table[fd].redirect_to = NO_FD;
-	memset(fd_table[fd].fd.name, 0, sizeof(fd_table[fd].fd.name));
+	fd_table[fd].clear();
 
 	return OK;
 }
 
-error_t copy_fd_table(file_descriptor_entry* dest,
-                      const file_descriptor_entry* src,
+error_t copy_fd_table(file_descriptor* dest,
+                      const file_descriptor* src,
                       size_t table_size,
                       ProcessId child_pid)
 {
@@ -130,19 +115,18 @@ error_t copy_fd_table(file_descriptor_entry* dest,
 
 	// Copy each entry
 	for (size_t i = 0; i < table_size; ++i) {
-		if (src[i].in_use) {
+		if (src[i].is_used()) {
 			dest[i] = src[i];
 			// No need to update PID as it's managed per-process now
 		} else {
-			dest[i].in_use = false;
-			dest[i].redirect_to = NO_FD;
+			dest[i].clear();
 		}
 	}
 
 	return OK;
 }
 
-void release_all_process_fds(file_descriptor_entry* fd_table, size_t table_size)
+void release_all_process_fds(file_descriptor* fd_table, size_t table_size)
 {
 	if (fd_table == nullptr) {
 		return;
@@ -151,7 +135,7 @@ void release_all_process_fds(file_descriptor_entry* fd_table, size_t table_size)
 	// Release all non-standard file descriptors
 	for (size_t i = 0; i < table_size; ++i) {
 		if (i != STDIN_FILENO && i != STDOUT_FILENO && i != STDERR_FILENO) {
-			if (fd_table[i].in_use) {
+			if (fd_table[i].is_used()) {
 				release_process_fd(fd_table, table_size, i);
 			}
 		}
