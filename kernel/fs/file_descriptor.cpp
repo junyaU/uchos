@@ -1,5 +1,4 @@
 #include "fs/file_descriptor.hpp"
-#include "error.hpp"
 #include "graphics/log.hpp"
 #include <cstddef>
 #include <cstring>

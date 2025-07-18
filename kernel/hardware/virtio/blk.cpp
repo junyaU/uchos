@@ -1,12 +1,12 @@
 #include "hardware/virtio/blk.hpp"
-#include <cstdint>
-#include <cstring>
 #include "graphics/log.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
+#include <cstdint>
+#include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
@@ -15,8 +15,7 @@ namespace
 {
 void handle_read_request(const message& m)
 {
-	message send_m = { .type = m.data.blk_io.dst_type,
-					   .sender = process_ids::VIRTIO_BLK };
+	message send_m = { .type = m.data.blk_io.dst_type, .sender = process_ids::VIRTIO_BLK };
 
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len;
@@ -45,8 +44,9 @@ void handle_read_request(const message& m)
 void handle_write_request(const message& m)
 {
 	const int sector = m.data.blk_io.sector;
-	const int len =
-			m.data.blk_io.len < kernel::hw::virtio::SECTOR_SIZE ? kernel::hw::virtio::SECTOR_SIZE : m.data.blk_io.len;
+	const int len = m.data.blk_io.len < kernel::hw::virtio::SECTOR_SIZE
+	                    ? kernel::hw::virtio::SECTOR_SIZE
+	                    : m.data.blk_io.len;
 
 	char buf[512];
 	memcpy(buf, m.data.blk_io.buf, len);
@@ -55,17 +55,17 @@ void handle_write_request(const message& m)
 		LOG_ERROR("failed to write to blk device");
 	}
 }
-} // namespace
+}  // namespace
 
-namespace kernel::hw::virtio {
+namespace kernel::hw::virtio
+{
 
 virtio_pci_device* blk_dev = nullptr;
 
 error_t validate_length(uint32_t len)
 {
 	if (len < SECTOR_SIZE) {
-		LOG_ERROR("Data size is too small: %d bytes. Minimum is %d bytes.", len,
-				  SECTOR_SIZE);
+		LOG_ERROR("Data size is too small: %d bytes. Minimum is %d bytes.", len, SECTOR_SIZE);
 		return ERR_INVALID_ARG;
 	}
 
@@ -76,8 +76,8 @@ error_t write_to_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 {
 	ASSERT_OK(validate_length(len));
 
-	virtio_blk_req* req =
-			(virtio_blk_req*)kernel::memory::alloc(sizeof(virtio_blk_req), kernel::memory::ALLOC_ZEROED);
+	virtio_blk_req* req = (virtio_blk_req*)kernel::memory::alloc(sizeof(virtio_blk_req),
+	                                                             kernel::memory::ALLOC_ZEROED);
 	if (req == nullptr) {
 		return ERR_NO_MEMORY;
 	}
@@ -120,8 +120,8 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 {
 	ASSERT_OK(validate_length(len));
 
-	virtio_blk_req* req =
-			(virtio_blk_req*)kernel::memory::alloc(sizeof(virtio_blk_req), kernel::memory::ALLOC_ZEROED);
+	virtio_blk_req* req = (virtio_blk_req*)kernel::memory::alloc(sizeof(virtio_blk_req),
+	                                                             kernel::memory::ALLOC_ZEROED);
 	if (req == nullptr) {
 		return ERR_NO_MEMORY;
 	}
@@ -190,4 +190,4 @@ void virtio_blk_service()
 	kernel::task::process_messages(t);
 }
 
-} // namespace kernel::hw::virtio
+}  // namespace kernel::hw::virtio

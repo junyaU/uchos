@@ -29,19 +29,13 @@ struct file_descriptor {
 	 * @brief Check if this file descriptor is unused
 	 * @return true if the descriptor is not in use (empty name)
 	 */
-	bool is_unused() const
-	{
-		return name[0] == '\0';
-	}
+	bool is_unused() const { return name[0] == '\0'; }
 
 	/**
 	 * @brief Check if this file descriptor is in use
 	 * @return true if the descriptor is in use (non-empty name)
 	 */
-	bool is_used() const
-	{
-		return name[0] != '\0';
-	}
+	bool is_used() const { return name[0] != '\0'; }
 
 	/**
 	 * @brief Clear this file descriptor entry
@@ -60,12 +54,8 @@ struct file_descriptor {
 	 * @param target_name The name to compare against
 	 * @return true if the name matches, false otherwise
 	 */
-	bool has_name(const char* target_name) const
-	{
-		return strcmp(name, target_name) == 0;
-	}
+	bool has_name(const char* target_name) const { return strcmp(name, target_name) == 0; }
 };
-
 
 // Process-local file descriptor management functions
 
