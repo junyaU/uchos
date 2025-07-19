@@ -26,6 +26,9 @@ extern unsigned int FAT_TABLE_SECTOR;
 extern kernel::fs::directory_entry* ROOT_DIR;
 extern std::queue<message> pending_messages;
 
+// FAT table write optimization constants
+constexpr size_t FAT_WRITE_CHUNK_SIZE = 65536; // 64KB chunks for batch writes
+
 // Change directory request tracking
 extern std::map<fs_id_t, ProcessId> change_dir_requests;
 extern std::map<fs_id_t, std::string> change_dir_names;

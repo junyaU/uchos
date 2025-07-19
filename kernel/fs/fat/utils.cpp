@@ -274,6 +274,58 @@ void send_write_req_to_blk_device(void* buffer,
 	kernel::task::send_message(process_ids::VIRTIO_BLK, m);
 }
 
+void write_fat_sectors_fallback(unsigned int base_sector, size_t start_sector, size_t end_sector)
+{
+	const size_t bytes_per_sector = VOLUME_BPB->bytes_per_sector;
+
+	for (size_t i = start_sector; i < end_sector; i++) {
+		void* sector_buffer = kernel::memory::alloc(bytes_per_sector, kernel::memory::ALLOC_ZEROED);
+		if (sector_buffer == nullptr) {
+			LOG_ERROR("Failed to allocate sector buffer for FAT write");
+			continue;
+		}
+		void* fat_sector = reinterpret_cast<uint8_t*>(FAT_TABLE) + (i * bytes_per_sector);
+		memcpy(sector_buffer, fat_sector, bytes_per_sector);
+		send_write_req_to_blk_device(
+		    sector_buffer, base_sector + i, bytes_per_sector, msg_t::FS_WRITE, 0, i);
+	}
+}
+
+void write_fat_sectors_chunked(unsigned int base_sector, size_t sectors_per_fat)
+{
+	const size_t bytes_per_sector = VOLUME_BPB->bytes_per_sector;
+	const size_t sectors_per_chunk = FAT_WRITE_CHUNK_SIZE / bytes_per_sector;
+
+	size_t sector_offset = 0;
+	while (sector_offset < sectors_per_fat) {
+		const size_t sectors_remaining = sectors_per_fat - sector_offset;
+		const size_t current_chunk_sectors =
+		    (sectors_remaining < sectors_per_chunk) ? sectors_remaining : sectors_per_chunk;
+		const size_t chunk_size = current_chunk_sectors * bytes_per_sector;
+
+		void* chunk_buffer = kernel::memory::alloc(chunk_size, kernel::memory::ALLOC_ZEROED);
+		if (chunk_buffer == nullptr) {
+			write_fat_sectors_fallback(
+			    base_sector, sector_offset, sector_offset + current_chunk_sectors);
+			sector_offset += current_chunk_sectors;
+			continue;
+		}
+
+		void* fat_chunk =
+		    reinterpret_cast<uint8_t*>(FAT_TABLE) + (sector_offset * bytes_per_sector);
+		memcpy(chunk_buffer, fat_chunk, chunk_size);
+
+		send_write_req_to_blk_device(chunk_buffer,
+		                             base_sector + sector_offset,
+		                             chunk_size,
+		                             msg_t::FS_WRITE,
+		                             0,
+		                             sector_offset);
+
+		sector_offset += current_chunk_sectors;
+	}
+}
+
 void write_fat_table_to_disk()
 {
 	if (FAT_TABLE == nullptr || VOLUME_BPB == nullptr) {
@@ -282,47 +334,11 @@ void write_fat_table_to_disk()
 	}
 
 	const size_t sectors_per_fat = VOLUME_BPB->fat_size_32;
-	const size_t bytes_per_sector = VOLUME_BPB->bytes_per_sector;
 
-	// Write FAT table to disk sector by sector
-	for (size_t i = 0; i < sectors_per_fat; i++) {
-		// Allocate buffer for each sector write
-		void* sector_buffer = kernel::memory::alloc(bytes_per_sector, kernel::memory::ALLOC_ZEROED);
-		if (sector_buffer == nullptr) {
-			LOG_ERROR("Failed to allocate sector buffer for FAT write");
-			continue;
-		}
+	write_fat_sectors_chunked(FAT_TABLE_SECTOR, sectors_per_fat);
 
-		// Copy FAT sector data to buffer
-		void* fat_sector = reinterpret_cast<uint8_t*>(FAT_TABLE) + (i * bytes_per_sector);
-		memcpy(sector_buffer, fat_sector, bytes_per_sector);
-
-		send_write_req_to_blk_device(
-		    sector_buffer, FAT_TABLE_SECTOR + i, bytes_per_sector, msg_t::FS_WRITE, 0, i);
-	}
-
-	// FAT32 typically has 2 FAT copies, write to backup FAT if needed
 	if (VOLUME_BPB->num_fats > 1) {
-		for (size_t i = 0; i < sectors_per_fat; i++) {
-			// Allocate buffer for each sector write
-			void* sector_buffer =
-			    kernel::memory::alloc(bytes_per_sector, kernel::memory::ALLOC_ZEROED);
-			if (sector_buffer == nullptr) {
-				LOG_ERROR("Failed to allocate sector buffer for backup FAT write");
-				continue;
-			}
-
-			// Copy FAT sector data to buffer
-			void* fat_sector = reinterpret_cast<uint8_t*>(FAT_TABLE) + (i * bytes_per_sector);
-			memcpy(sector_buffer, fat_sector, bytes_per_sector);
-
-			send_write_req_to_blk_device(sector_buffer,
-			                             FAT_TABLE_SECTOR + sectors_per_fat + i,
-			                             bytes_per_sector,
-			                             msg_t::FS_WRITE,
-			                             0,
-			                             i);
-		}
+		write_fat_sectors_chunked(FAT_TABLE_SECTOR + sectors_per_fat, sectors_per_fat);
 	}
 }
 

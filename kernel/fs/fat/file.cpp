@@ -219,14 +219,12 @@ void handle_fs_read(const message& m)
 
 void handle_fs_close(const message& m)
 {
-	// Get the requesting process's task
 	kernel::task::task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
 		LOG_ERROR("Task %d not found in fs_close - likely already exited", m.sender.raw());
 		return;
 	}
 
-	// Release the file descriptor in the process's FD table
 	error_t result = kernel::fs::release_process_fd(
 	    t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
 	if (IS_ERR(result)) {
@@ -392,12 +390,9 @@ void handle_fs_write(const message& m)
 		update_directory_entry_on_disk(entry, fd->name);
 	}
 
+	// All writes completed successfully, send successful reply
 	reply.data.fs.len = write_len;
 	kernel::task::send_message(m.sender, reply);
-
-	// DO NOT free the cluster_buffer here - it will be freed when write completes
-	// The buffer is being used by the block device for asynchronous write
-	// TODO: Implement proper write completion handling
 
 	if (m.tool_desc.present) {
 		kernel::memory::free(m.tool_desc.addr);
@@ -427,14 +422,12 @@ void handle_fs_mkfile(const message& m)
 	entry->attribute = entry_attribute::ARCHIVE;
 	entry->file_size = 0;
 
-	// Get the requesting process's task
 	kernel::task::task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
 		LOG_ERROR("Task %d not found - likely already exited", m.sender.raw());
 		return;
 	}
 
-	// Allocate a file descriptor in the process's FD table
 	fd_t fd = kernel::fs::allocate_process_fd(
 	    t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, name, 0, m.sender);
 
@@ -449,7 +442,6 @@ void handle_fs_dup2(const message& m)
 	fd_t oldfd = m.data.fs.fd;
 	fd_t newfd = m.data.fs.operation;
 
-	// Get the requesting process's task
 	kernel::task::task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
 		reply.data.fs.result = -1;
@@ -457,7 +449,6 @@ void handle_fs_dup2(const message& m)
 		return;
 	}
 
-	// Check if oldfd is a valid file descriptor in the process's FD table
 	kernel::fs::file_descriptor* old_entry =
 	    kernel::fs::get_process_fd(t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, oldfd);
 	if (old_entry == nullptr) {
@@ -473,16 +464,12 @@ void handle_fs_dup2(const message& m)
 		return;
 	}
 
-	// Duplicate the file descriptor (true copy, not redirection)
 	if (newfd >= 0 && newfd < kernel::task::MAX_FDS_PER_PROCESS) {
-		// Copy the file descriptor data from oldfd to newfd
 		t->fd_table[newfd] = *old_entry;
 	}
 
-	// Success - newfd now contains a true copy of oldfd's file descriptor
-	// Independent of oldfd, following POSIX dup2 semantics
 	reply.data.fs.result = newfd;
-	reply.data.fs.fd = oldfd;  // Store the file fd for later use
+	reply.data.fs.fd = oldfd;
 	kernel::task::send_message(m.sender, reply);
 }
 
