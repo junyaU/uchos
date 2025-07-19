@@ -15,7 +15,7 @@ namespace
 {
 void handle_read_request(const message& m)
 {
-	message send_m = { .type = m.data.blk_io.dst_type, .sender = process_ids::VIRTIO_BLK };
+	message reply = { .type = m.data.blk_io.dst_type, .sender = process_ids::VIRTIO_BLK };
 
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len;
@@ -29,16 +29,17 @@ void handle_read_request(const message& m)
 	if (IS_ERR(kernel::hw::virtio::read_from_blk_device(buf, sector, len))) {
 		LOG_ERROR("failed to read from blk device");
 		kernel::memory::free(buf);
-		kernel::task::send_message(m.sender, send_m);
+		kernel::task::send_message(m.sender, reply);
+		return;
 	}
 
-	send_m.data.blk_io.buf = buf;
-	send_m.data.blk_io.sector = sector;
-	send_m.data.blk_io.len = len;
-	send_m.data.blk_io.sequence = m.data.blk_io.sequence;
-	send_m.data.blk_io.request_id = m.data.blk_io.request_id;
+	reply.data.blk_io.buf = buf;
+	reply.data.blk_io.sector = sector;
+	reply.data.blk_io.len = len;
+	reply.data.blk_io.sequence = m.data.blk_io.sequence;
+	reply.data.blk_io.request_id = m.data.blk_io.request_id;
 
-	kernel::task::send_message(m.sender, send_m);
+	kernel::task::send_message(m.sender, reply);
 }
 
 void handle_write_request(const message& m)
@@ -48,12 +49,20 @@ void handle_write_request(const message& m)
 	                    ? kernel::hw::virtio::SECTOR_SIZE
 	                    : m.data.blk_io.len;
 
-	char buf[512];
+	char* buf = static_cast<char*>(kernel::memory::alloc(len, kernel::memory::ALLOC_ZEROED));
+	if (buf == nullptr) {
+		LOG_ERROR("failed to allocate buffer for write request: %d bytes", len);
+		return;
+	}
+
 	memcpy(buf, m.data.blk_io.buf, len);
 
 	if (IS_ERR(kernel::hw::virtio::write_to_blk_device(buf, sector, len))) {
 		LOG_ERROR("failed to write to blk device");
 	}
+
+	kernel::memory::free(buf);
+	// kernel::memory::free(m.data.blk_io.buf);
 }
 }  // namespace
 
