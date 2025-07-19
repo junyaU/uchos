@@ -49,20 +49,12 @@ void handle_write_request(const message& m)
 	                    ? kernel::hw::virtio::SECTOR_SIZE
 	                    : m.data.blk_io.len;
 
-	char* buf = static_cast<char*>(kernel::memory::alloc(len, kernel::memory::ALLOC_ZEROED));
-	if (buf == nullptr) {
-		LOG_ERROR("failed to allocate buffer for write request: %d bytes", len);
-		return;
-	}
-
-	memcpy(buf, m.data.blk_io.buf, len);
-
-	if (IS_ERR(kernel::hw::virtio::write_to_blk_device(buf, sector, len))) {
+	if (IS_ERR(kernel::hw::virtio::write_to_blk_device(
+	        static_cast<const char*>(m.data.blk_io.buf), sector, len))) {
 		LOG_ERROR("failed to write to blk device");
 	}
 
-	kernel::memory::free(buf);
-	// kernel::memory::free(m.data.blk_io.buf);
+	kernel::memory::free(m.data.blk_io.buf);
 }
 }  // namespace
 

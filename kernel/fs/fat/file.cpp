@@ -353,9 +353,6 @@ void handle_fs_write(const message& m)
 	                             msg_t::FS_WRITE,
 	                             m.data.fs.request_id);
 
-	// Free the cluster buffer now that write is complete
-	kernel::memory::free(cluster_buffer);
-
 	fd->offset += write_len;
 
 	if (new_size != entry->file_size) {
