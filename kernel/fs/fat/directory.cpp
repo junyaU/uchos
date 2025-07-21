@@ -364,7 +364,6 @@ void update_directory_entry_on_disk(directory_entry* entry, const char* name)
 		return;
 	}
 
-	// Find the entry in ROOT_DIR
 	directory_entry* disk_entry = nullptr;
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
 		if (ROOT_DIR[i].name[0] == 0x00) {
@@ -382,20 +381,16 @@ void update_directory_entry_on_disk(directory_entry* entry, const char* name)
 		return;
 	}
 
-	// Update the entry in memory
 	memcpy(disk_entry, entry, sizeof(directory_entry));
 
-	// Allocate a buffer for the write operation
 	void* write_buffer = kernel::memory::alloc(BYTES_PER_CLUSTER, kernel::memory::ALLOC_ZEROED);
 	if (write_buffer == nullptr) {
 		LOG_ERROR("Failed to allocate write buffer");
 		return;
 	}
 
-	// Copy ROOT_DIR to the write buffer
 	memcpy(write_buffer, ROOT_DIR, BYTES_PER_CLUSTER);
 
-	// Calculate which sector contains the ROOT_DIR
 	const unsigned int root_dir_sector = calc_start_sector(VOLUME_BPB->root_cluster);
 
 	// Write the entire ROOT_DIR cluster back to disk

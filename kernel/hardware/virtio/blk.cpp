@@ -6,7 +6,6 @@
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 #include <cstdint>
-#include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
