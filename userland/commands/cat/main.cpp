@@ -19,11 +19,15 @@ int main(int argc, char** argv)
 	}
 
 	char buf[1024];
-	int result = fs_read(fd, buf, sizeof(buf));
+	int result = fs_read(fd, buf, sizeof(buf) - 1);  // Leave room for null terminator
 	if (result <= 0) {
 		// fs_close(fd);
 		return 0;
 	}
+
+	printu("result: %d", result);
+
+	buf[result] = '\0';  // Add null terminator
 	printu(buf);
 
 	// fs_close(fd);

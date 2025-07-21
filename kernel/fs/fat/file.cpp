@@ -331,7 +331,8 @@ void handle_fs_write(const message& m)
 		// For new files or empty files, we can write partial data to zero-filled buffer
 		if (entry->file_size == 0 || fd->offset == 0) {
 			// Buffer is already zero-filled, just copy the data at the right offset
-			void* write_data = m.tool_desc.present ? m.tool_desc.addr : m.data.fs.buf;
+			void* write_data =
+			    m.tool_desc.present ? m.tool_desc.addr : const_cast<char*>(m.data.fs.temp_buf);
 			memcpy(static_cast<char*>(cluster_buffer) + offset_in_cluster, write_data, write_len);
 		} else {
 			// TODO: For existing data, need to read first
@@ -343,7 +344,8 @@ void handle_fs_write(const message& m)
 		}
 	} else {
 		// Full cluster write - copy write data to cluster buffer
-		void* write_data = m.tool_desc.present ? m.tool_desc.addr : m.data.fs.buf;
+		void* write_data =
+		    m.tool_desc.present ? m.tool_desc.addr : const_cast<char*>(m.data.fs.temp_buf);
 		memcpy(cluster_buffer, write_data, write_len);
 	}
 
