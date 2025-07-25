@@ -34,6 +34,13 @@ error_t process_read_data_response(const message& m, bool for_user)
 
 	auto& ctx = it->second;
 	const size_t offset = m.data.blk_io.sequence * BYTES_PER_CLUSTER;
+
+	// オフセットがファイルサイズを超えている場合は無視
+	if (offset >= ctx.total_size) {
+		kernel::memory::free(m.data.blk_io.buf);
+		return OK;
+	}
+
 	const size_t copy_len = std::min(BYTES_PER_CLUSTER, ctx.total_size - offset);
 
 	memcpy(ctx.buffer.data() + offset, m.data.blk_io.buf, copy_len);
