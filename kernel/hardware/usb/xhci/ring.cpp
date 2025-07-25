@@ -17,12 +17,9 @@ void ring::initialize(size_t buf_size)
 	cycle_bit_ = true;
 	write_index_ = 0;
 	buffer_size_ = buf_size;
-	buffer_ = reinterpret_cast<trb*>(
-			kernel::memory::alloc(sizeof(trb) * buffer_size_, kernel::memory::ALLOC_ZEROED, 64));
-	if (buffer_ == nullptr) {
-		LOG_ERROR("failed to allocate memory for ring");
-		return;
-	}
+	void* buffer_ptr;
+	ALLOC_OR_RETURN(buffer_ptr, sizeof(trb) * buffer_size_, kernel::memory::ALLOC_ZEROED);
+	buffer_ = reinterpret_cast<trb*>(buffer_ptr);
 }
 
 void ring::copy_to_last(const std::array<uint32_t, 4>& data)
@@ -60,12 +57,9 @@ void event_ring::initialize(size_t buf_size,
 	buffer_size_ = buf_size;
 	interrupter_register_ = interrupter_register;
 
-	buffer_ = reinterpret_cast<trb*>(
-			kernel::memory::alloc(sizeof(trb) * buffer_size_, kernel::memory::ALLOC_ZEROED, 64));
-	if (buffer_ == nullptr) {
-		LOG_ERROR("failed to allocate memory for event ring");
-		return;
-	}
+	void* buffer_ptr;
+	ALLOC_OR_RETURN(buffer_ptr, sizeof(trb) * buffer_size_, kernel::memory::ALLOC_ZEROED);
+	buffer_ = reinterpret_cast<trb*>(buffer_ptr);
 
 	segment_table_ = reinterpret_cast<event_ring_segment_table_entry*>(
 			kernel::memory::alloc(sizeof(event_ring_segment_table_entry), kernel::memory::ALLOC_ZEROED, 64));

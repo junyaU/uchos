@@ -1,18 +1,18 @@
 #include "keyboard.hpp"
-#include <cstdint>
-#include <cstddef>
-#include <functional>
-#include <utility>
+#include "../device.hpp"
 #include "hid.hpp"
 #include "memory/slab.hpp"
-#include "../device.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <utility>
 
 #include <bitset>
 
 namespace kernel::hw::usb
 {
 keyboard_driver::keyboard_driver(usb::device* dev, int interface_index)
-	: hid_driver{ dev, interface_index, 8 }
+    : hid_driver{ dev, interface_index, 8 }
 {
 }
 
@@ -21,7 +21,10 @@ void* keyboard_driver::operator new(size_t size)
 	return kernel::memory::alloc(sizeof(keyboard_driver), kernel::memory::ALLOC_UNINITIALIZED);
 }
 
-void keyboard_driver::operator delete(void* ptr) noexcept { kernel::memory::free(ptr); }
+void keyboard_driver::operator delete(void* ptr) noexcept
+{
+	kernel::memory::free(ptr);
+}
 
 void keyboard_driver::on_data_received()
 {
@@ -59,4 +62,4 @@ void keyboard_driver::notify_key_push(uint8_t modifier, uint8_t keycode, bool pr
 	}
 }
 
-} // namespace kernel::hw::usb
+}  // namespace kernel::hw::usb
