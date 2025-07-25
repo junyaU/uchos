@@ -2,6 +2,7 @@
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
 #include "graphics/screen.hpp"
+#include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/slab.hpp"
 #include "memory/user.hpp"
@@ -82,19 +83,23 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 		m.data.fs.fd = fd;
 		m.data.fs.len = count;
 
-		// Handle buffer size limitation
-		if (count <= sizeof(m.data.fs.buf)) {
-			// Small writes can be handled inline
-			copy_from_user(m.data.fs.buf, buf, count);
-			kernel::task::send_message(process_ids::FS_FAT32, m);
-
-			// Wait for response from file system
-			message reply = kernel::task::wait_for_message(msg_t::FS_WRITE);
-			return reply.data.fs.len;
+		// For small writes, use inline buffer temporarily
+		if (count <= sizeof(m.data.fs.temp_buf) - 1) {
+			copy_from_user(m.data.fs.temp_buf, buf, count);
+			m.data.fs.temp_buf[count] = '\0';
+		} else {
+			// Large writes not supported currently
+			LOG_ERROR("Large write not supported: %d bytes", count);
+			return ERR_INVALID_ARG;
 		}
-		// Large writes not supported in Phase 1
-		// TODO: Implement OOL (out-of-line) memory for large writes
-		return 0;
+
+		kernel::task::send_message(process_ids::FS_FAT32, m);
+
+		// Wait for response from file system
+		message reply = kernel::task::wait_for_message(msg_t::FS_WRITE);
+
+		// The FS process will deallocate the OOL memory
+		return reply.data.fs.len;
 	}
 
 	// For file descriptors, the user process should use fs_write() through IPC

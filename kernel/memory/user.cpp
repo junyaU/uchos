@@ -33,6 +33,7 @@ size_t copy_to_user(void __user* to, const void* from, size_t n)
 size_t copy_from_user(void* to, const void __user* from, size_t n)
 {
 	if (to == nullptr || from == nullptr) {
+		LOG_ERROR("null pointer in copy_from_user");
 		return 0;
 	}
 

@@ -112,6 +112,7 @@ struct message {
 			fs_id_t request_id;
 			fd_t fd;
 			void* buf;
+			char temp_buf[256];
 			char name[30];
 			size_t len;
 			int operation;
