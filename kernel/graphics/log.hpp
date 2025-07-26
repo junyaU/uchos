@@ -16,7 +16,7 @@ namespace kernel::graphics
  * Different log levels allow filtering messages based on severity
  * and purpose. Higher levels indicate more critical messages.
  */
-enum class log_level : uint8_t {
+enum class LogLevel : uint8_t {
 	DEBUG, ///< Debug messages for development
 	ERROR, ///< Error messages indicating problems
 	INFO,  ///< Informational messages
@@ -31,7 +31,7 @@ enum class log_level : uint8_t {
  *
  * @param level New minimum log level
  */
-void change_log_level(log_level level);
+void change_log_level(LogLevel level);
 
 } // namespace kernel::graphics
 
@@ -49,7 +49,7 @@ void change_log_level(log_level level);
  * @note This function preserves all caller-saved registers
  */
 __attribute__((no_caller_saved_registers)) void
-printk(kernel::graphics::log_level level, const char* format, ...);
+printk(kernel::graphics::LogLevel level, const char* format, ...);
 
 /**
  * @brief Base logging macro with file location information
@@ -72,7 +72,7 @@ printk(kernel::graphics::log_level level, const char* format, ...);
  * @param ... Format arguments
  */
 #define LOG_DEBUG(fmt, ...)                                                         \
-	LOG(kernel::graphics::log_level::DEBUG, fmt, ##__VA_ARGS__)
+	LOG(kernel::graphics::LogLevel::DEBUG, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Info log macro
@@ -82,7 +82,7 @@ printk(kernel::graphics::log_level level, const char* format, ...);
  * @param fmt Format string
  * @param ... Format arguments
  */
-#define LOG_INFO(fmt, ...) LOG(kernel::graphics::log_level::INFO, fmt, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...) LOG(kernel::graphics::LogLevel::INFO, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Error log macro
@@ -93,7 +93,7 @@ printk(kernel::graphics::log_level level, const char* format, ...);
  * @param ... Format arguments
  */
 #define LOG_ERROR(fmt, ...)                                                         \
-	LOG(kernel::graphics::log_level::ERROR, fmt, ##__VA_ARGS__)
+	LOG(kernel::graphics::LogLevel::ERROR, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Test log macro
@@ -103,4 +103,4 @@ printk(kernel::graphics::log_level level, const char* format, ...);
  * @param fmt Format string
  * @param ... Format arguments
  */
-#define LOG_TEST(fmt, ...) LOG(kernel::graphics::log_level::TEST, fmt, ##__VA_ARGS__)
+#define LOG_TEST(fmt, ...) LOG(kernel::graphics::LogLevel::TEST, fmt, ##__VA_ARGS__)

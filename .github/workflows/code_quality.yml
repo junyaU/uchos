@@ -1,0 +1,129 @@
+name: UCHos Code Quality & Naming Convention Check
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  code_quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang-18 \
+          clang-tidy-18 \
+          clang-format-18 \
+          cmake \
+          build-essential \
+          lld-18
+    
+    - name: Setup build environment
+      run: |
+        # CMake構成
+        cmake -B build kernel
+        
+    - name: Build UCHos kernel
+      run: |
+        cmake --build build
+        
+    - name: Run comprehensive naming convention check
+      run: |
+        echo "=== Google C++ Style Guide準拠 包括的命名規則チェック ==="
+        ./scripts/check_naming_full.sh
+        
+    - name: Run clang-tidy static analysis
+      run: |
+        run-clang-tidy -p build \
+          -clang-tidy-binary "clang-tidy-18" \
+          -header-filter='^(?!.*/x86_64-elf/).*' \
+          -quiet
+          
+    - name: Check clang-format compliance
+      run: |
+        # 全CPPファイルのフォーマットチェック
+        find kernel/ libs/ userland/ -name "*.cpp" -o -name "*.hpp" | \
+        xargs clang-format-18 --dry-run --Werror
+        
+    - name: Run integrated code quality check
+      run: |
+        echo "=== 統合コード品質チェック ==="
+        ./lint.sh
+        
+  naming_regression_test:
+    runs-on: ubuntu-latest
+    needs: code_quality
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Verify Google C++ Style Guide compliance
+      run: |
+        echo "=== Google C++ Style Guide準拠チェック ==="
+        
+        # Phase5完了確認: PascalCase型の存在確認
+        echo "Phase5 ハードウェア関連型のPascalCase確認:"
+        
+        # 重要なPascalCase型の存在確認
+        expected_types=(
+          "Device" "ClassDriver" "Controller" "DeviceManager"
+          "VirtqDesc" "VirtioBlkReq" "EndpointDescriptor" "EndpointConfig"
+          "CapabilityRegisters" "OperationalRegisters" "MemoryMappedRegister"
+        )
+        
+        missing_types=0
+        for type_name in "${expected_types[@]}"; do
+          if ! grep -r "struct\|class" kernel/hardware/ | grep -q "$type_name"; then
+            echo "❌ 型 '$type_name' が見つかりません"
+            ((missing_types++))
+          else
+            echo "✅ 型 '$type_name' 確認"
+          fi
+        done
+        
+        if [ $missing_types -eq 0 ]; then
+          echo "🎉 全てのハードウェア関連型がPascalCase化されています"
+        else
+          echo "⚠️  $missing_types 個の型でPascalCase化が未完了です"
+          exit 1
+        fi
+        
+        echo ""
+        echo "=== 技術的注記 ==="
+        echo "C++標準アロケータ要件により、rebind構造体は例外的に小文字で維持されます。"
+        echo "これは技術的に正当化された例外です。"
+        
+    - name: Check for snake_case type violations
+      run: |
+        echo "=== snake_case型違反チェック ==="
+        
+        # ハードウェア関連でsnake_case型が残っていないかチェック（rebind除外）
+        violations_files=$(find kernel/hardware/ -name "*.hpp" -exec grep -l "struct [a-z_]" {} \; 2>/dev/null || true)
+        
+        # rebindを含まないファイルのみカウント
+        actual_violations=0
+        if [ -n "$violations_files" ]; then
+          for file in $violations_files; do
+            if ! grep -q "struct rebind" "$file" 2>/dev/null; then
+              ((actual_violations++))
+            fi
+          done
+        fi
+        
+        if [ $actual_violations -eq 0 ]; then
+          echo "✅ snake_case型違反は見つかりませんでした（C++標準要件rebindは除外）"
+        else
+          echo "❌ $actual_violations 個のファイルでsnake_case型が検出されました"
+          # rebindを除外して違反を表示
+          find kernel/hardware/ -name "*.hpp" -exec grep -n "struct [a-z_]" {} + 2>/dev/null | \
+            grep -v "struct rebind" || true
+          exit 1
+        fi

@@ -27,6 +27,6 @@ namespace kernel::task
  * @note Supports out-of-line memory transfer
  * @note [[gnu::no_caller_saved_registers]] attribute optimizes register saving on call
  */
-[[gnu::no_caller_saved_registers]] error_t send_message(ProcessId dst, message& m);
+[[gnu::no_caller_saved_registers]] error_t send_message(ProcessId dst, Message& m);
 
 } // namespace kernel::task

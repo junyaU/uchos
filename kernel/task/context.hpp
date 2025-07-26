@@ -21,7 +21,7 @@ namespace kernel::task
  *
  * @note The packed attribute ensures no padding between members
  */
-struct context {
+struct Context {
 	uint64_t cr3;		///< Control register 3 (page table base address)
 	uint64_t rip;		///< Instruction pointer
 	uint64_t rflags;	///< CPU flags register

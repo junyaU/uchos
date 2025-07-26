@@ -38,7 +38,7 @@ void initialize()
 
 	DIVIDE_CONF = 0b1011; // divide by 1
 
-	LVT_TIMER = (0b010 << 16) | kernel::interrupt::interrupt_vector::LOCAL_APIC_TIMER;
+	LVT_TIMER = (0b010 << 16) | kernel::interrupt::InterruptVector::LOCAL_APIC_TIMER;
 
 	INITIAL_COUNT = freq / kernel::timers::TIMER_FREQUENCY;
 

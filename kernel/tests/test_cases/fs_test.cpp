@@ -16,7 +16,7 @@
 namespace kernel::fs::fat
 {
 // Forward declarations for testing
-extern kernel::fs::directory_entry* ROOT_DIR;
+extern kernel::fs::DirectoryEntry* ROOT_DIR;
 extern uint32_t* FAT_TABLE;
 }
 
@@ -28,7 +28,7 @@ using namespace kernel::fs::fat;
 void test_write_existing_file()
 {
 	// Create a test file entry
-	kernel::fs::directory_entry test_entry;
+	kernel::fs::DirectoryEntry test_entry;
 	memset(&test_entry, 0, sizeof(test_entry));
 	memcpy(test_entry.name, "TEST    TXT", 11);
 	test_entry.attribute = kernel::fs::entry_attribute::ARCHIVE;
@@ -102,7 +102,7 @@ void test_fat_table_update()
 void test_write_extend_file()
 {
 	// Test creating a file entry with no initial cluster
-	kernel::fs::directory_entry test_entry;
+	kernel::fs::DirectoryEntry test_entry;
 	memset(&test_entry, 0, sizeof(test_entry));
 	memcpy(test_entry.name, "EXTEND  TXT", 11);
 	test_entry.attribute = kernel::fs::entry_attribute::ARCHIVE;

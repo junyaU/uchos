@@ -10,22 +10,22 @@
 int main(int argc, char** argv)
 {
 	pid_t pid = sys_getpid();
-	message m = { .type = msg_t::IPC_PCI, .sender = ProcessId::from_raw(pid) };
+	Message m = { .type = MsgType::IPC_PCI, .sender = ProcessId::from_raw(pid) };
 	send_message(process_ids::KERNEL, &m);
 
-	message msg;
+	Message msg;
 	while (true) {
 		receive_message(&msg);
-		if (msg.type == msg_t::NO_TASK) {
+		if (msg.type == MsgType::NO_TASK) {
 			continue;
 		}
 
-		if (msg.type != msg_t::IPC_PCI) {
+		if (msg.type != MsgType::IPC_PCI) {
 			continue;
 		}
 
-		message send_m = {
-			.type = msg_t::NOTIFY_WRITE,
+		Message send_m = {
+			.type = MsgType::NOTIFY_WRITE,
 			.sender = ProcessId::from_raw(pid),
 		};
 

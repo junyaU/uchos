@@ -9,18 +9,18 @@
 
 namespace kernel::hw::usb::xhci
 {
-void device_manager::initialize(size_t max_slots)
+void DeviceManager::initialize(size_t max_slots)
 {
 	max_slots_ = max_slots;
 
 	// NOLINTNEXTLINE(bugprone-sizeof-expression)
 	void* devices_ptr;
-	ALLOC_OR_RETURN(devices_ptr, sizeof(device*) * (max_slots_ + 1), kernel::memory::ALLOC_UNINITIALIZED);
-	devices_ = reinterpret_cast<device**>(devices_ptr);
+	ALLOC_OR_RETURN(devices_ptr, sizeof(Device*) * (max_slots_ + 1), kernel::memory::ALLOC_UNINITIALIZED);
+	devices_ = reinterpret_cast<Device**>(devices_ptr);
 
-	contexts_ = reinterpret_cast<device_context**>(
+	contexts_ = reinterpret_cast<DeviceContext**>(
 			// NOLINTNEXTLINE(bugprone-sizeof-expression)
-			kernel::memory::alloc(sizeof(device_context*) * (max_slots_ + 1),
+			kernel::memory::alloc(sizeof(DeviceContext*) * (max_slots_ + 1),
 								  kernel::memory::ALLOC_UNINITIALIZED, 64));
 	if (contexts_ == nullptr) {
 		kernel::memory::free(reinterpret_cast<void*>(devices_));
@@ -34,9 +34,9 @@ void device_manager::initialize(size_t max_slots)
 	}
 }
 
-device_context** device_manager::device_contexts() const { return contexts_; }
+DeviceContext** DeviceManager::device_contexts() const { return contexts_; }
 
-device* device_manager::find_by_port(uint8_t port, uint32_t route_string) const
+Device* DeviceManager::find_by_port(uint8_t port, uint32_t route_string) const
 {
 	for (size_t i = 0; i <= max_slots_; i++) {
 		auto* dev = devices_[i];
@@ -52,7 +52,7 @@ device* device_manager::find_by_port(uint8_t port, uint32_t route_string) const
 	return nullptr;
 }
 
-device* device_manager::find_by_state(enum device::slot_state state) const
+Device* DeviceManager::find_by_state(enum Device::SlotState state) const
 {
 	for (size_t i = 0; i <= max_slots_; i++) {
 		auto* dev = devices_[i];
@@ -68,7 +68,7 @@ device* device_manager::find_by_state(enum device::slot_state state) const
 	return nullptr;
 }
 
-device* device_manager::find_by_slot_id(uint8_t slot_id) const
+Device* DeviceManager::find_by_slot_id(uint8_t slot_id) const
 {
 	if (slot_id > max_slots_) {
 		return nullptr;
@@ -77,8 +77,8 @@ device* device_manager::find_by_slot_id(uint8_t slot_id) const
 	return devices_[slot_id];
 }
 
-void device_manager::allocate_device(uint8_t slot_id,
-									 kernel::hw::usb::xhci::doorbell_register* dbreg)
+void DeviceManager::allocate_device(uint8_t slot_id,
+									 kernel::hw::usb::xhci::DoorbellRegister* dbreg)
 {
 	if (slot_id > max_slots_) {
 		LOG_ERROR("slot_id %d is out of range", slot_id);
@@ -91,12 +91,12 @@ void device_manager::allocate_device(uint8_t slot_id,
 	}
 
 	void* device_ptr;
-	ALLOC_OR_RETURN(device_ptr, sizeof(device), kernel::memory::ALLOC_UNINITIALIZED);
-	devices_[slot_id] = reinterpret_cast<device*>(device_ptr);
-	new (devices_[slot_id]) device(slot_id, dbreg);
+	ALLOC_OR_RETURN(device_ptr, sizeof(Device), kernel::memory::ALLOC_UNINITIALIZED);
+	devices_[slot_id] = reinterpret_cast<Device*>(device_ptr);
+	new (devices_[slot_id]) Device(slot_id, dbreg);
 }
 
-void device_manager::load_dcbaa(uint8_t slot_id)
+void DeviceManager::load_dcbaa(uint8_t slot_id)
 {
 	if (slot_id > max_slots_) {
 		LOG_ERROR("slot_id %d is out of range", slot_id);
@@ -107,7 +107,7 @@ void device_manager::load_dcbaa(uint8_t slot_id)
 	contexts_[slot_id] = dev->context();
 }
 
-void device_manager::remove(uint8_t slot_id)
+void DeviceManager::remove(uint8_t slot_id)
 {
 	contexts_[slot_id] = nullptr;
 	kernel::memory::free(static_cast<void*>(devices_[slot_id]));

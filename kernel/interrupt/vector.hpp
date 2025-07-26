@@ -15,7 +15,7 @@ namespace kernel::interrupt
  * various hardware and software interrupts. These vectors are programmed
  * into the Interrupt Descriptor Table (IDT).
  */
-class interrupt_vector
+class InterruptVector
 {
 public:
 	/**

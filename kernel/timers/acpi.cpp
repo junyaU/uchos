@@ -6,7 +6,7 @@
 
 namespace kernel::timers::acpi
 {
-bool root_system_description_pointer::is_valid() const
+bool RootSystemDescriptionPointer::is_valid() const
 {
 	if (strncmp(signature, "RSD PTR ", 8) != 0) {
 		return false;
@@ -24,7 +24,7 @@ bool root_system_description_pointer::is_valid() const
 	return sum == 0;
 }
 
-bool sdt_header::is_valid(const char* expected_signature) const
+bool SdtHeader::is_valid(const char* expected_signature) const
 {
 	if (strncmp(signature, expected_signature, 4) != 0) {
 		return false;
@@ -38,9 +38,9 @@ bool sdt_header::is_valid(const char* expected_signature) const
 	return sum == 0;
 }
 
-const fixed_acpi_description_table* fadt;
+const FixedAcpiDescriptionTable* fadt;
 
-void initialize(const root_system_description_pointer& rsdp)
+void initialize(const RootSystemDescriptionPointer& rsdp)
 {
 	LOG_INFO("Initializing ACPI...");
 
@@ -50,12 +50,12 @@ void initialize(const root_system_description_pointer& rsdp)
 	}
 
 	fadt = nullptr;
-	const auto* xsdt = reinterpret_cast<const extended_system_description_table*>(
+	const auto* xsdt = reinterpret_cast<const ExtendedSystemDescriptionTable*>(
 			rsdp.xsdt_address);
 	for (int i = 0; i < xsdt->Count(); i++) {
 		const auto& entry = (*xsdt)[i];
 		if (entry.is_valid("FACP")) {
-			fadt = reinterpret_cast<const fixed_acpi_description_table*>(&entry);
+			fadt = reinterpret_cast<const FixedAcpiDescriptionTable*>(&entry);
 			break;
 		}
 	}

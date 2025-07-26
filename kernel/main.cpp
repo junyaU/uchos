@@ -28,7 +28,7 @@ char kernel_stack[1024 * 1024];
 
 extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 					 const MemoryMap& memory_map,
-					 const kernel::timers::acpi::root_system_description_pointer& rsdp)
+					 const kernel::timers::acpi::RootSystemDescriptionPointer& rsdp)
 {
 	kernel::graphics::initialize(frame_buffer_conf, { 0, 0, 0 });
 

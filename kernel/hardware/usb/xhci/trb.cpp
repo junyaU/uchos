@@ -3,7 +3,7 @@
 
 namespace kernel::hw::usb::xhci
 {
-setup_stage_trb make_setup_stage_trb(setup_stage_data setup_data, int transfer_type)
+setup_stage_trb make_setup_stage_trb(SetupStageData setup_data, int transfer_type)
 {
 	setup_stage_trb trb{};
 	trb.bits.request_type = setup_data.request_type.data;

@@ -8,7 +8,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 
-using kernel::task::task;
+using kernel::task::Task;
 using kernel::task::create_task;
 using kernel::task::TASK_WAITING;
 using kernel::task::get_available_task_id;
@@ -20,7 +20,7 @@ void test_task_creation_basic()
 {
 	// Test basic task creation
 	const char* task_name = "test_task";
-	task* t = create_task(task_name, 0, true, true);
+	Task* t = create_task(task_name, 0, true, true);
 	ASSERT_NOT_NULL(t);
 
 	// Verify task properties
@@ -41,7 +41,7 @@ void test_task_id_management()
 	ASSERT_TRUE(id1.raw() < MAX_TASKS);
 
 	// Create first task
-	task* t1 = create_task("id_test1", 0, true, true);
+	Task* t1 = create_task("id_test1", 0, true, true);
 	ASSERT_NOT_NULL(t1);
 	ASSERT_TRUE(t1->id == id1);
 
@@ -52,7 +52,7 @@ void test_task_id_management()
 	ASSERT_FALSE(id1 == id2);
 
 	// Create second task
-	task* t2 = create_task("id_test2", 0, true, true);
+	Task* t2 = create_task("id_test2", 0, true, true);
 	ASSERT_NOT_NULL(t2);
 	ASSERT_TRUE(t2->id == id2);
 
@@ -70,45 +70,45 @@ namespace
 {
 bool g_handler_called = false;
 
-void test_message_handler(const message& /*unused*/) { g_handler_called = true; }
+void test_message_handler(const Message& /*unused*/) { g_handler_called = true; }
 } // namespace
 
 void test_task_message_handling()
 {
-	task* t = create_task("message_test", 0, true, true);
+	Task* t = create_task("message_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
 	// Test message handler registration
 	g_handler_called = false;
-	t->add_msg_handler(msg_t::IPC_EXIT_TASK, test_message_handler);
+	t->add_msg_handler(MsgType::IPC_EXIT_TASK, test_message_handler);
 	ASSERT_FALSE(g_handler_called);
 
 	// Test message queue
 	ASSERT_TRUE(t->messages.empty());
-	const message test_msg = { .type = msg_t::IPC_EXIT_TASK, .sender = ProcessId::from_raw(0) };
+	const Message test_msg = { .type = MsgType::IPC_EXIT_TASK, .sender = ProcessId::from_raw(0) };
 	t->messages.push(test_msg);
 	ASSERT_FALSE(t->messages.empty());
 
 	// Test message handling
-	t->message_handlers[static_cast<int32_t>(msg_t::IPC_EXIT_TASK)](test_msg);
+	t->message_handlers[static_cast<int32_t>(MsgType::IPC_EXIT_TASK)](test_msg);
 	ASSERT_TRUE(g_handler_called);
 }
 
 void test_task_copy()
 {
 	// Create and setup parent task
-	task* parent = create_task("parent_task", 0, true, true);
+	Task* parent = create_task("parent_task", 0, true, true);
 	ASSERT_NOT_NULL(parent);
 
 	// Setup parent context
-	kernel::task::context parent_ctx = {};
+	kernel::task::Context parent_ctx = {};
 	parent_ctx.rsp =
 			reinterpret_cast<uint64_t>(parent->stack) + parent->stack_size - 8;
 	parent_ctx.rbp = parent_ctx.rsp;
 	parent_ctx.cr3 = reinterpret_cast<uint64_t>(parent->get_page_table());
 
 	// Copy task
-	task* child = kernel::task::copy_task(parent, &parent_ctx);
+	Task* child = kernel::task::copy_task(parent, &parent_ctx);
 	ASSERT_NOT_NULL(child);
 
 	// Verify child task properties
@@ -123,7 +123,7 @@ void test_task_copy()
 void test_task_memory_management()
 {
 	// Test task allocation with operator new
-	task* t = new task(0, "memory_test", 0, TASK_WAITING, true, true);
+	Task* t = new Task(0, "memory_test", 0, TASK_WAITING, true, true);
 	ASSERT_NOT_NULL(t);
 
 	// Verify task properties after allocation

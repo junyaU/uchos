@@ -111,32 +111,32 @@ union hcc_params2_register {
  *
  * This struct represents the capability registers of the xHCI host controller.
  */
-struct capability_registers {
+struct CapabilityRegisters {
 	// Length of the Capability Registers section.
-	memory_mapped_register<default_bitmap<uint8_t>> cap_length;
+	MemoryMappedRegister<DefaultBitmap<uint8_t>> cap_length;
 
 	// Reserved space for future use.
-	memory_mapped_register<default_bitmap<uint8_t>> reserved;
+	MemoryMappedRegister<DefaultBitmap<uint8_t>> reserved;
 
 	// Version number of the xHCI implementation.
-	memory_mapped_register<default_bitmap<uint16_t>> hci_version;
+	MemoryMappedRegister<DefaultBitmap<uint16_t>> hci_version;
 
 	// Structural parameters of the host controller.
-	memory_mapped_register<hcs_params1_register> hcs_params1;
-	memory_mapped_register<hcs_params2_register> hcs_params2;
-	memory_mapped_register<hcs_params3_register> hcs_params3;
+	MemoryMappedRegister<hcs_params1_register> hcs_params1;
+	MemoryMappedRegister<hcs_params2_register> hcs_params2;
+	MemoryMappedRegister<hcs_params3_register> hcs_params3;
 
 	// Capability parameters of the host controller.
-	memory_mapped_register<hcc_params1_register> hcc_params1;
+	MemoryMappedRegister<hcc_params1_register> hcc_params1;
 
 	// Offset to the Doorbell Registers.
-	memory_mapped_register<doorbell_offset_bitmap> doorbell_offset;
+	MemoryMappedRegister<doorbell_offset_bitmap> doorbell_offset;
 
 	// Offset to the Runtime Registers.
-	memory_mapped_register<rts_offset_bitmap> rts_offset;
+	MemoryMappedRegister<rts_offset_bitmap> rts_offset;
 
 	// Additional capability parameters of the host controller.
-	memory_mapped_register<hcc_params2_register> hcc_params2;
+	MemoryMappedRegister<hcc_params2_register> hcc_params2;
 };
 
 union usb_cmd_bitmap {
@@ -230,18 +230,18 @@ union config_bitmap {
  *
  * This struct represents the operational registers of the xHCI host controller.
  */
-struct operational_registers {
+struct OperationalRegisters {
 	// The USB Command Register (USB_CMD) is used to issue commands to the xHCI
 	// controller, such as run/stop, reset, and other control commands.
-	memory_mapped_register<usb_cmd_bitmap> usb_cmd;
+	MemoryMappedRegister<usb_cmd_bitmap> usb_cmd;
 
 	// The USB Status Register (USB_STS) provides status information about the xHCI
 	// controller, including error conditions and interrupt status.
-	memory_mapped_register<usb_sts_bitmap> usb_sts;
+	MemoryMappedRegister<usb_sts_bitmap> usb_sts;
 
 	// The PageSize Register indicates the page size supported by the xHCI
 	// controller.
-	memory_mapped_register<default_bitmap<uint32_t>> page_size;
+	MemoryMappedRegister<DefaultBitmap<uint32_t>> page_size;
 
 	// Reserved memory space for future use or alignment.
 	uint32_t reserved1[2];
@@ -249,11 +249,11 @@ struct operational_registers {
 	// The Device Notification Control Register is used to enable various types of
 	// notifications from the controller to the host, such as function wake
 	// notifications.
-	memory_mapped_register<default_bitmap<uint32_t>> device_notification_ctrl;
+	MemoryMappedRegister<DefaultBitmap<uint32_t>> device_notification_ctrl;
 
 	// The Command Ring Control Register (CRCR) is used to manage the command ring,
 	// a data structure used for sending commands to the xHCI controller.
-	memory_mapped_register<crcr_bitmap> cmd_ring_ctrl;
+	MemoryMappedRegister<crcr_bitmap> cmd_ring_ctrl;
 
 	// Reserved memory space for future use or alignment.
 	uint32_t reserved2[4];
@@ -261,11 +261,11 @@ struct operational_registers {
 	// The Device Context Base Address Array Pointer (DCBAAP) points to the base
 	// address of the Device Context Base Address Array, a key data structure in xHCI
 	// that stores the device contexts for connected USB devices.
-	memory_mapped_register<dcbaap_bitmap> device_context_base_addr_array_ptr;
+	MemoryMappedRegister<dcbaap_bitmap> device_context_base_addr_array_ptr;
 
 	// The Configure Register (CONFIG) is used to configure various parameters of the
 	// xHCI controller, including the number of device slots enabled.
-	memory_mapped_register<config_bitmap> config;
+	MemoryMappedRegister<config_bitmap> config;
 } __attribute__((packed));
 
 // port status and control
@@ -338,14 +338,14 @@ union port_hlpmc_bitmap {
  *
  * This struct represents the port registers of the xHCI host controller.
  */
-struct port_register_set {
-	memory_mapped_register<port_sc_bitmap> port_sc;
-	memory_mapped_register<port_pmsc_bitmap> port_pmsc;
-	memory_mapped_register<port_li_bitmap> port_li;
-	memory_mapped_register<port_hlpmc_bitmap> port_hlpmc;
+struct PortRegisterSet {
+	MemoryMappedRegister<port_sc_bitmap> port_sc;
+	MemoryMappedRegister<port_pmsc_bitmap> port_pmsc;
+	MemoryMappedRegister<port_li_bitmap> port_li;
+	MemoryMappedRegister<port_hlpmc_bitmap> port_hlpmc;
 } __attribute__((packed));
 
-using port_register_set_array = array_wrapper<port_register_set>;
+using port_register_set_array = ArrayWrapper<PortRegisterSet>;
 
 union iman_bitmap {
 	uint32_t data[1];
@@ -420,16 +420,16 @@ union erdp_bitmap {
  *
  * This struct represents the interrupter registers of the xHCI host controller.
  */
-struct interrupter_register_set {
-	memory_mapped_register<iman_bitmap> iman;
-	memory_mapped_register<imod_bitmap> imod;
-	memory_mapped_register<erstsz_bitmap> erstsz;
+struct InterrupterRegisterSet {
+	MemoryMappedRegister<iman_bitmap> iman;
+	MemoryMappedRegister<imod_bitmap> imod;
+	MemoryMappedRegister<erstsz_bitmap> erstsz;
 	uint32_t reserved;
-	memory_mapped_register<erstba_bitmap> erstba;
-	memory_mapped_register<erdp_bitmap> erdp;
+	MemoryMappedRegister<erstba_bitmap> erstba;
+	MemoryMappedRegister<erdp_bitmap> erdp;
 } __attribute__((packed));
 
-using interrupter_register_set_array = array_wrapper<interrupter_register_set>;
+using interrupter_register_set_array = ArrayWrapper<InterrupterRegisterSet>;
 
 union doorbell_bitmap {
 	uint32_t data[1];
@@ -441,9 +441,9 @@ union doorbell_bitmap {
 	} __attribute__((packed)) bits;
 } __attribute__((packed));
 
-class doorbell_register
+class DoorbellRegister
 {
-	memory_mapped_register<doorbell_bitmap> reg_;
+	MemoryMappedRegister<doorbell_bitmap> reg_;
 
 public:
 	void ring(uint8_t target, uint16_t stream_id = 0)
@@ -455,7 +455,7 @@ public:
 	}
 };
 
-using doorbell_register_array = array_wrapper<doorbell_register>;
+using doorbell_register_array = ArrayWrapper<DoorbellRegister>;
 
 union extended_register_bitmap {
 	uint32_t data[1];
@@ -467,10 +467,10 @@ union extended_register_bitmap {
 	} __attribute__((packed)) bits;
 } __attribute__((packed));
 
-class extended_register_list
+class ExtendedRegisterList
 {
 public:
-	using value_type = memory_mapped_register<extended_register_bitmap>;
+	using value_type = MemoryMappedRegister<extended_register_bitmap>;
 
 	class iterator
 	{
@@ -486,7 +486,7 @@ public:
 		value_type* reg_;
 	};
 
-	extended_register_list(uint64_t mmio_base, hcc_params1_register hccp);
+	ExtendedRegisterList(uint64_t mmio_base, hcc_params1_register hccp);
 	iterator begin() const { return begin_; }
 	iterator end() const { return iterator{ nullptr }; }
 
@@ -507,6 +507,6 @@ union usb_legacy_support_bitmap {
 	} __attribute__((packed)) bits;
 } __attribute__((packed));
 
-// void register_command_ring(ring* r, memory_mapped_register<crcr_bitmap>* crcr);
+// void register_command_ring(ring* r, MemoryMappedRegister<crcr_bitmap>* crcr);
 
 } // namespace kernel::hw::usb::xhci

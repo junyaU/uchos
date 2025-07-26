@@ -1,11 +1,11 @@
 #pragma once
 
-struct terminal;
+struct Terminal;
 
-struct shell {
+struct Shell {
 	char histories[10][100];
 
-	shell();
+	Shell();
 
-	void process_input(char* input, terminal& term);
+	void process_input(char* input, Terminal& term);
 };

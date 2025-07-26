@@ -20,46 +20,46 @@
 
 namespace kernel::hw::usb
 {
-class class_driver;
+class ClassDriver;
 
-struct control_transfer_data {
-	const endpoint_id& ep_id;
-	setup_stage_data setup_data;
+struct ControlTransferData {
+	const EndpointId& ep_id;
+	SetupStageData setup_data;
 	void* buf;
 	int len;
-	class_driver* driver;
+	ClassDriver* driver;
 };
 
-struct interrupt_transfer_data {
-	const endpoint_id& ep_id;
+struct InterruptTransferData {
+	const EndpointId& ep_id;
 	void* buf;
 	int len;
 };
 
-class device
+class Device
 {
 public:
-	virtual ~device();
-	virtual void control_in(const control_transfer_data& data) = 0;
-	virtual void control_out(const control_transfer_data& data) = 0;
-	virtual void interrupt_in(const interrupt_transfer_data& data) = 0;
-	virtual void interrupt_out(const interrupt_transfer_data& data) = 0;
+	virtual ~Device();
+	virtual void control_in(const ControlTransferData& data) = 0;
+	virtual void control_out(const ControlTransferData& data) = 0;
+	virtual void interrupt_in(const InterruptTransferData& data) = 0;
+	virtual void interrupt_out(const InterruptTransferData& data) = 0;
 
 	void start_initialize();
 	bool is_initialized() const { return is_initialized_; }
 
-	endpoint_config* endpoint_configs() { return endpoint_configs_.data(); }
-	int num_endpoint_configs() const { return num_endpoint_configs_; }
+	EndpointConfig* EndpointConfigs() { return EndpointConfigs_.data(); }
+	int num_EndpointConfigs() const { return num_EndpointConfigs_; }
 	void on_endpoints_configured();
 
 	uint8_t* buffer() { return buffer_.data(); }
 
 protected:
-	void on_control_completed(const control_transfer_data& data);
-	void on_interrupt_completed(const interrupt_transfer_data& data);
+	void on_control_completed(const ControlTransferData& data);
+	void on_interrupt_completed(const InterruptTransferData& data);
 
 private:
-	std::array<class_driver*, 16> class_drivers_{};
+	std::array<ClassDriver*, 16> ClassDrivers_{};
 	std::array<uint8_t, 256> buffer_{};
 
 	uint8_t num_configurations_;
@@ -71,25 +71,25 @@ private:
 
 	bool is_initialized_{ false };
 	int initialize_stage_{ 0 };
-	std::array<endpoint_config, 16> endpoint_configs_;
-	int num_endpoint_configs_;
+	std::array<EndpointConfig, 16> EndpointConfigs_;
+	int num_EndpointConfigs_;
 
 	void initialize_stage1(const uint8_t* buf, int len);
 	void initialize_stage2(const uint8_t* buf, int len);
 	void initialize_stage3(const uint8_t* buf, int len);
 
-	array_map<setup_stage_data, class_driver*, 4> event_waiters_{};
+	ArrayMap<SetupStageData, ClassDriver*, 4> event_waiters_{};
 };
 
-void get_descriptor(device& dev,
-					const endpoint_id& ep_id,
+void get_descriptor(Device& dev,
+					const EndpointId& ep_id,
 					uint8_t desc_type,
 					uint8_t desc_index,
 					void* buf,
 					int len,
 					bool debug = false);
-void set_configuration(device& dev,
-					   const endpoint_id& ep_id,
+void set_configuration(Device& dev,
+					   const EndpointId& ep_id,
 					   uint8_t config_value,
 					   bool debug = false);
 } // namespace kernel::hw::usb

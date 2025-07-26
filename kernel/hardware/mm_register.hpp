@@ -25,7 +25,7 @@
  * Base template - specialized below for arrays
  */
 template<typename T>
-struct array_length {
+struct ArrayLength {
 };
 
 /**
@@ -36,7 +36,7 @@ struct array_length {
  * Provides compile-time access to array length through the 'value' member
  */
 template<typename T, size_t N>
-struct array_length<T[N]> {
+struct ArrayLength<T[N]> {
 	static const size_t value = N; ///< The array length
 };
 
@@ -50,7 +50,7 @@ struct array_length<T[N]> {
  * communication.
  */
 template<typename T>
-class memory_mapped_register
+class MemoryMappedRegister
 {
 public:
 	/**
@@ -88,7 +88,7 @@ public:
 
 private:
 	volatile T value_; ///< The actual memory-mapped register (volatile)
-	static const size_t len_ = array_length<decltype(value_.data)>::value; ///< Length of the data array
+	static const size_t len_ = ArrayLength<decltype(value_.data)>::value; ///< Length of the data array
 };
 
 /**
@@ -100,7 +100,7 @@ private:
  * expects types with a 'data' array member.
  */
 template<typename T>
-struct default_bitmap {
+struct DefaultBitmap {
 	T data[1]; ///< Single-element array to hold the value
 
 	/**
@@ -108,7 +108,7 @@ struct default_bitmap {
 	 * @param value Value to assign
 	 * @return Reference to this object
 	 */
-	default_bitmap& operator=(const T& value) { data[0] = value; return *this; }
+	DefaultBitmap& operator=(const T& value) { data[0] = value; return *this; }
 
 	/**
 	 * @brief Conversion operator to underlying type
@@ -126,7 +126,7 @@ struct default_bitmap {
  * arrays of registers or buffers in hardware devices.
  */
 template<typename T>
-class array_wrapper
+class ArrayWrapper
 {
 public:
 	using value_type = T; ///< Type of elements in the array
@@ -141,7 +141,7 @@ public:
 	 * 
 	 * @warning The memory at addr must be valid and accessible
 	 */
-	array_wrapper(uintptr_t addr, size_t size)
+	ArrayWrapper(uintptr_t addr, size_t size)
 		: array_{ reinterpret_cast<value_type*>(addr) }, size_{ size }
 	{
 	}

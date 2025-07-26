@@ -12,8 +12,8 @@
 namespace kernel::memory
 {
 
-class m_cache;
-class m_slab;
+class MCache;
+class MSlab;
 
 /**
  * @brief Size of a memory page in bytes
@@ -29,7 +29,7 @@ constexpr size_t PAGE_SIZE = 4096;
  * status and association with slab allocator structures. Pages can be free
  * or allocated to a specific cache/slab.
  */
-class page
+class Page
 {
 public:
 	/**
@@ -37,7 +37,7 @@ public:
 	 *
 	 * Initializes a page as free with no associated pointer.
 	 */
-	page() : status_{ 0 }, ptr_{ nullptr } {}
+	Page() : status_{ 0 }, ptr_{ nullptr } {}
 
 	/**
 	 * @brief Get the page index based on its memory address
@@ -91,33 +91,33 @@ public:
 	 *
 	 * @param cache Pointer to the cache this page belongs to
 	 */
-	void set_cache(m_cache* cache) { cache_ = cache; }
+	void set_cache(MCache* cache) { cache_ = cache; }
 
 	/**
 	 * @brief Associate this page with a slab
 	 *
 	 * @param slab Pointer to the slab this page belongs to
 	 */
-	void set_slab(m_slab* slab) { slab_ = slab; }
+	void set_slab(MSlab* slab) { slab_ = slab; }
 
 	/**
 	 * @brief Get the cache this page belongs to
 	 *
-	 * @return m_cache* Pointer to the associated cache, or nullptr
+	 * @return MCache* Pointer to the associated cache, or nullptr
 	 */
-	m_cache* cache() const { return cache_; }
+	MCache* cache() const { return cache_; }
 
 	/**
 	 * @brief Get the slab this page belongs to
 	 *
-	 * @return m_slab* Pointer to the associated slab, or nullptr
+	 * @return MSlab* Pointer to the associated slab, or nullptr
 	 */
-	m_slab* slab() const { return slab_; }
+	MSlab* slab() const { return slab_; }
 
 private:
 	int status_;	 ///< Page status: 0 = free, 1 = used
-	m_cache* cache_; ///< Associated cache (for slab allocator)
-	m_slab* slab_;	 ///< Associated slab (for slab allocator)
+	MCache* cache_; ///< Associated cache (for slab allocator)
+	MSlab* slab_;	 ///< Associated slab (for slab allocator)
 	void* ptr_;		 ///< Pointer to the page's memory
 };
 
@@ -127,7 +127,7 @@ private:
  * This vector tracks all pages in the system, allowing for efficient
  * page lookup and management.
  */
-extern std::vector<page> pages;
+extern std::vector<Page> pages;
 
 /**
  * @brief Initialize the page management system
@@ -141,9 +141,9 @@ void initialize_pages();
  * @brief Get the page object for a given memory address
  *
  * @param ptr Memory address within a page
- * @return page* Pointer to the page object, or nullptr if not found
+ * @return Page* Pointer to the page object, or nullptr if not found
  */
-page* get_page(void* ptr);
+Page* get_page(void* ptr);
 
 /**
  * @brief Get current memory usage statistics

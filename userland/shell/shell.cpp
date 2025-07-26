@@ -6,12 +6,12 @@
 #include <libs/user/syscall.hpp>
 #include <unistd.h>
 
-shell::shell()
+Shell::Shell()
 {
 	memset(histories, 0, sizeof(histories));
 }
 
-void shell::process_input(char* input, terminal& term)
+void Shell::process_input(char* input, Terminal& term)
 {
 	if (strlen(input) == 0) {
 		term.enable_input = true;

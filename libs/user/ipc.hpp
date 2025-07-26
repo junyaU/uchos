@@ -4,11 +4,11 @@
 #include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
 
-void receive_message(message* msg);
+void receive_message(Message* msg);
 
-void send_message(ProcessId dst, const message* msg);
+void send_message(ProcessId dst, const Message* msg);
 
-message wait_for_message(msg_t type);
+Message wait_for_message(MsgType type);
 
 void initialize_task();
 

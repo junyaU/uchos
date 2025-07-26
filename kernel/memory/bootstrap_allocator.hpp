@@ -15,10 +15,10 @@ static const uint64_t MAX_PHYS_MEM_BYTES = 64UL * 1024 * 1024 * 1024;
 const uint64_t TOTAL_PAGES = MAX_PHYS_MEM_BYTES / PAGE_SIZE;
 const size_t BITMAP_ENTRY_SIZE = sizeof(unsigned long) * 8;
 
-class bootstrap_allocator
+class BootstrapAllocator
 {
 public:
-	bootstrap_allocator();
+	BootstrapAllocator();
 
 	void* allocate(size_t size);
 	void free(void* addr, size_t size);
@@ -47,7 +47,7 @@ private:
 	void *memory_start_, *memory_end_;
 };
 
-extern bootstrap_allocator* boot_allocator;
+extern BootstrapAllocator* boot_allocator;
 
 void initialize(const MemoryMap& mem_map);
 void initialize_heap();

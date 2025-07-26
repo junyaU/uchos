@@ -240,7 +240,7 @@ union address_device_command_trb {
 
 	struct {
 		uint64_t : 4;
-		uint64_t input_context_pointer : 60;
+		uint64_t InputContext_pointer : 60;
 
 		uint32_t : 32;
 
@@ -252,21 +252,21 @@ union address_device_command_trb {
 		uint32_t slot_id : 8;
 	} __attribute__((packed)) bits;
 
-	address_device_command_trb(const input_context* ctx, uint8_t slot_id)
+	address_device_command_trb(const InputContext* ctx, uint8_t slot_id)
 	{
 		bits.trb_type = TYPE;
 		bits.slot_id = slot_id;
 		set_pointer(ctx);
 	}
 
-	input_context* pointer() const
+	InputContext* pointer() const
 	{
-		return reinterpret_cast<input_context*>(bits.input_context_pointer << 4);
+		return reinterpret_cast<InputContext*>(bits.InputContext_pointer << 4);
 	}
 
-	void set_pointer(const input_context* p)
+	void set_pointer(const InputContext* p)
 	{
-		bits.input_context_pointer = reinterpret_cast<uint64_t>(p) >> 4;
+		bits.InputContext_pointer = reinterpret_cast<uint64_t>(p) >> 4;
 	}
 };
 
@@ -276,7 +276,7 @@ union configure_endpoint_command_trb {
 
 	struct {
 		uint64_t : 4;
-		uint64_t input_context_pointer : 60;
+		uint64_t InputContext_pointer : 60;
 
 		uint32_t : 32;
 
@@ -288,21 +288,21 @@ union configure_endpoint_command_trb {
 		uint32_t slot_id : 8;
 	} __attribute__((packed)) bits;
 
-	configure_endpoint_command_trb(const input_context* ctx, uint8_t slot_id)
+	configure_endpoint_command_trb(const InputContext* ctx, uint8_t slot_id)
 	{
 		bits.trb_type = TYPE;
 		bits.slot_id = slot_id;
 		set_pointer(ctx);
 	}
 
-	input_context* pointer() const
+	InputContext* pointer() const
 	{
-		return reinterpret_cast<input_context*>(bits.input_context_pointer << 4);
+		return reinterpret_cast<InputContext*>(bits.InputContext_pointer << 4);
 	}
 
-	void set_pointer(const input_context* p)
+	void set_pointer(const InputContext* p)
 	{
-		bits.input_context_pointer = reinterpret_cast<uint64_t>(p) >> 4;
+		bits.InputContext_pointer = reinterpret_cast<uint64_t>(p) >> 4;
 	}
 };
 
@@ -321,7 +321,7 @@ union transfer_event_trb {
 		uint32_t event_data : 1;
 		uint32_t : 7;
 		uint32_t trb_type : 6;
-		uint32_t endpoint_id : 5;
+		uint32_t EndpointId : 5;
 		uint32_t : 3;
 		uint32_t slot_id : 8;
 	} __attribute__((packed)) bits;
@@ -335,7 +335,7 @@ union transfer_event_trb {
 		bits.trb_pointer = reinterpret_cast<uint64_t>(p);
 	}
 
-	kernel::hw::usb::endpoint_id endpoint_id() const { return kernel::hw::usb::endpoint_id{ bits.endpoint_id }; }
+	kernel::hw::usb::EndpointId EndpointId() const { return kernel::hw::usb::EndpointId{ bits.EndpointId }; }
 };
 
 union command_completion_event_trb {
@@ -400,7 +400,7 @@ to_type* trb_dynamic_cast(from_type* trb)
 	return nullptr;
 }
 
-setup_stage_trb make_setup_stage_trb(setup_stage_data setup_data, int transfer_type);
+setup_stage_trb make_setup_stage_trb(SetupStageData setup_data, int transfer_type);
 
 data_stage_trb make_data_stage_trb(const void* buf, int len, bool dir_in);
 } // namespace kernel::hw::usb::xhci

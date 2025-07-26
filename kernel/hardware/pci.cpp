@@ -29,12 +29,12 @@ uint16_t read_device_id(uint8_t bus, uint8_t device, uint8_t func)
 	return (read_from_io_port(CONFIG_DATA_PORT) >> 16);
 }
 
-class_code read_class_code(uint8_t bus, uint8_t device, uint8_t func)
+ClassCode read_class_code(uint8_t bus, uint8_t device, uint8_t func)
 {
 	write_to_io_port(CONFIG_ADDRESS_PORT, calc_config_addr(bus, device, func, 0x08));
 	auto reg = read_from_io_port(CONFIG_DATA_PORT);
 
-	class_code cc;
+	ClassCode cc;
 	cc.base = (reg >> 24) & 0xffU;
 	cc.sub = (reg >> 16) & 0xffU;
 	cc.interface = (reg >> 8) & 0xffU;
@@ -42,14 +42,14 @@ class_code read_class_code(uint8_t bus, uint8_t device, uint8_t func)
 	return cc;
 }
 
-uint32_t read_conf_reg(const device& dev, uint8_t reg_addr)
+uint32_t read_conf_reg(const Device& dev, uint8_t reg_addr)
 {
 	write_to_io_port(CONFIG_ADDRESS_PORT,
 					 calc_config_addr(dev.bus, dev.device, dev.function, reg_addr));
 	return read_from_io_port(CONFIG_DATA_PORT);
 }
 
-void write_conf_reg(const device& dev, uint8_t reg_addr, uint32_t value)
+void write_conf_reg(const Device& dev, uint8_t reg_addr, uint32_t value)
 {
 	write_to_io_port(CONFIG_ADDRESS_PORT,
 					 calc_config_addr(dev.bus, dev.device, dev.function, reg_addr));
@@ -66,7 +66,7 @@ void read_function(uint8_t bus, uint8_t dev, uint8_t func)
 	auto header_type = read_header_type(bus, dev, func);
 	auto class_code = read_class_code(bus, dev, func);
 
-	device d;
+	Device d;
 	d.bus = bus;
 	d.device = dev;
 	d.function = func;
@@ -124,7 +124,7 @@ void load_devices()
 	}
 }
 
-uint64_t read_base_address_register(const device& dev, unsigned int index)
+uint64_t read_base_address_register(const Device& dev, unsigned int index)
 {
 	const auto base_addr_index = 0x10 + index * 4;
 	write_to_io_port(
@@ -145,14 +145,14 @@ uint64_t read_base_address_register(const device& dev, unsigned int index)
 	return bar_low | (static_cast<uint64_t>(bar_high) << 32);
 }
 
-uint8_t get_capability_pointer(const device& dev)
+uint8_t get_capability_pointer(const Device& dev)
 {
 	return read_conf_reg(dev, 0x34) & 0xffU;
 }
 
-msi_capability read_msi_capability(const device& dev, uint8_t cap_addr)
+MsiCapability read_msi_capability(const Device& dev, uint8_t cap_addr)
 {
-	msi_capability msi_cap{};
+	MsiCapability msi_cap{};
 	msi_cap.header.data = read_conf_reg(dev, cap_addr);
 	msi_cap.msg_addr = read_conf_reg(dev, cap_addr + 4);
 
@@ -172,9 +172,9 @@ msi_capability read_msi_capability(const device& dev, uint8_t cap_addr)
 	return msi_cap;
 }
 
-msi_x_capability read_msi_x_capability(const device& dev, uint8_t cap_addr)
+MsiXCapability read_msi_x_capability(const Device& dev, uint8_t cap_addr)
 {
-	msi_x_capability msix_cap{};
+	MsiXCapability msix_cap{};
 
 	msix_cap.header.data = read_conf_reg(dev, cap_addr);
 	msix_cap.table.data = read_conf_reg(dev, cap_addr + 4);
@@ -183,9 +183,9 @@ msi_x_capability read_msi_x_capability(const device& dev, uint8_t cap_addr)
 	return msix_cap;
 }
 
-void write_msi_capability(const device& dev,
+void write_msi_capability(const Device& dev,
 						  uint8_t cap_addr,
-						  const msi_capability& msi_cap)
+						  const MsiCapability& msi_cap)
 {
 	write_conf_reg(dev, cap_addr, msi_cap.header.data);
 	write_conf_reg(dev, cap_addr + 4, msi_cap.msg_addr);
@@ -204,8 +204,8 @@ void write_msi_capability(const device& dev,
 	}
 }
 
-void configure_msi_x_table_entry(const device& dev,
-								 const msi_x_capability& msix_cap,
+void configure_msi_x_table_entry(const Device& dev,
+								 const MsiXCapability& msix_cap,
 								 uint8_t cap_addr,
 								 uint32_t msg_addr,
 								 uint32_t msg_data)
@@ -213,17 +213,17 @@ void configure_msi_x_table_entry(const device& dev,
 	uint64_t bar_addr = read_base_address_register(dev, msix_cap.table.bits.bar);
 	bar_addr &= ~0xfff;
 	bar_addr += msix_cap.table.bits.offset << 3;
-	auto* table_entry = reinterpret_cast<msix_table_entry*>(bar_addr);
+	auto* table_entry = reinterpret_cast<MsixTableEntry*>(bar_addr);
 
 	for (size_t i = 0; i <= msix_cap.header.bits.size_of_table; ++i) {
 		if (table_entry[i].msg_addr.read() != 0) {
 			continue;
 		}
 
-		table_entry[i].msg_addr.write(default_bitmap<uint32_t>{ msg_addr });
-		table_entry[i].msg_upper_addr.write(default_bitmap<uint32_t>{ 0 });
-		table_entry[i].msg_data.write(default_bitmap<uint32_t>{ msg_data });
-		table_entry[i].vector_control.write(default_bitmap<uint32_t>{ 0 });
+		table_entry[i].msg_addr.write(DefaultBitmap<uint32_t>{ msg_addr });
+		table_entry[i].msg_upper_addr.write(DefaultBitmap<uint32_t>{ 0 });
+		table_entry[i].msg_data.write(DefaultBitmap<uint32_t>{ msg_data });
+		table_entry[i].vector_control.write(DefaultBitmap<uint32_t>{ 0 });
 
 		break;
 	}
@@ -232,7 +232,7 @@ void configure_msi_x_table_entry(const device& dev,
 	asm volatile("mfence" ::: "memory");
 }
 
-void configure_msi_register(const device& dev,
+void configure_msi_register(const Device& dev,
 							uint8_t cap_addr,
 							uint32_t msg_addr,
 							uint32_t msg_data,
@@ -253,7 +253,7 @@ void configure_msi_register(const device& dev,
 	write_msi_capability(dev, cap_addr, msi_cap);
 }
 
-void configure_msi_x_register(const device& dev,
+void configure_msi_x_register(const Device& dev,
 							  uint8_t cap_addr,
 							  uint32_t msg_addr,
 							  uint32_t msg_data)
@@ -268,14 +268,14 @@ void configure_msi_x_register(const device& dev,
 	configure_msi_x_table_entry(dev, msix_cap, cap_addr, msg_addr, msg_data);
 }
 
-capability_header read_capability_header(const device& dev, uint8_t addr)
+capability_header read_capability_header(const Device& dev, uint8_t addr)
 {
 	capability_header header;
 	header.data = read_conf_reg(dev, addr);
 	return header;
 }
 
-void configure_msi(const device& dev,
+void configure_msi(const Device& dev,
 				   uint32_t msg_addr,
 				   uint32_t msg_data,
 				   unsigned int num_vector_exponent)
@@ -306,16 +306,16 @@ void configure_msi(const device& dev,
 	}
 }
 
-void configure_msi_fixed_destination(const device& dev,
+void configure_msi_fixed_destination(const Device& dev,
 									 uint8_t apic_id,
-									 msi_trigger_mode trigger_mode,
-									 msi_delivery_mode delivery_mode,
+									 MsiTriggerMode trigger_mode,
+									 MsiDeliveryMode delivery_mode,
 									 uint8_t vector,
 									 unsigned int num_vector_exponent)
 {
 	const uint32_t msg_addr = 0xfee00000U | (apic_id << 12);
 	uint32_t msg_data = (static_cast<uint32_t>(delivery_mode) << 8) | vector;
-	if (trigger_mode == msi_trigger_mode::LEVEL) {
+	if (trigger_mode == MsiTriggerMode::LEVEL) {
 		msg_data |= 0xc000;
 	}
 

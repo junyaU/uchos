@@ -6,18 +6,18 @@
 
 namespace kernel::hw::usb
 {
-hid_driver::hid_driver(device* dev, int interface_index, int in_packet_size)
-	: class_driver(dev),
+HidDriver::HidDriver(Device* dev, int interface_index, int in_packet_size)
+	: ClassDriver(dev),
 	  interface_index_(interface_index),
 	  in_packet_size_(in_packet_size)
 {
 }
 
-void hid_driver::initialize() {}
+void HidDriver::initialize() {}
 
-void hid_driver::set_endpoint(const endpoint_config& config)
+void HidDriver::set_endpoint(const EndpointConfig& config)
 {
-	if (config.type != endpoint_type::INTERRUPT) {
+	if (config.type != EndpointType::INTERRUPT) {
 		return;
 	}
 
@@ -28,9 +28,9 @@ void hid_driver::set_endpoint(const endpoint_config& config)
 	}
 }
 
-void hid_driver::on_endpoints_configured()
+void HidDriver::on_endpoints_configured()
 {
-	setup_stage_data setup_data{};
+	SetupStageData setup_data{};
 	setup_data.request_type.bits.direction = request_type::OUT;
 	setup_data.request_type.bits.type = request_type::CLASS;
 	setup_data.request_type.bits.recipient = request_type::INTERFACE;
@@ -44,8 +44,8 @@ void hid_driver::on_endpoints_configured()
 			{ DEFAULT_CONTROL_PIPE_ID, setup_data, nullptr, 0, this });
 }
 
-void hid_driver::on_control_completed(endpoint_id ep_id,
-									  setup_stage_data setup_data,
+void HidDriver::on_control_completed(EndpointId ep_id,
+									  SetupStageData setup_data,
 									  void* buf,
 									  int len)
 {
@@ -57,7 +57,7 @@ void hid_driver::on_control_completed(endpoint_id ep_id,
 	}
 }
 
-void hid_driver::on_interrupt_completed(endpoint_id ep_id, void* buf, int len)
+void HidDriver::on_interrupt_completed(EndpointId ep_id, void* buf, int len)
 {
 	if (ep_id.is_in()) {
 		on_data_received();

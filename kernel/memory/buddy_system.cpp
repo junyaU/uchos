@@ -10,9 +10,9 @@
 
 namespace kernel::memory {
 
-buddy_system* memory_manager;
+BuddySystem* memory_manager;
 
-size_t buddy_system::calculate_order(size_t num_pages)
+size_t BuddySystem::calculate_order(size_t num_pages)
 {
 	const size_t order = bit_width_ceil(num_pages);
 
@@ -23,7 +23,7 @@ size_t buddy_system::calculate_order(size_t num_pages)
 	return order;
 }
 
-void buddy_system::split_memory_block(int order)
+void BuddySystem::split_memory_block(int order)
 {
 	auto* block = free_lists_[order].front();
 	free_lists_[order].pop_front();
@@ -38,7 +38,7 @@ void buddy_system::split_memory_block(int order)
 	free_lists_[lower_order].push_back(buddy_block);
 }
 
-void* buddy_system::allocate(size_t size)
+void* BuddySystem::allocate(size_t size)
 {
 	const int order = calculate_order((size + kernel::memory::PAGE_SIZE - 1) / kernel::memory::PAGE_SIZE);
 	if (order == -1) {
@@ -82,7 +82,7 @@ void* buddy_system::allocate(size_t size)
 	return page->ptr();
 }
 
-void buddy_system::free(void* addr, size_t size)
+void BuddySystem::free(void* addr, size_t size)
 {
 	auto* start_page = &pages[reinterpret_cast<uintptr_t>(addr) / kernel::memory::PAGE_SIZE];
 	if (start_page->is_free()) {
@@ -110,7 +110,7 @@ void buddy_system::free(void* addr, size_t size)
 		auto buddy_addr = reinterpret_cast<uintptr_t>(start_page->ptr()) ^
 						  (num_order_pages * kernel::memory::PAGE_SIZE);
 
-		page* buddy_block = get_page(reinterpret_cast<void*>(buddy_addr));
+		Page* buddy_block = get_page(reinterpret_cast<void*>(buddy_addr));
 
 		auto it = std::find(free_lists_[order].begin(), free_lists_[order].end(),
 							buddy_block);
@@ -131,7 +131,7 @@ void buddy_system::free(void* addr, size_t size)
 	}
 }
 
-void buddy_system::register_memory_blocks(size_t num_total_pages, page* start_page)
+void BuddySystem::register_memory_blocks(size_t num_total_pages, Page* start_page)
 {
 	if (num_total_pages <= 0) {
 		return;
@@ -178,7 +178,7 @@ void buddy_system::register_memory_blocks(size_t num_total_pages, page* start_pa
 	}
 }
 
-void buddy_system::print_free_lists(int order) const
+void BuddySystem::print_free_lists(int order) const
 {
 	if (order != -1) {
 		LOG_INFO("order-%d remaining blocks: %d", order, free_lists_[order].size());
@@ -202,7 +202,7 @@ void initialize_memory_manager()
 {
 	LOG_INFO("Initializing memory manager...");
 
-	memory_manager = new buddy_system();
+	memory_manager = new BuddySystem();
 
 	size_t start_index = 0;
 	size_t num_total_pages = 0;

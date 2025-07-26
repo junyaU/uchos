@@ -9,7 +9,7 @@ void test_virtio_blk_task_creation()
 {
 	// virtio_blk_taskはinitial_tasksで自動的に作成されるため、
 	// 存在確認とプロパティの検証を行う
-	kernel::task::task* t = kernel::task::get_task(process_ids::VIRTIO_BLK);
+	kernel::task::Task* t = kernel::task::get_task(process_ids::VIRTIO_BLK);
 	ASSERT_NOT_NULL(t);
 	ASSERT_EQ(strcmp(t->name, "virtio"), 0);
 }
@@ -18,12 +18,12 @@ void test_virtio_blk_task_creation()
 void test_virtio_blk_read_operation()
 {
 	// // Prepare read request message
-	// message m = { .type = msg_t::IPC_READ_FROM_BLK_DEVICE,
+	// Message m = { .type = MsgType::IPC_READ_FROM_BLK_DEVICE,
 	// 			  .sender = CURRENT_TASK->id,
 	// 			  .data = { .blk_io = {
 	// 								.sector = 0,
 	// 								.len = 512,
-	// 								.dst_type = msg_t::IPC_READ_FROM_BLK_DEVICE,
+	// 								.dst_type = MsgType::IPC_READ_FROM_BLK_DEVICE,
 	// 						} } };
 
 	// // Send read request
@@ -31,7 +31,7 @@ void test_virtio_blk_read_operation()
 	// ASSERT_EQ(err, OK);
 
 	// // Wait for response
-	// message response = wait_for_message(msg_t::IPC_READ_FROM_BLK_DEVICE);
+	// Message response = wait_for_message(MsgType::IPC_READ_FROM_BLK_DEVICE);
 
 	// // Verify response
 	// ASSERT_TRUE(response.sender == process_ids::VIRTIO_BLK);
@@ -44,12 +44,12 @@ void test_virtio_blk_read_operation()
 void test_virtio_blk_error_handling()
 {
 	// // Test invalid sector size
-	// message m = { .type = msg_t::IPC_READ_FROM_BLK_DEVICE,
+	// Message m = { .type = MsgType::IPC_READ_FROM_BLK_DEVICE,
 	// 			  .sender = CURRENT_TASK->id,
 	// 			  .data = { .blk_io = {
 	// 								.sector = 0,
 	// 								.len = 100, // Less than SECTOR_SIZE
-	// 								.dst_type = msg_t::IPC_READ_FROM_BLK_DEVICE,
+	// 								.dst_type = MsgType::IPC_READ_FROM_BLK_DEVICE,
 	// 						} } };
 
 	// // Send request with invalid size
@@ -57,7 +57,7 @@ void test_virtio_blk_error_handling()
 	// ASSERT_EQ(err, OK);
 
 	// // Wait for response
-	// message response = wait_for_message(msg_t::IPC_READ_FROM_BLK_DEVICE);
+	// Message response = wait_for_message(MsgType::IPC_READ_FROM_BLK_DEVICE);
 
 	// // Verify error response
 	// ASSERT_NULL(response.data.blk_io.buf);

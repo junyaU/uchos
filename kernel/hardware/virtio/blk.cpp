@@ -12,9 +12,9 @@
 
 namespace
 {
-void handle_read_request(const message& m)
+void handle_read_request(const Message& m)
 {
-	message reply = { .type = m.data.blk_io.dst_type, .sender = process_ids::VIRTIO_BLK };
+	Message reply = { .type = m.data.blk_io.dst_type, .sender = process_ids::VIRTIO_BLK };
 
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len;
@@ -39,7 +39,7 @@ void handle_read_request(const message& m)
 	kernel::task::send_message(m.sender, reply);
 }
 
-void handle_write_request(const message& m)
+void handle_write_request(const Message& m)
 {
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len < kernel::hw::virtio::SECTOR_SIZE
@@ -58,7 +58,7 @@ void handle_write_request(const message& m)
 namespace kernel::hw::virtio
 {
 
-virtio_pci_device* blk_dev = nullptr;
+VirtioPciDevice* blk_dev = nullptr;
 
 error_t validate_length(uint32_t len)
 {
@@ -75,13 +75,13 @@ error_t write_to_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 	ASSERT_OK(validate_length(len));
 
 	void* req_ptr;
-	ALLOC_OR_RETURN_ERROR(req_ptr, sizeof(virtio_blk_req), kernel::memory::ALLOC_ZEROED);
-	virtio_blk_req* req = (virtio_blk_req*)req_ptr;
+	ALLOC_OR_RETURN_ERROR(req_ptr, sizeof(VirtioBlkReq), kernel::memory::ALLOC_ZEROED);
+	VirtioBlkReq* req = (VirtioBlkReq*)req_ptr;
 
 	req->type = VIRTIO_BLK_T_OUT;
 	req->sector = sector;
 
-	virtio_entry chain[3];
+	VirtioEntry chain[3];
 	chain[0].addr = (uint64_t)req;
 	chain[0].len = sizeof(uint32_t) * 2 + sizeof(uint64_t);
 	chain[0].write = false;
@@ -94,7 +94,7 @@ error_t write_to_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 	chain[2].len = sizeof(uint8_t);
 	chain[2].write = true;
 
-	push_virtio_entry(&blk_dev->queues[0], chain, 3);
+	push_VirtioEntry(&blk_dev->queues[0], chain, 3);
 
 	notify_virtqueue(*blk_dev, 0);
 
@@ -117,13 +117,13 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 	ASSERT_OK(validate_length(len));
 
 	void* req_ptr;
-	ALLOC_OR_RETURN_ERROR(req_ptr, sizeof(virtio_blk_req), kernel::memory::ALLOC_ZEROED);
-	virtio_blk_req* req = (virtio_blk_req*)req_ptr;
+	ALLOC_OR_RETURN_ERROR(req_ptr, sizeof(VirtioBlkReq), kernel::memory::ALLOC_ZEROED);
+	VirtioBlkReq* req = (VirtioBlkReq*)req_ptr;
 
 	req->type = VIRTIO_BLK_T_IN;
 	req->sector = sector;
 
-	virtio_entry chain[3];
+	VirtioEntry chain[3];
 	chain[0].addr = (uint64_t)req;
 	chain[0].len = sizeof(uint32_t) * 2 + sizeof(uint64_t);
 	chain[0].write = false;
@@ -136,7 +136,7 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 	chain[2].len = sizeof(uint8_t);
 	chain[2].write = true;
 
-	push_virtio_entry(&blk_dev->queues[0], chain, 3);
+	push_VirtioEntry(&blk_dev->queues[0], chain, 3);
 
 	notify_virtqueue(*blk_dev, 0);
 
@@ -156,14 +156,14 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 
 error_t init_blk_device()
 {
-	void* buffer = kernel::memory::alloc(sizeof(virtio_pci_device), kernel::memory::ALLOC_ZEROED);
+	void* buffer = kernel::memory::alloc(sizeof(VirtioPciDevice), kernel::memory::ALLOC_ZEROED);
 	if (buffer == nullptr) {
 		return ERR_NO_MEMORY;
 	}
 
-	blk_dev = new (buffer) virtio_pci_device();
+	blk_dev = new (buffer) VirtioPciDevice();
 
-	ASSERT_OK(init_virtio_pci_device(blk_dev, VIRTIO_BLK));
+	ASSERT_OK(init_VirtioPciDevice(blk_dev, VIRTIO_BLK));
 
 	kernel::task::CURRENT_TASK->is_initilized = true;
 
@@ -172,12 +172,12 @@ error_t init_blk_device()
 
 void virtio_blk_service()
 {
-	kernel::task::task* t = kernel::task::CURRENT_TASK;
+	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
 	init_blk_device();
 
-	t->add_msg_handler(msg_t::IPC_READ_FROM_BLK_DEVICE, handle_read_request);
-	t->add_msg_handler(msg_t::IPC_WRITE_TO_BLK_DEVICE, handle_write_request);
+	t->add_msg_handler(MsgType::IPC_READ_FROM_BLK_DEVICE, handle_read_request);
+	t->add_msg_handler(MsgType::IPC_WRITE_TO_BLK_DEVICE, handle_write_request);
 
 	t->is_initilized = true;
 

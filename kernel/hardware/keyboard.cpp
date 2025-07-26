@@ -55,7 +55,7 @@ namespace kernel::hw {
 
 void initialize_keyboard()
 {
-	usb::keyboard_driver::default_observer = [](uint8_t modifier, uint8_t keycode,
+	usb::KeyboardDriver::default_observer = [](uint8_t modifier, uint8_t keycode,
 												bool press) {
 		if (!press) {
 			return;
@@ -65,7 +65,7 @@ void initialize_keyboard()
 		const char ascii =
 				shift ? keycode_map_shifted[keycode] : keycode_map[keycode];
 
-		message m{ .type = msg_t::NOTIFY_KEY_INPUT, .sender = process_ids::INTERRUPT };
+		Message m{ .type = MsgType::NOTIFY_KEY_INPUT, .sender = process_ids::INTERRUPT };
 		m.data.key_input.key_code = keycode;
 		m.data.key_input.modifier = modifier;
 		m.data.key_input.ascii = static_cast<uint8_t>(ascii);

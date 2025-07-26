@@ -15,14 +15,14 @@ std::vector<uint8_t>* nihongo_font_data;
 
 namespace kernel::graphics {
 
-bitmap_font::bitmap_font(int width, int height)
+BitmapFont::BitmapFont(int width, int height)
 	: font_data_{ &_binary_hankaku_bin_start }, width_{ width }, height_{ height }
 {
 }
 
 bool is_ascii_code(char32_t c) { return c <= 0x7E; }
 
-const uint8_t* bitmap_font::get_font(char c)
+const uint8_t* BitmapFont::get_font(char c)
 {
 	auto index = height_ * static_cast<unsigned int>(c);
 	if (index >= reinterpret_cast<uintptr_t>(&_binary_hankaku_bin_size)) {
@@ -47,14 +47,14 @@ void render_unicode(char32_t c, FT_Face face)
 	}
 }
 
-void write_ascii(screen& scr, point2d position, char c, uint32_t color_code)
+void write_ascii(Screen& scr, Point2D position, char c, uint32_t color_code)
 {
 	const uint8_t* font = kfont->get_font(c);
 	if (font != nullptr) {
 		for (int dy = 0; dy < kfont->height(); dy++) {
 			for (int dx = 0; dx < kfont->width(); dx++) {
 				if ((font[dy] << dx & 0x80) != 0) {
-					scr.put_pixel(position + point2d{ dx, dy }, color_code);
+				scr.put_pixel(position + Point2D{ dx, dy }, color_code);
 				}
 			}
 		}
@@ -82,7 +82,7 @@ int utf8_size(uint8_t c)
 	return 0;
 }
 
-void write_unicode(screen& scr, point2d position, char32_t c, uint32_t color_code)
+void write_unicode(Screen& scr, Point2D position, char32_t c, uint32_t color_code)
 {
 	{
 		if (is_ascii_code(c)) {
@@ -93,7 +93,7 @@ void write_unicode(screen& scr, point2d position, char32_t c, uint32_t color_cod
 		auto face = nullptr; // new_face();
 		if (face == nullptr) {
 			write_ascii(scr, position, '?', color_code);
-			write_ascii(scr, position + point2d{ kfont->width(), 0 }, '?',
+			write_ascii(scr, position + Point2D{ kfont->width(), 0 }, '?',
 						color_code);
 			return;
 		}
@@ -104,7 +104,7 @@ void write_unicode(screen& scr, point2d position, char32_t c, uint32_t color_cod
 		// const int baseline = (face->height + face->descender) *
 		// 					 face->size->metrics.y_ppem / face->units_per_EM;
 		// const auto glyph_topleft =
-		// 		position + point2d{ face->glyph->bitmap_left,
+		// 		position + Point2D{ face->glyph->bitmap_left,
 		// 							baseline - face->glyph->bitmap_top };
 
 		// for (int dy = 0; dy < bitmap.rows; ++dy) {
@@ -115,7 +115,7 @@ void write_unicode(screen& scr, point2d position, char32_t c, uint32_t color_cod
 		// 	for (int dx = 0; dx < bitmap.width; ++dx) {
 		// 		const bool b = (q[dx >> 3] & (0x80 >> (dx & 0x7))) != 0;
 		// 		if (b) {
-		// 			kscreen->put_pixel(glyph_topleft + point2d{ dx, dy },
+		// 			kscreen->put_pixel(glyph_topleft + Point2D{ dx, dy },
 		// 							   color_code);
 		// 		}
 		// 	}
@@ -168,14 +168,14 @@ char decode_utf8(char32_t c)
 	return 0;
 }
 
-void write_string(screen& scr, point2d position, const char* s, uint32_t color_code)
+void write_string(Screen& scr, Point2D position, const char* s, uint32_t color_code)
 {
 	int font_position = 0;
 	while (*s != '\0') {
 		const int size = utf8_size(*s);
 		const char32_t c = utf8_to_unicode(s);
 
-		write_unicode(scr, position + point2d{ font_position * kfont->width(), 0 },
+		write_unicode(scr, position + Point2D{ font_position * kfont->width(), 0 },
 					  c, color_code);
 
 		font_position += is_ascii_code(c) ? 1 : 2;
@@ -207,8 +207,8 @@ void to_upper(char* s)
 	}
 }
 
-bitmap_font* kfont;
-alignas(bitmap_font) char bitmap_font_buffer[sizeof(bitmap_font)];
+BitmapFont* kfont;
+alignas(BitmapFont) char bitmap_font_buffer[sizeof(BitmapFont)];
 
 FT_Face new_face()
 {
@@ -228,7 +228,7 @@ FT_Face new_face()
 	return face;
 }
 
-void initialize_font() { kfont = new (bitmap_font_buffer) bitmap_font{ 8, 16 }; }
+void initialize_font() { kfont = new (bitmap_font_buffer) BitmapFont{ 8, 16 }; }
 
 void initialize_freetype()
 {

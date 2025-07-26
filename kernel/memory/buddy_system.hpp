@@ -22,10 +22,10 @@ namespace kernel::memory {
 
 static const auto MAX_ORDER = 18;
 
-class buddy_system
+class BuddySystem
 {
 public:
-	buddy_system() = default;
+	BuddySystem() = default;
 
 	/**
 	 * \brief Allocates memory of the specified size using the buddy system.
@@ -59,7 +59,7 @@ public:
 	 * \param num_consecutive_pages The number of memory pages in the block.
 	 * \param start_page The starting address of the memory block.
 	 */
-	void register_memory_blocks(size_t num_total_pages, page* start_page);
+	void register_memory_blocks(size_t num_total_pages, Page* start_page);
 
 	void print_free_lists(int order = -1) const;
 
@@ -89,11 +89,11 @@ private:
 
 	static size_t calculate_order(size_t num_pages);
 
-	std::array<std::list<page*, PoolAllocator<page*, PAGE_SIZE>>, MAX_ORDER + 1>
+	std::array<std::list<Page*, PoolAllocator<Page*, PAGE_SIZE>>, MAX_ORDER + 1>
 			free_lists_;
 };
 
-extern buddy_system* memory_manager;
+extern BuddySystem* memory_manager;
 
 void initialize_memory_manager();
 

@@ -17,7 +17,7 @@
 
 namespace kernel::hw::pci
 {
-struct device;
+struct Device;
 }
 
 namespace kernel::hw::virtio {
@@ -47,7 +47,7 @@ constexpr int VIRTIO_PCI_CAP_VENDOR_CFG = 9;         ///< Vendor-specific data
 constexpr int NO_VECTOR = 0xffff;
 
 /**
- * @struct virtio_pci_cap
+ * @struct VirtioPciCap
  * @brief VirtIO PCI Capability Structure
  *
  * This structure represents a VirtIO PCI capability.
@@ -55,7 +55,7 @@ constexpr int NO_VECTOR = 0xffff;
  * @see
  * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
  */
-struct virtio_pci_cap {
+struct VirtioPciCap {
 	union {
 		uint32_t data;
 
@@ -80,11 +80,11 @@ struct virtio_pci_cap {
 	uint32_t offset; /* Offset within bar. */
 	uint32_t length; /* Length of the structure, in bytes. */
 
-	virtio_pci_cap* next;
+	VirtioPciCap* next;
 } __attribute__((packed));
 
 /**
- * @struct virtio_pci_common_cfg
+ * @struct VirtioPciCommonCfg
  * @brief VirtIO PCI Common Configuration Structure
  *
  * This structure represents the common configuration for a VirtIO PCI device.
@@ -92,7 +92,7 @@ struct virtio_pci_cap {
  * @see
  * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
  */
-struct virtio_pci_common_cfg {
+struct VirtioPciCommonCfg {
 	/* About the whole device. */
 	uint32_t device_feature_select; /* read-write */
 	uint32_t device_feature;		/* read-only */
@@ -117,7 +117,7 @@ struct virtio_pci_common_cfg {
 } __attribute__((packed));
 
 /**
- * @struct virtio_pci_notify_cap
+ * @struct VirtioPciNotifyCap
  * @brief VirtIO PCI Notify Capability Structure
  *
  * This structure represents the notify capability for a VirtIO PCI device.
@@ -125,13 +125,13 @@ struct virtio_pci_common_cfg {
  * @see
  * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
  */
-struct virtio_pci_notify_cap {
-	struct virtio_pci_cap cap;
+struct VirtioPciNotifyCap {
+	struct VirtioPciCap cap;
 	uint32_t notify_off_multiplier; /* Multiplier for queue_notify_off. */
 } __attribute__((packed));
 
 /**
- * @struct virtio_pci_cfg_cap
+ * @struct VirtioPciCfgCap
  * @brief VirtIO PCI Configuration Capability Structure
  *
  * This structure represents the PCI configuration capability for a VirtIO PCI
@@ -140,24 +140,24 @@ struct virtio_pci_notify_cap {
  * @see
  * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-1390004
  */
-struct virtio_pci_cfg_cap {
-	struct virtio_pci_cap cap;
+struct VirtioPciCfgCap {
+	struct VirtioPciCap cap;
 	uint8_t pci_cfg_data[4]; /* Offset within bar. */
 } __attribute__((packed));
 
 /**
- * @struct virtio_pci_device
+ * @struct VirtioPciDevice
  * @brief VirtIO PCI Device Structure
  *
  * This structure represents a VirtIO PCI device, including its capabilities,
  * configurations, and associated Virtqueues.
  */
-struct virtio_pci_device {
-	kernel::hw::pci::device* dev;				   /* PCI device. */
-	virtio_pci_cap* caps;			   /* Capabilities. */
-	virtio_pci_common_cfg* common_cfg; /* Common configuration. */
-	virtio_pci_notify_cap* notify_cfg; /* Notifications. */
-	virtio_virtqueue* queues;		   /* Virtqueues. */
+struct VirtioPciDevice {
+	kernel::hw::pci::Device* dev;				   /* PCI device. */
+	VirtioPciCap* caps;			   /* Capabilities. */
+	VirtioPciCommonCfg* common_cfg; /* Common configuration. */
+	VirtioPciNotifyCap* notify_cfg; /* Notifications. */
+	VirtioVirtqueue* queues;		   /* Virtqueues. */
 	size_t num_queues;				   /* Number of virtqueues. */
 	uintptr_t notify_base;			   /* Base address for notifications. */
 };
@@ -174,7 +174,7 @@ struct virtio_pci_device {
  * @note The BAR must be memory-mapped for this to work correctly
  */
 template<typename T>
-T* get_virtio_pci_capability(virtio_pci_device& virtio_dev)
+T* get_VirtioPciCapability(VirtioPciDevice& virtio_dev)
 {
 	uint64_t bar_addr = kernel::hw::pci::read_base_address_register(
 			*virtio_dev.dev, virtio_dev.caps->second_dword.fields.bar);
@@ -192,7 +192,7 @@ T* get_virtio_pci_capability(virtio_pci_device& virtio_dev)
  * @param virtio_dev VirtIO PCI device to scan
  * @return size_t Number of capabilities found
  */
-size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev);
+size_t find_VirtioPciCap(VirtioPciDevice& virtio_dev);
 
 /**
  * @brief Set up VirtIO PCI device capabilities
@@ -203,7 +203,7 @@ size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev);
  * @param virtio_dev VirtIO PCI device to configure
  * @return error_t Error code (kSuccess on success)
  */
-error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev);
+error_t set_VirtioPciCapability(VirtioPciDevice& virtio_dev);
 
 /**
  * @brief Notify the device about available buffers in a virtqueue
@@ -214,6 +214,6 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev);
  * @param virtio_dev VirtIO PCI device
  * @param queue_idx Index of the virtqueue to notify
  */
-void notify_virtqueue(virtio_pci_device& virtio_dev, size_t queue_idx);
+void notify_virtqueue(VirtioPciDevice& virtio_dev, size_t queue_idx);
 
 } // namespace kernel::hw::virtio

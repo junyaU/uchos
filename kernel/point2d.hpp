@@ -18,7 +18,7 @@
  * It is primarily used in the graphics subsystem for screen positioning,
  * cursor tracking, and drawing operations.
  */
-class point2d
+class Point2D
 {
 public:
 	/**
@@ -27,7 +27,7 @@ public:
 	 * @param x The x-coordinate
 	 * @param y The y-coordinate
 	 */
-	point2d(int x, int y) : x_{ x }, y_{ y } {};
+	Point2D(int x, int y) : x_{ x }, y_{ y } {};
 	
 	/**
 	 * @brief Get the x-coordinate
@@ -53,13 +53,13 @@ public:
 	 * @return A new point representing the sum
 	 * 
 	 * @example
-	 * point2d p1(10, 20);
-	 * point2d p2(5, 7);
-	 * point2d result = p1 + p2;  // result is (15, 27)
+	 * Point2D p1(10, 20);
+	 * Point2D p2(5, 7);
+	 * Point2D result = p1 + p2;  // result is (15, 27)
 	 */
-	point2d operator+(const point2d& rhs) const
+	Point2D operator+(const Point2D& rhs) const
 	{
-		return point2d{ x_ + rhs.x_, y_ + rhs.y_ };
+		return Point2D{ x_ + rhs.x_, y_ + rhs.y_ };
 	}
 
 private:

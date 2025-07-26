@@ -24,7 +24,7 @@
 namespace kernel::fs::fat
 {
 
-error_t process_read_data_response(const message& m, bool for_user)
+error_t process_read_data_response(const Message& m, bool for_user)
 {
 	auto it = file_caches.find(m.data.blk_io.request_id);
 	if (it == file_caches.end()) {
@@ -60,13 +60,13 @@ error_t process_read_data_response(const message& m, bool for_user)
 	return OK;
 }
 
-error_t process_file_read_request(const message& m, directory_entry* entry, bool for_user)
+error_t process_file_read_request(const Message& m, DirectoryEntry* entry, bool for_user)
 {
 	char file_name[12] = { 0 };
 	memcpy(file_name, entry->name, 11);
 	file_name[11] = 0;
 
-	file_cache* c = find_file_cache_by_path(file_name);
+	FileCache* c = find_file_cache_by_path(file_name);
 	if (c != nullptr) {
 		send_file_data(
 		    m.data.fs.request_id, c->buffer.data(), c->total_size, m.sender, m.type, for_user);
@@ -75,7 +75,7 @@ error_t process_file_read_request(const message& m, directory_entry* entry, bool
 
 	int target_cluster = entry->first_cluster();
 	size_t sequence = 0;
-	file_cache* cache = create_file_cache(file_name, entry->file_size, m.sender);
+	FileCache* cache = create_file_cache(file_name, entry->file_size, m.sender);
 	if (cache == nullptr) {
 		LOG_ERROR("failed to create file cache");
 		return ERR_NO_MEMORY;
@@ -96,7 +96,7 @@ void execute_file(void* data, const char* name, const char* args)
 	exec_elf(data, name, args);
 }
 
-void handle_get_file_info(const message& m)
+void handle_get_file_info(const Message& m)
 {
 	if (!kernel::task::CURRENT_TASK->is_initilized) {
 		pending_messages.push(m);
@@ -106,7 +106,7 @@ void handle_get_file_info(const message& m)
 	const auto* name = m.data.fs.name;
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	message sm = { .type = msg_t::IPC_GET_FILE_INFO, .sender = process_ids::FS_FAT32 };
+	Message sm = { .type = MsgType::IPC_GET_FILE_INFO, .sender = process_ids::FS_FAT32 };
 	sm.data.fs.buf = nullptr;
 
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
@@ -124,8 +124,8 @@ void handle_get_file_info(const message& m)
 
 		if (entry_name_is_equal(ROOT_DIR[i], name)) {
 			void* buf;
-			ALLOC_OR_RETURN(buf, sizeof(directory_entry), kernel::memory::ALLOC_ZEROED);
-			memcpy(buf, &ROOT_DIR[i], sizeof(directory_entry));
+			ALLOC_OR_RETURN(buf, sizeof(DirectoryEntry), kernel::memory::ALLOC_ZEROED);
+			memcpy(buf, &ROOT_DIR[i], sizeof(DirectoryEntry));
 			sm.data.fs.buf = buf;
 			break;
 		}
@@ -134,7 +134,7 @@ void handle_get_file_info(const message& m)
 	kernel::task::send_message(m.sender, sm);
 }
 
-void handle_read_file_data(const message& m)
+void handle_read_file_data(const Message& m)
 {
 	if (!kernel::task::CURRENT_TASK->is_initilized) {
 		pending_messages.push(m);
@@ -146,7 +146,7 @@ void handle_read_file_data(const message& m)
 		return;
 	}
 
-	directory_entry* entry = reinterpret_cast<directory_entry*>(m.data.fs.buf);
+	DirectoryEntry* entry = reinterpret_cast<DirectoryEntry*>(m.data.fs.buf);
 	if (entry == nullptr) {
 		LOG_ERROR("entry is null");
 		return;
@@ -155,14 +155,14 @@ void handle_read_file_data(const message& m)
 	process_file_read_request(m, entry, false);
 }
 
-void handle_fs_open(const message& m)
+void handle_fs_open(const Message& m)
 {
-	message req = { .type = msg_t::FS_OPEN, .sender = process_ids::FS_FAT32 };
+	Message req = { .type = MsgType::FS_OPEN, .sender = process_ids::FS_FAT32 };
 
 	const char* name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	directory_entry* entry = find_dir_entry(ROOT_DIR, name);
+	DirectoryEntry* entry = find_dir_entry(ROOT_DIR, name);
 	if (entry == nullptr) {
 		req.data.fs.fd = -1;
 		kernel::task::send_message(m.sender, req);
@@ -170,7 +170,7 @@ void handle_fs_open(const message& m)
 	}
 
 	// Get the requesting process's task
-	kernel::task::task* t = kernel::task::get_task(m.sender);
+	kernel::task::Task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
 		req.data.fs.fd = -1;
 		kernel::task::send_message(m.sender, req);
@@ -185,16 +185,16 @@ void handle_fs_open(const message& m)
 	kernel::task::send_message(m.sender, req);
 }
 
-void handle_fs_read(const message& m)
+void handle_fs_read(const Message& m)
 {
 	if (m.sender == process_ids::VIRTIO_BLK) {
 		process_read_data_response(m, true);
 		return;
 	}
 
-	message req = { .type = msg_t::FS_READ, .sender = process_ids::FS_FAT32 };
+	Message req = { .type = MsgType::FS_READ, .sender = process_ids::FS_FAT32 };
 
-	kernel::task::task* t = kernel::task::get_task(m.sender);
+	kernel::task::Task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
 		LOG_ERROR("Task not found: %d", m.sender.raw());
 		req.data.fs.len = 0;
@@ -202,7 +202,7 @@ void handle_fs_read(const message& m)
 		return;
 	}
 
-	file_descriptor* fd_entry = kernel::fs::get_process_fd(
+	FileDescriptor* fd_entry = kernel::fs::get_process_fd(
 	    t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
 	if (fd_entry == nullptr) {
 		LOG_ERROR("fd not found");
@@ -211,9 +211,9 @@ void handle_fs_read(const message& m)
 		return;
 	}
 
-	file_descriptor* fd = fd_entry;
+	FileDescriptor* fd = fd_entry;
 
-	directory_entry* entry = find_dir_entry(ROOT_DIR, fd->name);
+	DirectoryEntry* entry = find_dir_entry(ROOT_DIR, fd->name);
 	if (entry == nullptr) {
 		LOG_ERROR("entry not found");
 		req.data.fs.len = 0;
@@ -224,9 +224,9 @@ void handle_fs_read(const message& m)
 	process_file_read_request(m, entry, true);
 }
 
-void handle_fs_close(const message& m)
+void handle_fs_close(const Message& m)
 {
-	kernel::task::task* t = kernel::task::get_task(m.sender);
+	kernel::task::Task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
 		LOG_ERROR("Task %d not found in fs_close - likely already exited", m.sender.raw());
 		return;
@@ -240,17 +240,17 @@ void handle_fs_close(const message& m)
 	}
 }
 
-void handle_fs_write(const message& m)
+void handle_fs_write(const Message& m)
 {
-	message reply = { .type = msg_t::FS_WRITE, .sender = process_ids::FS_FAT32 };
+	Message reply = { .type = MsgType::FS_WRITE, .sender = process_ids::FS_FAT32 };
 
-	kernel::task::task* t = kernel::task::get_task(m.sender);
+	kernel::task::Task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
 		LOG_ERROR("Task %d not found - likely already exited", m.sender.raw());
 		return;
 	}
 
-	file_descriptor* fd_entry = kernel::fs::get_process_fd(
+	FileDescriptor* fd_entry = kernel::fs::get_process_fd(
 	    t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
 	if (fd_entry == nullptr) {
 		LOG_ERROR("fd not found");
@@ -259,9 +259,9 @@ void handle_fs_write(const message& m)
 		return;
 	}
 
-	file_descriptor* fd = fd_entry;
+	FileDescriptor* fd = fd_entry;
 
-	directory_entry* entry = find_dir_entry(ROOT_DIR, fd->name);
+	DirectoryEntry* entry = find_dir_entry(ROOT_DIR, fd->name);
 	if (entry == nullptr) {
 		LOG_ERROR("entry not found");
 		reply.data.fs.len = 0;
@@ -354,7 +354,7 @@ void handle_fs_write(const message& m)
 	send_write_req_to_blk_device(cluster_buffer,
 	                             calc_start_sector(target_cluster),
 	                             BYTES_PER_CLUSTER,
-	                             msg_t::FS_WRITE,
+	                             MsgType::FS_WRITE,
 	                             m.data.fs.request_id);
 
 	fd->offset += write_len;
@@ -403,20 +403,20 @@ void handle_fs_write(const message& m)
 	}
 }
 
-void handle_fs_mkfile(const message& m)
+void handle_fs_mkfile(const Message& m)
 {
-	message reply = { .type = msg_t::FS_MKFILE, .sender = process_ids::FS_FAT32 };
+	Message reply = { .type = MsgType::FS_MKFILE, .sender = process_ids::FS_FAT32 };
 
 	const char* name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	directory_entry* existing_entry = find_dir_entry(ROOT_DIR, name);
+	DirectoryEntry* existing_entry = find_dir_entry(ROOT_DIR, name);
 	if (existing_entry != nullptr) {
 		LOG_ERROR("File already exists: %s", name);
 		return;
 	}
 
-	directory_entry* entry = find_empty_dir_entry();
+	DirectoryEntry* entry = find_empty_dir_entry();
 	if (entry == nullptr) {
 		LOG_ERROR("No empty directory entry found");
 		return;
@@ -426,7 +426,7 @@ void handle_fs_mkfile(const message& m)
 	entry->attribute = entry_attribute::ARCHIVE;
 	entry->file_size = 0;
 
-	kernel::task::task* t = kernel::task::get_task(m.sender);
+	kernel::task::Task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
 		LOG_ERROR("Task %d not found - likely already exited", m.sender.raw());
 		return;
@@ -439,21 +439,21 @@ void handle_fs_mkfile(const message& m)
 	kernel::task::send_message(m.sender, reply);
 }
 
-void handle_fs_dup2(const message& m)
+void handle_fs_dup2(const Message& m)
 {
-	message reply = { .type = msg_t::FS_DUP2, .sender = process_ids::FS_FAT32 };
+	Message reply = { .type = MsgType::FS_DUP2, .sender = process_ids::FS_FAT32 };
 
 	fd_t oldfd = m.data.fs.fd;
 	fd_t newfd = m.data.fs.operation;
 
-	kernel::task::task* t = kernel::task::get_task(m.sender);
+	kernel::task::Task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
 		reply.data.fs.result = -1;
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
 
-	kernel::fs::file_descriptor* old_entry =
+	kernel::fs::FileDescriptor* old_entry =
 	    kernel::fs::get_process_fd(t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, oldfd);
 	if (old_entry == nullptr) {
 		reply.data.fs.result = -1;

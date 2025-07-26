@@ -145,6 +145,7 @@ inline void cpu_halt() {
 - **アーキテクチャ**: x86_64
 - **文字エンコーディング**: UTF-8
 - **ビルドシステム**: CMake
+- **コーディング規約**: Google C++ Style Guide準拠
 
 ### フォーマット規則
 ```cpp
@@ -172,11 +173,11 @@ if (condition) {
    # ファイル終端に改行があることを確認
    ```
 
-### 命名規則
+### 命名規則（Google C++ Style Guide準拠）
 | 対象 | 形式 | 例 |
 |------|------|-----|
 | 変数・関数・名前空間 | snake_case | `page_allocator`, `get_free_pages()` |
-| クラス・構造体・列挙型 | CamelCase | `PageTable`, `ProcessManager` |
+| クラス・構造体・列挙型 | PascalCase | `PageTable`, `ProcessManager`, `Device`, `VirtioBlkReq` |
 | マクロ・定数 | ALL_CAPS | `KERNEL_VIRTUAL_BASE` |
 
 ### マイクロカーネル設計指針
