@@ -21,7 +21,7 @@ namespace kernel::graphics
  * This class manages bitmap fonts where each character is represented
  * as a fixed-size bitmap. Used for basic text rendering in the kernel.
  */
-class bitmap_font
+class BitmapFont
 {
 public:
 	/**
@@ -30,7 +30,7 @@ public:
 	 * @param width Width of each character in pixels
 	 * @param height Height of each character in pixels
 	 */
-	bitmap_font(int width, int height);
+	BitmapFont(int width, int height);
 
 	/**
 	 * @brief Get the bitmap data for a character
@@ -57,9 +57,9 @@ public:
 	/**
 	 * @brief Get the character size as a point
 	 *
-	 * @return point2d Character dimensions
+	 * @return Point2D Character dimensions
 	 */
-	point2d size() const { return { width_, height_ }; }
+	Point2D size() const { return { width_, height_ }; }
 
 private:
 	const uint8_t* font_data_; ///< Pointer to font bitmap data
@@ -67,7 +67,7 @@ private:
 	int height_;			   ///< Character height in pixels
 };
 
-class screen;
+class Screen;
 
 /**
  * @brief Check if a character is within ASCII range
@@ -116,7 +116,7 @@ char decode_utf8(char32_t c);
  * @param c ASCII character to write
  * @param color_code Color in 32-bit format
  */
-void write_ascii(screen& scr, point2d position, char c, uint32_t color_code);
+void write_ascii(Screen& scr, Point2D position, char c, uint32_t color_code);
 
 /**
  * @brief Write a Unicode character to the screen
@@ -129,7 +129,7 @@ void write_ascii(screen& scr, point2d position, char c, uint32_t color_code);
  * @note Falls back to ASCII or replacement character if Unicode
  *       character cannot be displayed
  */
-void write_unicode(screen& scr, point2d position, char32_t c, uint32_t color_code);
+void write_unicode(Screen& scr, Point2D position, char32_t c, uint32_t color_code);
 
 /**
  * @brief Write a string to the screen
@@ -141,7 +141,7 @@ void write_unicode(screen& scr, point2d position, char32_t c, uint32_t color_cod
  * @param s Null-terminated string (UTF-8 encoded)
  * @param color_code Color in 32-bit format
  */
-void write_string(screen& scr, point2d position, const char* s, uint32_t color_code);
+void write_string(Screen& scr, Point2D position, const char* s, uint32_t color_code);
 
 /**
  * @brief Convert string to lowercase
@@ -166,7 +166,7 @@ void to_upper(char* s);
  *
  * The primary font used for kernel text output.
  */
-extern bitmap_font* kfont;
+extern BitmapFont* kfont;
 
 /**
  * @brief Create a new FreeType font face

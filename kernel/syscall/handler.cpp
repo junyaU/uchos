@@ -131,7 +131,7 @@ error_t sys_fill_rect(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4
 	const int height = arg4;
 	const uint32_t color = arg5;
 
-	kernel::graphics::kscreen->fill_rectangle(point2d{ x, y }, point2d{ width, height }, color);
+	kernel::graphics::kscreen->fill_rectangle(Point2D{ x, y }, Point2D{ width, height }, color);
 
 	return OK;
 }

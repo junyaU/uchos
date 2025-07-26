@@ -20,7 +20,7 @@ namespace kernel::graphics
  * This class provides an abstraction over the framebuffer, allowing
  * pixel-level drawing operations and managing screen dimensions.
  */
-class screen
+class Screen
 {
 public:
 	/**
@@ -29,7 +29,7 @@ public:
 	 * @param frame_buffer_conf Framebuffer configuration from UEFI
 	 * @param bg_color Background color to use for clearing the screen
 	 */
-	screen(const FrameBufferConf& frame_buffer_conf, Color bg_color);
+	Screen(const FrameBufferConf& frame_buffer_conf, Color bg_color);
 
 	/**
 	 * @brief Get screen width in pixels
@@ -48,9 +48,9 @@ public:
 	/**
 	 * @brief Get screen dimensions as a point
 	 *
-	 * @return point2d Screen width and height
+	 * @return Point2D Screen width and height
 	 */
-	point2d size() const { return { width(), height() }; }
+	Point2D size() const { return { width(), height() }; }
 
 	/**
 	 * @brief Get the background color
@@ -67,7 +67,7 @@ public:
 	 *
 	 * @note No bounds checking is performed for performance
 	 */
-	void put_pixel(point2d point, uint32_t color_code);
+	void put_pixel(Point2D point, uint32_t color_code);
 
 	/**
 	 * @brief Fill a rectangular area with a solid color
@@ -76,7 +76,7 @@ public:
 	 * @param size Width and height of the rectangle
 	 * @param color_code Color in 32-bit format
 	 */
-	void fill_rectangle(point2d position, point2d size, uint32_t color_code);
+	void fill_rectangle(Point2D position, Point2D size, uint32_t color_code);
 
 private:
 	uint64_t pixels_per_scan_line_;	 ///< Number of pixels per scan line (may include
@@ -92,7 +92,7 @@ private:
  *
  * Primary screen object used for all kernel graphics output.
  */
-extern screen* kscreen;
+extern Screen* kscreen;
 
 /**
  * @brief Initialize the screen subsystem

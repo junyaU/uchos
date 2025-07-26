@@ -8,18 +8,18 @@
 
 namespace
 {
-kernel::graphics::log_level CURRENT_LOG_LEVEL = kernel::graphics::log_level::ERROR;
+kernel::graphics::LogLevel CURRENT_LOG_LEVEL = kernel::graphics::LogLevel::ERROR;
 int kernel_cursor_x = 0;
 int kernel_cursor_y = 5;
 } // namespace
 
 namespace kernel::graphics {
 
-void change_log_level(log_level level) { CURRENT_LOG_LEVEL = level; }
+void change_log_level(LogLevel level) { CURRENT_LOG_LEVEL = level; }
 
 } // namespace kernel::graphics
 
-void printk(kernel::graphics::log_level level, const char* format, ...)
+void printk(kernel::graphics::LogLevel level, const char* format, ...)
 {
 	if (level != CURRENT_LOG_LEVEL || format == nullptr) {
 		return;
