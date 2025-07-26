@@ -17,22 +17,22 @@
 
 namespace kernel::hw::usb::xhci
 {
-class device_manager
+class DeviceManager
 {
 public:
 	void initialize(size_t max_slots);
-	device_context** device_contexts() const;
-	device* find_by_port(uint8_t port, uint32_t route_string) const;
-	device* find_by_state(enum device::slot_state state) const;
-	device* find_by_slot_id(uint8_t slot_id) const;
-	void allocate_device(uint8_t slot_id, doorbell_register* dbreg);
+	DeviceContext** device_contexts() const;
+	Device* find_by_port(uint8_t port, uint32_t route_string) const;
+	Device* find_by_state(enum Device::slot_state state) const;
+	Device* find_by_slot_id(uint8_t slot_id) const;
+	void allocate_device(uint8_t slot_id, DoorbellRegister* dbreg);
 	void load_dcbaa(uint8_t slot_id);
 	void remove(uint8_t slot_id);
 
 private:
 	// contexts_[0] is reserved for scratchpad buffer array
-	device_context** contexts_;
+	DeviceContext** contexts_;
 	size_t max_slots_;
-	device** devices_;
+	Device** devices_;
 };
 } // namespace kernel::hw::usb::xhci

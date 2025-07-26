@@ -71,7 +71,7 @@ const int SUPERSPEED_USB_ENDPOINT_COMPANION = 48;
 const int SUPERSPEEDPLUS_ISOCH_ENDPOINT_COMPANION = 49;
 } // namespace descriptor_type
 
-struct setup_stage_data {
+struct SetupStageData {
 	union {
 		uint8_t data;
 
@@ -88,7 +88,7 @@ struct setup_stage_data {
 	uint16_t length;
 } __attribute__((packed));
 
-inline bool operator==(setup_stage_data lhs, setup_stage_data rhs)
+inline bool operator==(SetupStageData lhs, SetupStageData rhs)
 {
 	return lhs.request_type.data == rhs.request_type.data &&
 		   lhs.request == rhs.request && lhs.value == rhs.value &&

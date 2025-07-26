@@ -31,7 +31,7 @@ namespace kernel::hw::usb
  * This class handles USB keyboards by processing HID reports and
  * notifying observers about key press and release events.
  */
-class keyboard_driver : public hid_driver
+class KeyboardDriver : public HidDriver
 {
 public:
 	/**
@@ -40,7 +40,7 @@ public:
 	 * @param dev Parent USB device
 	 * @param interface_index Index of the keyboard interface
 	 */
-	keyboard_driver(device* dev, int interface_index);
+	KeyboardDriver(Device* dev, int interface_index);
 
 	/**
 	 * @brief Custom memory allocation for keyboard driver

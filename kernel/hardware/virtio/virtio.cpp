@@ -10,9 +10,9 @@
 
 namespace kernel::hw::virtio {
 
-error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
+error_t init_VirtioPciDevice(VirtioPciDevice* virtio_dev, int device_type)
 {
-	kernel::hw::pci::device* dev = nullptr;
+	kernel::hw::pci::Device* dev = nullptr;
 	for (int i = 0; i < kernel::hw::pci::num_devices; ++i) {
 		if (kernel::hw::pci::devices[i].is_virtio()) {
 			dev = &kernel::hw::pci::devices[i];
@@ -27,32 +27,32 @@ error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type)
 
 	const uint8_t bsp_lapic_id = *reinterpret_cast<uint32_t*>(0xfee00020) >> 24;
 	kernel::hw::pci::configure_msi_fixed_destination(
-			*dev, bsp_lapic_id, kernel::hw::pci::msi_trigger_mode::EDGE,
-			kernel::hw::pci::msi_delivery_mode::FIXED, kernel::interrupt::InterruptVector::VIRTIO, 0);
+			*dev, bsp_lapic_id, kernel::hw::pci::MsiTriggerMode::EDGE,
+			kernel::hw::pci::MsiDeliveryMode::FIXED, kernel::interrupt::InterruptVector::VIRTIO, 0);
 	kernel::hw::pci::configure_msi_fixed_destination(
-			*dev, bsp_lapic_id, kernel::hw::pci::msi_trigger_mode::EDGE,
-			kernel::hw::pci::msi_delivery_mode::FIXED, kernel::interrupt::InterruptVector::VIRTQUEUE, 0);
+			*dev, bsp_lapic_id, kernel::hw::pci::MsiTriggerMode::EDGE,
+			kernel::hw::pci::MsiDeliveryMode::FIXED, kernel::interrupt::InterruptVector::VIRTQUEUE, 0);
 
 	virtio_dev->dev = dev;
 
-	find_virtio_pci_cap(*virtio_dev);
+	find_VirtioPciCap(*virtio_dev);
 
-	return set_virtio_pci_capability(*virtio_dev);
+	return set_VirtioPciCapability(*virtio_dev);
 }
 
-int push_virtio_entry(virtio_virtqueue* queue,
-					  virtio_entry* entry_chain,
+int push_VirtioEntry(VirtioVirtqueue* queue,
+					  VirtioEntry* entry_chain,
 					  size_t num_entries)
 {
 	if (queue->num_free_desc < num_entries) {
 		while (queue->last_device_idx != queue->device->index) {
-			virtq_device_elem* elem =
+			VirtqDeviceElem* elem =
 					&queue->device->ring[queue->last_device_idx % queue->num_desc];
 
 			int num_freed = 0;
 			int next_idx = elem->id;
 			while (true) {
-				virtq_desc* desc = &queue->desc[next_idx];
+				VirtqDesc* desc = &queue->desc[next_idx];
 				++num_freed;
 
 				if ((desc->flags & VIRTQ_DESC_F_NEXT) == 0) {
@@ -74,10 +74,10 @@ int push_virtio_entry(virtio_virtqueue* queue,
 
 	const int top_free_idx = queue->top_free_idx;
 	int desc_idx = top_free_idx;
-	virtq_desc* desc = nullptr;
+	VirtqDesc* desc = nullptr;
 
 	for (int i = 0; i < num_entries; ++i) {
-		virtio_entry* entry = &entry_chain[i];
+		VirtioEntry* entry = &entry_chain[i];
 		entry->index = desc_idx;
 
 		desc = &queue->desc[desc_idx];
@@ -109,15 +109,15 @@ int push_virtio_entry(virtio_virtqueue* queue,
 	return top_free_idx;
 }
 
-int pop_virtio_entry(virtio_virtqueue* queue,
-					 virtio_entry* entry_chain,
+int pop_VirtioEntry(VirtioVirtqueue* queue,
+					 VirtioEntry* entry_chain,
 					 size_t num_entries)
 {
-	virtq_device_elem* elem =
+	VirtqDeviceElem* elem =
 			&queue->device->ring[queue->last_device_idx % queue->num_desc];
 
 	int desc_idx = elem->id;
-	virtq_desc* desc = nullptr;
+	VirtqDesc* desc = nullptr;
 	int num_pop = 0;
 
 	while (num_pop < num_entries) {
@@ -149,7 +149,7 @@ int pop_virtio_entry(virtio_virtqueue* queue,
 	return num_pop;
 }
 
-error_t init_virtqueue(virtio_virtqueue* queue,
+error_t init_virtqueue(VirtioVirtqueue* queue,
 					   size_t index,
 					   size_t num_desc,
 					   uintptr_t desc_addr,
@@ -159,9 +159,9 @@ error_t init_virtqueue(virtio_virtqueue* queue,
 	queue->index = index;
 	queue->num_desc = num_desc;
 	queue->num_free_desc = num_desc;
-	queue->desc = reinterpret_cast<virtq_desc*>(desc_addr);
-	queue->driver = reinterpret_cast<virtq_driver*>(driver_ring_addr);
-	queue->device = reinterpret_cast<virtq_device*>(device_ring_addr);
+	queue->desc = reinterpret_cast<VirtqDesc*>(desc_addr);
+	queue->driver = reinterpret_cast<VirtqDriver*>(driver_ring_addr);
+	queue->device = reinterpret_cast<VirtqDevice*>(device_ring_addr);
 
 	for (int i = 0; i < num_desc; ++i) {
 		queue->desc[i].addr = 0;

@@ -17,7 +17,7 @@
 namespace kernel::hw::virtio {
 
 // Forward declaration
-struct virtio_pci_device;
+struct VirtioPciDevice;
 
 /**
  * @brief VirtIO block device feature bits
@@ -87,7 +87,7 @@ constexpr size_t SECTOR_SIZE = 512;
  * @see
  * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-3160006
  */
-struct virtio_blk_req {
+struct VirtioBlkReq {
 	uint32_t type;
 	uint32_t reserved;
 	uint64_t sector;
@@ -97,7 +97,7 @@ struct virtio_blk_req {
 /**
  * @brief Global VirtIO block device instance
  */
-extern virtio_pci_device* blk_dev;
+extern VirtioPciDevice* blk_dev;
 
 /**
  * @brief Write data to the block device

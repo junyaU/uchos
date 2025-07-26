@@ -55,7 +55,7 @@ namespace kernel::hw {
 
 void initialize_keyboard()
 {
-	usb::keyboard_driver::default_observer = [](uint8_t modifier, uint8_t keycode,
+	usb::KeyboardDriver::default_observer = [](uint8_t modifier, uint8_t keycode,
 												bool press) {
 		if (!press) {
 			return;

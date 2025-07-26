@@ -32,14 +32,14 @@ unsigned int determine_max_packet_size_for_control_pipe(int port_speed)
 	}
 }
 
-void enable_slot(controller& xhc, port& p)
+void enable_slot(Controller& xhc, Port& p)
 {
 	const bool is_enabled = p.is_enabled();
 	const bool reset_completed = p.is_port_reset_changed();
 
 	if (is_enabled && reset_completed) {
 		p.clear_port_reset_changed();
-		port_connection_states[p.number()] = port_connection_state::ENABLEING_SLOT;
+		port_connection_states[p.number()] = PortConnectionState::ENABLEING_SLOT;
 
 		const enable_slot_command_trb cmd{};
 		xhc.command_ring()->push(cmd);
@@ -47,7 +47,7 @@ void enable_slot(controller& xhc, port& p)
 	}
 }
 
-void initialize_device(controller& xhc, uint8_t port_id, uint8_t slot_id)
+void initialize_device(Controller& xhc, uint8_t port_id, uint8_t slot_id)
 {
 	auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 	if (dev == nullptr) {
@@ -55,11 +55,11 @@ void initialize_device(controller& xhc, uint8_t port_id, uint8_t slot_id)
 		return;
 	}
 
-	port_connection_states[port_id] = port_connection_state::INITIALIZING_DEVICE;
+	port_connection_states[port_id] = PortConnectionState::INITIALIZING_DEVICE;
 	dev->start_initialize();
 }
 
-void complete_configuration(controller& xhc, uint8_t port_id, uint8_t slot_id)
+void complete_configuration(Controller& xhc, uint8_t port_id, uint8_t slot_id)
 {
 	auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 	if (dev == nullptr) {
@@ -69,23 +69,23 @@ void complete_configuration(controller& xhc, uint8_t port_id, uint8_t slot_id)
 
 	dev->on_endpoints_configured();
 
-	port_connection_states[port_id] = port_connection_state::CONFIGURED;
+	port_connection_states[port_id] = PortConnectionState::CONFIGURED;
 }
 
-void address_device(controller& xhc, uint8_t port_id, uint8_t slot_id)
+void address_device(Controller& xhc, uint8_t port_id, uint8_t slot_id)
 {
 	xhc.device_manager()->allocate_device(slot_id,
 										  xhc.doorbell_register_at(slot_id));
 
-	device* dev = xhc.device_manager()->find_by_slot_id(slot_id);
+	Device* dev = xhc.device_manager()->find_by_slot_id(slot_id);
 	if (dev == nullptr) {
 		LOG_ERROR("device not found for slot id %d", slot_id);
 		return;
 	}
 
-	memset(&dev->input_context()->control, 0, sizeof(input_control_context));
+	memset(&dev->input_context()->control, 0, sizeof(InputControlContext));
 
-	const auto ep0_dci = device_context_index{ 0, false };
+	const auto ep0_dci = DeviceContextIndex{ 0, false };
 	auto* slot_ctx = dev->input_context()->enable_slot_context();
 	auto* ep0_ctx = dev->input_context()->enable_endpoint_context(ep0_dci);
 
@@ -98,23 +98,23 @@ void address_device(controller& xhc, uint8_t port_id, uint8_t slot_id)
 
 	xhc.device_manager()->load_dcbaa(slot_id);
 
-	port_connection_states[port_id] = port_connection_state::ADDRESSING_DEVICE;
+	port_connection_states[port_id] = PortConnectionState::ADDRESSING_DEVICE;
 
 	const address_device_command_trb cmd{ dev->input_context(), slot_id };
 	xhc.command_ring()->push(cmd);
 	xhc.doorbell_register_at(0)->ring(0);
 }
 
-void on_event(controller& xhc, port_status_change_event_trb& trb)
+void on_event(Controller& xhc, port_status_change_event_trb& trb)
 {
 	auto port_id = trb.bits.port_id;
 	auto p = xhc.port_at(port_id);
 
 	switch (port_connection_states[port_id]) {
-		case port_connection_state ::DISCONNECTED:
+		case PortConnectionState::DISCONNECTED:
 			reset_port(p);
 			break;
-		case port_connection_state::RESETTING_PORT:
+		case PortConnectionState::RESETTING_PORT:
 			enable_slot(xhc, p);
 			break;
 		default:
@@ -123,7 +123,7 @@ void on_event(controller& xhc, port_status_change_event_trb& trb)
 	}
 }
 
-void on_event(controller& xhc, transfer_event_trb& trb)
+void on_event(Controller& xhc, transfer_event_trb& trb)
 {
 	const uint8_t slot_id = trb.bits.slot_id;
 	auto* dev = xhc.device_manager()->find_by_slot_id(slot_id);
@@ -137,12 +137,12 @@ void on_event(controller& xhc, transfer_event_trb& trb)
 	const auto port_id = dev->context()->slot.bits.root_hub_port_num;
 	if (dev->is_initialized() &&
 		port_connection_states[port_id] ==
-				port_connection_state::INITIALIZING_DEVICE) {
+				PortConnectionState::INITIALIZING_DEVICE) {
 		configure_endpoints(xhc, *dev);
 	}
 }
 
-void on_event(controller& xhc, command_completion_event_trb& trb)
+void on_event(Controller& xhc, command_completion_event_trb& trb)
 {
 	const auto issuer_type = trb.pointer()->bits.trb_type;
 	const auto slot_id = trb.bits.slot_id;
@@ -150,7 +150,7 @@ void on_event(controller& xhc, command_completion_event_trb& trb)
 	switch (issuer_type) {
 		case enable_slot_command_trb::TYPE:
 			if (port_connection_states[addressing_port] !=
-				port_connection_state::ENABLEING_SLOT) {
+				PortConnectionState::ENABLEING_SLOT) {
 				LOG_ERROR("port %d is not enabling slot", addressing_port);
 				break;
 			}
@@ -173,7 +173,7 @@ void on_event(controller& xhc, command_completion_event_trb& trb)
 			}
 
 			if (port_connection_states[port_id] !=
-				port_connection_state::ADDRESSING_DEVICE) {
+				PortConnectionState::ADDRESSING_DEVICE) {
 				LOG_ERROR("port %d is not addressing device", port_id);
 				break;
 			}
@@ -181,7 +181,7 @@ void on_event(controller& xhc, command_completion_event_trb& trb)
 			addressing_port = 0;
 			for (int i = 0; i < port_connection_states.size(); i++) {
 				if (port_connection_states[i] ==
-					port_connection_state::WAITING_ADDRESSED) {
+					PortConnectionState::WAITING_ADDRESSED) {
 					auto p = xhc.port_at(i);
 					reset_port(p);
 					break;
@@ -201,7 +201,7 @@ void on_event(controller& xhc, command_completion_event_trb& trb)
 
 			auto port_id = dev->context()->slot.bits.root_hub_port_num;
 			if (port_connection_states[port_id] !=
-				port_connection_state::CONFIGURING_ENDPOINTS) {
+				PortConnectionState::CONFIGURING_ENDPOINTS) {
 				LOG_ERROR("port %d is not configuring endpoints", port_id);
 				break;
 			}
@@ -218,7 +218,7 @@ void on_event(controller& xhc, command_completion_event_trb& trb)
 
 void request_hc_ownership(uintptr_t mmio_base, hcc_params1_register hccp)
 {
-	const extended_register_list extended_regs{ mmio_base, hccp };
+	const ExtendedRegisterList extended_regs{ mmio_base, hccp };
 
 	auto ext_usb_legacy_support =
 			std::find_if(extended_regs.begin(), extended_regs.end(), [](auto& reg) {
@@ -228,7 +228,7 @@ void request_hc_ownership(uintptr_t mmio_base, hcc_params1_register hccp)
 		return;
 	}
 
-	auto& reg = reinterpret_cast<memory_mapped_register<usb_legacy_support_bitmap>&>(
+	auto& reg = reinterpret_cast<MemoryMappedRegister<usb_legacy_support_bitmap>&>(
 			*ext_usb_legacy_support);
 	auto r = reg.read();
 	if (r.bits.hc_os_owned_semaphore) {
@@ -246,16 +246,16 @@ void request_hc_ownership(uintptr_t mmio_base, hcc_params1_register hccp)
 
 namespace kernel::hw::usb::xhci
 {
-controller::controller(uintptr_t mmio_base)
+Controller::Controller(uintptr_t mmio_base)
 	: mmio_base_(mmio_base),
-	  cap_regs_(reinterpret_cast<capability_registers*>(mmio_base)),
-	  op_regs_(reinterpret_cast<operational_registers*>(
+	  cap_regs_(reinterpret_cast<CapabilityRegisters*>(mmio_base)),
+	  op_regs_(reinterpret_cast<OperationalRegisters*>(
 			  mmio_base + cap_regs_->cap_length.read())),
 	  max_ports_(static_cast<uint8_t>(cap_regs_->hcs_params1.read().bits.max_ports))
 {
 }
 
-void controller::initialize()
+void Controller::initialize()
 {
 	device_manager_.initialize(DEVICE_SIZE);
 
@@ -306,7 +306,7 @@ void controller::initialize()
 		}
 
 		device_manager_.device_contexts()[0] =
-				reinterpret_cast<device_context*>(scratchpad_buf_arr);
+				reinterpret_cast<DeviceContext*>(scratchpad_buf_arr);
 	}
 
 	dcbaap_bitmap device_context_base_address_array_pointer = {};
@@ -330,7 +330,7 @@ void controller::initialize()
 	op_regs_->usb_cmd.write(usb_command);
 }
 
-void controller::run()
+void Controller::run()
 {
 	auto usb_command = op_regs_->usb_cmd.read();
 	usb_command.bits.run_stop = true;
@@ -340,24 +340,24 @@ void controller::run()
 	}
 }
 
-doorbell_register* controller::doorbell_register_at(uint8_t index)
+DoorbellRegister* Controller::doorbell_register_at(uint8_t index)
 {
 	return &doorbell_registers()[index];
 }
 
-void configure_port(controller& xhc, port& p)
+void configure_port(Controller& xhc, Port& p)
 {
-	if (port_connection_states[p.number()] == port_connection_state::DISCONNECTED) {
+	if (port_connection_states[p.number()] == PortConnectionState::DISCONNECTED) {
 		reset_port(p);
 	}
 }
 
-void configure_endpoints(controller& xhc, device& dev)
+void configure_endpoints(Controller& xhc, Device& dev)
 {
-	const auto* configs = dev.endpoint_configs();
-	const auto len = dev.num_endpoint_configs();
+	const auto* configs = dev.EndpointConfigs();
+	const auto len = dev.num_EndpointConfigs();
 
-	memset(&dev.input_context()->control, 0, sizeof(input_control_context));
+	memset(&dev.input_context()->control, 0, sizeof(InputControlContext));
 	memcpy(&dev.input_context()->slot, &dev.context()->slot, sizeof(slot_context));
 
 	auto* slot_ctx = dev.input_context()->enable_slot_context();
@@ -370,9 +370,9 @@ void configure_endpoints(controller& xhc, device& dev)
 		return;
 	}
 
-	auto convert_interval = [port_speed](endpoint_type type, int interval) {
+	auto convert_interval = [port_speed](EndpointType type, int interval) {
 		if (port_speed == FULL_SPEED || port_speed == LOW_SPEED) {
-			if (type == endpoint_type::ISOCHRONOUS) {
+			if (type == EndpointType::ISOCHRONOUS) {
 				return interval + 2;
 			}
 			return most_significant_bit(interval) + 3;
@@ -382,19 +382,19 @@ void configure_endpoints(controller& xhc, device& dev)
 	};
 
 	for (int i = 0; i < len; i++) {
-		const device_context_index ep_dci{ configs[i].id };
+		const DeviceContextIndex ep_dci{ configs[i].id };
 		auto* ep_ctx = dev.input_context()->enable_endpoint_context(ep_dci);
 		switch (configs[i].type) {
-			case endpoint_type::CONTROL:
+			case EndpointType::CONTROL:
 				ep_ctx->bits.ep_type = 4;
 				break;
-			case endpoint_type::ISOCHRONOUS:
+			case EndpointType::ISOCHRONOUS:
 				ep_ctx->bits.ep_type = configs[i].id.is_in() ? 5 : 1;
 				break;
-			case endpoint_type::BULK:
+			case EndpointType::BULK:
 				ep_ctx->bits.ep_type = configs[i].id.is_in() ? 6 : 2;
 				break;
-			case endpoint_type::INTERRUPT:
+			case EndpointType::INTERRUPT:
 				ep_ctx->bits.ep_type = configs[i].id.is_in() ? 7 : 3;
 				break;
 		}
@@ -413,14 +413,14 @@ void configure_endpoints(controller& xhc, device& dev)
 		ep_ctx->bits.error_count = 3;
 	}
 
-	port_connection_states[port_id] = port_connection_state::CONFIGURING_ENDPOINTS;
+	port_connection_states[port_id] = PortConnectionState::CONFIGURING_ENDPOINTS;
 
 	const configure_endpoint_command_trb cmd{ dev.input_context(), dev.slot_id() };
 	xhc.command_ring()->push(cmd);
 	xhc.doorbell_register_at(0)->ring(0);
 }
 
-void process_event(controller& xhc)
+void process_event(Controller& xhc)
 {
 	if (!xhc.primary_event_ring()->has_front()) {
 		return;
@@ -442,13 +442,13 @@ void process_event(controller& xhc)
 	xhc.primary_event_ring()->pop();
 }
 
-controller* host_controller;
+Controller* host_controller;
 
 void initialize()
 {
 	LOG_INFO("Initializing xHCI...");
 
-	kernel::hw::pci::device* xhc_dev = nullptr;
+	kernel::hw::pci::Device* xhc_dev = nullptr;
 	for (int i = 0; i < kernel::hw::pci::num_devices; i++) {
 		if (kernel::hw::pci::devices[i].is_xhci()) {
 			xhc_dev = &kernel::hw::pci::devices[i];
@@ -466,15 +466,15 @@ void initialize()
 
 	const uint8_t bsp_lapic_id = *reinterpret_cast<uint32_t*>(0xfee00020) >> 24;
 	kernel::hw::pci::configure_msi_fixed_destination(
-			*xhc_dev, bsp_lapic_id, kernel::hw::pci::msi_trigger_mode::LEVEL,
-			kernel::hw::pci::msi_delivery_mode::FIXED, kernel::interrupt::InterruptVector::XHCI, 0);
+			*xhc_dev, bsp_lapic_id, kernel::hw::pci::MsiTriggerMode::LEVEL,
+			kernel::hw::pci::MsiDeliveryMode::FIXED, kernel::interrupt::InterruptVector::XHCI, 0);
 
 	const uint64_t bar = kernel::hw::pci::read_base_address_register(*xhc_dev, 0);
 	const uint64_t xhc_mmio_base = bar & ~static_cast<uint64_t>(0xf);
 
-	host_controller = new controller(xhc_mmio_base);
+	host_controller = new Controller(xhc_mmio_base);
 
-	controller& xhc = *host_controller;
+	Controller& xhc = *host_controller;
 
 	xhc.initialize();
 

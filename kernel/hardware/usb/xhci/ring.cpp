@@ -10,9 +10,9 @@
 
 namespace kernel::hw::usb::xhci
 {
-ring::~ring() {}
+Ring::~Ring() {}
 
-void ring::initialize(size_t buf_size)
+void Ring::initialize(size_t buf_size)
 {
 	cycle_bit_ = true;
 	write_index_ = 0;
@@ -22,7 +22,7 @@ void ring::initialize(size_t buf_size)
 	buffer_ = reinterpret_cast<trb*>(buffer_ptr);
 }
 
-void ring::copy_to_last(const std::array<uint32_t, 4>& data)
+void Ring::copy_to_last(const std::array<uint32_t, 4>& data)
 {
 	for (int i = 0; i < 3; i++) {
 		buffer_[write_index_].data[i] = data[i];
@@ -32,7 +32,7 @@ void ring::copy_to_last(const std::array<uint32_t, 4>& data)
 			(data[3] & 0xfffffffeU) | static_cast<uint32_t>(cycle_bit_);
 }
 
-trb* ring::push(const std::array<uint32_t, 4>& data)
+trb* Ring::push(const std::array<uint32_t, 4>& data)
 {
 	auto* trb_ptr = &buffer_[write_index_];
 	copy_to_last(data);
@@ -50,8 +50,8 @@ trb* ring::push(const std::array<uint32_t, 4>& data)
 	return trb_ptr;
 }
 
-void event_ring::initialize(size_t buf_size,
-							interrupter_register_set* interrupter_register)
+void EventRing::initialize(size_t buf_size,
+							InterrupterRegisterSet* interrupter_register)
 {
 	cycle_bit_ = true;
 	buffer_size_ = buf_size;
@@ -87,14 +87,14 @@ void event_ring::initialize(size_t buf_size,
 	interrupter_register_->erstba.write(event_ring_segment_table_base_address);
 }
 
-void event_ring::write_dequeue_pointer(trb* p)
+void EventRing::write_dequeue_pointer(trb* p)
 {
 	auto erdp = interrupter_register_->erdp.read();
 	erdp.set_pointer(reinterpret_cast<uint64_t>(p));
 	interrupter_register_->erdp.write(erdp);
 }
 
-void event_ring::pop()
+void EventRing::pop()
 {
 	auto* p = read_dequeue_pointer() + 1;
 
@@ -110,7 +110,7 @@ void event_ring::pop()
 	write_dequeue_pointer(p);
 }
 
-void register_command_ring(ring* r, memory_mapped_register<crcr_bitmap>* crcr)
+void register_command_ring(Ring* r, MemoryMappedRegister<crcr_bitmap>* crcr)
 {
 	crcr_bitmap value = crcr->read();
 	value.bits.ring_cycle_state = true;

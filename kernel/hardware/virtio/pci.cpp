@@ -11,11 +11,11 @@
 
 namespace kernel::hw::virtio {
 
-size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev)
+size_t find_VirtioPciCap(VirtioPciDevice& virtio_dev)
 {
 	uint8_t cap_id, cap_next;
 	uint32_t cap_addr = kernel::hw::pci::get_capability_pointer(*virtio_dev.dev);
-	virtio_pci_cap* prev_cap = nullptr;
+	VirtioPciCap* prev_cap = nullptr;
 	size_t num_caps = 0;
 	virtio_dev.caps = nullptr;
 
@@ -25,8 +25,8 @@ size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev)
 		cap_next = header.bits.next_ptr;
 
 		if (cap_id == kernel::hw::pci::CAP_VIRTIO) {
-			void* addr = kernel::memory::alloc(sizeof(virtio_pci_cap), kernel::memory::ALLOC_ZEROED);
-			virtio_pci_cap* cap = new (addr) virtio_pci_cap;
+			void* addr = kernel::memory::alloc(sizeof(VirtioPciCap), kernel::memory::ALLOC_ZEROED);
+			VirtioPciCap* cap = new (addr) VirtioPciCap;
 			cap->first_dword.data = kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr);
 			cap->second_dword.data =
 					kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr + 4);
@@ -49,7 +49,7 @@ size_t find_virtio_pci_cap(virtio_pci_device& virtio_dev)
 	return num_caps;
 }
 
-error_t negotiate_features(virtio_pci_device& virtio_dev)
+error_t negotiate_features(VirtioPciDevice& virtio_dev)
 {
 	uint64_t driver_features = 0;
 	uint64_t device_features = 0;
@@ -78,7 +78,7 @@ error_t negotiate_features(virtio_pci_device& virtio_dev)
 	return OK;
 }
 
-error_t setup_virtqueue(virtio_pci_device& virtio_dev)
+error_t setup_virtqueue(VirtioPciDevice& virtio_dev)
 {
 	const size_t num_desc = virtio_dev.common_cfg->queue_size;
 	const size_t descriptor_area_size = calc_desc_area_size(num_desc);
@@ -90,8 +90,8 @@ error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 
 	const size_t total_size = device_ring_offset + device_ring_size;
 	void* queues_ptr;
-	ALLOC_OR_RETURN_ERROR(queues_ptr, sizeof(virtio_virtqueue) * virtio_dev.common_cfg->num_queues, kernel::memory::ALLOC_ZEROED);
-	virtio_dev.queues = reinterpret_cast<virtio_virtqueue*>(queues_ptr);
+	ALLOC_OR_RETURN_ERROR(queues_ptr, sizeof(VirtioVirtqueue) * virtio_dev.common_cfg->num_queues, kernel::memory::ALLOC_ZEROED);
+	virtio_dev.queues = reinterpret_cast<VirtioVirtqueue*>(queues_ptr);
 
 	for (int i = 0; i < virtio_dev.common_cfg->num_queues; ++i) {
 		virtio_dev.common_cfg->queue_select = i;
@@ -122,10 +122,10 @@ error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 	return OK;
 }
 
-error_t configure_pci_common_cfg(virtio_pci_device& virtio_dev)
+error_t configure_pci_common_cfg(VirtioPciDevice& virtio_dev)
 {
 	virtio_dev.common_cfg =
-			get_virtio_pci_capability<virtio_pci_common_cfg>(virtio_dev);
+			get_VirtioPciCapability<VirtioPciCommonCfg>(virtio_dev);
 
 	virtio_dev.common_cfg->device_status = 0;
 	while (virtio_dev.common_cfg->device_status != 0) {
@@ -149,7 +149,7 @@ error_t configure_pci_common_cfg(virtio_pci_device& virtio_dev)
 	return OK;
 }
 
-error_t configure_pci_notify_cfg(virtio_pci_device& virtio_dev)
+error_t configure_pci_notify_cfg(VirtioPciDevice& virtio_dev)
 {
 
 	uint64_t bar_addr = kernel::hw::pci::read_base_address_register(
@@ -166,7 +166,7 @@ error_t configure_pci_notify_cfg(virtio_pci_device& virtio_dev)
 	return OK;
 }
 
-error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
+error_t set_VirtioPciCapability(VirtioPciDevice& virtio_dev)
 {
 	while (virtio_dev.caps != nullptr) {
 		switch (virtio_dev.caps->first_dword.fields.cfg_type) {
@@ -176,7 +176,7 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 
 			case VIRTIO_PCI_CAP_NOTIFY_CFG:
 				virtio_dev.notify_cfg =
-						reinterpret_cast<virtio_pci_notify_cap*>(virtio_dev.caps);
+						reinterpret_cast<VirtioPciNotifyCap*>(virtio_dev.caps);
 				break;
 
 			case VIRTIO_PCI_CAP_ISR_CFG:
@@ -203,7 +203,7 @@ error_t set_virtio_pci_capability(virtio_pci_device& virtio_dev)
 	return OK;
 }
 
-void notify_virtqueue(virtio_pci_device& virtio_dev, size_t queue_idx)
+void notify_virtqueue(VirtioPciDevice& virtio_dev, size_t queue_idx)
 {
 	asm volatile("sfence" ::: "memory");
 	*(volatile uint32_t*)virtio_dev.notify_base = queue_idx;

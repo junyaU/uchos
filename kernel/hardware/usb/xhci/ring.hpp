@@ -18,13 +18,13 @@
 namespace kernel::hw::usb::xhci
 {
 // Command/Transfer ring
-class ring
+class Ring
 {
 public:
-	ring() = default;
-	ring(const ring&) = delete;
-	~ring();
-	ring& operator=(const ring&) = delete;
+	Ring() = default;
+	Ring(const Ring&) = delete;
+	~Ring();
+	Ring& operator=(const Ring&) = delete;
 
 	void initialize(size_t buf_size);
 
@@ -61,10 +61,10 @@ union event_ring_segment_table_entry {
 	} __attribute__((packed)) bits;
 };
 
-class event_ring
+class EventRing
 {
 public:
-	void initialize(size_t buf_size, interrupter_register_set* interrupter_register);
+	void initialize(size_t buf_size, InterrupterRegisterSet* interrupter_register);
 
 	trb* read_dequeue_pointer() const
 	{
@@ -85,8 +85,8 @@ private:
 
 	bool cycle_bit_;
 	event_ring_segment_table_entry* segment_table_;
-	interrupter_register_set* interrupter_register_;
+	InterrupterRegisterSet* interrupter_register_;
 };
 
-void register_command_ring(ring* r, memory_mapped_register<crcr_bitmap>* crcr);
+void register_command_ring(Ring* r, MemoryMappedRegister<crcr_bitmap>* crcr);
 } // namespace kernel::hw::usb::xhci

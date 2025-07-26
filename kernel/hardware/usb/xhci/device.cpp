@@ -11,19 +11,19 @@
 
 namespace kernel::hw::usb::xhci
 {
-device::device(uint8_t slot_id, doorbell_register* doorbell_register)
+Device::Device(uint8_t slot_id, DoorbellRegister* doorbell_register)
 	: slot_id_{ slot_id }, doorbell_register_{ doorbell_register }
 {
 }
 
-void device::initialize() { state_ = slot_state::BLANK; }
+void Device::initialize() { state_ = slot_state::BLANK; }
 
-void device::select_for_slot_assignment() { state_ = slot_state::SLOT_ASSIGNING; }
+void Device::select_for_slot_assignment() { state_ = slot_state::SLOT_ASSIGNING; }
 
-ring* device::alloc_transfer_ring(device_context_index index, size_t buf_size)
+Ring* Device::alloc_transfer_ring(DeviceContextIndex index, size_t buf_size)
 {
 	const int i = index.value - 1;
-	auto* transfer_ring = reinterpret_cast<ring*>(malloc(64));
+	auto* transfer_ring = reinterpret_cast<Ring*>(malloc(64));
 	if (transfer_ring != nullptr) {
 		transfer_ring->initialize(buf_size);
 	}
@@ -33,17 +33,17 @@ ring* device::alloc_transfer_ring(device_context_index index, size_t buf_size)
 	return transfer_ring;
 }
 
-void device::control_in(const control_transfer_data& data)
+void Device::control_in(const ControlTransferData& data)
 {
-	kernel::hw::usb::device::control_in(data);
+	kernel::hw::usb::Device::control_in(data);
 
 	if (data.ep_id.number() < 0 || data.ep_id.number() > 15) {
 		LOG_ERROR("invalid endpoint id");
 		return;
 	}
 
-	const device_context_index dc_index{ data.ep_id };
-	ring* transfer_ring = transfer_rings_[dc_index.value - 1];
+	const DeviceContextIndex dc_index{ data.ep_id };
+	Ring* transfer_ring = transfer_rings_[dc_index.value - 1];
 	if (transfer_ring == nullptr) {
 		LOG_ERROR("transfer ring is not allocated");
 		return;
@@ -75,17 +75,17 @@ void device::control_in(const control_transfer_data& data)
 	doorbell_register_->ring(dc_index.value);
 }
 
-void device::control_out(const control_transfer_data& data)
+void Device::control_out(const ControlTransferData& data)
 {
-	kernel::hw::usb::device::control_out(data);
+	kernel::hw::usb::Device::control_out(data);
 
 	if (data.ep_id.number() < 0 || data.ep_id.number() > 15) {
 		LOG_ERROR("invalid endpoint id");
 		return;
 	}
 
-	const device_context_index dc_index{ data.ep_id };
-	ring* transfer_ring = transfer_rings_[dc_index.value - 1];
+	const DeviceContextIndex dc_index{ data.ep_id };
+	Ring* transfer_ring = transfer_rings_[dc_index.value - 1];
 	if (transfer_ring == nullptr) {
 		LOG_ERROR("transfer ring is not allocated");
 		return;
@@ -117,12 +117,12 @@ void device::control_out(const control_transfer_data& data)
 	doorbell_register_->ring(dc_index.value);
 }
 
-void device::interrupt_in(const interrupt_transfer_data& data)
+void Device::interrupt_in(const InterruptTransferData& data)
 {
-	kernel::hw::usb::device::interrupt_in(data);
+	kernel::hw::usb::Device::interrupt_in(data);
 
-	const device_context_index dc_index{ data.ep_id };
-	ring* transfer_ring = transfer_rings_[dc_index.value - 1];
+	const DeviceContextIndex dc_index{ data.ep_id };
+	Ring* transfer_ring = transfer_rings_[dc_index.value - 1];
 	if (transfer_ring == nullptr) {
 		LOG_ERROR("transfer ring is not allocated");
 		return;
@@ -138,15 +138,15 @@ void device::interrupt_in(const interrupt_transfer_data& data)
 	doorbell_register_->ring(dc_index.value);
 }
 
-void device::interrupt_out(const interrupt_transfer_data& data)
+void Device::interrupt_out(const InterruptTransferData& data)
 {
-	kernel::hw::usb::device::interrupt_out(data);
+	kernel::hw::usb::Device::interrupt_out(data);
 
 	LOG_DEBUG("interrupt_out: ep_id: %d, buf: %p, len: %d\n", data.ep_id.number(),
 			  data.buf, data.len);
 }
 
-void device::on_transfer_event_received(const transfer_event_trb& event_trb)
+void Device::on_transfer_event_received(const transfer_event_trb& event_trb)
 {
 	const auto residual_length = event_trb.bits.trb_transfer_length;
 
@@ -164,7 +164,7 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 	if (auto* normal = trb_dynamic_cast<normal_trb>(issued_trb)) {
 		const auto transfer_length =
 				normal->bits.trb_transfer_length - residual_length;
-		this->on_interrupt_completed({ event_trb.endpoint_id(),
+		this->on_interrupt_completed({ event_trb.EndpointId(),
 											  normal->pointer(),
 											  static_cast<int>(transfer_length) });
 		return;
@@ -179,7 +179,7 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 	setup_stages_.remove(issued_trb);
 
 	const auto* setup_trb = opt_setup_stage_trb.value();
-	setup_stage_data setup_data{};
+	SetupStageData setup_data{};
 	setup_data.request_type.data = setup_trb->bits.request_type;
 	setup_data.request = setup_trb->bits.request;
 	setup_data.value = setup_trb->bits.value;
@@ -197,7 +197,7 @@ void device::on_transfer_event_received(const transfer_event_trb& event_trb)
 		return;
 	}
 
-	this->on_control_completed({ event_trb.endpoint_id(), setup_data,
+	this->on_control_completed({ event_trb.EndpointId(), setup_data,
 										data_stage_buf, transfer_length });
 }
 

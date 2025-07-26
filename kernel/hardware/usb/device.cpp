@@ -8,45 +8,45 @@
 
 namespace kernel::hw::usb
 {
-device::~device() {}
+Device::~Device() {}
 
-void device::control_in(const control_transfer_data& data)
+void Device::control_in(const ControlTransferData& data)
 {
 	if (data.driver != nullptr) {
 		event_waiters_.put(data.setup_data, data.driver);
 	}
 }
 
-void device::control_out(const control_transfer_data& data)
+void Device::control_out(const ControlTransferData& data)
 {
 	if (data.driver != nullptr) {
 		event_waiters_.put(data.setup_data, data.driver);
 	}
 }
 
-void device::interrupt_in(const interrupt_transfer_data& data) {}
+void Device::interrupt_in(const InterruptTransferData& data) {}
 
-void device::interrupt_out(const interrupt_transfer_data& data) {}
+void Device::interrupt_out(const InterruptTransferData& data) {}
 
-void device::start_initialize()
+void Device::start_initialize()
 {
 	is_initialized_ = false;
 	initialize_stage_ = 1;
 
-	get_descriptor(*this, DEFAULT_CONTROL_PIPE_ID, device_descriptor::TYPE, 0,
+	get_descriptor(*this, DEFAULT_CONTROL_PIPE_ID, DeviceDescriptor::TYPE, 0,
 				   buffer_.data(), buffer_.size(), true);
 }
 
-void device::on_endpoints_configured()
+void Device::on_endpoints_configured()
 {
-	for (auto* class_driver : class_drivers_) {
+	for (auto* class_driver : ClassDrivers_) {
 		if (class_driver != nullptr) {
 			class_driver->on_endpoints_configured();
 		}
 	}
 }
 
-void device::on_control_completed(const control_transfer_data& data)
+void Device::on_control_completed(const ControlTransferData& data)
 {
 	if (is_initialized_) {
 		if (auto w = event_waiters_.get(data.setup_data)) {
@@ -61,13 +61,13 @@ void device::on_control_completed(const control_transfer_data& data)
 	switch (initialize_stage_) {
 		case 1:
 			if (data.setup_data.request == request::GET_DESCRIPTOR &&
-				(descriptor_dynamic_cast<device_descriptor>(buf8) != nullptr)) {
+				(descriptor_dynamic_cast<DeviceDescriptor>(buf8) != nullptr)) {
 				initialize_stage1(buf8, data.len);
 				return;
 			}
 		case 2:
 			if (data.setup_data.request == request::GET_DESCRIPTOR &&
-				(descriptor_dynamic_cast<configuration_descriptor>(buf8) !=
+				(descriptor_dynamic_cast<ConfigurationDescriptor>(buf8) !=
 				 nullptr)) {
 				initialize_stage2(buf8, data.len);
 				return;
@@ -83,9 +83,9 @@ void device::on_control_completed(const control_transfer_data& data)
 	}
 }
 
-void device::on_interrupt_completed(const interrupt_transfer_data& data)
+void Device::on_interrupt_completed(const InterruptTransferData& data)
 {
-	if (auto* w = class_drivers_[data.ep_id.number()]; w != nullptr) {
+	if (auto* w = ClassDrivers_[data.ep_id.number()]; w != nullptr) {
 		w->on_interrupt_completed(data.ep_id, data.buf, data.len);
 		return;
 	}
@@ -93,44 +93,44 @@ void device::on_interrupt_completed(const interrupt_transfer_data& data)
 	LOG_ERROR("invalid endpoint");
 }
 
-void device::initialize_stage1(const uint8_t* buf, int len)
+void Device::initialize_stage1(const uint8_t* buf, int len)
 {
-	const auto* device_desc = descriptor_dynamic_cast<device_descriptor>(buf);
+	const auto* device_desc = descriptor_dynamic_cast<DeviceDescriptor>(buf);
 	num_configurations_ = device_desc->num_configurations;
 	config_index_ = 0;
 	initialize_stage_ = 2;
 
-	get_descriptor(*this, DEFAULT_CONTROL_PIPE_ID, configuration_descriptor::TYPE,
+	get_descriptor(*this, DEFAULT_CONTROL_PIPE_ID, ConfigurationDescriptor::TYPE,
 				   config_index_, buffer_.data(), buffer_.size(), true);
 }
 
-void device::initialize_stage2(const uint8_t* buf, int len)
+void Device::initialize_stage2(const uint8_t* buf, int len)
 {
-	const auto* conf_desc = descriptor_dynamic_cast<configuration_descriptor>(buf);
+	const auto* conf_desc = descriptor_dynamic_cast<ConfigurationDescriptor>(buf);
 	if (conf_desc == nullptr) {
 		return;
 	}
 
-	configuration_descriptor_iterator config_it{ buf, len };
-	class_driver* class_driver = nullptr;
+	ConfigurationDescriptorIterator config_it{ buf, len };
+	ClassDriver* class_driver = nullptr;
 
-	while (const auto* if_desc = config_it.next<interface_descriptor>()) {
+	while (const auto* if_desc = config_it.next<InterfaceDescriptor>()) {
 		class_driver = new_class_driver(this, *if_desc);
 		if (class_driver == nullptr) {
 			continue;
 		}
 
-		num_endpoint_configs_ = 0;
+		num_EndpointConfigs_ = 0;
 
-		while (num_endpoint_configs_ < if_desc->num_endpoints) {
+		while (num_EndpointConfigs_ < if_desc->num_endpoints) {
 			const auto* desc = config_it.next();
 			if (const auto* ep_desc =
-						descriptor_dynamic_cast<endpoint_descriptor>(desc);
+						descriptor_dynamic_cast<EndpointDescriptor>(desc);
 				ep_desc != nullptr) {
 				auto conf = make_endpoint_config(*ep_desc);
 
-				endpoint_configs_[num_endpoint_configs_++] = conf;
-				class_drivers_[conf.id.number()] = class_driver;
+				EndpointConfigs_[num_EndpointConfigs_++] = conf;
+				ClassDrivers_[conf.id.number()] = class_driver;
 			}
 		}
 
@@ -146,26 +146,26 @@ void device::initialize_stage2(const uint8_t* buf, int len)
 							 conf_desc->configuration_value, true);
 }
 
-void device::initialize_stage3(const uint8_t* buf, int len)
+void Device::initialize_stage3(const uint8_t* buf, int len)
 {
-	for (int i = 0; i < num_endpoint_configs_; i++) {
-		class_drivers_[endpoint_configs_[i].id.number()]->set_endpoint(
-				endpoint_configs_[i]);
+	for (int i = 0; i < num_EndpointConfigs_; i++) {
+		ClassDrivers_[EndpointConfigs_[i].id.number()]->set_endpoint(
+				EndpointConfigs_[i]);
 	}
 
 	initialize_stage_ = 4;
 	is_initialized_ = true;
 }
 
-void get_descriptor(device& dev,
-					const endpoint_id& ep_id,
+void get_descriptor(Device& dev,
+					const EndpointId& ep_id,
 					uint8_t desc_type,
 					uint8_t desc_index,
 					void* buf,
 					int len,
 					bool debug)
 {
-	setup_stage_data setup_data{};
+	SetupStageData setup_data{};
 	setup_data.request_type.bits.direction = request_type::IN;
 	setup_data.request_type.bits.type = request_type::STANDARD;
 	setup_data.request_type.bits.recipient = request_type::DEVICE;
@@ -177,12 +177,12 @@ void get_descriptor(device& dev,
 	dev.control_in({ ep_id, setup_data, buf, len, nullptr });
 }
 
-void set_configuration(device& dev,
-					   const endpoint_id& ep_id,
+void set_configuration(Device& dev,
+					   const EndpointId& ep_id,
 					   uint8_t config_value,
 					   bool debug)
 {
-	setup_stage_data setup_data{};
+	SetupStageData setup_data{};
 	setup_data.request_type.bits.direction = request_type::OUT;
 	setup_data.request_type.bits.type = request_type::STANDARD;
 	setup_data.request_type.bits.recipient = request_type::DEVICE;
