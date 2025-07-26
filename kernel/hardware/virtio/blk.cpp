@@ -12,9 +12,9 @@
 
 namespace
 {
-void handle_read_request(const message& m)
+void handle_read_request(const Message& m)
 {
-	message reply = { .type = m.data.blk_io.dst_type, .sender = process_ids::VIRTIO_BLK };
+	Message reply = { .type = m.data.blk_io.dst_type, .sender = process_ids::VIRTIO_BLK };
 
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len;
@@ -39,7 +39,7 @@ void handle_read_request(const message& m)
 	kernel::task::send_message(m.sender, reply);
 }
 
-void handle_write_request(const message& m)
+void handle_write_request(const Message& m)
 {
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len < kernel::hw::virtio::SECTOR_SIZE
@@ -172,12 +172,12 @@ error_t init_blk_device()
 
 void virtio_blk_service()
 {
-	kernel::task::task* t = kernel::task::CURRENT_TASK;
+	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
 	init_blk_device();
 
-	t->add_msg_handler(msg_t::IPC_READ_FROM_BLK_DEVICE, handle_read_request);
-	t->add_msg_handler(msg_t::IPC_WRITE_TO_BLK_DEVICE, handle_write_request);
+	t->add_msg_handler(MsgType::IPC_READ_FROM_BLK_DEVICE, handle_read_request);
+	t->add_msg_handler(MsgType::IPC_WRITE_TO_BLK_DEVICE, handle_write_request);
 
 	t->is_initilized = true;
 

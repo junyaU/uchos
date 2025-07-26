@@ -14,21 +14,21 @@ int main(void)
 	auto* term = new (buffer) terminal(s);
 	term->print_user();
 
-	message msg;
+	Message msg;
 	while (true) {
 		receive_message(&msg);
-		if (msg.type == msg_t::NO_TASK) {
+		if (msg.type == MsgType::NO_TASK) {
 			continue;
 		}
 
 		switch (msg.type) {
-			case msg_t::NOTIFY_KEY_INPUT:
+			case MsgType::NOTIFY_KEY_INPUT:
 				term->input_char(msg.data.key_input.ascii);
 				break;
-			case msg_t::NOTIFY_WRITE:
+			case MsgType::NOTIFY_WRITE:
 				term->printf("%s\n", msg.data.write_shell.buf);
 				break;
-			case msg_t::NOTIFY_TIMER_TIMEOUT:
+			case MsgType::NOTIFY_TIMER_TIMEOUT:
 				switch (msg.data.timer.action) {
 					case timeout_action_t::TERMINAL_CURSOR_BLINK:
 						term->blink_cursor();
@@ -37,13 +37,13 @@ int main(void)
 						break;
 				};
 				break;
-			case msg_t::FS_CHANGE_DIR:
+			case MsgType::FS_CHANGE_DIR:
 				term->register_current_dir(msg.data.fs.name);
 				break;
-			case msg_t::INITIALIZE_TASK:
+			case MsgType::INITIALIZE_TASK:
 				set_cursor_timer(500);
 				break;
-			case msg_t::IPC_EXIT_TASK:
+			case MsgType::IPC_EXIT_TASK:
 				term->enable_input = true;
 				term->print_user();
 			default:

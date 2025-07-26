@@ -24,7 +24,7 @@ extern unsigned long ENTRIES_PER_CLUSTER;
 extern uint32_t* FAT_TABLE;
 extern unsigned int FAT_TABLE_SECTOR;
 extern kernel::fs::directory_entry* ROOT_DIR;
-extern std::queue<message> pending_messages;
+extern std::queue<Message> pending_messages;
 
 // FAT table write optimization constants
 constexpr size_t FAT_WRITE_CHUNK_SIZE = 65536; // 64KB chunks for batch writes
@@ -53,14 +53,14 @@ size_t count_free_clusters();
 // Communication with block device
 void send_read_req_to_blk_device(unsigned int sector,
 								 size_t len,
-								 msg_t dst_type,
+								 MsgType dst_type,
 								 fs_id_t request_id = 0,
 								 size_t sequence = 0);
 
 void send_write_req_to_blk_device(void* buffer,
 								  unsigned int sector,
 								  size_t len,
-								  msg_t dst_type,
+								  MsgType dst_type,
 								  fs_id_t request_id = 0,
 								  size_t sequence = 0);
 
@@ -72,25 +72,25 @@ void send_file_data(fs_id_t id,
 					void* buf,
 					size_t size,
 					ProcessId requester,
-					msg_t type,
+					MsgType type,
 					bool for_user);
 
 // Directory entry persistence
 void update_directory_entry_on_disk(kernel::fs::directory_entry* entry, const char* name);
 
 // Message handlers declarations
-void handle_initialize(const message& m);
-void handle_get_file_info(const message& m);
-void handle_read_file_data(const message& m);
-void handle_get_directory_contents(const message& m);
-void handle_fs_open(const message& m);
-void handle_fs_read(const message& m);
-void handle_fs_write(const message& m);
-void handle_fs_close(const message& m);
-void handle_fs_mkfile(const message& m);
-void handle_fs_register_path(const message& m);
-void handle_fs_pwd(const message& m);
-void handle_fs_change_dir(const message& m);
-void handle_fs_dup2(const message& m);
+void handle_initialize(const Message& m);
+void handle_get_file_info(const Message& m);
+void handle_read_file_data(const Message& m);
+void handle_get_directory_contents(const Message& m);
+void handle_fs_open(const Message& m);
+void handle_fs_read(const Message& m);
+void handle_fs_write(const Message& m);
+void handle_fs_close(const Message& m);
+void handle_fs_mkfile(const Message& m);
+void handle_fs_register_path(const Message& m);
+void handle_fs_pwd(const Message& m);
+void handle_fs_change_dir(const Message& m);
+void handle_fs_dup2(const Message& m);
 
 } // namespace kernel::fs::fat

@@ -21,7 +21,7 @@ namespace kernel::timers
  * Represents a scheduled timer event that will trigger an action
  * when its timeout expires. Supports both one-shot and periodic timers.
  */
-struct timer_event {
+struct TimerEvent {
 	uint64_t id;		 ///< Unique identifier for this timer event
 	ProcessId task_id;	 ///< Task to notify when timer expires
 	uint64_t timeout;	 ///< Absolute tick count when timer expires
@@ -40,7 +40,7 @@ struct timer_event {
  * @param rhs Right timer event
  * @return true if lhs has a later timeout than rhs
  */
-inline bool operator<(const timer_event& lhs, const timer_event& rhs)
+inline bool operator<(const TimerEvent& lhs, const TimerEvent& rhs)
 {
 	return lhs.timeout > rhs.timeout;
 }
@@ -60,7 +60,7 @@ static constexpr int TIMER_FREQUENCY = 100;
  * timer events. It handles both one-shot and periodic timers, and
  * provides timing services to the kernel and user processes.
  */
-class kernel_timer
+class KernelTimer
 {
 public:
 	/**
@@ -68,9 +68,9 @@ public:
 	 *
 	 * Initializes the tick counter to 0 and prepares the event queue.
 	 */
-	kernel_timer() : tick_{ 0 }, last_id_{ 1 }
+	KernelTimer() : tick_{ 0 }, last_id_{ 1 }
 	{
-		events_ = std::priority_queue<timer_event>();
+		events_ = std::priority_queue<TimerEvent>();
 		ignore_events_ = std::unordered_set<uint64_t>();
 	}
 
@@ -159,7 +159,7 @@ private:
 	uint64_t tick_;								 ///< Current system tick counter
 	uint64_t last_id_;							 ///< Last assigned timer event ID
 	std::unordered_set<uint64_t> ignore_events_; ///< Set of timer IDs to ignore
-	std::priority_queue<timer_event>
+	std::priority_queue<TimerEvent>
 			events_; ///< Priority queue of pending timer events
 };
 
@@ -168,7 +168,7 @@ private:
  *
  * Single system-wide timer instance that manages all timer events.
  */
-extern kernel_timer* ktimer;
+extern KernelTimer* ktimer;
 
 /**
  * @brief Initialize the timer subsystem

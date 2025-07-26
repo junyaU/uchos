@@ -20,7 +20,7 @@ namespace kernel::fs
  * tracks the file being accessed, the owning process, and the current
  * read/write position.
  */
-struct file_descriptor {
+struct FileDescriptor {
 	char name[11];  ///< File name (8.3 format for FAT compatibility)
 	size_t size;    ///< File size in bytes
 	size_t offset;  ///< Current read/write position
@@ -68,7 +68,7 @@ struct file_descriptor {
  * @param fd_table Array of file descriptors to initialize
  * @param table_size Size of the file descriptor table
  */
-void init_process_fd_table(file_descriptor* fd_table, size_t table_size);
+void init_process_fd_table(FileDescriptor* fd_table, size_t table_size);
 
 /**
  * @brief Allocate a new file descriptor for a process
@@ -83,7 +83,7 @@ void init_process_fd_table(file_descriptor* fd_table, size_t table_size);
  * @param pid Process ID that owns this descriptor
  * @return fd_t The allocated file descriptor number, or NO_FD on failure
  */
-fd_t allocate_process_fd(file_descriptor* fd_table,
+fd_t allocate_process_fd(FileDescriptor* fd_table,
                          size_t table_size,
                          const char* name,
                          size_t size,
@@ -95,9 +95,9 @@ fd_t allocate_process_fd(file_descriptor* fd_table,
  * @param fd_table Process's file descriptor table
  * @param table_size Size of the file descriptor table
  * @param fd File descriptor number to look up
- * @return file_descriptor* Pointer to the descriptor, or nullptr if invalid
+ * @return FileDescriptor* Pointer to the descriptor, or nullptr if invalid
  */
-file_descriptor* get_process_fd(file_descriptor* fd_table, size_t table_size, fd_t fd);
+FileDescriptor* get_process_fd(FileDescriptor* fd_table, size_t table_size, fd_t fd);
 
 /**
  * @brief Release a file descriptor in a process's table
@@ -109,7 +109,7 @@ file_descriptor* get_process_fd(file_descriptor* fd_table, size_t table_size, fd
  * @param fd File descriptor number to release
  * @return error_t OK on success, error code on failure
  */
-error_t release_process_fd(file_descriptor* fd_table, size_t table_size, fd_t fd);
+error_t release_process_fd(FileDescriptor* fd_table, size_t table_size, fd_t fd);
 
 /**
  * @brief Copy file descriptor table for process forking
@@ -122,8 +122,8 @@ error_t release_process_fd(file_descriptor* fd_table, size_t table_size, fd_t fd
  * @param child_pid Process ID of the child process
  * @return error_t OK on success, error code on failure
  */
-error_t copy_fd_table(file_descriptor* dest,
-                      const file_descriptor* src,
+error_t copy_fd_table(FileDescriptor* dest,
+                      const FileDescriptor* src,
                       size_t table_size,
                       ProcessId child_pid);
 
@@ -135,6 +135,6 @@ error_t copy_fd_table(file_descriptor* dest,
  * @param fd_table Process's file descriptor table
  * @param table_size Size of the file descriptor table
  */
-void release_all_process_fds(file_descriptor* fd_table, size_t table_size);
+void release_all_process_fds(FileDescriptor* fd_table, size_t table_size);
 
 }  // namespace kernel::fs

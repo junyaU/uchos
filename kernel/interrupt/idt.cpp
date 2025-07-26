@@ -42,11 +42,11 @@ void initialize_interrupt()
 					  type_attr{ ist, gate_type::kInterruptGate, 0, 1 }, kernel::memory::KERNEL_CS);
 	};
 
-	set_entry(interrupt_vector::LOCAL_APIC_TIMER, on_timer_interrupt, IST_FOR_TIMER);
-	set_entry(interrupt_vector::XHCI, on_xhci_interrupt, IST_FOR_XHCI);
-	set_entry(interrupt_vector::VIRTIO, on_virtio_interrupt);
-	set_entry(interrupt_vector::VIRTQUEUE, on_virtio_blk_queue_interrupt);
-	set_entry(interrupt_vector::SWITCH_TASK, interrupt_task_switch,
+	set_entry(InterruptVector::LOCAL_APIC_TIMER, on_timer_interrupt, IST_FOR_TIMER);
+	set_entry(InterruptVector::XHCI, on_xhci_interrupt, IST_FOR_XHCI);
+	set_entry(InterruptVector::VIRTIO, on_virtio_interrupt);
+	set_entry(InterruptVector::VIRTQUEUE, on_virtio_blk_queue_interrupt);
+	set_entry(InterruptVector::SWITCH_TASK, interrupt_task_switch,
 			  IST_FOR_SWITCH_TASK);
 	set_entry(DIVIDE_ERROR, fault_handler<DIVIDE_ERROR, false>::handler);
 	set_entry(DEBUG, fault_handler<DEBUG, false>::handler);

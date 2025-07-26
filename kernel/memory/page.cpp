@@ -7,7 +7,7 @@
 namespace kernel::memory
 {
 
-std::vector<page> pages;
+std::vector<Page> pages;
 
 void initialize_pages()
 {
@@ -28,7 +28,7 @@ void initialize_pages()
 	}
 }
 
-page* get_page(void* ptr)
+Page* get_page(void* ptr)
 {
 	if (ptr == nullptr ||
 		pages.size() < reinterpret_cast<uintptr_t>(ptr) / PAGE_SIZE) {

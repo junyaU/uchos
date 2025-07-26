@@ -18,21 +18,21 @@
 
 namespace
 {
-void notify_xhci_handler(const message& m)
+void notify_xhci_handler(const Message& m)
 {
 	kernel::hw::usb::xhci::process_events();
 }
 
-void handle_initialize_task(const message& m)
+void handle_initialize_task(const Message& m)
 {
-	message send_m = { .type = msg_t::INITIALIZE_TASK, .sender = process_ids::KERNEL };
+	Message send_m = { .type = MsgType::INITIALIZE_TASK, .sender = process_ids::KERNEL };
 	send_m.data.init.task_id = m.sender.raw();
 	kernel::task::send_message(m.sender, send_m);
 }
 
-void handle_memory_usage(const message& m)
+void handle_memory_usage(const Message& m)
 {
-	message send_m = { .type = msg_t::IPC_MEMORY_USAGE, .sender = process_ids::KERNEL };
+	Message send_m = { .type = MsgType::IPC_MEMORY_USAGE, .sender = process_ids::KERNEL };
 
 	size_t used_mem = 0;
 	size_t total_mem = 0;
@@ -45,10 +45,10 @@ void handle_memory_usage(const message& m)
 	kernel::task::send_message(m.sender, send_m);
 }
 
-void handle_pci(const message& m)
+void handle_pci(const Message& m)
 {
-	message send_m = {
-		.type = msg_t::IPC_PCI,
+	Message send_m = {
+		.type = MsgType::IPC_PCI,
 		.sender = process_ids::KERNEL,
 	};
 
@@ -65,7 +65,7 @@ void handle_pci(const message& m)
 	}
 }
 
-void handle_fs_register_path(const message& m)
+void handle_fs_register_path(const Message& m)
 {
 	path* p = reinterpret_cast<path*>(m.data.fs.buf);
 	if (p == nullptr) {
@@ -73,14 +73,14 @@ void handle_fs_register_path(const message& m)
 		return;
 	}
 
-	kernel::task::task* t = kernel::task::get_task(m.sender);
+	kernel::task::Task* t = kernel::task::get_task(m.sender);
 	if (t->parent_id == process_ids::INVALID) {
 		memcpy(&t->fs_path, p, sizeof(path));
 	}
 
 	kernel::memory::free(p);
 
-	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = process_ids::KERNEL };
+	Message reply = { .type = MsgType::FS_REGISTER_PATH, .sender = process_ids::KERNEL };
 	reply.data.fs.result = 0;
 	kernel::task::send_message(m.sender, reply);
 };
@@ -98,24 +98,24 @@ void idle_service()
 
 void kernel_service()
 {
-	task* t = kernel::task::CURRENT_TASK;
+	Task* t = kernel::task::CURRENT_TASK;
 
-	t->add_msg_handler(msg_t::INITIALIZE_TASK, handle_initialize_task);
-	t->add_msg_handler(msg_t::IPC_MEMORY_USAGE, handle_memory_usage);
-	t->add_msg_handler(msg_t::IPC_PCI, handle_pci);
-	t->add_msg_handler(msg_t::FS_REGISTER_PATH, handle_fs_register_path);
+	t->add_msg_handler(MsgType::INITIALIZE_TASK, handle_initialize_task);
+	t->add_msg_handler(MsgType::IPC_MEMORY_USAGE, handle_memory_usage);
+	t->add_msg_handler(MsgType::IPC_PCI, handle_pci);
+	t->add_msg_handler(MsgType::FS_REGISTER_PATH, handle_fs_register_path);
 
 	kernel::task::process_messages(t);
 }
 
 void shell_service()
 {
-	message m = { .type = msg_t::IPC_GET_FILE_INFO, .sender = process_ids::SHELL };
+	Message m = { .type = MsgType::IPC_GET_FILE_INFO, .sender = process_ids::SHELL };
 	char path[6] = "shell";
 	memcpy(m.data.fs.name, path, 6);
 	kernel::task::send_message(process_ids::FS_FAT32, m);
 
-	const message info_m = kernel::task::wait_for_message(msg_t::IPC_GET_FILE_INFO);
+	const Message info_m = kernel::task::wait_for_message(MsgType::IPC_GET_FILE_INFO);
 	auto* entry = reinterpret_cast<kernel::fs::directory_entry*>(info_m.data.fs.buf);
 	if (entry == nullptr) {
 		LOG_ERROR("failed to find shell");
@@ -124,18 +124,18 @@ void shell_service()
 		}
 	}
 
-	message read_m = { .type = msg_t::IPC_READ_FILE_DATA, .sender = process_ids::SHELL };
+	Message read_m = { .type = MsgType::IPC_READ_FILE_DATA, .sender = process_ids::SHELL };
 	read_m.data.fs.buf = info_m.data.fs.buf;
 	kernel::task::send_message(process_ids::FS_FAT32, read_m);
 
-	const message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
+	const Message data_m = kernel::task::wait_for_message(MsgType::IPC_READ_FILE_DATA);
 	CURRENT_TASK->is_initilized = true;
 	kernel::fs::fat::execute_file(data_m.data.fs.buf, "shell", nullptr);
 }
 
 void usb_handler_service()
 {
-	task* t = kernel::task::CURRENT_TASK;
+	Task* t = kernel::task::CURRENT_TASK;
 
 	kernel::hw::pci::initialize();
 
@@ -143,7 +143,7 @@ void usb_handler_service()
 
 	kernel::hw::initialize_keyboard();
 
-	t->add_msg_handler(msg_t::NOTIFY_XHCI, notify_xhci_handler);
+	t->add_msg_handler(MsgType::NOTIFY_XHCI, notify_xhci_handler);
 
 	kernel::task::process_messages(t);
 }

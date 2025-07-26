@@ -12,7 +12,7 @@ int main(int argc, char** argv)
 	pid_t pid = sys_getpid();
 	char* input = argv[1];
 
-	message m = { .type = msg_t::GET_DIRECTORY_CONTENTS, .sender = ProcessId::from_raw(pid) };
+	Message m = { .type = MsgType::GET_DIRECTORY_CONTENTS, .sender = ProcessId::from_raw(pid) };
 	if (input != nullptr) {
 		memcpy(m.data.fs.name, input, strlen(input));
 	} else {
@@ -21,7 +21,7 @@ int main(int argc, char** argv)
 
 	send_message(process_ids::FS_FAT32, &m);
 
-	message msg = wait_for_message(msg_t::GET_DIRECTORY_CONTENTS);
+	Message msg = wait_for_message(MsgType::GET_DIRECTORY_CONTENTS);
 
 	char buf[256];
 	size_t buf_pos = 0;

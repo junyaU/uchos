@@ -11,7 +11,7 @@
 constexpr int IPC_RECV = 0;
 constexpr int IPC_SEND = 1;
 
-enum class msg_t : int32_t {
+enum class MsgType : int32_t {
 	NO_TASK = -1,
 	NOTIFY_KEY_INPUT,
 	NOTIFY_XHCI,
@@ -41,7 +41,7 @@ enum class msg_t : int32_t {
 	MAX_MESSAGE_TYPE,  // must be the last
 };
 
-constexpr int32_t TOTAL_MESSAGE_TYPES = static_cast<int32_t>(msg_t::MAX_MESSAGE_TYPE);
+constexpr int32_t TOTAL_MESSAGE_TYPES = static_cast<int32_t>(MsgType::MAX_MESSAGE_TYPE);
 
 enum class timeout_action_t : uint8_t {
 	TERMINAL_CURSOR_BLINK,
@@ -54,8 +54,8 @@ struct msg_ool_desc_t {
 	bool present = false;
 };
 
-struct message {
-	msg_t type;
+struct Message {
+	MsgType type;
 	ProcessId sender;
 	msg_ool_desc_t tool_desc;
 
@@ -105,7 +105,7 @@ struct message {
 			unsigned int sector;
 			size_t len;
 			size_t sequence;
-			msg_t dst_type;
+			MsgType dst_type;
 		} blk_io;
 
 		struct {

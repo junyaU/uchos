@@ -467,7 +467,7 @@ void initialize()
 	const uint8_t bsp_lapic_id = *reinterpret_cast<uint32_t*>(0xfee00020) >> 24;
 	kernel::hw::pci::configure_msi_fixed_destination(
 			*xhc_dev, bsp_lapic_id, kernel::hw::pci::msi_trigger_mode::LEVEL,
-			kernel::hw::pci::msi_delivery_mode::FIXED, kernel::interrupt::interrupt_vector::XHCI, 0);
+			kernel::hw::pci::msi_delivery_mode::FIXED, kernel::interrupt::InterruptVector::XHCI, 0);
 
 	const uint64_t bar = kernel::hw::pci::read_base_address_register(*xhc_dev, 0);
 	const uint64_t xhc_mmio_base = bar & ~static_cast<uint64_t>(0xf);

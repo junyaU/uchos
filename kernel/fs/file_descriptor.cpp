@@ -8,7 +8,7 @@
 namespace kernel::fs
 {
 
-void init_process_fd_table(file_descriptor* fd_table, size_t table_size)
+void init_process_fd_table(FileDescriptor* fd_table, size_t table_size)
 {
 	if (fd_table == nullptr) {
 		return;
@@ -42,7 +42,7 @@ void init_process_fd_table(file_descriptor* fd_table, size_t table_size)
 	}
 }
 
-fd_t allocate_process_fd(file_descriptor* fd_table,
+fd_t allocate_process_fd(FileDescriptor* fd_table,
                          size_t table_size,
                          const char* name,
                          size_t size,
@@ -68,7 +68,7 @@ fd_t allocate_process_fd(file_descriptor* fd_table,
 	return NO_FD;
 }
 
-file_descriptor* get_process_fd(file_descriptor* fd_table, size_t table_size, fd_t fd)
+FileDescriptor* get_process_fd(FileDescriptor* fd_table, size_t table_size, fd_t fd)
 {
 	if (fd_table == nullptr || fd < 0 || fd >= table_size) {
 		return nullptr;
@@ -82,7 +82,7 @@ file_descriptor* get_process_fd(file_descriptor* fd_table, size_t table_size, fd
 	return &fd_table[fd];
 }
 
-error_t release_process_fd(file_descriptor* fd_table, size_t table_size, fd_t fd)
+error_t release_process_fd(FileDescriptor* fd_table, size_t table_size, fd_t fd)
 {
 	if (fd_table == nullptr || fd < 0 || fd >= table_size) {
 		return ERR_INVALID_ARG;
@@ -103,8 +103,8 @@ error_t release_process_fd(file_descriptor* fd_table, size_t table_size, fd_t fd
 	return OK;
 }
 
-error_t copy_fd_table(file_descriptor* dest,
-                      const file_descriptor* src,
+error_t copy_fd_table(FileDescriptor* dest,
+                      const FileDescriptor* src,
                       size_t table_size,
                       ProcessId child_pid)
 {
@@ -125,7 +125,7 @@ error_t copy_fd_table(file_descriptor* dest,
 	return OK;
 }
 
-void release_all_process_fds(file_descriptor* fd_table, size_t table_size)
+void release_all_process_fds(FileDescriptor* fd_table, size_t table_size)
 {
 	if (fd_table == nullptr) {
 		return;

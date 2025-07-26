@@ -20,9 +20,9 @@
  * part of a linked list. A single struct can contain multiple list
  * nodes to be part of multiple lists simultaneously.
  */
-struct list {
-	list* prev;  ///< Pointer to previous node in the list
-	list* next;  ///< Pointer to next node in the list
+struct List {
+	List* prev;  ///< Pointer to previous node in the list
+	List* next;  ///< Pointer to next node in the list
 };
 
 /**
@@ -31,14 +31,14 @@ struct list {
  * The list head is just a list node that serves as the anchor point
  * for the entire list. It is not part of any containing structure.
  */
-using list_t = list;
+using list_t = List;
 
 /**
  * @brief Type alias for list element
  * 
  * List elements are list nodes embedded within other structures.
  */
-using list_elem_t = list;
+using list_elem_t = List;
 
 /**
  * @brief Initialize a list head
@@ -126,11 +126,11 @@ size_t list_size(list_t* list);
  * @return Pointer to the containing structure, or nullptr if list is empty
  * 
  * @example
- * struct task {
+ * struct Task {
  *     int pid;
  *     list_elem_t list_node;
  * };
- * task* t = LIST_POP_FRONT(&task_list, task, list_node);
+ * Task* t = LIST_POP_FRONT(&task_list, Task, list_node);
  */
 #define LIST_POP_FRONT(list, container, field)                                      \
 	({                                                                              \
@@ -152,12 +152,12 @@ size_t list_size(list_t* list);
  * @note This is similar to the Linux kernel's container_of macro
  * 
  * @example
- * struct task {
+ * struct Task {
  *     int pid;
  *     list_elem_t list_node;
  * };
  * list_elem_t* elem = get_some_element();
- * task* t = LIST_CONTAINER(elem, task, list_node);
+ * Task* t = LIST_CONTAINER(elem, Task, list_node);
  */
 #define LIST_CONTAINER(elem, container, field)                                      \
 	((container*)((uintptr_t)(elem) - __builtin_offsetof(container, field)))

@@ -23,7 +23,7 @@ namespace kernel::interrupt {
 
 __attribute__((interrupt)) void on_xhci_interrupt(interrupt_frame* frame)
 {
-	message m = { msg_t::NOTIFY_XHCI, process_ids::INTERRUPT, {} };
+	Message m = { MsgType::NOTIFY_XHCI, process_ids::INTERRUPT, {} };
 	kernel::task::send_message(process_ids::XHCI, m);
 	notify_end_of_interrupt();
 }
@@ -43,7 +43,7 @@ __attribute__((interrupt)) void on_virtio_blk_queue_interrupt(interrupt_frame* f
 } // namespace kernel::interrupt
 
 
-extern "C" void switch_task_by_timer_interrupt(kernel::task::context* ctx)
+extern "C" void switch_task_by_timer_interrupt(kernel::task::Context* ctx)
 {
 	const bool need_switch_task = kernel::timers::ktimer->increment_tick();
 	notify_end_of_interrupt();
@@ -53,7 +53,7 @@ extern "C" void switch_task_by_timer_interrupt(kernel::task::context* ctx)
 	}
 }
 
-extern "C" void switch_task_by_interrupt(kernel::task::context* ctx)
+extern "C" void switch_task_by_interrupt(kernel::task::Context* ctx)
 {
 	notify_end_of_interrupt();
 	switch_task(*ctx);

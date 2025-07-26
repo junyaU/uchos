@@ -12,7 +12,7 @@
 namespace kernel::task
 {
 
-error_t handle_ool_memory_dealloc(const message& m)
+error_t handle_ool_memory_dealloc(const Message& m)
 {
 	const kernel::memory::vaddr_t addr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
 	const kernel::memory::vaddr_t start_addr{ addr.data - addr.part(0) };
@@ -22,7 +22,7 @@ error_t handle_ool_memory_dealloc(const message& m)
 	    kernel::memory::get_active_page_table(), start_addr, pages_to_unmap);
 }
 
-error_t handle_ool_memory_alloc(message& m, task* dst)
+error_t handle_ool_memory_alloc(Message& m, Task* dst)
 {
 	const kernel::memory::vaddr_t src_vaddr{ reinterpret_cast<uint64_t>(m.tool_desc.addr) };
 	const size_t num_pages = kernel::memory::calc_required_pages(src_vaddr, m.tool_desc.size);
@@ -45,7 +45,7 @@ error_t handle_ool_memory_alloc(message& m, task* dst)
 	return OK;
 }
 
-error_t send_message(ProcessId dst_id, message& m)
+error_t send_message(ProcessId dst_id, Message& m)
 {
 	const pid_t dst_raw = dst_id.raw();
 	if (dst_raw == -1 || m.sender.raw() == dst_raw) {
@@ -56,16 +56,16 @@ error_t send_message(ProcessId dst_id, message& m)
 		return ERR_INVALID_ARG;
 	}
 
-	task* dst = tasks[dst_raw];
+	Task* dst = tasks[dst_raw];
 	if (dst == nullptr) {
-		if (m.type != msg_t::INITIALIZE_TASK) {
+		if (m.type != MsgType::INITIALIZE_TASK) {
 			LOG_ERROR_CODE(ERR_INVALID_TASK, "task %d is not found", dst_raw);
 			LOG_ERROR("message type: %d", m.type);
 		}
 		return ERR_INVALID_TASK;
 	}
 
-	if (m.type == msg_t::IPC_OOL_MEMORY_DEALLOC) {
+	if (m.type == MsgType::IPC_OOL_MEMORY_DEALLOC) {
 		RETURN_IF_ERROR(handle_ool_memory_dealloc(m));
 	} else if (m.tool_desc.present) {
 		RETURN_IF_ERROR(handle_ool_memory_alloc(m, dst));
