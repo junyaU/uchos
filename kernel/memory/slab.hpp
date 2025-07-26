@@ -139,7 +139,7 @@ void* alloc(size_t size, unsigned flags, int align = 1);
  */
 void free(void* addr);
 
-struct free_deleter {
+struct FreeDeleter {
 	void operator()(void* p) { free(p); }
 };
 

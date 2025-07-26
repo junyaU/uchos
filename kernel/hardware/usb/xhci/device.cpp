@@ -16,9 +16,9 @@ Device::Device(uint8_t slot_id, DoorbellRegister* doorbell_register)
 {
 }
 
-void Device::initialize() { state_ = slot_state::BLANK; }
+void Device::initialize() { state_ = SlotState::BLANK; }
 
-void Device::select_for_slot_assignment() { state_ = slot_state::SLOT_ASSIGNING; }
+void Device::select_for_slot_assignment() { state_ = SlotState::SLOT_ASSIGNING; }
 
 Ring* Device::alloc_transfer_ring(DeviceContextIndex index, size_t buf_size)
 {

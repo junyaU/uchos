@@ -131,7 +131,7 @@ struct VirtioPciNotifyCap {
 } __attribute__((packed));
 
 /**
- * @struct virtio_pci_cfg_cap
+ * @struct VirtioPciCfgCap
  * @brief VirtIO PCI Configuration Capability Structure
  *
  * This structure represents the PCI configuration capability for a VirtIO PCI

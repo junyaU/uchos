@@ -60,13 +60,13 @@ error_t process_read_data_response(const Message& m, bool for_user)
 	return OK;
 }
 
-error_t process_file_read_request(const Message& m, directory_entry* entry, bool for_user)
+error_t process_file_read_request(const Message& m, DirectoryEntry* entry, bool for_user)
 {
 	char file_name[12] = { 0 };
 	memcpy(file_name, entry->name, 11);
 	file_name[11] = 0;
 
-	file_cache* c = find_file_cache_by_path(file_name);
+	FileCache* c = find_file_cache_by_path(file_name);
 	if (c != nullptr) {
 		send_file_data(
 		    m.data.fs.request_id, c->buffer.data(), c->total_size, m.sender, m.type, for_user);
@@ -75,7 +75,7 @@ error_t process_file_read_request(const Message& m, directory_entry* entry, bool
 
 	int target_cluster = entry->first_cluster();
 	size_t sequence = 0;
-	file_cache* cache = create_file_cache(file_name, entry->file_size, m.sender);
+	FileCache* cache = create_file_cache(file_name, entry->file_size, m.sender);
 	if (cache == nullptr) {
 		LOG_ERROR("failed to create file cache");
 		return ERR_NO_MEMORY;
@@ -124,8 +124,8 @@ void handle_get_file_info(const Message& m)
 
 		if (entry_name_is_equal(ROOT_DIR[i], name)) {
 			void* buf;
-			ALLOC_OR_RETURN(buf, sizeof(directory_entry), kernel::memory::ALLOC_ZEROED);
-			memcpy(buf, &ROOT_DIR[i], sizeof(directory_entry));
+			ALLOC_OR_RETURN(buf, sizeof(DirectoryEntry), kernel::memory::ALLOC_ZEROED);
+			memcpy(buf, &ROOT_DIR[i], sizeof(DirectoryEntry));
 			sm.data.fs.buf = buf;
 			break;
 		}
@@ -146,7 +146,7 @@ void handle_read_file_data(const Message& m)
 		return;
 	}
 
-	directory_entry* entry = reinterpret_cast<directory_entry*>(m.data.fs.buf);
+	DirectoryEntry* entry = reinterpret_cast<DirectoryEntry*>(m.data.fs.buf);
 	if (entry == nullptr) {
 		LOG_ERROR("entry is null");
 		return;
@@ -162,7 +162,7 @@ void handle_fs_open(const Message& m)
 	const char* name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	directory_entry* entry = find_dir_entry(ROOT_DIR, name);
+	DirectoryEntry* entry = find_dir_entry(ROOT_DIR, name);
 	if (entry == nullptr) {
 		req.data.fs.fd = -1;
 		kernel::task::send_message(m.sender, req);
@@ -213,7 +213,7 @@ void handle_fs_read(const Message& m)
 
 	FileDescriptor* fd = fd_entry;
 
-	directory_entry* entry = find_dir_entry(ROOT_DIR, fd->name);
+	DirectoryEntry* entry = find_dir_entry(ROOT_DIR, fd->name);
 	if (entry == nullptr) {
 		LOG_ERROR("entry not found");
 		req.data.fs.len = 0;
@@ -261,7 +261,7 @@ void handle_fs_write(const Message& m)
 
 	FileDescriptor* fd = fd_entry;
 
-	directory_entry* entry = find_dir_entry(ROOT_DIR, fd->name);
+	DirectoryEntry* entry = find_dir_entry(ROOT_DIR, fd->name);
 	if (entry == nullptr) {
 		LOG_ERROR("entry not found");
 		reply.data.fs.len = 0;
@@ -410,13 +410,13 @@ void handle_fs_mkfile(const Message& m)
 	const char* name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	directory_entry* existing_entry = find_dir_entry(ROOT_DIR, name);
+	DirectoryEntry* existing_entry = find_dir_entry(ROOT_DIR, name);
 	if (existing_entry != nullptr) {
 		LOG_ERROR("File already exists: %s", name);
 		return;
 	}
 
-	directory_entry* entry = find_empty_dir_entry();
+	DirectoryEntry* entry = find_empty_dir_entry();
 	if (entry == nullptr) {
 		LOG_ERROR("No empty directory entry found");
 		return;

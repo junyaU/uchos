@@ -79,7 +79,7 @@ void get_fault_name(uint64_t code, char* buf)
 	}
 }
 
-void log_fault_info(const char* fault_type, interrupt_frame* frame)
+void log_fault_info(const char* fault_type, InterruptFrame* frame)
 {
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 	LOG_ERROR("Error in task %d (%s)", t->id, t->name);

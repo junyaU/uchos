@@ -4,12 +4,12 @@
 #include <cstddef>
 #include <cstdint>
 
-struct shell;
+struct Shell;
 
 constexpr size_t TERMINAL_WIDTH = 98, TERMINAL_HEIGHT = 30;
 constexpr int LINE_SPACING = 3, START_X = 7, START_Y = 7;
 
-struct terminal {
+struct Terminal {
 	static std::array<std::array<char, TERMINAL_WIDTH>, TERMINAL_HEIGHT> buffer;
 	static std::array<std::array<uint32_t, TERMINAL_WIDTH>, TERMINAL_HEIGHT> color_buffer;
 	char user_name[16];
@@ -21,9 +21,9 @@ struct terminal {
 	int prompt_len;
 	bool cursor_visible;
 	bool enable_input;
-	shell* shell_;
+	Shell* shell_;
 
-	terminal(shell* s);
+	Terminal(Shell* s);
 
 	void blink_cursor();
 

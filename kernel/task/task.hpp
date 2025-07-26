@@ -30,7 +30,7 @@ struct Task {
 	int priority;
 	bool is_initilized;
 	TaskState state;
-	path fs_path;
+	Path fs_path;
 	uint64_t* stack;
 	size_t stack_size;
 	uint64_t kernel_stack_ptr;
@@ -75,7 +75,7 @@ struct Task {
 	}
 };
 
-struct initial_task_info {
+struct InitialTaskInfo {
 	const char* name;
 	uint64_t addr;
 	bool setup_context;

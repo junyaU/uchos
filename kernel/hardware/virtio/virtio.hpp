@@ -52,7 +52,7 @@ constexpr int VIRTQ_DESC_F_WRITE = 2;
 constexpr int VIRTQ_DESC_F_INDIRECT = 4;
 
 /**
- * @struct virtq_desc
+ * @struct VirtqDesc
  * @brief Virtqueue Descriptor
  *
  * This structure describes a single descriptor in a Virtqueue.
@@ -67,7 +67,7 @@ struct VirtqDesc {
 } __attribute__((packed));
 
 /**
- * @struct virtq_driver
+ * @struct VirtqDriver
  * @brief Virtqueue Driver Area
  *
  * This structure describes the driver area of a Virtqueue.
@@ -82,7 +82,7 @@ struct VirtqDriver {
 } __attribute__((packed));
 
 /**
- * @struct virtq_device_elem
+ * @struct VirtqDeviceElem
  * @brief Virtqueue Device Element
  *
  * This structure describes an element in the device area of a Virtqueue.
@@ -96,7 +96,7 @@ struct VirtqDeviceElem {
 } __attribute__((packed));
 
 /**
- * @struct virtq_device
+ * @struct VirtqDevice
  * @brief Virtqueue Device Area
  *
  * This structure describes the device area of a Virtqueue.

@@ -67,7 +67,7 @@ void handle_pci(const Message& m)
 
 void handle_fs_register_path(const Message& m)
 {
-	path* p = reinterpret_cast<path*>(m.data.fs.buf);
+	Path* p = reinterpret_cast<Path*>(m.data.fs.buf);
 	if (p == nullptr) {
 		LOG_ERROR("failed to allocate memory");
 		return;
@@ -75,7 +75,7 @@ void handle_fs_register_path(const Message& m)
 
 	kernel::task::Task* t = kernel::task::get_task(m.sender);
 	if (t->parent_id == process_ids::INVALID) {
-		memcpy(&t->fs_path, p, sizeof(path));
+		memcpy(&t->fs_path, p, sizeof(Path));
 	}
 
 	kernel::memory::free(p);
@@ -116,7 +116,7 @@ void shell_service()
 	kernel::task::send_message(process_ids::FS_FAT32, m);
 
 	const Message info_m = kernel::task::wait_for_message(MsgType::IPC_GET_FILE_INFO);
-	auto* entry = reinterpret_cast<kernel::fs::directory_entry*>(info_m.data.fs.buf);
+	auto* entry = reinterpret_cast<kernel::fs::DirectoryEntry*>(info_m.data.fs.buf);
 	if (entry == nullptr) {
 		LOG_ERROR("failed to find shell");
 		while (true) {

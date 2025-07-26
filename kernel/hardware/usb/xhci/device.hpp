@@ -21,7 +21,7 @@ namespace kernel::hw::usb::xhci
 class Device : public kernel::hw::usb::Device
 {
 public:
-	enum class slot_state {
+	enum class SlotState {
 		INVALID,
 		BLANK,
 		SLOT_ASSIGNING,
@@ -35,7 +35,7 @@ public:
 	DeviceContext* context() { return &ctx_; }
 	InputContext* input_context() { return &input_ctx_; }
 
-	slot_state slot_state() { return state_; }
+	SlotState slot_state() { return state_; }
 	uint8_t slot_id() { return slot_id_; }
 
 	void select_for_slot_assignment();
@@ -55,7 +55,7 @@ private:
 	const uint8_t slot_id_;
 	DoorbellRegister* const doorbell_register_;
 
-	enum slot_state state_;
+	enum SlotState state_;
 	std::array<Ring*, 31> transfer_rings_;
 	ArrayMap<const void*, const setup_stage_trb*, 16> setup_stages_{};
 };

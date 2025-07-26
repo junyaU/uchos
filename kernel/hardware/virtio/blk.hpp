@@ -79,7 +79,7 @@ constexpr int VIRTIO_BLK_S_UNSUPP = 2;  ///< Request not supported
 constexpr size_t SECTOR_SIZE = 512;
 
 /**
- * @struct virtio_blk_req
+ * @struct VirtioBlkReq
  * @brief VirtIO Block Request Structure
  *
  * This structure represents a request to a VirtIO block device.

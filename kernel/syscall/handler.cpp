@@ -233,7 +233,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	const Message info_m = kernel::task::wait_for_message(MsgType::IPC_GET_FILE_INFO);
 
-	auto* entry = reinterpret_cast<kernel::fs::directory_entry*>(info_m.data.fs.buf);
+	auto* entry = reinterpret_cast<kernel::fs::DirectoryEntry*>(info_m.data.fs.buf);
 	if (entry == nullptr) {
 		return ERR_NO_FILE;
 	}

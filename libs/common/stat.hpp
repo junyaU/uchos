@@ -13,7 +13,7 @@ enum class stat_type_t : uint8_t {
 	UNKNOWN = 0
 };
 
-struct stat {
+struct Stat {
 	char name[11];
 	size_t size;
 	stat_type_t type;

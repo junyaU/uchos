@@ -11,7 +11,7 @@ enum gate_type {
 	kTrapGate = 0xF,
 };
 
-struct type_attr {
+struct TypeAttr {
 	uint16_t interrupt_stack_table : 3;
 	uint16_t : 5;
 	uint16_t type : 4;
@@ -20,18 +20,18 @@ struct type_attr {
 	uint16_t present : 1;
 } __attribute__((packed));
 
-struct idt_entry {
+struct IdtEntry {
 	uint16_t offset_low;
 	uint16_t segment_selector;
-	type_attr attr;
+	TypeAttr attr;
 	uint16_t offset_middle;
 	uint32_t offset_high;
 	uint32_t zero;
 } __attribute__((packed));
 
-extern std::array<idt_entry, 256> idt;
+extern std::array<IdtEntry, 256> idt;
 
-struct idtr {
+struct Idtr {
 	uint16_t limit;
 	uint64_t base;
 } __attribute__((packed));

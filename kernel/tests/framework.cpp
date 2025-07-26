@@ -2,12 +2,12 @@
 #include "graphics/log.hpp"
 #include <cstring>
 
-struct test_case_t {
+struct TestCaseT {
 	const char* name;
 	void (*func)();
 };
 
-struct test_stats_t {
+struct TestStatsT {
 	int total;
 	int passed;
 	int failed;
@@ -16,9 +16,9 @@ struct test_stats_t {
 namespace
 {
 constexpr int MAX_TEST_CASES = 100;
-test_case_t test_cases[MAX_TEST_CASES];
+TestCaseT test_cases[MAX_TEST_CASES];
 int test_count = 0;
-test_stats_t stats = { 0, 0, 0 };
+TestStatsT stats = { 0, 0, 0 };
 bool current_test_failed = false;
 } // namespace
 void test_init()

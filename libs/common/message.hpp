@@ -48,7 +48,7 @@ enum class timeout_action_t : uint8_t {
 	SWITCH_TASK,
 };
 
-struct msg_ool_desc_t {
+struct MsgOolDescT {
 	void __user* addr;
 	size_t size;
 	bool present = false;
@@ -57,7 +57,7 @@ struct msg_ool_desc_t {
 struct Message {
 	MsgType type;
 	ProcessId sender;
-	msg_ool_desc_t tool_desc;
+	MsgOolDescT tool_desc;
 
 	union {
 		struct {

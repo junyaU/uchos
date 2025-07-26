@@ -52,7 +52,7 @@ Device* DeviceManager::find_by_port(uint8_t port, uint32_t route_string) const
 	return nullptr;
 }
 
-Device* DeviceManager::find_by_state(enum Device::slot_state state) const
+Device* DeviceManager::find_by_state(enum Device::SlotState state) const
 {
 	for (size_t i = 0; i <= max_slots_; i++) {
 		auto* dev = devices_[i];

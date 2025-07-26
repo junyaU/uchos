@@ -11,11 +11,11 @@
 
 namespace kernel::interrupt {
 
-std::array<idt_entry, 256> idt;
+std::array<IdtEntry, 256> idt;
 
-void set_idt_entry(idt_entry& entry,
+void set_IdtEntry(IdtEntry& entry,
 				   uint64_t offset,
-				   type_attr attr,
+				   TypeAttr attr,
 				   uint16_t segment_selector)
 {
 	entry.offset_low = offset & 0xffffU;
@@ -27,7 +27,7 @@ void set_idt_entry(idt_entry& entry,
 
 void load_idt(size_t size, uint64_t addr)
 {
-	idtr r;
+	Idtr r;
 	r.limit = size - 1;
 	r.base = addr;
 	__asm__("lidt %0" : : "m"(r));
@@ -38,8 +38,8 @@ void initialize_interrupt()
 	LOG_INFO("Initializing interrupt...");
 
 	auto set_entry = [](int irq, auto handler, uint16_t ist = 0) {
-		set_idt_entry(idt[irq], reinterpret_cast<uint64_t>(handler),
-					  type_attr{ ist, gate_type::kInterruptGate, 0, 1 }, kernel::memory::KERNEL_CS);
+		set_IdtEntry(idt[irq], reinterpret_cast<uint64_t>(handler),
+					  TypeAttr{ ist, gate_type::kInterruptGate, 0, 1 }, kernel::memory::KERNEL_CS);
 	};
 
 	set_entry(InterruptVector::LOCAL_APIC_TIMER, on_timer_interrupt, IST_FOR_TIMER);

@@ -53,7 +53,7 @@ std::vector<char*> parse_path(const char* path)
 	return result;
 }
 
-void read_dir_entry_name_raw(const directory_entry& entry, char* dest)
+void read_dir_entry_name_raw(const DirectoryEntry& entry, char* dest)
 {
 	char extension[5] = ".";
 
@@ -81,7 +81,7 @@ void read_dir_entry_name_raw(const directory_entry& entry, char* dest)
 	}
 }
 
-void read_dir_entry_name(const directory_entry& entry, char* dest)
+void read_dir_entry_name(const DirectoryEntry& entry, char* dest)
 {
 	read_dir_entry_name_raw(entry, dest);
 
@@ -93,7 +93,7 @@ void read_dir_entry_name(const directory_entry& entry, char* dest)
 	}
 }
 
-bool entry_name_is_equal(const directory_entry& entry, const char* name)
+bool entry_name_is_equal(const DirectoryEntry& entry, const char* name)
 {
 	char entry_name[13];
 	read_dir_entry_name_raw(entry, entry_name);
@@ -117,7 +117,7 @@ cluster_t next_cluster(cluster_t cluster_id)
 	return next;
 }
 
-directory_entry* find_dir_entry(directory_entry* parent_dir, const char* name)
+DirectoryEntry* find_dir_entry(DirectoryEntry* parent_dir, const char* name)
 {
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
 		if (parent_dir[i].name[0] == 0) {
@@ -132,7 +132,7 @@ directory_entry* find_dir_entry(directory_entry* parent_dir, const char* name)
 	return nullptr;
 }
 
-directory_entry* find_empty_dir_entry()
+DirectoryEntry* find_empty_dir_entry()
 {
 	if (ROOT_DIR == nullptr) {
 		return nullptr;

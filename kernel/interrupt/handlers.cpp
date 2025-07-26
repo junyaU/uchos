@@ -21,20 +21,20 @@ namespace
 
 namespace kernel::interrupt {
 
-__attribute__((interrupt)) void on_xhci_interrupt(interrupt_frame* frame)
+__attribute__((interrupt)) void on_xhci_interrupt(InterruptFrame* frame)
 {
 	Message m = { MsgType::NOTIFY_XHCI, process_ids::INTERRUPT, {} };
 	kernel::task::send_message(process_ids::XHCI, m);
 	notify_end_of_interrupt();
 }
 
-__attribute__((interrupt)) void on_virtio_interrupt(interrupt_frame* frame)
+__attribute__((interrupt)) void on_virtio_interrupt(InterruptFrame* frame)
 {
 	LOG_ERROR("virtio interrupt");
 	notify_end_of_interrupt();
 }
 
-__attribute__((interrupt)) void on_virtio_blk_queue_interrupt(interrupt_frame* frame)
+__attribute__((interrupt)) void on_virtio_blk_queue_interrupt(InterruptFrame* frame)
 {
 	kernel::task::schedule_task(process_ids::VIRTIO_BLK);
 	notify_end_of_interrupt();
@@ -61,7 +61,7 @@ extern "C" void switch_task_by_interrupt(kernel::task::Context* ctx)
 
 namespace kernel::interrupt {
 
-void kill_userland(interrupt_frame* frame)
+void kill_userland(InterruptFrame* frame)
 {
 	auto cpl = frame->cs & 0x3;
 	if (cpl != 3) {

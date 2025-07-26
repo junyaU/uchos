@@ -10,8 +10,8 @@ alignas(shell) char shell_buffer[sizeof(shell)];
 
 int main(void)
 {
-	auto* s = new (shell_buffer) shell();
-	auto* term = new (buffer) terminal(s);
+	auto* s = new (shell_buffer) Shell();
+	auto* term = new (buffer) Terminal(s);
 	term->print_user();
 
 	Message msg;

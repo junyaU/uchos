@@ -20,21 +20,21 @@
 namespace kernel::fs::fat
 {
 
-kernel::fs::bios_parameter_block* VOLUME_BPB = nullptr;
+kernel::fs::BiosParameterBlock* VOLUME_BPB = nullptr;
 unsigned long BYTES_PER_CLUSTER = 0;
 unsigned long ENTRIES_PER_CLUSTER = 0;
 uint32_t* FAT_TABLE = nullptr;
 unsigned int FAT_TABLE_SECTOR = 0;
-kernel::fs::directory_entry* ROOT_DIR = nullptr;
+kernel::fs::DirectoryEntry* ROOT_DIR = nullptr;
 std::queue<Message> pending_messages;
 
 void handle_initialize(const Message& m)
 {
 	if (m.data.blk_io.sector == BOOT_SECTOR) {
-		VOLUME_BPB = reinterpret_cast<kernel::fs::bios_parameter_block*>(m.data.blk_io.buf);
+		VOLUME_BPB = reinterpret_cast<kernel::fs::BiosParameterBlock*>(m.data.blk_io.buf);
 		BYTES_PER_CLUSTER = static_cast<unsigned long>(VOLUME_BPB->bytes_per_sector) *
 		                    VOLUME_BPB->sectors_per_cluster;
-		ENTRIES_PER_CLUSTER = BYTES_PER_CLUSTER / sizeof(kernel::fs::directory_entry);
+		ENTRIES_PER_CLUSTER = BYTES_PER_CLUSTER / sizeof(kernel::fs::DirectoryEntry);
 		FAT_TABLE_SECTOR = VOLUME_BPB->reserved_sector_count;
 
 		const size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
@@ -48,7 +48,7 @@ void handle_initialize(const Message& m)
 		send_read_req_to_blk_device(
 		    calc_start_sector(root_cluster), BYTES_PER_CLUSTER, MsgType::INITIALIZE_TASK);
 	} else {
-		ROOT_DIR = reinterpret_cast<kernel::fs::directory_entry*>(m.data.blk_io.buf);
+		ROOT_DIR = reinterpret_cast<kernel::fs::DirectoryEntry*>(m.data.blk_io.buf);
 		kernel::task::CURRENT_TASK->is_initilized = true;
 
 		while (!pending_messages.empty()) {
@@ -69,10 +69,10 @@ void handle_fs_register_path(const Message& m)
 	Message reply = { .type = MsgType::FS_REGISTER_PATH, .sender = m.sender };
 
 	void* buf;
-	ALLOC_OR_RETURN(buf, sizeof(path), kernel::memory::ALLOC_ZEROED);
+	ALLOC_OR_RETURN(buf, sizeof(Path), kernel::memory::ALLOC_ZEROED);
 
-	path p = init_path(ROOT_DIR);
-	memcpy(buf, &p, sizeof(path));
+	Path p = init_path(ROOT_DIR);
+	memcpy(buf, &p, sizeof(Path));
 	reply.data.fs.buf = buf;
 
 	kernel::task::send_message(process_ids::KERNEL, reply);

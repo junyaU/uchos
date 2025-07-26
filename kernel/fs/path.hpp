@@ -14,13 +14,13 @@
  * operations, including references to the current directory, parent directory,
  * and root directory. It enables directory navigation and path resolution.
  */
-struct path {
+struct Path {
 	/**
 	 * @brief Pointer to the current directory entry
 	 *
 	 * Points to the directory entry representing the current working directory.
 	 */
-	kernel::fs::directory_entry* current_dir;
+	kernel::fs::DirectoryEntry* current_dir;
 
 	/**
 	 * @brief Pointer to the parent directory entry
@@ -28,7 +28,7 @@ struct path {
 	 * Points to the directory entry of the current directory's parent.
 	 * For the root directory, this may point to itself.
 	 */
-	kernel::fs::directory_entry* parent_dir;
+	kernel::fs::DirectoryEntry* parent_dir;
 
 	/**
 	 * @brief Pointer to the root directory entry
@@ -36,7 +36,7 @@ struct path {
 	 * Points to the file system's root directory entry.
 	 * This remains constant throughout the path's lifetime.
 	 */
-	kernel::fs::directory_entry* root_dir;
+	kernel::fs::DirectoryEntry* root_dir;
 
 	/**
 	 * @brief Current directory name
@@ -74,4 +74,4 @@ struct path {
  *
  * @note The root_dir parameter must not be nullptr
  */
-path init_path(kernel::fs::directory_entry* root_dir);
+Path init_path(kernel::fs::DirectoryEntry* root_dir);

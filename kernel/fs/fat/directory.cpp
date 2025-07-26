@@ -100,7 +100,7 @@ bool validate_change_dir_request(const Message& m, kernel::task::Task*& task)
 	return true;
 }
 
-void update_directory_entry(kernel::task::Task* t, directory_entry* new_dir)
+void update_DirectoryEntry(kernel::task::Task* t, DirectoryEntry* new_dir)
 {
 	if (t->fs_path.current_dir != nullptr && t->fs_path.current_dir != ROOT_DIR) {
 		kernel::memory::free(t->fs_path.current_dir);
@@ -135,7 +135,7 @@ void handle_virtio_response(const Message& m)
 		return;
 	}
 
-	update_directory_entry(task, reinterpret_cast<directory_entry*>(m.data.blk_io.buf));
+	update_DirectoryEntry(task, reinterpret_cast<DirectoryEntry*>(m.data.blk_io.buf));
 	finalize_directory_change(m, task);
 }
 
@@ -163,7 +163,7 @@ void send_error_response(const Message& m, const char* error_msg = nullptr)
 
 void request_parent_directory_load(const Message& m,
                                    kernel::task::Task* t,
-                                   directory_entry* parent_entry)
+                                   DirectoryEntry* parent_entry)
 {
 	const fs_id_t request_id = next_change_dir_id++;
 	change_dir_requests[request_id] = t->id;
@@ -198,7 +198,7 @@ void handle_parent_directory_change(const Message& m, kernel::task::Task* t)
 		return;
 	}
 
-	directory_entry* parent_entry = find_dir_entry(t->fs_path.current_dir, "..");
+	DirectoryEntry* parent_entry = find_dir_entry(t->fs_path.current_dir, "..");
 	if (parent_entry == nullptr) {
 		send_error_response(m);
 		return;
@@ -219,7 +219,7 @@ void handle_normal_directory_change(const Message& m, kernel::task::Task* t, con
 	upper_name[sizeof(upper_name) - 1] = '\0';
 	kernel::graphics::to_upper(upper_name);
 
-	directory_entry* entry = find_dir_entry(t->fs_path.current_dir, upper_name);
+	DirectoryEntry* entry = find_dir_entry(t->fs_path.current_dir, upper_name);
 	if (entry == nullptr || entry->attribute != entry_attribute::DIRECTORY) {
 		send_error_response(m);
 		return;
@@ -290,8 +290,8 @@ void handle_get_directory_contents(const Message& m)
 		t = kernel::task::get_task(t->parent_id);
 	}
 
-	directory_entry* current_dir = t->fs_path.current_dir;
-	std::vector<char> entries(ENTRIES_PER_CLUSTER * sizeof(directory_entry));
+	DirectoryEntry* current_dir = t->fs_path.current_dir;
+	std::vector<char> entries(ENTRIES_PER_CLUSTER * sizeof(DirectoryEntry));
 	int entries_count = 0;
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
 		if (current_dir[i].name[0] == 0x00) {
@@ -306,19 +306,19 @@ void handle_get_directory_contents(const Message& m)
 			continue;
 		}
 
-		memcpy(&entries[entries_count * sizeof(directory_entry)],
+		memcpy(&entries[entries_count * sizeof(DirectoryEntry)],
 		       &current_dir[i],
-		       sizeof(directory_entry));
+		       sizeof(DirectoryEntry));
 		++entries_count;
 	}
 
 	void* buf;
-	ALLOC_OR_RETURN(buf, entries_count * sizeof(stat), kernel::memory::ALLOC_ZEROED);
+	ALLOC_OR_RETURN(buf, entries_count * sizeof(Stat), kernel::memory::ALLOC_ZEROED);
 
 	for (int i = 0; i < entries_count; ++i) {
-		stat* s = reinterpret_cast<stat*>(buf) + i;
+		Stat* s = reinterpret_cast<Stat*>(buf) + i;
 		read_dir_entry_name(
-		    *reinterpret_cast<directory_entry*>(&entries[i * sizeof(directory_entry)]), s->name);
+		    *reinterpret_cast<DirectoryEntry*>(&entries[i * sizeof(DirectoryEntry)]), s->name);
 		s->size = current_dir[i].file_size;
 		s->type = current_dir[i].attribute == entry_attribute::DIRECTORY
 		              ? stat_type_t::DIRECTORY
@@ -327,7 +327,7 @@ void handle_get_directory_contents(const Message& m)
 
 	Message sm = { .type = MsgType::GET_DIRECTORY_CONTENTS, .sender = process_ids::FS_FAT32 };
 	sm.tool_desc.addr = buf;
-	sm.tool_desc.size = entries_count * sizeof(stat);
+	sm.tool_desc.size = entries_count * sizeof(Stat);
 	sm.tool_desc.present = true;
 
 	kernel::task::send_message(m.sender, sm);
@@ -353,14 +353,14 @@ void handle_fs_pwd(const Message& m)
 	kernel::task::send_message(m.sender, reply);
 }
 
-void update_directory_entry_on_disk(directory_entry* entry, const char* name)
+void update_directory_entry_on_disk(DirectoryEntry* entry, const char* name)
 {
 	if (entry == nullptr || ROOT_DIR == nullptr) {
 		LOG_ERROR("Invalid directory entry or ROOT_DIR not initialized");
 		return;
 	}
 
-	directory_entry* disk_entry = nullptr;
+	DirectoryEntry* disk_entry = nullptr;
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
 		if (ROOT_DIR[i].name[0] == 0x00) {
 			break;
@@ -377,7 +377,7 @@ void update_directory_entry_on_disk(directory_entry* entry, const char* name)
 		return;
 	}
 
-	memcpy(disk_entry, entry, sizeof(directory_entry));
+	memcpy(disk_entry, entry, sizeof(DirectoryEntry));
 
 	void* write_buffer;
 	ALLOC_OR_RETURN(write_buffer, BYTES_PER_CLUSTER, kernel::memory::ALLOC_ZEROED);

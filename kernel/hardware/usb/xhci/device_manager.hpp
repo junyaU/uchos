@@ -23,7 +23,7 @@ public:
 	void initialize(size_t max_slots);
 	DeviceContext** device_contexts() const;
 	Device* find_by_port(uint8_t port, uint32_t route_string) const;
-	Device* find_by_state(enum Device::slot_state state) const;
+	Device* find_by_state(enum Device::SlotState state) const;
 	Device* find_by_slot_id(uint8_t slot_id) const;
 	void allocate_device(uint8_t slot_id, DoorbellRegister* dbreg);
 	void load_dcbaa(uint8_t slot_id);
