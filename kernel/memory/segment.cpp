@@ -91,10 +91,8 @@ void set_tss(int index, void* addr)
 
 void* allocate_stack(size_t size)
 {
-	void* stack = kernel::memory::alloc(size, ALLOC_UNINITIALIZED);
-	if (stack == nullptr) {
-		return nullptr;
-	}
+	void* stack;
+	ALLOC_OR_RETURN_NULL(stack, size, ALLOC_UNINITIALIZED);
 
 	return reinterpret_cast<void*>(reinterpret_cast<uint64_t>(stack) + size);
 }

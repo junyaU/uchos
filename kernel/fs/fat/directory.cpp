@@ -312,12 +312,8 @@ void handle_get_directory_contents(const message& m)
 		++entries_count;
 	}
 
-	void* buf = kernel::memory::alloc(
-	    entries_count * sizeof(stat), kernel::memory::ALLOC_ZEROED, memory::PAGE_SIZE);
-	if (buf == nullptr) {
-		LOG_ERROR("failed to allocate memory");
-		return;
-	}
+	void* buf;
+	ALLOC_OR_RETURN(buf, entries_count * sizeof(stat), kernel::memory::ALLOC_ZEROED);
 
 	for (int i = 0; i < entries_count; ++i) {
 		stat* s = reinterpret_cast<stat*>(buf) + i;
@@ -383,11 +379,8 @@ void update_directory_entry_on_disk(directory_entry* entry, const char* name)
 
 	memcpy(disk_entry, entry, sizeof(directory_entry));
 
-	void* write_buffer = kernel::memory::alloc(BYTES_PER_CLUSTER, kernel::memory::ALLOC_ZEROED);
-	if (write_buffer == nullptr) {
-		LOG_ERROR("Failed to allocate write buffer");
-		return;
-	}
+	void* write_buffer;
+	ALLOC_OR_RETURN(write_buffer, BYTES_PER_CLUSTER, kernel::memory::ALLOC_ZEROED);
 
 	memcpy(write_buffer, ROOT_DIR, BYTES_PER_CLUSTER);
 

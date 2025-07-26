@@ -74,11 +74,8 @@ void handle_fs_register_path(const message& m)
 
 	message reply = { .type = msg_t::FS_REGISTER_PATH, .sender = m.sender };
 
-	void* buf = kernel::memory::alloc(sizeof(path), kernel::memory::ALLOC_ZEROED);
-	if (buf == nullptr) {
-		LOG_ERROR("failed to allocate memory");
-		return;
-	}
+	void* buf;
+	ALLOC_OR_RETURN(buf, sizeof(path), kernel::memory::ALLOC_ZEROED);
 
 	path p = init_path(ROOT_DIR);
 	memcpy(buf, &p, sizeof(path));

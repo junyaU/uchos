@@ -91,11 +91,8 @@ void dump_page_tables(vaddr_t addr)
 
 page_table_entry* new_page_table()
 {
-	void* addr = kernel::memory::alloc(PAGE_SIZE, ALLOC_ZEROED, PAGE_SIZE);
-	if (addr == nullptr) {
-		LOG_ERROR("Failed to allocate memory for page table.");
-		return nullptr;
-	}
+	void* addr;
+	ALLOC_OR_RETURN_NULL(addr, PAGE_SIZE, ALLOC_ZEROED);
 
 	return reinterpret_cast<page_table_entry*>(addr);
 }

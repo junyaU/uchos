@@ -151,17 +151,24 @@ void initialize_slab_allocator();
 
 } // namespace kernel::memory
 
+/**
+ * @brief Allocate memory or return void (for void functions)
+ * @param ptr Variable to store allocated pointer
+ * @param size Size to allocate
+ * @param flags Allocation flags
+ * @note Returns void if allocation fails, suitable for void functions
+ */
 #define ALLOC_OR_RETURN(ptr, size, flags)                                         \
 	do {                                                                            \
 		(ptr) = kernel::memory::alloc(size, flags);                               \
 		if ((ptr) == nullptr) {                                                     \
-			LOG_ERROR("failed to allocate memory: %s", #ptr);                       \
+			LOG_ERROR("Memory allocation failed: %s (size=%zu)", #ptr, (size_t)(size)); \
 			return;                                                                 \
 		}                                                                           \
 	} while (0)
 
 /**
- * @brief Macro to allocate memory and return error code on failure
+ * @brief Allocate memory or return error code
  * @param ptr Variable to store allocated pointer
  * @param size Size to allocate
  * @param flags Allocation flags
@@ -171,7 +178,23 @@ void initialize_slab_allocator();
 	do {                                                                            \
 		(ptr) = kernel::memory::alloc(size, flags);                               \
 		if ((ptr) == nullptr) {                                                     \
-			LOG_ERROR_CODE(ERR_NO_MEMORY, "failed to allocate memory: %s", #ptr);   \
+			LOG_ERROR("Memory allocation failed: %s (size=%zu)", #ptr, (size_t)(size)); \
 			return ERR_NO_MEMORY;                                                   \
+		}                                                                           \
+	} while (0)
+
+/**
+ * @brief Allocate memory or return nullptr
+ * @param ptr Variable to store allocated pointer
+ * @param size Size to allocate
+ * @param flags Allocation flags
+ * @note Returns nullptr if allocation fails, suitable for functions returning pointers
+ */
+#define ALLOC_OR_RETURN_NULL(ptr, size, flags)                                    \
+	do {                                                                            \
+		(ptr) = kernel::memory::alloc(size, flags);                               \
+		if ((ptr) == nullptr) {                                                     \
+			LOG_ERROR("Memory allocation failed: %s (size=%zu)", #ptr, (size_t)(size)); \
+			return nullptr;                                                        \
 		}                                                                           \
 	} while (0)

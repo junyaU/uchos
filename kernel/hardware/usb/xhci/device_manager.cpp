@@ -13,15 +13,10 @@ void device_manager::initialize(size_t max_slots)
 {
 	max_slots_ = max_slots;
 
-	devices_ =
-			// NOLINTNEXTLINE(bugprone-sizeof-expression)
-			reinterpret_cast<device**>(
-					kernel::memory::alloc(sizeof(device*) * (max_slots_ + 1),
-										  kernel::memory::ALLOC_UNINITIALIZED));
-	if (devices_ == nullptr) {
-		LOG_ERROR("failed to allocate memory for devices");
-		return;
-	}
+	// NOLINTNEXTLINE(bugprone-sizeof-expression)
+	void* devices_ptr;
+	ALLOC_OR_RETURN(devices_ptr, sizeof(device*) * (max_slots_ + 1), kernel::memory::ALLOC_UNINITIALIZED);
+	devices_ = reinterpret_cast<device**>(devices_ptr);
 
 	contexts_ = reinterpret_cast<device_context**>(
 			// NOLINTNEXTLINE(bugprone-sizeof-expression)
@@ -95,8 +90,9 @@ void device_manager::allocate_device(uint8_t slot_id,
 		return;
 	}
 
-	devices_[slot_id] = reinterpret_cast<device*>(kernel::memory::alloc(
-			sizeof(device), kernel::memory::ALLOC_UNINITIALIZED, 64));
+	void* device_ptr;
+	ALLOC_OR_RETURN(device_ptr, sizeof(device), kernel::memory::ALLOC_UNINITIALIZED);
+	devices_[slot_id] = reinterpret_cast<device*>(device_ptr);
 	new (devices_[slot_id]) device(slot_id, dbreg);
 }
 

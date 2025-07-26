@@ -123,8 +123,8 @@ void handle_get_file_info(const message& m)
 		}
 
 		if (entry_name_is_equal(ROOT_DIR[i], name)) {
-			void* buf =
-			    kernel::memory::alloc(sizeof(directory_entry), kernel::memory::ALLOC_ZEROED);
+			void* buf;
+			ALLOC_OR_RETURN(buf, sizeof(directory_entry), kernel::memory::ALLOC_ZEROED);
 			memcpy(buf, &ROOT_DIR[i], sizeof(directory_entry));
 			sm.data.fs.buf = buf;
 			break;
@@ -325,13 +325,8 @@ void handle_fs_write(const message& m)
 		return;
 	}
 
-	void* cluster_buffer = kernel::memory::alloc(BYTES_PER_CLUSTER, kernel::memory::ALLOC_ZEROED);
-	if (cluster_buffer == nullptr) {
-		LOG_ERROR("failed to allocate cluster buffer");
-		reply.data.fs.len = 0;
-		kernel::task::send_message(m.sender, reply);
-		return;
-	}
+	void* cluster_buffer;
+	ALLOC_OR_RETURN(cluster_buffer, BYTES_PER_CLUSTER, kernel::memory::ALLOC_ZEROED);
 
 	// Handle partial cluster writes
 	if (offset_in_cluster != 0 || write_len < BYTES_PER_CLUSTER) {

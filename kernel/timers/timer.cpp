@@ -129,11 +129,8 @@ void initialize()
 {
 	LOG_INFO("Initializing logical timer...");
 
-	void* addr = kernel::memory::alloc(sizeof(kernel_timer), kernel::memory::ALLOC_ZEROED);
-	if (addr == nullptr) {
-		LOG_ERROR("Failed to allocate memory for kernel timer.");
-		return;
-	}
+	void* addr;
+	ALLOC_OR_RETURN(addr, sizeof(kernel_timer), kernel::memory::ALLOC_ZEROED);
 
 	ktimer = new (addr) kernel_timer;
 

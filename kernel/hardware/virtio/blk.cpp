@@ -19,11 +19,9 @@ void handle_read_request(const message& m)
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len;
 
-	char* buf = static_cast<char*>(kernel::memory::alloc(len, kernel::memory::ALLOC_ZEROED));
-	if (buf == nullptr) {
-		LOG_ERROR("failed to allocate buffer");
-		return;
-	}
+	void* buf_ptr;
+	ALLOC_OR_RETURN(buf_ptr, len, kernel::memory::ALLOC_ZEROED);
+	char* buf = static_cast<char*>(buf_ptr);
 
 	if (IS_ERR(kernel::hw::virtio::read_from_blk_device(buf, sector, len))) {
 		LOG_ERROR("failed to read from blk device");
@@ -76,11 +74,9 @@ error_t write_to_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 {
 	ASSERT_OK(validate_length(len));
 
-	virtio_blk_req* req = (virtio_blk_req*)kernel::memory::alloc(sizeof(virtio_blk_req),
-	                                                             kernel::memory::ALLOC_ZEROED);
-	if (req == nullptr) {
-		return ERR_NO_MEMORY;
-	}
+	void* req_ptr;
+	ALLOC_OR_RETURN_ERROR(req_ptr, sizeof(virtio_blk_req), kernel::memory::ALLOC_ZEROED);
+	virtio_blk_req* req = (virtio_blk_req*)req_ptr;
 
 	req->type = VIRTIO_BLK_T_OUT;
 	req->sector = sector;
@@ -120,11 +116,9 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 {
 	ASSERT_OK(validate_length(len));
 
-	virtio_blk_req* req = (virtio_blk_req*)kernel::memory::alloc(sizeof(virtio_blk_req),
-	                                                             kernel::memory::ALLOC_ZEROED);
-	if (req == nullptr) {
-		return ERR_NO_MEMORY;
-	}
+	void* req_ptr;
+	ALLOC_OR_RETURN_ERROR(req_ptr, sizeof(virtio_blk_req), kernel::memory::ALLOC_ZEROED);
+	virtio_blk_req* req = (virtio_blk_req*)req_ptr;
 
 	req->type = VIRTIO_BLK_T_IN;
 	req->sector = sector;

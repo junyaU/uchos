@@ -89,20 +89,15 @@ error_t setup_virtqueue(virtio_pci_device& virtio_dev)
 	auto device_ring_offset = align_up(driver_ring_offset + driver_ring_size, 4);
 
 	const size_t total_size = device_ring_offset + device_ring_size;
-	virtio_dev.queues = reinterpret_cast<virtio_virtqueue*>(
-			kernel::memory::alloc(sizeof(virtio_virtqueue) * virtio_dev.common_cfg->num_queues,
-					kernel::memory::ALLOC_ZEROED));
-	if (virtio_dev.queues == nullptr) {
-		return ERR_NO_MEMORY;
-	}
+	void* queues_ptr;
+	ALLOC_OR_RETURN_ERROR(queues_ptr, sizeof(virtio_virtqueue) * virtio_dev.common_cfg->num_queues, kernel::memory::ALLOC_ZEROED);
+	virtio_dev.queues = reinterpret_cast<virtio_virtqueue*>(queues_ptr);
 
 	for (int i = 0; i < virtio_dev.common_cfg->num_queues; ++i) {
 		virtio_dev.common_cfg->queue_select = i;
 
-		void* addr = kernel::memory::alloc(total_size, kernel::memory::ALLOC_ZEROED, kernel::memory::PAGE_SIZE);
-		if (addr == nullptr) {
-			return ERR_NO_MEMORY;
-		}
+		void* addr;
+		ALLOC_OR_RETURN_ERROR(addr, total_size, kernel::memory::ALLOC_ZEROED);
 
 		const uint64_t desc_addr = reinterpret_cast<uint64_t>(addr);
 		const uint64_t driver_ring_addr = desc_addr + driver_ring_offset;

@@ -353,12 +353,8 @@ void send_file_data(fs_id_t id,
 	m.data.fs.request_id = id;
 
 	if (for_user) {
-		void* user_buf =
-		    kernel::memory::alloc(size, kernel::memory::ALLOC_ZEROED, memory::PAGE_SIZE);
-		if (user_buf == nullptr) {
-			LOG_ERROR("failed to allocate memory");
-			return;
-		}
+		void* user_buf;
+		ALLOC_OR_RETURN(user_buf, size, kernel::memory::ALLOC_ZEROED);
 
 		memcpy(user_buf, buf, size);
 		m.tool_desc.addr = user_buf;

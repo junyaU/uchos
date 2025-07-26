@@ -200,3 +200,73 @@ void register_slab_tests()
 	test_register("slab_zeroed_allocation", test_slab_zeroed_allocation);
 	test_register("slab_error_handling", test_slab_error_handling);
 }
+
+static void helper_alloc_or_return_void()
+{
+	void* ptr;
+	ALLOC_OR_RETURN(ptr, 64, kernel::memory::ALLOC_UNINITIALIZED);
+	ASSERT_NOT_NULL(ptr);
+	kernel::memory::free(ptr);
+}
+
+void test_alloc_or_return_void()
+{
+	helper_alloc_or_return_void();
+}
+
+static int helper_alloc_or_return_error()
+{
+	void* ptr;
+	ALLOC_OR_RETURN_ERROR(ptr, 64, kernel::memory::ALLOC_UNINITIALIZED);
+	if (ptr == nullptr) {
+		return -1;
+	}
+	kernel::memory::free(ptr);
+	return 0;
+}
+
+void test_alloc_or_return_error()
+{
+	int result = helper_alloc_or_return_error();
+	ASSERT_EQ(result, 0);
+}
+
+static void* helper_alloc_or_return_null()
+{
+	void* ptr;
+	ALLOC_OR_RETURN_NULL(ptr, 64, kernel::memory::ALLOC_UNINITIALIZED);
+	return ptr;
+}
+
+void test_alloc_or_return_null()
+{
+	void* result = helper_alloc_or_return_null();
+	ASSERT_NOT_NULL(result);
+	kernel::memory::free(result);
+}
+
+void test_macro_logging()
+{
+	auto test_log_function = []() -> void {
+		void* ptr;
+		ALLOC_OR_RETURN(ptr, 128, kernel::memory::ALLOC_ZEROED);
+		ASSERT_NOT_NULL(ptr);
+		
+		uint8_t* bytes = static_cast<uint8_t*>(ptr);
+		for (size_t i = 0; i < 128; ++i) {
+			ASSERT_EQ(bytes[i], 0);
+		}
+		
+		kernel::memory::free(ptr);
+	};
+	
+	test_log_function();
+}
+
+void register_alloc_macro_tests()
+{
+	test_register("test_alloc_or_return_void", test_alloc_or_return_void);
+	test_register("test_alloc_or_return_error", test_alloc_or_return_error);
+	test_register("test_alloc_or_return_null", test_alloc_or_return_null);
+	test_register("test_macro_logging", test_macro_logging);
+}
