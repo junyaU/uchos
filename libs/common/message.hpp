@@ -43,7 +43,7 @@ enum class MsgType : int32_t {
 
 constexpr int32_t TOTAL_MESSAGE_TYPES = static_cast<int32_t>(MsgType::MAX_MESSAGE_TYPE);
 
-enum class timeout_action_t : uint8_t {
+enum class TimeoutAction : uint8_t {
 	TERMINAL_CURSOR_BLINK,
 	SWITCH_TASK,
 };
@@ -72,7 +72,7 @@ struct Message {
 		} key_input;
 
 		struct {
-			timeout_action_t action;
+			TimeoutAction action;
 		} timer;
 
 		struct {

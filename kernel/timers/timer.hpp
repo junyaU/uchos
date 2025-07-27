@@ -27,7 +27,7 @@ struct TimerEvent {
 	uint64_t timeout;	 ///< Absolute tick count when timer expires
 	unsigned int period; ///< Period in milliseconds for periodic timers
 	int periodical; ///< Flag indicating if timer is periodic (1) or one-shot (0)
-	timeout_action_t action; ///< Action to perform when timer expires
+	TimeoutAction action; ///< Action to perform when timer expires
 };
 
 /**
@@ -101,7 +101,7 @@ public:
 	 * @return uint64_t Timer event ID for later removal
 	 */
 	uint64_t add_timer_event(unsigned long millisec,
-							 timeout_action_t action,
+							 TimeoutAction action,
 							 ProcessId task_id);
 
 	/**
@@ -114,7 +114,7 @@ public:
 	 * @return uint64_t Timer event ID for later removal
 	 */
 	uint64_t add_periodic_timer_event(unsigned long millisec,
-									  timeout_action_t action,
+									  TimeoutAction action,
 									  ProcessId task_id,
 									  uint64_t id = 0);
 

@@ -100,7 +100,7 @@ bool validate_change_dir_request(const Message& m, kernel::task::Task*& task)
 	return true;
 }
 
-void update_DirectoryEntry(kernel::task::Task* t, DirectoryEntry* new_dir)
+void update_directory_entry(kernel::task::Task* t, DirectoryEntry* new_dir)
 {
 	if (t->fs_path.current_dir != nullptr && t->fs_path.current_dir != ROOT_DIR) {
 		kernel::memory::free(t->fs_path.current_dir);
@@ -135,7 +135,7 @@ void handle_virtio_response(const Message& m)
 		return;
 	}
 
-	update_DirectoryEntry(task, reinterpret_cast<DirectoryEntry*>(m.data.blk_io.buf));
+	update_directory_entry(task, reinterpret_cast<DirectoryEntry*>(m.data.blk_io.buf));
 	finalize_directory_change(m, task);
 }
 
@@ -321,8 +321,8 @@ void handle_get_directory_contents(const Message& m)
 		    *reinterpret_cast<DirectoryEntry*>(&entries[i * sizeof(DirectoryEntry)]), s->name);
 		s->size = current_dir[i].file_size;
 		s->type = current_dir[i].attribute == entry_attribute::DIRECTORY
-		              ? stat_type_t::DIRECTORY
-		              : stat_type_t::REGULAR_FILE;
+		              ? StatType::DIRECTORY
+		              : StatType::REGULAR_FILE;
 	}
 
 	Message sm = { .type = MsgType::GET_DIRECTORY_CONTENTS, .sender = process_ids::FS_FAT32 };

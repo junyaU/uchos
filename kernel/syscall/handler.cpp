@@ -140,7 +140,7 @@ error_t sys_time(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 {
 	const uint64_t ms = arg1;
 	const int is_periodic = arg2;
-	const timeout_action_t action = static_cast<timeout_action_t>(arg3);
+	const TimeoutAction action = static_cast<TimeoutAction>(arg3);
 	const ProcessId task_id = ProcessId::from_raw(arg4);
 
 	if (is_periodic == 1) {

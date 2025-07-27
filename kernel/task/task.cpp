@@ -34,7 +34,7 @@ std::array<Task*, MAX_TASKS> tasks;
 Task* CURRENT_TASK = nullptr;
 Task* IDLE_TASK = nullptr;
 
-const InitialTaskInfo initial_tasks[] = {
+const InitialTaskInfo INITIAL_TASKS[] = {
 	{ "main", 0, false, true },
 	{ "idle", reinterpret_cast<uint64_t>(&kernel::task::idle_service), true, true },
 	{ "usb_handler", reinterpret_cast<uint64_t>(&kernel::task::usb_handler_service), true, true },
@@ -275,7 +275,7 @@ void initialize()
 	tasks = std::array<Task*, MAX_TASKS>();
 	list_init(&run_queue);
 
-	for (const auto& t_info : initial_tasks) {
+	for (const auto& t_info : INITIAL_TASKS) {
 		Task* new_task =
 		    create_task(t_info.name, t_info.addr, t_info.setup_context, t_info.is_initilized);
 		if (new_task != nullptr) {

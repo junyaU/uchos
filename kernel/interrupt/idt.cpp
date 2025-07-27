@@ -13,7 +13,7 @@ namespace kernel::interrupt {
 
 std::array<IdtEntry, 256> idt;
 
-void set_IdtEntry(IdtEntry& entry,
+void set_idt_entry(IdtEntry& entry,
 				   uint64_t offset,
 				   TypeAttr attr,
 				   uint16_t segment_selector)
@@ -38,7 +38,7 @@ void initialize_interrupt()
 	LOG_INFO("Initializing interrupt...");
 
 	auto set_entry = [](int irq, auto handler, uint16_t ist = 0) {
-		set_IdtEntry(idt[irq], reinterpret_cast<uint64_t>(handler),
+		set_idt_entry(idt[irq], reinterpret_cast<uint64_t>(handler),
 					  TypeAttr{ ist, gate_type::kInterruptGate, 0, 1 }, kernel::memory::KERNEL_CS);
 	};
 

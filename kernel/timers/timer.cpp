@@ -22,7 +22,7 @@ uint64_t KernelTimer::calculate_timeout_ticks(unsigned long millisec) const
 }
 
 uint64_t KernelTimer::add_timer_event(unsigned long millisec,
-									   timeout_action_t action,
+									   TimeoutAction action,
 									   ProcessId task_id)
 {
 	auto e = TimerEvent{
@@ -39,7 +39,7 @@ uint64_t KernelTimer::add_timer_event(unsigned long millisec,
 }
 
 uint64_t KernelTimer::add_periodic_timer_event(unsigned long millisec,
-												timeout_action_t action,
+												TimeoutAction action,
 												ProcessId task_id,
 												uint64_t id)
 {
@@ -72,7 +72,7 @@ uint64_t KernelTimer::add_switch_task_event(unsigned long millisec)
 		.timeout = calculate_timeout_ticks(millisec),
 		.period = 0,
 		.periodical = 0,
-		.action = timeout_action_t::SWITCH_TASK,
+		.action = TimeoutAction::SWITCH_TASK,
 	};
 	events_.push(e);
 
@@ -100,7 +100,7 @@ bool KernelTimer::increment_tick()
 		auto e = events_.top();
 		events_.pop();
 
-		if (e.action == timeout_action_t::SWITCH_TASK) {
+		if (e.action == TimeoutAction::SWITCH_TASK) {
 			need_switch_task = true;
 
 			e.timeout = calculate_timeout_ticks(SWITCH_TASK_MILLISEC);
