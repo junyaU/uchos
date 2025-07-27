@@ -56,6 +56,7 @@ Checks: '
   readability-duplicate-include,
   readability-else-after-return,
   readability-uppercase-literal-suffix,
+  readability-identifier-naming,
   -readability-function-cognitive-complexity,
   -readability-identifier-length,
   -readability-isolate-declaration,
@@ -83,6 +84,16 @@ CheckOptions:
   - key: readability-identifier-naming.LocalConstantCase
     value: lower_case
   - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.TypedefCase
+    value: CamelCase
+  - key: readability-identifier-naming.PrivateMemberSuffix
+    value: _
+  - key: readability-identifier-naming.EnumConstantCase
     value: UPPER_CASE
 
   # パフォーマンスチェックの調整
