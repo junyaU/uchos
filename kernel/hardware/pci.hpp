@@ -22,7 +22,7 @@ namespace kernel::hw::pci
 const uint16_t CONFIG_ADDRESS_PORT = 0x0cf8;
 const uint16_t CONFIG_DATA_PORT = 0x0cfc;
 
-struct class_code {
+struct ClassCode {
 	uint8_t base, sub, interface;
 
 	bool match(uint8_t b) const { return b == base; }
@@ -33,9 +33,9 @@ struct class_code {
 	}
 };
 
-struct device {
+struct Device {
 	uint8_t bus, device, function, header_type;
-	class_code class_code;
+	ClassCode class_code;
 	uint16_t vendor_id;
 	uint16_t device_id;
 
@@ -51,13 +51,13 @@ struct device {
 	}
 };
 
-uint32_t read_conf_reg(const device& dev, uint8_t reg_addr);
+uint32_t read_conf_reg(const Device& dev, uint8_t reg_addr);
 
-uint64_t read_base_address_register(const device& dev, unsigned int index);
+uint64_t read_base_address_register(const Device& dev, unsigned int index);
 
-uint8_t get_capability_pointer(const device& dev);
+uint8_t get_capability_pointer(const Device& dev);
 
-inline std::array<device, 32> devices;
+inline std::array<Device, 32> devices;
 inline int num_devices;
 
 constexpr uint8_t BAR_0 = 0b000;
@@ -77,9 +77,9 @@ union capability_header {
 	} __attribute__((packed)) bits;
 } __attribute__((packed));
 
-capability_header read_capability_header(const device& dev, uint8_t addr);
+capability_header read_capability_header(const Device& dev, uint8_t addr);
 
-struct msi_capability {
+struct MsiCapability {
 	union {
 		uint32_t data;
 
@@ -102,7 +102,7 @@ struct msi_capability {
 	uint32_t pending_bits;
 } __attribute__((packed));
 
-struct msi_x_capability {
+struct MsiXCapability {
 	union {
 		uint32_t data;
 
@@ -126,18 +126,18 @@ struct msi_x_capability {
 	} table, pba;
 };
 
-struct msix_table_entry {
-	memory_mapped_register<default_bitmap<uint32_t>> msg_addr;
-	memory_mapped_register<default_bitmap<uint32_t>> msg_upper_addr;
-	memory_mapped_register<default_bitmap<uint32_t>> msg_data;
-	memory_mapped_register<default_bitmap<uint32_t>> vector_control;
+struct MsixTableEntry {
+	MemoryMappedRegister<DefaultBitmap<uint32_t>> msg_addr;
+	MemoryMappedRegister<DefaultBitmap<uint32_t>> msg_upper_addr;
+	MemoryMappedRegister<DefaultBitmap<uint32_t>> msg_data;
+	MemoryMappedRegister<DefaultBitmap<uint32_t>> vector_control;
 } __attribute__((packed));
 
 constexpr uint8_t CAP_MSI = 0x05;
 constexpr uint8_t CAP_MSIX = 0x11;
 constexpr uint8_t CAP_VIRTIO = 0x09;
 
-enum class msi_delivery_mode {
+enum class MsiDeliveryMode {
 	FIXED = 0b000,
 	LOWPRI = 0b001,
 	SMI = 0b010,
@@ -146,15 +146,15 @@ enum class msi_delivery_mode {
 	EXTINT = 0b111,
 };
 
-enum class msi_trigger_mode {
+enum class MsiTriggerMode {
 	EDGE = 0,
 	LEVEL = 1,
 };
 
-void configure_msi_fixed_destination(const device& dev,
+void configure_msi_fixed_destination(const Device& dev,
 									 uint8_t apic_id,
-									 msi_trigger_mode trigger_mode,
-									 msi_delivery_mode delivery_mode,
+									 MsiTriggerMode trigger_mode,
+									 MsiDeliveryMode delivery_mode,
 									 uint8_t vector,
 									 unsigned int num_vector_exponent);
 

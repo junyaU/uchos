@@ -53,7 +53,7 @@ std::vector<char*> parse_path(const char* path)
 	return result;
 }
 
-void read_dir_entry_name_raw(const directory_entry& entry, char* dest)
+void read_dir_entry_name_raw(const DirectoryEntry& entry, char* dest)
 {
 	char extension[5] = ".";
 
@@ -81,7 +81,7 @@ void read_dir_entry_name_raw(const directory_entry& entry, char* dest)
 	}
 }
 
-void read_dir_entry_name(const directory_entry& entry, char* dest)
+void read_dir_entry_name(const DirectoryEntry& entry, char* dest)
 {
 	read_dir_entry_name_raw(entry, dest);
 
@@ -93,7 +93,7 @@ void read_dir_entry_name(const directory_entry& entry, char* dest)
 	}
 }
 
-bool entry_name_is_equal(const directory_entry& entry, const char* name)
+bool entry_name_is_equal(const DirectoryEntry& entry, const char* name)
 {
 	char entry_name[13];
 	read_dir_entry_name_raw(entry, entry_name);
@@ -117,7 +117,7 @@ cluster_t next_cluster(cluster_t cluster_id)
 	return next;
 }
 
-directory_entry* find_dir_entry(directory_entry* parent_dir, const char* name)
+DirectoryEntry* find_dir_entry(DirectoryEntry* parent_dir, const char* name)
 {
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
 		if (parent_dir[i].name[0] == 0) {
@@ -132,7 +132,7 @@ directory_entry* find_dir_entry(directory_entry* parent_dir, const char* name)
 	return nullptr;
 }
 
-directory_entry* find_empty_dir_entry()
+DirectoryEntry* find_empty_dir_entry()
 {
 	if (ROOT_DIR == nullptr) {
 		return nullptr;
@@ -242,11 +242,11 @@ void free_cluster_chain(cluster_t start_cluster, cluster_t keep_until_cluster)
 
 void send_read_req_to_blk_device(unsigned int sector,
                                  size_t len,
-                                 msg_t dst_type,
+                                 MsgType dst_type,
                                  fs_id_t request_id,
                                  size_t sequence)
 {
-	message m = { .type = msg_t::IPC_READ_FROM_BLK_DEVICE, .sender = process_ids::FS_FAT32 };
+	Message m = { .type = MsgType::IPC_READ_FROM_BLK_DEVICE, .sender = process_ids::FS_FAT32 };
 	m.data.blk_io.sector = sector;
 	m.data.blk_io.len = len;
 	m.data.blk_io.dst_type = dst_type;
@@ -259,11 +259,11 @@ void send_read_req_to_blk_device(unsigned int sector,
 void send_write_req_to_blk_device(void* buffer,
                                   unsigned int sector,
                                   size_t len,
-                                  msg_t dst_type,
+                                  MsgType dst_type,
                                   fs_id_t request_id,
                                   size_t sequence)
 {
-	message m = { .type = msg_t::IPC_WRITE_TO_BLK_DEVICE, .sender = process_ids::FS_FAT32 };
+	Message m = { .type = MsgType::IPC_WRITE_TO_BLK_DEVICE, .sender = process_ids::FS_FAT32 };
 	m.data.blk_io.buf = buffer;
 	m.data.blk_io.sector = sector;
 	m.data.blk_io.len = len;
@@ -287,7 +287,7 @@ void write_fat_sectors_fallback(unsigned int base_sector, size_t start_sector, s
 		void* fat_sector = reinterpret_cast<uint8_t*>(FAT_TABLE) + (i * bytes_per_sector);
 		memcpy(sector_buffer, fat_sector, bytes_per_sector);
 		send_write_req_to_blk_device(
-		    sector_buffer, base_sector + i, bytes_per_sector, msg_t::FS_WRITE, 0, i);
+		    sector_buffer, base_sector + i, bytes_per_sector, MsgType::FS_WRITE, 0, i);
 	}
 }
 
@@ -318,7 +318,7 @@ void write_fat_sectors_chunked(unsigned int base_sector, size_t sectors_per_fat)
 		send_write_req_to_blk_device(chunk_buffer,
 		                             base_sector + sector_offset,
 		                             chunk_size,
-		                             msg_t::FS_WRITE,
+		                             MsgType::FS_WRITE,
 		                             0,
 		                             sector_offset);
 
@@ -346,10 +346,10 @@ void send_file_data(fs_id_t id,
                     void* buf,
                     size_t size,
                     ProcessId requester,
-                    msg_t type,
+                    MsgType type,
                     bool for_user)
 {
-	message m = { .type = type, .sender = process_ids::FS_FAT32 };
+	Message m = { .type = type, .sender = process_ids::FS_FAT32 };
 	m.data.fs.request_id = id;
 
 	if (for_user) {

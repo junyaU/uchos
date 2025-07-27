@@ -12,7 +12,7 @@
 using kernel::task::create_task;
 using kernel::task::CURRENT_TASK;
 using kernel::task::MAX_FDS_PER_PROCESS;
-using kernel::task::task;
+using kernel::task::Task;
 
 // Forward declarations for syscalls
 namespace kernel::syscall
@@ -24,7 +24,7 @@ extern ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3);
 void test_fd_table_init()
 {
 	// Create a test task
-	task* t = create_task("fd_test", 0, true, true);
+	Task* t = create_task("fd_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
 	// Check standard file descriptors are initialized
@@ -46,10 +46,10 @@ void test_fd_table_init()
 void test_write_to_stdout()
 {
 	// Create a test task and set it as current
-	task* t = create_task("write_test", 0, true, true);
+	Task* t = create_task("write_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	task* prev_task = CURRENT_TASK;
+	Task* prev_task = CURRENT_TASK;
 	CURRENT_TASK = t;
 
 	// Test writing to stdout
@@ -68,10 +68,10 @@ void test_write_to_stdout()
 void test_write_to_stderr()
 {
 	// Create a test task and set it as current
-	task* t = create_task("stderr_test", 0, true, true);
+	Task* t = create_task("stderr_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	task* prev_task = CURRENT_TASK;
+	Task* prev_task = CURRENT_TASK;
 	CURRENT_TASK = t;
 
 	// Test writing to stderr
@@ -90,10 +90,10 @@ void test_write_to_stderr()
 void test_read_from_stdin()
 {
 	// Create a test task and set it as current
-	task* t = create_task("read_test", 0, true, true);
+	Task* t = create_task("read_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	task* prev_task = CURRENT_TASK;
+	Task* prev_task = CURRENT_TASK;
 	CURRENT_TASK = t;
 
 	// Test reading from stdin (currently returns 0)
@@ -111,10 +111,10 @@ void test_read_from_stdin()
 void test_invalid_fd()
 {
 	// Create a test task and set it as current
-	task* t = create_task("invalid_fd_test", 0, true, true);
+	Task* t = create_task("invalid_fd_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	task* prev_task = CURRENT_TASK;
+	Task* prev_task = CURRENT_TASK;
 	CURRENT_TASK = t;
 
 	// Test invalid file descriptor (negative)
@@ -140,7 +140,7 @@ void test_invalid_fd()
 void test_fd_inheritance()
 {
 	// Create parent task
-	task* parent = create_task("parent_task", 0, true, true);
+	Task* parent = create_task("parent_task", 0, true, true);
 	ASSERT_NOT_NULL(parent);
 
 	// Modify parent's FD table - allocate a file descriptor
@@ -149,12 +149,12 @@ void test_fd_inheritance()
 	ASSERT_GT(fd, -1);
 
 	// Set parent as current task for copy_task
-	task* prev_task = CURRENT_TASK;
+	Task* prev_task = CURRENT_TASK;
 	CURRENT_TASK = parent;
 
 	// Create child task (this would normally be done by fork)
-	kernel::task::context dummy_ctx = {};
-	task* child = kernel::task::copy_task(parent, &dummy_ctx);
+	kernel::task::Context dummy_ctx = {};
+	Task* child = kernel::task::copy_task(parent, &dummy_ctx);
 	ASSERT_NOT_NULL(child);
 
 	// Check that child inherited parent's FD table
@@ -174,10 +174,10 @@ void test_fd_inheritance()
 void test_stdout_redirection()
 {
 	// Create a test task and set it as current
-	task* t = create_task("redirect_test", 0, true, true);
+	Task* t = create_task("redirect_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	task* prev_task = CURRENT_TASK;
+	Task* prev_task = CURRENT_TASK;
 	CURRENT_TASK = t;
 
 	// Allocate a file descriptor to redirect to
@@ -215,10 +215,10 @@ void test_stdout_redirection()
 void test_stderr_redirection()
 {
 	// Create a test task and set it as current
-	task* t = create_task("stderr_redirect_test", 0, true, true);
+	Task* t = create_task("stderr_redirect_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	task* prev_task = CURRENT_TASK;
+	Task* prev_task = CURRENT_TASK;
 	CURRENT_TASK = t;
 
 	// Allocate a file descriptor to redirect to
@@ -247,10 +247,10 @@ void test_stderr_redirection()
 void test_large_write_redirection()
 {
 	// Create a test task and set it as current
-	task* t = create_task("large_redirect_test", 0, true, true);
+	Task* t = create_task("large_redirect_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	task* prev_task = CURRENT_TASK;
+	Task* prev_task = CURRENT_TASK;
 	CURRENT_TASK = t;
 
 	// Allocate a file descriptor to redirect to

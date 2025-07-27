@@ -17,20 +17,20 @@ void test_boot_allocator_basic()
 
 void test_boot_allocator_multi_page()
 {
-	constexpr size_t NUM_PAGES = 3;
-	void* multi_page = kernel::memory::boot_allocator->allocate(kernel::memory::PAGE_SIZE * NUM_PAGES);
+	constexpr size_t num_pages = 3;
+	void* multi_page = kernel::memory::boot_allocator->allocate(kernel::memory::PAGE_SIZE * num_pages);
 	ASSERT_NOT_NULL(multi_page);
 
 	// check if all pages are marked as allocated
 	auto page_index = reinterpret_cast<uintptr_t>(multi_page) / kernel::memory::PAGE_SIZE;
-	for (size_t i = 0; i < NUM_PAGES; i++) {
+	for (size_t i = 0; i < num_pages; i++) {
 		ASSERT_TRUE(kernel::memory::boot_allocator->is_bit_set(page_index + i));
 	}
 
-	kernel::memory::boot_allocator->free(multi_page, kernel::memory::PAGE_SIZE * NUM_PAGES);
+	kernel::memory::boot_allocator->free(multi_page, kernel::memory::PAGE_SIZE * num_pages);
 
 	// check if all pages are marked as free
-	for (size_t i = 0; i < NUM_PAGES; i++) {
+	for (size_t i = 0; i < num_pages; i++) {
 		ASSERT_FALSE(kernel::memory::boot_allocator->is_bit_set(page_index + i));
 	}
 }
@@ -86,14 +86,14 @@ void test_buddy_system_basic()
 void test_buddy_system_multi_page()
 {
 	// Test allocation of multiple pages
-	constexpr size_t NUM_PAGES = 3;
-	void* multi_page = kernel::memory::memory_manager->allocate(kernel::memory::PAGE_SIZE * NUM_PAGES);
+	constexpr size_t num_pages = 3;
+	void* multi_page = kernel::memory::memory_manager->allocate(kernel::memory::PAGE_SIZE * num_pages);
 	ASSERT_NOT_NULL(multi_page);
 
 	// Test alignment for larger allocations
 	ASSERT_EQ(reinterpret_cast<uintptr_t>(multi_page) % kernel::memory::PAGE_SIZE, 0);
 
-	kernel::memory::memory_manager->free(multi_page, kernel::memory::PAGE_SIZE * NUM_PAGES);
+	kernel::memory::memory_manager->free(multi_page, kernel::memory::PAGE_SIZE * num_pages);
 }
 
 void test_buddy_system_split_and_merge()
@@ -142,8 +142,8 @@ void test_slab_basic()
 void test_slab_cache_creation()
 {
 	// Test cache creation with specific size
-	constexpr size_t OBJ_SIZE = 128;
-	auto& cache = kernel::memory::m_cache_create("test-cache", OBJ_SIZE);
+	constexpr size_t obj_size = 128;
+	auto& cache = kernel::memory::m_cache_create("test-cache", obj_size);
 
 	// Allocate from the cache
 	void* obj = cache.alloc();
@@ -152,29 +152,29 @@ void test_slab_cache_creation()
 	// Get the cache by name and verify it exists
 	auto* found_cache = kernel::memory::get_cache_in_chain(const_cast<char*>("test-cache"));
 	ASSERT_NOT_NULL(found_cache);
-	ASSERT_EQ(found_cache->object_size(), OBJ_SIZE);
+	ASSERT_EQ(found_cache->object_size(), obj_size);
 }
 
 void test_slab_aligned_allocation()
 {
 	// Test allocation with alignment
-	constexpr size_t ALIGN = 16;
-	void* ptr = kernel::memory::alloc(64, kernel::memory::ALLOC_UNINITIALIZED, ALIGN);
+	constexpr size_t align = 16;
+	void* ptr = kernel::memory::alloc(64, kernel::memory::ALLOC_UNINITIALIZED, align);
 	ASSERT_NOT_NULL(ptr);
-	ASSERT_EQ(reinterpret_cast<uintptr_t>(ptr) % ALIGN, 0);
+	ASSERT_EQ(reinterpret_cast<uintptr_t>(ptr) % align, 0);
 	kernel::memory::free(ptr);
 }
 
 void test_slab_zeroed_allocation()
 {
 	// Test zero-initialized allocation
-	constexpr size_t SIZE = 64;
-	void* ptr = kernel::memory::alloc(SIZE, kernel::memory::ALLOC_ZEROED);
+	constexpr size_t size = 64;
+	void* ptr = kernel::memory::alloc(size, kernel::memory::ALLOC_ZEROED);
 	ASSERT_NOT_NULL(ptr);
 
 	// Verify memory is zeroed
 	uint8_t* bytes = static_cast<uint8_t*>(ptr);
-	for (size_t i = 0; i < SIZE; ++i) {
+	for (size_t i = 0; i < size; ++i) {
 		ASSERT_EQ(bytes[i], 0);
 	}
 

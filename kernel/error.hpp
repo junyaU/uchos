@@ -122,10 +122,10 @@ inline const char* error_to_string(error_t err)
  * }
  */
 template<typename T>
-class result {
+class Result {
 public:
-	result(T value) : value_(value), error_(OK) {}
-	result(error_t error) : value_(), error_(error) {}
+	Result(T value) : value_(value), error_(OK) {}
+	Result(error_t error) : value_(), error_(error) {}
 	
 	bool is_ok() const { return error_ == OK; }
 	bool is_error() const { return error_ != OK; }
@@ -155,10 +155,10 @@ private:
  * }
  */
 template<typename T>
-class optional {
+class Optional {
 public:
-	optional() : has_value_(false), value_() {}
-	optional(T value) : has_value_(true), value_(value) {}
+	Optional() : has_value_(false), value_() {}
+	Optional(T value) : has_value_(true), value_(value) {}
 	
 	bool has_value() const { return has_value_; }
 	T value() const { return value_; }
@@ -200,18 +200,18 @@ inline error_t try_with_cleanup(T&& func, std::function<void()> cleanup)
  *     .on_error([](error_t err) { LOG_ERROR("Failed: %s", error_to_string(err)); })
  *     .result();
  */
-class error_chain {
+class ErrorChain {
 public:
-	error_chain() : error_(OK) {}
+	ErrorChain() : error_(OK) {}
 	
-	error_chain& then(std::function<error_t()> func) {
+	ErrorChain& then(std::function<error_t()> func) {
 		if (is_ok(error_)) {
 			error_ = func();
 		}
 		return *this;
 	}
 	
-	error_chain& on_error(std::function<void(error_t)> handler) {
+	ErrorChain& on_error(std::function<void(error_t)> handler) {
 		if (is_error(error_)) {
 			handler(error_);
 		}

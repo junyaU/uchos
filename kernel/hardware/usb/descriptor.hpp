@@ -17,7 +17,7 @@
 
 namespace kernel::hw::usb
 {
-struct device_descriptor {
+struct DeviceDescriptor {
 	static const uint8_t TYPE = 1;
 
 	uint8_t length;
@@ -36,7 +36,7 @@ struct device_descriptor {
 	uint8_t num_configurations;
 } __attribute__((packed));
 
-struct configuration_descriptor {
+struct ConfigurationDescriptor {
 	static const uint8_t TYPE = 2;
 
 	uint8_t length;
@@ -49,7 +49,7 @@ struct configuration_descriptor {
 	uint8_t max_power;
 } __attribute__((packed));
 
-struct interface_descriptor {
+struct InterfaceDescriptor {
 	static const uint8_t TYPE = 4;
 
 	uint8_t length;
@@ -63,7 +63,7 @@ struct interface_descriptor {
 	uint8_t interface_id;
 } __attribute__((packed));
 
-struct endpoint_descriptor {
+struct EndpointDescriptor {
 	static const uint8_t TYPE = 5;
 
 	uint8_t length;
@@ -94,7 +94,7 @@ struct endpoint_descriptor {
 	uint8_t interval;
 } __attribute__((packed));
 
-struct hid_descriptor {
+struct HidDescriptor {
 	static const uint8_t TYPE = 33;
 
 	uint8_t length;
@@ -103,20 +103,20 @@ struct hid_descriptor {
 	uint8_t country_code;
 	uint8_t num_descriptors;
 
-	struct class_descriptor {
+	struct ClassDescriptor {
 		uint8_t type;
 		uint16_t length;
 	} __attribute__((packed));
 
-	class_descriptor* get_class_descriptor(size_t index) const
+	ClassDescriptor* get_class_descriptor(size_t index) const
 	{
 		if (index >= num_descriptors) {
 			return nullptr;
 		}
 
 		const auto end_of_struct =
-				reinterpret_cast<uintptr_t>(this) + sizeof(hid_descriptor);
-		return reinterpret_cast<class_descriptor*>(end_of_struct) + index;
+				reinterpret_cast<uintptr_t>(this) + sizeof(HidDescriptor);
+		return reinterpret_cast<ClassDescriptor*>(end_of_struct) + index;
 	}
 } __attribute__((packed));
 
@@ -138,10 +138,10 @@ const T* descriptor_dynamic_cast(const uint8_t* desc)
 	return nullptr;
 }
 
-class configuration_descriptor_iterator
+class ConfigurationDescriptorIterator
 {
 public:
-	configuration_descriptor_iterator(const uint8_t* buf, int len)
+	ConfigurationDescriptorIterator(const uint8_t* buf, int len)
 		: buf_(buf), desc_buf_len_(len), p_(buf)
 	{
 	}

@@ -5,31 +5,31 @@
 
 namespace kernel::hw::usb::xhci
 {
-uint8_t port::number() const { return port_num_; }
+uint8_t Port::number() const { return port_num_; }
 
-bool port::is_connected() const
+bool Port::is_connected() const
 {
 	return regs_.port_sc.read().bits.current_connect_status;
 }
 
-bool port::is_enabled() const
+bool Port::is_enabled() const
 {
 	return regs_.port_sc.read().bits.port_enabled_disabled;
 }
 
-bool port::is_connect_status_changed() const
+bool Port::is_connect_status_changed() const
 {
 	return regs_.port_sc.read().bits.connect_status_change;
 }
 
-bool port::is_port_reset_changed() const
+bool Port::is_port_reset_changed() const
 {
 	return regs_.port_sc.read().bits.port_reset_change;
 }
 
-int port::speed() const { return regs_.port_sc.read().bits.port_speed; }
+int Port::speed() const { return regs_.port_sc.read().bits.port_speed; }
 
-void port::reset()
+void Port::reset()
 {
 	auto portsc = regs_.port_sc.read();
 	portsc.data[0] &= 0x0e00c3e0U;
@@ -39,7 +39,7 @@ void port::reset()
 	}
 }
 
-void reset_port(port& p)
+void reset_port(Port& p)
 {
 	const bool is_connected = p.is_connected();
 	if (!is_connected) {
@@ -48,25 +48,25 @@ void reset_port(port& p)
 
 	if (addressing_port != 0) {
 		port_connection_states[p.number()] =
-				port_connection_state::WAITING_ADDRESSED;
+				PortConnectionState::WAITING_ADDRESSED;
 		return;
 	}
 
 	const auto port_state = port_connection_states[p.number()];
-	if (port_state != port_connection_state::DISCONNECTED &&
-		port_state != port_connection_state::WAITING_ADDRESSED) {
+	if (port_state != PortConnectionState::DISCONNECTED &&
+		port_state != PortConnectionState::WAITING_ADDRESSED) {
 		LOG_ERROR("port %d is not disconnected or waiting addressed", p.number());
 		return;
 	}
 
 	addressing_port = p.number();
-	port_connection_states[p.number()] = port_connection_state::RESETTING_PORT;
+	port_connection_states[p.number()] = PortConnectionState::RESETTING_PORT;
 	p.reset();
 }
 
-void configure_port(port& p)
+void configure_port(Port& p)
 {
-	if (port_connection_states[p.number()] == port_connection_state::DISCONNECTED) {
+	if (port_connection_states[p.number()] == PortConnectionState::DISCONNECTED) {
 		reset_port(p);
 	}
 }

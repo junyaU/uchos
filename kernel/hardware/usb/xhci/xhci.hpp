@@ -20,33 +20,33 @@
 
 namespace kernel::hw::usb::xhci
 {
-class controller
+class Controller
 {
 public:
-	controller(uintptr_t mmio_base);
+	Controller(uintptr_t mmio_base);
 	void initialize();
 	void run();
-	ring* command_ring() { return &command_ring_; }
-	event_ring* primary_event_ring() { return &event_ring_; }
-	doorbell_register* doorbell_register_at(uint8_t index);
-	port port_at(uint8_t index)
+	Ring* command_ring() { return &command_ring_; }
+	EventRing* primary_event_ring() { return &event_ring_; }
+	DoorbellRegister* doorbell_register_at(uint8_t index);
+	Port port_at(uint8_t index)
 	{
-		return port{ index, port_register_sets()[index - 1] };
+		return Port{ index, port_register_sets()[index - 1] };
 	}
 	uint8_t max_ports() const { return max_ports_; }
-	device_manager* device_manager() { return &device_manager_; }
+	DeviceManager* device_manager() { return &device_manager_; }
 
 private:
 	static const size_t DEVICE_SIZE = 8;
 
 	const uintptr_t mmio_base_;
-	capability_registers* const cap_regs_;
-	operational_registers* const op_regs_;
+	CapabilityRegisters* const cap_regs_;
+	OperationalRegisters* const op_regs_;
 	const uint8_t max_ports_;
 
-	class device_manager device_manager_;
-	ring command_ring_;
-	event_ring event_ring_;
+	class DeviceManager device_manager_;
+	Ring command_ring_;
+	EventRing event_ring_;
 
 	interrupter_register_set_array interrupter_register_sets() const
 	{
@@ -64,12 +64,12 @@ private:
 	}
 };
 
-void configure_port(controller& xhc, port& p);
-void configure_endpoints(controller& xhc, device& dev);
+void configure_port(Controller& xhc, Port& p);
+void configure_endpoints(Controller& xhc, Device& dev);
 
-void process_event(controller& xhc);
+void process_event(Controller& xhc);
 
-extern controller* host_controller;
+extern Controller* host_controller;
 void initialize();
 void process_events();
 } // namespace kernel::hw::usb::xhci

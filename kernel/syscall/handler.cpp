@@ -32,7 +32,7 @@ ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	// void __user* buf = reinterpret_cast<void*>(arg2);
 	// const size_t count = static_cast<size_t>(arg3);
 
-	kernel::task::task* t = kernel::task::CURRENT_TASK;
+	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
 	// Validate file descriptor
 	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd].is_unused()) {
@@ -56,7 +56,7 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	const void __user* buf = reinterpret_cast<const void*>(arg2);
 	const size_t count = static_cast<size_t>(arg3);
 
-	kernel::task::task* t = kernel::task::CURRENT_TASK;
+	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
 	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd].is_unused()) {
 		return ERR_INVALID_FD;
@@ -65,7 +65,7 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
 		if (t->fd_table[fd].has_name("stdout") || t->fd_table[fd].has_name("stderr")) {
 			// Standard output - send to terminal
-			message m = { .type = msg_t::NOTIFY_WRITE, .sender = t->id };
+			Message m = { .type = MsgType::NOTIFY_WRITE, .sender = t->id };
 
 			// Copy data from user space
 			const size_t copy_size = count > sizeof(m.data.write_shell.buf) - 1
@@ -79,7 +79,7 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 			return copy_size;
 		}
 		// File output - fd contains actual file info after dup2
-		message m = { .type = msg_t::FS_WRITE, .sender = t->id };
+		Message m = { .type = MsgType::FS_WRITE, .sender = t->id };
 		m.data.fs.fd = fd;
 		m.data.fs.len = count;
 
@@ -96,7 +96,7 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 		kernel::task::send_message(process_ids::FS_FAT32, m);
 
 		// Wait for response from file system
-		message reply = kernel::task::wait_for_message(msg_t::FS_WRITE);
+		Message reply = kernel::task::wait_for_message(MsgType::FS_WRITE);
 
 		// The FS process will deallocate the OOL memory
 		return reply.data.fs.len;
@@ -131,7 +131,7 @@ error_t sys_fill_rect(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4
 	const int height = arg4;
 	const uint32_t color = arg5;
 
-	kernel::graphics::kscreen->fill_rectangle(point2d{ x, y }, point2d{ width, height }, color);
+	kernel::graphics::kscreen->fill_rectangle(Point2D{ x, y }, Point2D{ width, height }, color);
 
 	return OK;
 }
@@ -140,7 +140,7 @@ error_t sys_time(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 {
 	const uint64_t ms = arg1;
 	const int is_periodic = arg2;
-	const timeout_action_t action = static_cast<timeout_action_t>(arg3);
+	const TimeoutAction action = static_cast<TimeoutAction>(arg3);
 	const ProcessId task_id = ProcessId::from_raw(arg4);
 
 	if (is_periodic == 1) {
@@ -155,16 +155,16 @@ error_t sys_time(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 {
 	const int dest = arg1;
-	message __user& m = *reinterpret_cast<message*>(arg3);
+	Message __user& m = *reinterpret_cast<Message*>(arg3);
 	const int flags = arg4;
 
-	kernel::task::task* t = kernel::task::CURRENT_TASK;
+	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 	t->state = kernel::task::TASK_WAITING;
 
 	if (flags == IPC_RECV) {
 		if (t->messages.empty()) {
 			m = {};
-			m.type = msg_t::NO_TASK;
+			m.type = MsgType::NO_TASK;
 			return OK;
 		}
 
@@ -177,10 +177,10 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	}
 
 	if (flags == IPC_SEND) {
-		message copy_m;
+		Message copy_m;
 		copy_from_user(&copy_m, &m, sizeof(m));
 
-		if (copy_m.type == msg_t::INITIALIZE_TASK) {
+		if (copy_m.type == MsgType::INITIALIZE_TASK) {
 			copy_m.sender = t->id;
 		}
 
@@ -192,17 +192,17 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 
 ProcessId sys_fork(void)
 {
-	kernel::task::context current_ctx;
+	kernel::task::Context current_ctx;
 	memset(&current_ctx, 0, sizeof(current_ctx));
 	asm volatile("mov %%rdi, %0" : "=r"(current_ctx.rdi));
 	get_current_context(&current_ctx);
 
-	kernel::task::task* t = kernel::task::CURRENT_TASK;
+	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 	if (t->parent_id.raw() != -1) {
 		return ProcessId::from_raw(0);
 	}
 
-	kernel::task::task* child = kernel::task::copy_task(t, &current_ctx);
+	kernel::task::Task* child = kernel::task::copy_task(t, &current_ctx);
 	if (child == nullptr) {
 		return ProcessId::from_raw(ERR_FORK_FAILED);
 	}
@@ -227,22 +227,22 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	copy_from_user(copy_args.data(), args, args_len);
 	copy_args[args_len] = '\0';
 
-	message msg{ .type = msg_t::IPC_GET_FILE_INFO, .sender = kernel::task::CURRENT_TASK->id };
+	Message msg{ .type = MsgType::IPC_GET_FILE_INFO, .sender = kernel::task::CURRENT_TASK->id };
 	memcpy(msg.data.fs.name, copy_path.data(), path_len + 1);
 	kernel::task::send_message(process_ids::FS_FAT32, msg);
 
-	const message info_m = kernel::task::wait_for_message(msg_t::IPC_GET_FILE_INFO);
+	const Message info_m = kernel::task::wait_for_message(MsgType::IPC_GET_FILE_INFO);
 
-	auto* entry = reinterpret_cast<kernel::fs::directory_entry*>(info_m.data.fs.buf);
+	auto* entry = reinterpret_cast<kernel::fs::DirectoryEntry*>(info_m.data.fs.buf);
 	if (entry == nullptr) {
 		return ERR_NO_FILE;
 	}
 
-	message read_msg{ .type = msg_t::IPC_READ_FILE_DATA, .sender = kernel::task::CURRENT_TASK->id };
+	Message read_msg{ .type = MsgType::IPC_READ_FILE_DATA, .sender = kernel::task::CURRENT_TASK->id };
 	read_msg.data.fs.buf = entry;
 	kernel::task::send_message(process_ids::FS_FAT32, read_msg);
 
-	const message data_m = kernel::task::wait_for_message(msg_t::IPC_READ_FILE_DATA);
+	const Message data_m = kernel::task::wait_for_message(MsgType::IPC_READ_FILE_DATA);
 	kernel::memory::free(entry);
 
 	// Save current FD table before cleaning page tables
@@ -276,7 +276,7 @@ ProcessId sys_wait(uint64_t arg1)
 {
 	auto __user* status = reinterpret_cast<int*>(arg1);
 
-	kernel::task::task* t = kernel::task::CURRENT_TASK;
+	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
 	while (true) {
 		if (t->messages.empty()) {
@@ -287,10 +287,10 @@ ProcessId sys_wait(uint64_t arg1)
 
 		t->state = kernel::task::TASK_RUNNING;
 
-		message m = t->messages.front();
+		Message m = t->messages.front();
 		t->messages.pop();
 
-		if (m.type == msg_t::IPC_EXIT_TASK) {
+		if (m.type == MsgType::IPC_EXIT_TASK) {
 			task::send_message(process_ids::SHELL, m);
 			copy_to_user(status, &m.data.exit_task.status, sizeof(int));
 			return m.sender;

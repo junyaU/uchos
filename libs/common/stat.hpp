@@ -2,7 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 
-enum class stat_type_t : uint8_t {
+enum class StatType : uint8_t {
 	REGULAR_FILE = 1,
 	DIRECTORY = 2,
 	SYMLINK = 3,
@@ -13,9 +13,9 @@ enum class stat_type_t : uint8_t {
 	UNKNOWN = 0
 };
 
-struct stat {
+struct Stat {
 	char name[11];
 	size_t size;
-	stat_type_t type;
+	StatType type;
 	uint64_t fs_id;
 };

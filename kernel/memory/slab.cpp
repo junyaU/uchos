@@ -16,7 +16,7 @@
 
 namespace kernel::memory {
 
-m_cache* get_cache_in_chain(char* name)
+MCache* get_cache_in_chain(char* name)
 {
 	if (cache_chain.empty()) {
 		return nullptr;
@@ -31,7 +31,7 @@ m_cache* get_cache_in_chain(char* name)
 	return nullptr;
 }
 
-m_cache::m_cache(char name[20], size_t object_size)
+MCache::MCache(char name[20], size_t object_size)
 	: object_size_(object_size),
 	  num_active_objects_(0),
 	  num_total_objects_(0),
@@ -49,7 +49,7 @@ m_cache::m_cache(char name[20], size_t object_size)
 	}
 }
 
-m_slab::m_slab(void* base_addr, size_t num_objs)
+MSlab::MSlab(void* base_addr, size_t num_objs)
 	: base_addr_(base_addr), num_in_use_(0)
 {
 	objects_.resize(num_objs);
@@ -59,7 +59,7 @@ m_slab::m_slab(void* base_addr, size_t num_objs)
 	}
 }
 
-m_cache& m_cache_create(const char* name, size_t obj_size)
+MCache& m_cache_create(const char* name, size_t obj_size)
 {
 	obj_size = 1 << bit_width_ceil(obj_size);
 
@@ -70,12 +70,12 @@ m_cache& m_cache_create(const char* name, size_t obj_size)
 	}
 
 	cache_chain.push_back(
-			std::make_unique<kernel::memory::m_cache>(const_cast<char*>(name), obj_size));
+			std::make_unique<kernel::memory::MCache>(const_cast<char*>(name), obj_size));
 
 	return *cache_chain.back();
 }
 
-bool m_cache::grow()
+bool MCache::grow()
 {
 	size_t const bytes_per_slab = num_pages_per_slab_ * kernel::memory::PAGE_SIZE;
 	void* addr = kernel::memory::memory_manager->allocate(bytes_per_slab);
@@ -85,16 +85,16 @@ bool m_cache::grow()
 	}
 
 	size_t const num_objs = bytes_per_slab / object_size_;
-	auto slab = std::make_unique<m_slab>(addr, num_objs);
+	auto slab = std::make_unique<MSlab>(addr, num_objs);
 
-	page* page = get_page(addr);
+	Page* page = get_page(addr);
 	page->set_cache(this);
 	page->set_slab(slab.get());
 
 	++num_total_slabs_;
 	num_total_objects_ += num_objs;
 
-	slab->set_status(slab_status::FREE);
+	slab->set_status(SlabStatus::FREE);
 	slabs_free_.push_back(std::move(slab));
 	auto last_it = std::prev(slabs_free_.end());
 	(*last_it)->set_position_in_list(last_it);
@@ -102,7 +102,7 @@ bool m_cache::grow()
 	return true;
 }
 
-void* m_cache::alloc()
+void* MCache::alloc()
 {
 	if (slabs_partial_.empty()) {
 		if (slabs_free_.empty() && !grow()) {
@@ -111,7 +111,7 @@ void* m_cache::alloc()
 		}
 
 		auto* free_slab = slabs_free_.front().get();
-		free_slab->move_list(*this, slab_status::PARTIAL);
+		free_slab->move_list(*this, SlabStatus::PARTIAL);
 
 		++num_active_slabs_;
 	}
@@ -127,13 +127,13 @@ void* m_cache::alloc()
 	++num_active_objects_;
 	if (current_slab->is_full()) {
 		auto* full_slab = slabs_partial_.front().get();
-		full_slab->move_list(*this, slab_status::FULL);
+		full_slab->move_list(*this, SlabStatus::FULL);
 	}
 
 	return addr;
 }
 
-void m_slab::move_list(m_cache& cache, slab_status to)
+void MSlab::move_list(MCache& cache, SlabStatus to)
 {
 	if (status_ == to) {
 		return;
@@ -141,27 +141,27 @@ void m_slab::move_list(m_cache& cache, slab_status to)
 
 	auto current_slab = std::move(*position_in_list_);
 	switch (status_) {
-		case slab_status::FREE:
+		case SlabStatus::FREE:
 			cache.slabs_free_.erase(position_in_list_);
 			break;
-		case slab_status::PARTIAL:
+		case SlabStatus::PARTIAL:
 			cache.slabs_partial_.erase(position_in_list_);
 			break;
-		case slab_status::FULL:
+		case SlabStatus::FULL:
 			cache.slabs_full_.erase(position_in_list_);
 			break;
 	}
 
 	switch (to) {
-		case slab_status::FREE:
+		case SlabStatus::FREE:
 			cache.slabs_free_.push_back(std::move(current_slab));
 			position_in_list_ = std::prev(cache.slabs_free_.end());
 			break;
-		case slab_status::PARTIAL:
+		case SlabStatus::PARTIAL:
 			cache.slabs_partial_.push_back(std::move(current_slab));
 			position_in_list_ = std::prev(cache.slabs_partial_.end());
 			break;
-		case slab_status::FULL:
+		case SlabStatus::FULL:
 			cache.slabs_full_.push_back(std::move(current_slab));
 			position_in_list_ = std::prev(cache.slabs_full_.end());
 			break;
@@ -170,7 +170,7 @@ void m_slab::move_list(m_cache& cache, slab_status to)
 	status_ = to;
 }
 
-void* m_slab::alloc_object(size_t obj_size)
+void* MSlab::alloc_object(size_t obj_size)
 {
 	if (free_objects_index_.empty()) {
 		LOG_ERROR("no free objects");
@@ -189,7 +189,7 @@ void* m_slab::alloc_object(size_t obj_size)
 								   obj_index * obj_size);
 }
 
-void m_slab::free_object(void* addr, size_t obj_size)
+void MSlab::free_object(void* addr, size_t obj_size)
 {
 	const size_t objs_index = (reinterpret_cast<uintptr_t>(addr) -
 							   reinterpret_cast<uintptr_t>(base_addr_)) /
@@ -253,29 +253,29 @@ void free(void* addr)
 		aligned_to_raw_addr_map.erase(it);
 	}
 
-	page* p = get_page(addr);
+	Page* p = get_page(addr);
 	if (p == nullptr) {
 		LOG_ERROR("invalid address");
 		return;
 	}
 
-	m_cache* cache = p->cache();
-	m_slab* slab = p->slab();
+	MCache* cache = p->cache();
+	MSlab* slab = p->slab();
 
 	slab->free_object(addr, cache->object_size());
 	cache->decrease_num_active_objects();
 
-	if (slab->status() == slab_status::FULL) {
-		slab->move_list(*cache, slab_status::PARTIAL);
+	if (slab->status() == SlabStatus::FULL) {
+		slab->move_list(*cache, SlabStatus::PARTIAL);
 	}
 
 	if (slab->is_empty()) {
-		slab->move_list(*cache, slab_status::FREE);
+		slab->move_list(*cache, SlabStatus::FREE);
 		cache->decrease_num_active_slabs();
 	}
 }
 
-std::list<std::unique_ptr<m_cache>> cache_chain;
+std::list<std::unique_ptr<MCache>> cache_chain;
 
 void initialize_slab_allocator()
 {

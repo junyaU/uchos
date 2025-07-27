@@ -17,7 +17,7 @@ using namespace kernel;
 void test_fd_allocation()
 {
 	// Create test FD table
-	fs::file_descriptor fd_table[32];
+	fs::FileDescriptor fd_table[32];
 	fs::init_process_fd_table(fd_table, 32);
 
 	// Test allocation
@@ -26,7 +26,7 @@ void test_fd_allocation()
 	ASSERT_LT(fd1, 32);
 
 	// Verify the allocated entry
-	fs::file_descriptor* entry = fs::get_process_fd(fd_table, 32, fd1);
+	fs::FileDescriptor* entry = fs::get_process_fd(fd_table, 32, fd1);
 	ASSERT_NOT_NULL(entry);
 	ASSERT_TRUE(entry->is_used());
 	ASSERT_EQ(strcmp(entry->name, "test1.txt"), 0);
@@ -43,7 +43,7 @@ void test_fd_allocation()
 void test_fd_release()
 {
 	// Create test FD table
-	fs::file_descriptor fd_table[32];
+	fs::FileDescriptor fd_table[32];
 	fs::init_process_fd_table(fd_table, 32);
 
 	// Allocate and release
@@ -54,7 +54,7 @@ void test_fd_release()
 	ASSERT_EQ(result, OK);
 
 	// Verify release
-	fs::file_descriptor* entry = fs::get_process_fd(fd_table, 32, fd);
+	fs::FileDescriptor* entry = fs::get_process_fd(fd_table, 32, fd);
 	ASSERT_NULL(entry);
 
 	// Try to release standard descriptors (should fail)
@@ -70,7 +70,7 @@ void test_fd_release()
 void test_fd_fork_copy()
 {
 	// Create parent FD table
-	fs::file_descriptor parent_table[32];
+	fs::FileDescriptor parent_table[32];
 	fs::init_process_fd_table(parent_table, 32);
 
 	// Add some file descriptors
@@ -80,13 +80,13 @@ void test_fd_fork_copy()
 	    fs::allocate_process_fd(parent_table, 32, "parent2.txt", 200, ProcessId::from_raw(1));
 
 	// Create child FD table and copy
-	fs::file_descriptor child_table[32];
+	fs::FileDescriptor child_table[32];
 	error_t result = fs::copy_fd_table(child_table, parent_table, 32, ProcessId::from_raw(2));
 	ASSERT_EQ(result, OK);
 
 	// Verify copy
-	fs::file_descriptor* parent_entry1 = fs::get_process_fd(parent_table, 32, fd1);
-	fs::file_descriptor* child_entry1 = fs::get_process_fd(child_table, 32, fd1);
+	fs::FileDescriptor* parent_entry1 = fs::get_process_fd(parent_table, 32, fd1);
+	fs::FileDescriptor* child_entry1 = fs::get_process_fd(child_table, 32, fd1);
 	ASSERT_NOT_NULL(parent_entry1);
 	ASSERT_NOT_NULL(child_entry1);
 	ASSERT_EQ(strcmp(parent_entry1->name, child_entry1->name), 0);
@@ -103,7 +103,7 @@ void test_fd_fork_copy()
 void test_fd_dup2()
 {
 	// Create test FD table
-	fs::file_descriptor fd_table[32];
+	fs::FileDescriptor fd_table[32];
 	fs::init_process_fd_table(fd_table, 32);
 
 	// Allocate a file descriptor
@@ -114,12 +114,12 @@ void test_fd_dup2()
 	// fd_table[STDOUT_FILENO].fd.redirect_to = file_fd;
 
 	// Verify redirection
-	fs::file_descriptor* stdout_entry = fs::get_process_fd(fd_table, 32, STDOUT_FILENO);
+	fs::FileDescriptor* stdout_entry = fs::get_process_fd(fd_table, 32, STDOUT_FILENO);
 	ASSERT_NOT_NULL(stdout_entry);
 	// ASSERT_EQ(stdout_entry->fd.redirect_to, file_fd);
 
 	// Get should follow redirection
-	fs::file_descriptor* redirected = fs::get_process_fd(fd_table, 32, STDOUT_FILENO);
+	fs::FileDescriptor* redirected = fs::get_process_fd(fd_table, 32, STDOUT_FILENO);
 	ASSERT_NOT_NULL(redirected);
 	ASSERT_EQ(strcmp(redirected->name, "output.txt"), 0);
 
@@ -129,7 +129,7 @@ void test_fd_dup2()
 void test_fd_limits()
 {
 	// Create small FD table
-	fs::file_descriptor fd_table[8];
+	fs::FileDescriptor fd_table[8];
 	fs::init_process_fd_table(fd_table, 8);
 
 	// Fill up the table (3 standard descriptors already used)
@@ -158,7 +158,7 @@ void test_fd_limits()
 void test_release_all_fds()
 {
 	// Create test FD table
-	fs::file_descriptor fd_table[32];
+	fs::FileDescriptor fd_table[32];
 	fs::init_process_fd_table(fd_table, 32);
 
 	// Allocate several file descriptors

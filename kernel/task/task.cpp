@@ -29,12 +29,12 @@ namespace kernel::task
 {
 
 list_t run_queue;
-std::array<task*, MAX_TASKS> tasks;
+std::array<Task*, MAX_TASKS> tasks;
 
-task* CURRENT_TASK = nullptr;
-task* IDLE_TASK = nullptr;
+Task* CURRENT_TASK = nullptr;
+Task* IDLE_TASK = nullptr;
 
-const initial_task_info initial_tasks[] = {
+const InitialTaskInfo INITIAL_TASKS[] = {
 	{ "main", 0, false, true },
 	{ "idle", reinterpret_cast<uint64_t>(&kernel::task::idle_service), true, true },
 	{ "usb_handler", reinterpret_cast<uint64_t>(&kernel::task::usb_handler_service), true, true },
@@ -56,7 +56,7 @@ ProcessId get_available_task_id()
 
 ProcessId get_task_id_by_name(const char* name)
 {
-	for (task* t : tasks) {
+	for (Task* t : tasks) {
 		if (t != nullptr && strcmp(t->name, name) == 0) {
 			return t->id;
 		}
@@ -65,7 +65,7 @@ ProcessId get_task_id_by_name(const char* name)
 	return ProcessId::from_raw(-1);
 }
 
-task* get_task(ProcessId id)
+Task* get_task(ProcessId id)
 {
 	const pid_t raw_id = id.raw();
 	if (raw_id < 0 || raw_id >= MAX_TASKS) {
@@ -75,7 +75,7 @@ task* get_task(ProcessId id)
 	return tasks[raw_id];
 }
 
-task* create_task(const char* name, uint64_t task_addr, bool setup_context, bool is_init)
+Task* create_task(const char* name, uint64_t task_addr, bool setup_context, bool is_init)
 {
 	const ProcessId task_id = get_available_task_id();
 	if (task_id.raw() == -1) {
@@ -84,14 +84,14 @@ task* create_task(const char* name, uint64_t task_addr, bool setup_context, bool
 	}
 
 	tasks[task_id.raw()] =
-	    new task(task_id.raw(), name, task_addr, TASK_WAITING, setup_context, is_init);
+	    new Task(task_id.raw(), name, task_addr, TASK_WAITING, setup_context, is_init);
 
 	return tasks[task_id.raw()];
 }
 
-error_t task::copy_parent_stack(const context& parent_ctx)
+error_t Task::copy_parent_stack(const Context& parent_ctx)
 {
-	task* parent = tasks[parent_id.raw()];
+	Task* parent = tasks[parent_id.raw()];
 	if (parent == nullptr) {
 		return ERR_NO_TASK;
 	}
@@ -118,9 +118,9 @@ error_t task::copy_parent_stack(const context& parent_ctx)
 	return OK;
 }
 
-error_t task::copy_parent_page_table()
+error_t Task::copy_parent_page_table()
 {
-	task* parent = tasks[parent_id.raw()];
+	Task* parent = tasks[parent_id.raw()];
 	if (parent == nullptr) {
 		return ERR_NO_TASK;
 	}
@@ -139,23 +139,23 @@ error_t task::copy_parent_page_table()
 	return OK;
 }
 
-void task::add_msg_handler(msg_t type, message_handler_t handler)
+void Task::add_msg_handler(MsgType type, message_handler_t handler)
 {
-	if (type == msg_t::NO_TASK || type >= msg_t::MAX_MESSAGE_TYPE) {
+	if (type == MsgType::NO_TASK || type >= MsgType::MAX_MESSAGE_TYPE) {
 		return;
 	}
 	message_handlers[static_cast<int32_t>(type)] = handler;
 }
 
-task* copy_task(task* parent, context* parent_ctx)
+Task* copy_task(Task* parent, Context* parent_ctx)
 {
-	task* child = create_task(parent->name, 0, false, true);
+	Task* child = create_task(parent->name, 0, false, true);
 	if (child == nullptr) {
 		return nullptr;
 	}
 	child->parent_id = parent->id;
 
-	memcpy(&child->ctx, parent_ctx, sizeof(context));
+	memcpy(&child->ctx, parent_ctx, sizeof(Context));
 
 	// Copy parent's file descriptor table
 	if (IS_ERR(kernel::fs::copy_fd_table(child->fd_table.data(), parent->fd_table.data(), 
@@ -177,14 +177,14 @@ task* copy_task(task* parent, context* parent_ctx)
 	return child;
 }
 
-task* get_scheduled_task()
+Task* get_scheduled_task()
 {
 	if (list_is_empty(&run_queue)) {
 		CURRENT_TASK = IDLE_TASK;
 		return IDLE_TASK;
 	}
 
-	task* scheduled_task = LIST_POP_FRONT(&run_queue, task, run_queue_elem);
+	Task* scheduled_task = LIST_POP_FRONT(&run_queue, Task, run_queue_elem);
 	scheduled_task->state = TASK_RUNNING;
 	CURRENT_TASK = scheduled_task;
 
@@ -208,13 +208,13 @@ void schedule_task(ProcessId id)
 	list_push_back(&run_queue, &tasks[raw_id]->run_queue_elem);
 }
 
-void switch_task(const context& current_ctx)
+void switch_task(const Context& current_ctx)
 {
 	if (CURRENT_TASK->state == TASK_EXITED) {
 		delete tasks[CURRENT_TASK->id.raw()];
 		tasks[CURRENT_TASK->id.raw()] = nullptr;
 	} else {
-		memcpy(&CURRENT_TASK->ctx, &current_ctx, sizeof(context));
+		memcpy(&CURRENT_TASK->ctx, &current_ctx, sizeof(Context));
 		if (CURRENT_TASK->state != TASK_WAITING) {
 			schedule_task(CURRENT_TASK->id);
 		}
@@ -229,18 +229,18 @@ void switch_next_task(bool sleep_current_task)
 		CURRENT_TASK->state = TASK_WAITING;
 	}
 
-	asm("int %0" : : "i"(kernel::interrupt::interrupt_vector::SWITCH_TASK));
+	asm("int %0" : : "i"(kernel::interrupt::InterruptVector::SWITCH_TASK));
 }
 
 void exit_task(int status)
 {
-	task* t = CURRENT_TASK;
+	Task* t = CURRENT_TASK;
 
 	// Release all file descriptors before exiting
 	kernel::fs::release_all_process_fds(t->fd_table.data(), MAX_FDS_PER_PROCESS);
 
 	if (t->has_parent()) {
-		message m = { .type = msg_t::IPC_EXIT_TASK, .sender = t->id };
+		Message m = { .type = MsgType::IPC_EXIT_TASK, .sender = t->id };
 		m.data.exit_task.status = status;
 		send_message(t->parent_id, m);
 	}
@@ -249,7 +249,7 @@ void exit_task(int status)
 	switch_task(t->ctx);
 }
 
-[[noreturn]] void process_messages(task* t)
+[[noreturn]] void process_messages(Task* t)
 {
 	while (true) {
 		if (t->messages.empty()) {
@@ -259,10 +259,10 @@ void exit_task(int status)
 
 		t->state = TASK_RUNNING;
 
-		const message m = t->messages.front();
+		const Message m = t->messages.front();
 		t->messages.pop();
 
-		if (m.type == msg_t::NO_TASK || m.type >= msg_t::MAX_MESSAGE_TYPE) {
+		if (m.type == MsgType::NO_TASK || m.type >= MsgType::MAX_MESSAGE_TYPE) {
 			continue;
 		}
 
@@ -272,11 +272,11 @@ void exit_task(int status)
 
 void initialize()
 {
-	tasks = std::array<task*, MAX_TASKS>();
+	tasks = std::array<Task*, MAX_TASKS>();
 	list_init(&run_queue);
 
-	for (const auto& t_info : initial_tasks) {
-		task* new_task =
+	for (const auto& t_info : INITIAL_TASKS) {
+		Task* new_task =
 		    create_task(t_info.name, t_info.addr, t_info.setup_context, t_info.is_initilized);
 		if (new_task != nullptr) {
 			schedule_task(new_task->id);
@@ -293,10 +293,10 @@ void initialize()
 	run_test_suite(register_task_tests);
 }
 
-task::task(int raw_id,
+Task::Task(int raw_id,
            const char* task_name,
            uint64_t task_addr,
-           task_state state,
+           TaskState state,
            bool setup_context,
            bool is_initilized)
     : id{ ProcessId::from_raw(raw_id) },
@@ -306,14 +306,14 @@ task::task(int raw_id,
       state{ state },
       fs_path({ nullptr, nullptr, nullptr }),
       stack{ nullptr },
-      messages{ std::queue<message>() },
+      messages{ std::queue<Message>() },
       message_handlers({ std::array<message_handler_t, TOTAL_MESSAGE_TYPES>() }),
       fd_table()
 {
 	list_elem_init(&run_queue_elem);
 
 	for (auto& handler : message_handlers) {
-		handler = [](const message&) {};
+		handler = [](const Message&) {};
 	}
 
 	// Initialize file descriptor table
@@ -346,9 +346,9 @@ task::task(int raw_id,
 	*reinterpret_cast<uint32_t*>(&ctx.fxsave_area[24]) = 0x1f80;
 }
 
-message wait_for_message(msg_t type)
+Message wait_for_message(MsgType type)
 {
-	task* t = CURRENT_TASK;
+	Task* t = CURRENT_TASK;
 
 	while (true) {
 		if (t->messages.empty()) {
@@ -358,7 +358,7 @@ message wait_for_message(msg_t type)
 
 		t->state = TASK_RUNNING;
 
-		message m = t->messages.front();
+		Message m = t->messages.front();
 		t->messages.pop();
 
 		if (m.type != type) {

@@ -16,16 +16,16 @@ constexpr int SWITCH_TASK_MILLISEC = 20;
 
 namespace kernel::timers {
 
-uint64_t kernel_timer::calculate_timeout_ticks(unsigned long millisec) const
+uint64_t KernelTimer::calculate_timeout_ticks(unsigned long millisec) const
 {
 	return tick_ + (millisec * TIMER_FREQUENCY) / 1000;
 }
 
-uint64_t kernel_timer::add_timer_event(unsigned long millisec,
-									   timeout_action_t action,
+uint64_t KernelTimer::add_timer_event(unsigned long millisec,
+									   TimeoutAction action,
 									   ProcessId task_id)
 {
-	auto e = timer_event{
+	auto e = TimerEvent{
 		.id = last_id_++,
 		.task_id = task_id,
 		.timeout = calculate_timeout_ticks(millisec),
@@ -38,8 +38,8 @@ uint64_t kernel_timer::add_timer_event(unsigned long millisec,
 	return e.id;
 }
 
-uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
-												timeout_action_t action,
+uint64_t KernelTimer::add_periodic_timer_event(unsigned long millisec,
+												TimeoutAction action,
 												ProcessId task_id,
 												uint64_t id)
 {
@@ -50,7 +50,7 @@ uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
 		return 0;
 	}
 
-	auto e = timer_event{
+	auto e = TimerEvent{
 		.id = id,
 		.task_id = task_id,
 		.timeout = calculate_timeout_ticks(millisec),
@@ -64,22 +64,22 @@ uint64_t kernel_timer::add_periodic_timer_event(unsigned long millisec,
 	return e.id;
 }
 
-uint64_t kernel_timer::add_switch_task_event(unsigned long millisec)
+uint64_t KernelTimer::add_switch_task_event(unsigned long millisec)
 {
-	auto e = timer_event{
+	auto e = TimerEvent{
 		.id = last_id_++,
 		.task_id = process_ids::KERNEL,  // Switch task events use kernel task
 		.timeout = calculate_timeout_ticks(millisec),
 		.period = 0,
 		.periodical = 0,
-		.action = timeout_action_t::SWITCH_TASK,
+		.action = TimeoutAction::SWITCH_TASK,
 	};
 	events_.push(e);
 
 	return e.id;
 }
 
-error_t kernel_timer::remove_timer_event(uint64_t id)
+error_t KernelTimer::remove_timer_event(uint64_t id)
 {
 	if (id == 0 || last_id_ < id) {
 		LOG_ERROR("invalid timer id: %lu", id);
@@ -91,7 +91,7 @@ error_t kernel_timer::remove_timer_event(uint64_t id)
 	return OK;
 }
 
-bool kernel_timer::increment_tick()
+bool KernelTimer::increment_tick()
 {
 	++tick_;
 
@@ -100,7 +100,7 @@ bool kernel_timer::increment_tick()
 		auto e = events_.top();
 		events_.pop();
 
-		if (e.action == timeout_action_t::SWITCH_TASK) {
+		if (e.action == TimeoutAction::SWITCH_TASK) {
 			need_switch_task = true;
 
 			e.timeout = calculate_timeout_ticks(SWITCH_TASK_MILLISEC);
@@ -109,7 +109,7 @@ bool kernel_timer::increment_tick()
 			continue;
 		}
 
-		message m = { .type = msg_t::NOTIFY_TIMER_TIMEOUT,
+		Message m = { .type = MsgType::NOTIFY_TIMER_TIMEOUT,
 					  .sender = process_ids::KERNEL };
 		m.data.timer.action = e.action;
 		kernel::task::send_message(e.task_id, m);
@@ -123,16 +123,16 @@ bool kernel_timer::increment_tick()
 	return need_switch_task;
 }
 
-kernel_timer* ktimer;
+KernelTimer* ktimer;
 
 void initialize()
 {
 	LOG_INFO("Initializing logical timer...");
 
 	void* addr;
-	ALLOC_OR_RETURN(addr, sizeof(kernel_timer), kernel::memory::ALLOC_ZEROED);
+	ALLOC_OR_RETURN(addr, sizeof(KernelTimer), kernel::memory::ALLOC_ZEROED);
 
-	ktimer = new (addr) kernel_timer;
+	ktimer = new (addr) KernelTimer;
 
 	run_test_suite(register_timer_tests);
 

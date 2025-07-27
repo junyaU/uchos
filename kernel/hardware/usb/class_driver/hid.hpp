@@ -24,7 +24,7 @@ namespace kernel::hw::usb
  * mice, and other human input devices. It handles HID-specific control
  * requests and interrupt transfers.
  */
-class hid_driver : public class_driver
+class HidDriver : public ClassDriver
 {
 public:
 	/**
@@ -34,16 +34,16 @@ public:
 	 * @param interface_index Index of the HID interface
 	 * @param in_packet_size Maximum packet size for input endpoint
 	 */
-	hid_driver(device* dev, int interface_index, int in_packet_size);
+	HidDriver(Device* dev, int interface_index, int in_packet_size);
 
 	void initialize() override;
-	void set_endpoint(const endpoint_config& config) override;
+	void set_endpoint(const EndpointConfig& config) override;
 	void on_endpoints_configured() override;
-	void on_control_completed(endpoint_id ep_id,
-							  setup_stage_data setup_data,
+	void on_control_completed(EndpointId ep_id,
+							  SetupStageData setup_data,
 							  void* buf,
 							  int len) override;
-	void on_interrupt_completed(endpoint_id ep_id, void* buf, int len) override;
+	void on_interrupt_completed(EndpointId ep_id, void* buf, int len) override;
 
 	/**
 	 * @brief Called when new HID data is received
@@ -77,8 +77,8 @@ public:
 	}
 
 private:
-	endpoint_id ep_interrupt_in_;   ///< Interrupt IN endpoint (device to host)
-	endpoint_id ep_interrupt_out_;  ///< Interrupt OUT endpoint (host to device)
+	EndpointId ep_interrupt_in_;   ///< Interrupt IN endpoint (device to host)
+	EndpointId ep_interrupt_out_;  ///< Interrupt OUT endpoint (host to device)
 	const int interface_index_;     ///< HID interface index
 	int in_packet_size_;            ///< Maximum packet size for IN transfers
 	int initialized_stage_{ 0 };    ///< Initialization progress tracker

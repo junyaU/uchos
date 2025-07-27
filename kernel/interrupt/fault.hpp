@@ -40,7 +40,7 @@ __attribute__((no_caller_saved_registers)) void
 get_fault_name(uint64_t code, char* buf);
 
 __attribute__((no_caller_saved_registers)) void
-log_fault_info(const char* fault_type, interrupt_frame* frame);
+log_fault_info(const char* fault_type, InterruptFrame* frame);
 
 template<uint64_t error_code, bool has_error_code>
 struct fault_handler;
@@ -48,7 +48,7 @@ struct fault_handler;
 // no error code
 template<uint64_t error_code>
 struct fault_handler<error_code, false> {
-	static inline __attribute__((interrupt)) void handler(interrupt_frame* frame)
+	static inline __attribute__((interrupt)) void handler(InterruptFrame* frame)
 	{
 		char buf[30];
 		get_fault_name(error_code, buf);
@@ -62,7 +62,7 @@ struct fault_handler<error_code, false> {
 template<uint64_t error_code>
 struct fault_handler<error_code, true> {
 	static inline __attribute__((interrupt)) void
-	handler(interrupt_frame* frame, uint64_t code)
+	handler(InterruptFrame* frame, uint64_t code)
 	{
 		if (error_code == PAGE_FAULT) {
 			const uint64_t fault_addr = get_cr2();

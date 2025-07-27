@@ -26,14 +26,14 @@
 
 namespace kernel::hw::usb::xhci
 {
-class controller;
-struct port_register_set;
-class device;
+class Controller;
+struct PortRegisterSet;
+class Device;
 
-class port
+class Port
 {
 public:
-	port(uint8_t port_num, port_register_set& regs)
+	Port(uint8_t port_num, PortRegisterSet& regs)
 		: port_num_(port_num), regs_(regs)
 	{
 	}
@@ -52,10 +52,10 @@ public:
 
 private:
 	const uint8_t port_num_;
-	port_register_set& regs_;
+	PortRegisterSet& regs_;
 };
 
-enum class port_connection_state {
+enum class PortConnectionState {
 	DISCONNECTED,
 	WAITING_ADDRESSED,
 	RESETTING_PORT,
@@ -66,11 +66,11 @@ enum class port_connection_state {
 	CONFIGURED,
 };
 
-inline std::array<volatile port_connection_state, 256> port_connection_states{};
+inline std::array<volatile PortConnectionState, 256> port_connection_states{};
 
 inline uint8_t addressing_port{ 0 };
 
-void reset_port(port& p);
+void reset_port(Port& p);
 
-void configure_port(port& p);
+void configure_port(Port& p);
 } // namespace kernel::hw::usb::xhci

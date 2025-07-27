@@ -9,10 +9,10 @@
 #include <libs/user/print.hpp>
 #include <libs/user/time.hpp>
 
-std::array<std::array<char, TERMINAL_WIDTH>, TERMINAL_HEIGHT> terminal::buffer;
-std::array<std::array<uint32_t, TERMINAL_WIDTH>, TERMINAL_HEIGHT> terminal::color_buffer;
+std::array<std::array<char, TERMINAL_WIDTH>, TERMINAL_HEIGHT> Terminal::buffer;
+std::array<std::array<uint32_t, TERMINAL_WIDTH>, TERMINAL_HEIGHT> Terminal::color_buffer;
 
-terminal::terminal(shell* s) : shell_(s)
+Terminal::Terminal(Shell* s) : shell_(s)
 {
 	char user_name[16] = "root@uchos";
 	memcpy(this->user_name, user_name, 16);
@@ -24,7 +24,7 @@ terminal::terminal(shell* s) : shell_(s)
 	enable_input = true;
 }
 
-void terminal::blink_cursor()
+void Terminal::blink_cursor()
 {
 	if (!enable_input) {
 		cursor_visible = false;
@@ -40,17 +40,17 @@ void terminal::blink_cursor()
 	cursor_visible = !cursor_visible;
 }
 
-int terminal::adjusted_x(int x)
+int Terminal::adjusted_x(int x)
 {
 	return x * FONT_WIDTH + START_X;
 }
 
-int terminal::adjusted_y(int y)
+int Terminal::adjusted_y(int y)
 {
 	return y * FONT_HEIGHT + START_Y + (y * LINE_SPACING);
 }
 
-size_t terminal::print_user()
+size_t Terminal::print_user()
 {
 	if (!enable_input) {
 		return 0;
@@ -86,7 +86,7 @@ size_t terminal::print_user()
 	return prompt_len;
 }
 
-void terminal::scroll()
+void Terminal::scroll()
 {
 	clear_screen();
 	memcpy(&buffer, &buffer[1], sizeof(buffer) - sizeof(buffer[0]));
@@ -104,7 +104,7 @@ void terminal::scroll()
 	cursor_x = 0;
 }
 
-void terminal::new_line()
+void Terminal::new_line()
 {
 	if (cursor_y == TERMINAL_HEIGHT - 1) {
 		scroll();
@@ -114,7 +114,7 @@ void terminal::new_line()
 	}
 }
 
-void terminal::print(char s, uint32_t color)
+void Terminal::print(char s, uint32_t color)
 {
 	// delete the cursor
 	delete_char(adjusted_x(cursor_x), adjusted_y(cursor_y));
@@ -135,7 +135,7 @@ void terminal::print(char s, uint32_t color)
 	}
 }
 
-void terminal::print(const char* s, uint32_t color)
+void Terminal::print(const char* s, uint32_t color)
 {
 	// TODO: bulk print
 	size_t len = strlen(s);
@@ -144,7 +144,7 @@ void terminal::print(const char* s, uint32_t color)
 	}
 }
 
-void terminal::printf(const char* format, ...)
+void Terminal::printf(const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -155,7 +155,7 @@ void terminal::printf(const char* format, ...)
 	print(buffer);
 }
 
-void terminal::input_char(char c)
+void Terminal::input_char(char c)
 {
 	if (!enable_input) {
 		return;
@@ -191,7 +191,7 @@ void terminal::input_char(char c)
 	print(c);
 }
 
-void terminal::register_current_dir(const char* name)
+void Terminal::register_current_dir(const char* name)
 {
 	if (name == nullptr || strlen(name) > 12) {
 		return;
@@ -211,5 +211,5 @@ void terminal::register_current_dir(const char* name)
 
 void set_cursor_timer(int ms)
 {
-	set_timer(ms, true, timeout_action_t::TERMINAL_CURSOR_BLINK, process_ids::SHELL.raw());
+	set_timer(ms, true, TimeoutAction::TERMINAL_CURSOR_BLINK, process_ids::SHELL.raw());
 }

@@ -23,7 +23,7 @@ namespace kernel::hw::usb
  * @tparam N Maximum number of entries (default: 16)
  */
 template<class K, class V, size_t N = 16>
-class array_map
+class ArrayMap
 {
 public:
 	/**

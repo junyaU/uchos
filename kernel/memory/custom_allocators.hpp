@@ -132,6 +132,15 @@ public:
 	}
 
 	/**
+	 * @brief Rebind allocator to another type
+	 * @tparam U New type to allocate
+	 */
+	template<typename U>
+	struct rebind {
+		using other = kernel_allocator<U>;
+	};
+
+	/**
 	 * @brief Allocate memory for n objects
 	 * @param n Number of objects to allocate
 	 * @return Pointer to allocated memory, or nullptr on failure

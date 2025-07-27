@@ -16,7 +16,7 @@
 
 namespace kernel::hw::usb
 {
-class device;
+class Device;
 
 /**
  * @brief Base class for USB device class drivers
@@ -25,7 +25,7 @@ class device;
  * drivers must implement. Each USB device class (HID, Mass Storage,
  * Audio, etc.) should derive from this class.
  */
-class class_driver
+class ClassDriver
 {
 public:
 	/**
@@ -33,12 +33,12 @@ public:
 	 * 
 	 * @param dev Parent USB device this driver manages
 	 */
-	class_driver(device* dev);
+	ClassDriver(Device* dev);
 	
 	/**
 	 * @brief Virtual destructor
 	 */
-	virtual ~class_driver();
+	virtual ~ClassDriver();
 
 	/**
 	 * @brief Initialize the class driver
@@ -53,7 +53,7 @@ public:
 	 * 
 	 * @param config Endpoint configuration from the device descriptor
 	 */
-	virtual void set_endpoint(const endpoint_config& config) = 0;
+	virtual void set_endpoint(const EndpointConfig& config) = 0;
 	
 	/**
 	 * @brief Called when all endpoints have been configured
@@ -71,8 +71,8 @@ public:
 	 * @param buf Buffer containing transfer data
 	 * @param len Length of data transferred
 	 */
-	virtual void on_control_completed(endpoint_id ep_id,
-									  setup_stage_data setup_data,
+	virtual void on_control_completed(EndpointId ep_id,
+									  SetupStageData setup_data,
 									  void* buf,
 									  int len) = 0;
 	
@@ -83,17 +83,17 @@ public:
 	 * @param buf Buffer containing transfer data
 	 * @param len Length of data transferred
 	 */
-	virtual void on_interrupt_completed(endpoint_id ep_id, void* buf, int len) = 0;
+	virtual void on_interrupt_completed(EndpointId ep_id, void* buf, int len) = 0;
 
 	/**
 	 * @brief Get the parent USB device
 	 * 
 	 * @return device* Pointer to the parent device
 	 */
-	device* parent_device() { return device_; }
+	Device* parent_device() { return device_; }
 
 private:
-	device* device_;  ///< Parent USB device
+	Device* device_;  ///< Parent USB device
 };
 
 /**
@@ -106,6 +106,6 @@ private:
  * @param if_desc Interface descriptor describing the device class
  * @return class_driver* New class driver instance, or nullptr if unsupported
  */
-class_driver* new_class_driver(device* dev, const interface_descriptor& if_desc);
+ClassDriver* new_class_driver(Device* dev, const InterfaceDescriptor& if_desc);
 
 } // namespace kernel::hw::usb

@@ -74,7 +74,7 @@ enum class file_system_type_t : uint8_t {
  * 
  * Contains all metadata about a file or directory entry.
  */
-struct file_info {
+struct FileInfo {
 	char name[11];              ///< File name in 8.3 format
 	size_t size;                ///< File size in bytes
 	uint32_t attributes;        ///< File attributes (combination of ATTR_* flags)
@@ -92,7 +92,7 @@ struct file_info {
  * Manages cached file data to optimize file I/O operations.
  * Supports partial reads and tracks read progress.
  */
-struct file_cache {
+struct FileCache {
 	fs_id_t id;                   ///< Unique cache identifier
 	ProcessId requester;          ///< Process that requested this cache
 	std::vector<uint8_t> buffer;  ///< Buffer containing file data
@@ -107,7 +107,7 @@ struct file_cache {
 	 * @param id Unique cache identifier
 	 * @param requester Process requesting the cache
 	 */
-	file_cache(size_t total_size, fs_id_t id, ProcessId requester)
+	FileCache(size_t total_size, fs_id_t id, ProcessId requester)
 		: id(id), requester(requester), total_size(total_size), read_size(0)
 	{
 		buffer.resize(total_size);
@@ -127,7 +127,7 @@ struct file_cache {
  * 
  * Maps cache IDs to their corresponding file cache objects.
  */
-extern std::unordered_map<fs_id_t, file_cache> file_caches;
+extern std::unordered_map<fs_id_t, FileCache> file_caches;
 
 /**
  * @brief Find a file cache by file path
@@ -135,7 +135,7 @@ extern std::unordered_map<fs_id_t, file_cache> file_caches;
  * @param path File path to search for
  * @return file_cache* Pointer to cache if found, nullptr otherwise
  */
-file_cache* find_file_cache_by_path(const char* path);
+FileCache* find_file_cache_by_path(const char* path);
 
 /**
  * @brief Create a new file cache
@@ -145,7 +145,7 @@ file_cache* find_file_cache_by_path(const char* path);
  * @param requester Process requesting the cache
  * @return file_cache* Pointer to the newly created cache
  */
-file_cache* create_file_cache(const char* path, size_t total_size, ProcessId requester);
+FileCache* create_file_cache(const char* path, size_t total_size, ProcessId requester);
 
 /**
  * @brief Generate a unique file system ID

@@ -56,6 +56,7 @@ Checks: '
   readability-duplicate-include,
   readability-else-after-return,
   readability-uppercase-literal-suffix,
+  readability-identifier-naming,
   -readability-function-cognitive-complexity,
   -readability-identifier-length,
   -readability-isolate-declaration,
@@ -84,6 +85,24 @@ CheckOptions:
     value: lower_case
   - key: readability-identifier-naming.MacroDefinitionCase
     value: UPPER_CASE
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.TypedefCase
+    value: CamelCase
+  - key: readability-identifier-naming.PrivateMemberSuffix
+    value: _
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+
+  # 技術的制約による命名規則違反の回避設定
+  - key: readability-identifier-naming.FunctionIgnoredRegexp
+    value: '^(_.*|Main)$'
+  - key: readability-identifier-naming.ParameterIgnoredRegexp
+    value: '.*_code$'
+  - key: readability-identifier-naming.ConstantIgnoredRegexp
+    value: '^(_binary_.*|.*_code)$'
 
   # パフォーマンスチェックの調整
   - key: performance-move-const-arg.CheckTriviallyCopyableMove

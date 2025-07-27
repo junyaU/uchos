@@ -25,16 +25,16 @@ namespace kernel::memory
 constexpr int ALLOC_UNINITIALIZED = 0;
 constexpr int ALLOC_ZEROED = (1 << 0);
 
-enum class slab_status : uint8_t {
+enum class SlabStatus : uint8_t {
 	FULL,
 	PARTIAL,
 	FREE,
 };
 
-class m_object
+class MObject
 {
 public:
-	m_object() = default;
+	MObject() = default;
 
 	void increase_usage_count() { usage_count_++; }
 
@@ -42,21 +42,21 @@ private:
 	unsigned int usage_count_;
 };
 
-class m_cache;
+class MCache;
 
-class m_slab
+class MSlab
 {
 public:
-	m_slab(void* base_addr, size_t num_objs);
+	MSlab(void* base_addr, size_t num_objs);
 
-	void set_position_in_list(std::list<std::unique_ptr<m_slab>>::iterator it)
+	void set_position_in_list(std::list<std::unique_ptr<MSlab>>::iterator it)
 	{
 		position_in_list_ = it;
 	}
 
-	slab_status status() const { return status_; }
+	SlabStatus status() const { return status_; }
 
-	void set_status(slab_status status) { status_ = status; }
+	void set_status(SlabStatus status) { status_ = status; }
 
 	bool is_full() const { return num_in_use_ == objects_.size(); }
 
@@ -66,21 +66,21 @@ public:
 
 	void free_object(void* addr, size_t obj_size);
 
-	void move_list(m_cache& cache, slab_status to);
+	void move_list(MCache& cache, SlabStatus to);
 
 private:
-	std::list<std::unique_ptr<m_slab>>::iterator position_in_list_;
-	std::vector<m_object> objects_;
+	std::list<std::unique_ptr<MSlab>>::iterator position_in_list_;
+	std::vector<MObject> objects_;
 	void* base_addr_;
 	size_t num_in_use_;
 	std::list<size_t> free_objects_index_;
-	slab_status status_;
+	SlabStatus status_;
 };
 
-class m_cache
+class MCache
 {
 public:
-	m_cache(char name[20], size_t object_size);
+	MCache(char name[20], size_t object_size);
 
 	char* name() { return name_; }
 	size_t object_size() const { return object_size_; }
@@ -91,9 +91,9 @@ public:
 	bool grow();
 	void* alloc();
 
-	std::list<std::unique_ptr<m_slab>> slabs_full_;
-	std::list<std::unique_ptr<m_slab>> slabs_partial_;
-	std::list<std::unique_ptr<m_slab>> slabs_free_;
+	std::list<std::unique_ptr<MSlab>> slabs_full_;
+	std::list<std::unique_ptr<MSlab>> slabs_partial_;
+	std::list<std::unique_ptr<MSlab>> slabs_free_;
 
 private:
 	char name_[20];
@@ -105,14 +105,14 @@ private:
 	size_t num_pages_per_slab_;
 };
 
-extern std::list<std::unique_ptr<m_cache>> cache_chain;
+extern std::list<std::unique_ptr<MCache>> cache_chain;
 
 /**
  * @brief Get a cache by name from the cache chain
  * @param name Name of the cache to retrieve
  * @return Pointer to the found cache, or nullptr if not found
  */
-m_cache* get_cache_in_chain(char* name);
+MCache* get_cache_in_chain(char* name);
 
 /**
  * @brief Create a new memory cache
@@ -120,7 +120,7 @@ m_cache* get_cache_in_chain(char* name);
  * @param obj_size Size of objects in the cache
  * @return Reference to the created cache
  */
-m_cache& m_cache_create(const char* name, size_t obj_size);
+MCache& m_cache_create(const char* name, size_t obj_size);
 
 /**
  * @brief Allocate kernel memory
@@ -139,7 +139,7 @@ void* alloc(size_t size, unsigned flags, int align = 1);
  */
 void free(void* addr);
 
-struct free_deleter {
+struct FreeDeleter {
 	void operator()(void* p) { free(p); }
 };
 

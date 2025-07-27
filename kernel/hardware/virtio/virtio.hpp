@@ -17,7 +17,7 @@
 namespace kernel::hw::virtio {
 
 // Forward declaration
-struct virtio_pci_device;
+struct VirtioPciDevice;
 
 // Device types
 constexpr int VIRTIO_BLK = 1;
@@ -52,14 +52,14 @@ constexpr int VIRTQ_DESC_F_WRITE = 2;
 constexpr int VIRTQ_DESC_F_INDIRECT = 4;
 
 /**
- * @struct virtq_desc
+ * @struct VirtqDesc
  * @brief Virtqueue Descriptor
  *
  * This structure describes a single descriptor in a Virtqueue.
  * @see
  * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-490006
  */
-struct virtq_desc {
+struct VirtqDesc {
 	uint64_t addr;	/* Address of buffer */
 	uint32_t len;	/* Length of buffer */
 	uint16_t flags; /* The flags as indicated above */
@@ -67,7 +67,7 @@ struct virtq_desc {
 } __attribute__((packed));
 
 /**
- * @struct virtq_driver
+ * @struct VirtqDriver
  * @brief Virtqueue Driver Area
  *
  * This structure describes the driver area of a Virtqueue.
@@ -75,14 +75,14 @@ struct virtq_desc {
  * @see
  * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-490006
  */
-struct virtq_driver {
+struct VirtqDriver {
 	uint16_t flags;
 	uint16_t index;
 	uint16_t ring[];
 } __attribute__((packed));
 
 /**
- * @struct virtq_device_elem
+ * @struct VirtqDeviceElem
  * @brief Virtqueue Device Element
  *
  * This structure describes an element in the device area of a Virtqueue.
@@ -90,13 +90,13 @@ struct virtq_driver {
  * @see
  * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-540008
  */
-struct virtq_device_elem {
+struct VirtqDeviceElem {
 	uint32_t id;
 	uint32_t len;
 } __attribute__((packed));
 
 /**
- * @struct virtq_device
+ * @struct VirtqDevice
  * @brief Virtqueue Device Area
  *
  * This structure describes the device area of a Virtqueue.
@@ -104,38 +104,38 @@ struct virtq_device_elem {
  * @see
  * https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-540008
  */
-struct virtq_device {
+struct VirtqDevice {
 	uint16_t flags;
 	uint16_t index;
-	struct virtq_device_elem ring[];
+	struct VirtqDeviceElem ring[];
 } __attribute__((packed));
 
 /**
- * @struct virtio_virtqueue
+ * @struct VirtioVirtqueue
  * @brief Virtqueue Management Structure
  *
  * This structure manages a Virtqueue, including its descriptors,
  * driver area, and device area.
  */
-struct virtio_virtqueue {
+struct VirtioVirtqueue {
 	size_t index;
 	size_t num_desc;
 	size_t num_free_desc;
 	size_t top_free_idx;
 	size_t last_driver_idx;
 	uint16_t last_device_idx;
-	virtq_desc* desc;
-	virtq_driver* driver;
-	virtq_device* device;
+	VirtqDesc* desc;
+	VirtqDriver* driver;
+	VirtqDevice* device;
 };
 
 /**
- * @struct virtio_entry
+ * @struct VirtioEntry
  * @brief Virtqueue Entry
  *
  * This structure represents an entry in the Virtqueue.
  */
-struct virtio_entry {
+struct VirtioEntry {
 	uint32_t index;
 	uintptr_t addr;
 	uint32_t len;
@@ -148,21 +148,21 @@ constexpr size_t calc_driver_ring_size(size_t num_desc) { return num_desc * 2 + 
 
 constexpr size_t calc_device_ring_size(size_t num_desc) { return num_desc * 8 + 6; }
 
-error_t init_virtio_pci_device(virtio_pci_device* virtio_dev, int device_type);
+error_t init_VirtioPciDevice(VirtioPciDevice* virtio_dev, int device_type);
 
-error_t init_virtqueue(virtio_virtqueue* queue,
+error_t init_virtqueue(VirtioVirtqueue* queue,
 					   size_t index,
 					   size_t num_desc,
 					   uintptr_t desc_addr,
 					   uintptr_t driver_ring_addr,
 					   uintptr_t device_ring_addr);
 
-int push_virtio_entry(virtio_virtqueue* queue,
-					  virtio_entry* entry_chain,
+int push_VirtioEntry(VirtioVirtqueue* queue,
+					  VirtioEntry* entry_chain,
 					  size_t num_entries);
 
-int pop_virtio_entry(virtio_virtqueue* queue,
-					 virtio_entry* entry_chain,
+int pop_VirtioEntry(VirtioVirtqueue* queue,
+					 VirtioEntry* entry_chain,
 					 size_t num_entries);
 
 } // namespace kernel::hw::virtio

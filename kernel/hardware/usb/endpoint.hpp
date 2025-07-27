@@ -15,23 +15,23 @@
 
 namespace kernel::hw::usb
 {
-enum class endpoint_type {
+enum class EndpointType {
 	CONTROL = 0,
 	ISOCHRONOUS = 1,
 	BULK = 2,
 	INTERRUPT = 3,
 };
 
-class endpoint_id
+class EndpointId
 {
 public:
-	constexpr endpoint_id() : addr_(0) {}
-	constexpr endpoint_id(const endpoint_id& id) : addr_(id.addr_) {}
-	explicit constexpr endpoint_id(int addr) : addr_(addr) {}
+	constexpr EndpointId() : addr_(0) {}
+	constexpr EndpointId(const EndpointId& id) : addr_(id.addr_) {}
+	explicit constexpr EndpointId(int addr) : addr_(addr) {}
 
-	constexpr endpoint_id(int ep_num, bool in) : addr_(ep_num << 1 | in) {}
+	constexpr EndpointId(int ep_num, bool in) : addr_(ep_num << 1 | in) {}
 
-	endpoint_id& operator=(const endpoint_id& id)
+	EndpointId& operator=(const EndpointId& id)
 	{
 		addr_ = id.addr_;
 		return *this;
@@ -47,15 +47,15 @@ private:
 	int addr_;
 };
 
-constexpr endpoint_id DEFAULT_CONTROL_PIPE_ID = endpoint_id(0, true);
+constexpr EndpointId DEFAULT_CONTROL_PIPE_ID = EndpointId(0, true);
 
-struct endpoint_config {
-	endpoint_id id;
-	endpoint_type type;
+struct EndpointConfig {
+	EndpointId id;
+	EndpointType type;
 	int max_packet_size;
 	int interval;
 };
 
-endpoint_config make_endpoint_config(const endpoint_descriptor& desc);
+EndpointConfig make_endpoint_config(const EndpointDescriptor& desc);
 
 } // namespace kernel::hw::usb

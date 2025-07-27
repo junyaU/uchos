@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-struct message;
+struct Message;
 
 using error_t = int;
 using pid_t = int;
@@ -12,7 +12,7 @@ using cluster_t = unsigned long;
 using paddr_t = uint64_t;
 using fs_id_t = size_t;
 
-using message_handler_t = void (*)(const message&);
+using message_handler_t = void (*)(const Message&);
 
 // error codes
 #define IS_OK(err) (!IS_ERR(err))

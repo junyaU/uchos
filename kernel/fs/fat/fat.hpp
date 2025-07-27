@@ -18,7 +18,7 @@
 
 namespace kernel::fs
 {
-struct bios_parameter_block {
+struct BiosParameterBlock {
 	uint8_t jump_boot[3];
 	char oem_name[8];
 	uint16_t bytes_per_sector;
@@ -58,7 +58,7 @@ enum class entry_attribute : uint8_t {
 	LONG_NAME = 0x0F,
 };
 
-struct directory_entry {
+struct DirectoryEntry {
 	unsigned char name[11];
 	entry_attribute attribute;
 	uint8_t ntres;

@@ -89,26 +89,26 @@ union endpoint_context {
 } __attribute__((packed));
 
 // identify endpoint context index
-struct device_context_index {
+struct DeviceContextIndex {
 	int value;
 
-	explicit device_context_index(int value) : value(value) {}
-	device_context_index(endpoint_id id) : value(id.address()) {}
-	device_context_index(int endpoint_num, bool in)
+	explicit DeviceContextIndex(int value) : value(value) {}
+	DeviceContextIndex(EndpointId id) : value(id.address()) {}
+	DeviceContextIndex(int endpoint_num, bool in)
 		: value{ 2 * endpoint_num + (endpoint_num == 0 ? 1 : in) }
 	{
 	}
 
-	device_context_index(const device_context_index& index) = default;
-	device_context_index& operator=(const device_context_index& index) = default;
+	DeviceContextIndex(const DeviceContextIndex& index) = default;
+	DeviceContextIndex& operator=(const DeviceContextIndex& index) = default;
 };
 
-struct device_context {
+struct DeviceContext {
 	slot_context slot;
 	endpoint_context endpoints[31];
 } __attribute__((packed));
 
-struct input_control_context {
+struct InputControlContext {
 	uint32_t drop_context_flags;
 	uint32_t add_context_flags;
 	uint32_t reserved1[5];
@@ -118,8 +118,8 @@ struct input_control_context {
 	uint8_t reserved2;
 } __attribute__((packed));
 
-struct input_context {
-	input_control_context control;
+struct InputContext {
+	InputControlContext control;
 	slot_context slot;
 	endpoint_context endpoints[31];
 
@@ -129,7 +129,7 @@ struct input_context {
 		return &slot;
 	}
 
-	endpoint_context* enable_endpoint_context(device_context_index index)
+	endpoint_context* enable_endpoint_context(DeviceContextIndex index)
 	{
 		control.add_context_flags |= 1U << index.value;
 		return &endpoints[index.value - 1];
