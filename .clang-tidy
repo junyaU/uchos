@@ -96,6 +96,14 @@ CheckOptions:
   - key: readability-identifier-naming.EnumConstantCase
     value: UPPER_CASE
 
+  # 技術的制約による命名規則違反の回避設定
+  - key: readability-identifier-naming.FunctionIgnoredRegexp
+    value: '^(_.*|Main)$'
+  - key: readability-identifier-naming.ParameterIgnoredRegexp
+    value: '.*_code$'
+  - key: readability-identifier-naming.ConstantIgnoredRegexp
+    value: '^(_binary_.*|.*_code)$'
+
   # パフォーマンスチェックの調整
   - key: performance-move-const-arg.CheckTriviallyCopyableMove
     value: false
