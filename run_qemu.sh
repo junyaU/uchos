@@ -23,10 +23,15 @@ if ! source ./scripts/build_kernel.sh; then
     exit 1
 fi
 
+if ! source ./scripts/setup_tap.sh; then
+    echo "TAP setup failed. Aborting QEMU launch."
+    exit 1
+fi
+
 sudo umount $mount_point
 sudo umount $storage_mount_point
 
-qemu-system-x86_64 -m 1G \
+sudo qemu-system-x86_64 -m 1G \
     -d cpu_reset \
     -drive if=pflash,format=raw,file=OVMF_CODE.fd \
     -drive if=pflash,format=raw,file=OVMF_VARS.fd \
@@ -35,4 +40,6 @@ qemu-system-x86_64 -m 1G \
     -device usb-kbd \
     -drive if=none,id=drive-virtio-disk0,format=raw,file=$storage_img \
     -device virtio-blk-pci,drive=drive-virtio-disk0,id=virtio-disk0 \
+    -netdev tap,id=net0,ifname=tap0,script=no \
+    -device virtio-net-pci,netdev=net0,mac=52:54:00:12:34:56 \
     -monitor stdio -S -gdb tcp::12345
