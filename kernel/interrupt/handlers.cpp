@@ -29,15 +29,28 @@ __attribute__((interrupt)) void on_xhci_interrupt(InterruptFrame* frame)
 	notify_end_of_interrupt();
 }
 
-__attribute__((interrupt)) void on_virtio_interrupt(InterruptFrame* frame)
+__attribute__((interrupt)) void on_virtio_blk_interrupt(InterruptFrame* frame)
 {
-	LOG_ERROR("virtio interrupt");
+	LOG_ERROR("virtio block interrupt");
 	notify_end_of_interrupt();
 }
 
 __attribute__((interrupt)) void on_virtio_blk_queue_interrupt(InterruptFrame* frame)
 {
 	kernel::task::schedule_task(process_ids::VIRTIO_BLK);
+	notify_end_of_interrupt();
+}
+
+__attribute__((interrupt)) void on_virtio_net_interrupt(InterruptFrame* frame)
+{
+	LOG_ERROR("virtio net interrupt");
+	notify_end_of_interrupt();
+}
+
+__attribute__((interrupt)) void on_virtio_net_queue_interrupt(InterruptFrame* frame)
+{
+	LOG_ERROR("virtio net queue interrupt");
+	// kernel::task::schedule_task(process_ids::VIRTIO_BLK);
 	notify_end_of_interrupt();
 }
 

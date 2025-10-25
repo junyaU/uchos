@@ -27,15 +27,29 @@ error_t init_virtio_pci_device(VirtioPciDevice* virtio_dev, int device_type)
 		return ERR_NO_DEVICE;
 	}
 
+	uint8_t config_vector;
+	uint8_t queue_vector;
+	switch (device_type) {
+		case VIRTIO_BLK:
+			config_vector = interrupt::InterruptVector::VIRTIO_BLK;
+			queue_vector = interrupt::InterruptVector::VIRTQUEUE_BLK;
+			break;
+		case VIRTIO_NET:
+			config_vector = interrupt::InterruptVector::VIRTIO_NET;
+			queue_vector = interrupt::InterruptVector::VIRTQUEUE_NET;
+			break;
+		default:
+			LOG_ERROR("Unknown Virtio device ID: %x", virtio_dev->dev->device_id);
+			return ERR_INVALID_ARG;
+	}
+
 	const uint8_t bsp_lapic_id = *reinterpret_cast<uint32_t*>(0xfee00020) >> 24;
 	kernel::hw::pci::configure_msi_fixed_destination(
 			*dev, bsp_lapic_id, kernel::hw::pci::MsiTriggerMode::EDGE,
-			kernel::hw::pci::MsiDeliveryMode::FIXED,
-			kernel::interrupt::InterruptVector::VIRTIO, 0);
+			kernel::hw::pci::MsiDeliveryMode::FIXED, config_vector, 0);
 	kernel::hw::pci::configure_msi_fixed_destination(
 			*dev, bsp_lapic_id, kernel::hw::pci::MsiTriggerMode::EDGE,
-			kernel::hw::pci::MsiDeliveryMode::FIXED,
-			kernel::interrupt::InterruptVector::VIRTQUEUE, 0);
+			kernel::hw::pci::MsiDeliveryMode::FIXED, queue_vector, 0);
 
 	virtio_dev->dev = dev;
 
