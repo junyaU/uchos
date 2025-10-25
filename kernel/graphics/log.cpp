@@ -1,10 +1,10 @@
 #include "graphics/log.hpp"
-#include "graphics/font.hpp"
-#include "graphics/screen.hpp"
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include "graphics/font.hpp"
+#include "graphics/screen.hpp"
 
 namespace
 {
@@ -13,7 +13,8 @@ int kernel_cursor_x = 0;
 int kernel_cursor_y = 5;
 } // namespace
 
-namespace kernel::graphics {
+namespace kernel::graphics
+{
 
 void change_log_level(LogLevel level) { current_log_level = level; }
 
@@ -33,8 +34,9 @@ void printk(kernel::graphics::LogLevel level, const char* format, ...)
 	va_end(ap);
 
 	for (size_t i = 0; i < strlen(s) && s[i] != '\0'; ++i) {
-		kernel::graphics::write_ascii(*kernel::graphics::kscreen, { kernel_cursor_x++ * 8, kernel_cursor_y * 16 }, s[i],
-					0xffff00);
+		kernel::graphics::write_ascii(
+				*kernel::graphics::kscreen,
+				{ kernel_cursor_x++ * 8, kernel_cursor_y * 16 }, s[i], 0xffff00);
 
 		if (s[i] == '\n') {
 			kernel_cursor_x = 0;

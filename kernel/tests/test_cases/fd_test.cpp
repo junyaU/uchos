@@ -4,13 +4,13 @@
  * @date 2025-07-13
  */
 
+#include <cstring>
+#include <libs/common/types.hpp>
 #include "fs/file_descriptor.hpp"
 #include "graphics/log.hpp"
 #include "task/task.hpp"
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
-#include <cstring>
-#include <libs/common/types.hpp>
 
 using namespace kernel;
 
@@ -21,7 +21,8 @@ void test_fd_allocation()
 	fs::init_process_fd_table(fd_table, 32);
 
 	// Test allocation
-	fd_t fd1 = fs::allocate_process_fd(fd_table, 32, "test1.txt", 100, ProcessId::from_raw(1));
+	fd_t fd1 = fs::allocate_process_fd(fd_table, 32, "test1.txt", 100,
+									   ProcessId::from_raw(1));
 	ASSERT_GT(fd1, -1);
 	ASSERT_LT(fd1, 32);
 
@@ -33,7 +34,8 @@ void test_fd_allocation()
 	ASSERT_EQ(entry->size, 100);
 
 	// Test another allocation
-	fd_t fd2 = fs::allocate_process_fd(fd_table, 32, "test2.txt", 200, ProcessId::from_raw(1));
+	fd_t fd2 = fs::allocate_process_fd(fd_table, 32, "test2.txt", 200,
+									   ProcessId::from_raw(1));
 	ASSERT_NE(fd1, fd2);
 	ASSERT_GT(fd2, -1);
 
@@ -47,7 +49,8 @@ void test_fd_release()
 	fs::init_process_fd_table(fd_table, 32);
 
 	// Allocate and release
-	fd_t fd = fs::allocate_process_fd(fd_table, 32, "temp.txt", 50, ProcessId::from_raw(1));
+	fd_t fd = fs::allocate_process_fd(fd_table, 32, "temp.txt", 50,
+									  ProcessId::from_raw(1));
 	ASSERT_GT(fd, -1);
 
 	error_t result = fs::release_process_fd(fd_table, 32, fd);
@@ -74,14 +77,15 @@ void test_fd_fork_copy()
 	fs::init_process_fd_table(parent_table, 32);
 
 	// Add some file descriptors
-	fd_t fd1 =
-	    fs::allocate_process_fd(parent_table, 32, "parent1.txt", 100, ProcessId::from_raw(1));
-	fd_t fd2 =
-	    fs::allocate_process_fd(parent_table, 32, "parent2.txt", 200, ProcessId::from_raw(1));
+	fd_t fd1 = fs::allocate_process_fd(parent_table, 32, "parent1.txt", 100,
+									   ProcessId::from_raw(1));
+	fd_t fd2 = fs::allocate_process_fd(parent_table, 32, "parent2.txt", 200,
+									   ProcessId::from_raw(1));
 
 	// Create child FD table and copy
 	fs::FileDescriptor child_table[32];
-	error_t result = fs::copy_fd_table(child_table, parent_table, 32, ProcessId::from_raw(2));
+	error_t result =
+			fs::copy_fd_table(child_table, parent_table, 32, ProcessId::from_raw(2));
 	ASSERT_EQ(result, OK);
 
 	// Verify copy
@@ -107,14 +111,16 @@ void test_fd_dup2()
 	fs::init_process_fd_table(fd_table, 32);
 
 	// Allocate a file descriptor
-	fd_t file_fd = fs::allocate_process_fd(fd_table, 32, "output.txt", 0, ProcessId::from_raw(1));
+	fd_t file_fd = fs::allocate_process_fd(fd_table, 32, "output.txt", 0,
+										   ProcessId::from_raw(1));
 	ASSERT_GT(file_fd, -1);
 
 	// Test redirection setup
 	// fd_table[STDOUT_FILENO].fd.redirect_to = file_fd;
 
 	// Verify redirection
-	fs::FileDescriptor* stdout_entry = fs::get_process_fd(fd_table, 32, STDOUT_FILENO);
+	fs::FileDescriptor* stdout_entry =
+			fs::get_process_fd(fd_table, 32, STDOUT_FILENO);
 	ASSERT_NOT_NULL(stdout_entry);
 	// ASSERT_EQ(stdout_entry->fd.redirect_to, file_fd);
 
@@ -134,23 +140,26 @@ void test_fd_limits()
 
 	// Fill up the table (3 standard descriptors already used)
 	fd_t fds[5];
-	const char* names[5] = { "file0.txt", "file1.txt", "file2.txt", "file3.txt", "file4.txt" };
+	const char* names[5] = { "file0.txt", "file1.txt", "file2.txt", "file3.txt",
+							 "file4.txt" };
 	for (int i = 0; i < 5; i++) {
-		fds[i] = fs::allocate_process_fd(fd_table, 8, names[i], 100, ProcessId::from_raw(1));
+		fds[i] = fs::allocate_process_fd(fd_table, 8, names[i], 100,
+										 ProcessId::from_raw(1));
 		ASSERT_GT(fds[i], -1);
 	}
 
 	// Next allocation should fail
-	fd_t overflow_fd =
-	    fs::allocate_process_fd(fd_table, 8, "overflow.txt", 100, ProcessId::from_raw(1));
+	fd_t overflow_fd = fs::allocate_process_fd(fd_table, 8, "overflow.txt", 100,
+											   ProcessId::from_raw(1));
 	ASSERT_EQ(overflow_fd, NO_FD);
 
 	// Release one and try again
 	error_t result = fs::release_process_fd(fd_table, 8, fds[0]);
 	ASSERT_EQ(result, OK);
 
-	fd_t new_fd = fs::allocate_process_fd(fd_table, 8, "new.txt", 100, ProcessId::from_raw(1));
-	ASSERT_EQ(new_fd, fds[0]);  // Should reuse the freed slot
+	fd_t new_fd = fs::allocate_process_fd(fd_table, 8, "new.txt", 100,
+										  ProcessId::from_raw(1));
+	ASSERT_EQ(new_fd, fds[0]); // Should reuse the freed slot
 
 	LOG_TEST("test_fd_limits passed");
 }
@@ -162,9 +171,11 @@ void test_release_all_fds()
 	fs::init_process_fd_table(fd_table, 32);
 
 	// Allocate several file descriptors
-	const char* names[5] = { "file0.txt", "file1.txt", "file2.txt", "file3.txt", "file4.txt" };
+	const char* names[5] = { "file0.txt", "file1.txt", "file2.txt", "file3.txt",
+							 "file4.txt" };
 	for (int i = 0; i < 5; i++) {
-		fd_t fd = fs::allocate_process_fd(fd_table, 32, names[i], 100, ProcessId::from_raw(1));
+		fd_t fd = fs::allocate_process_fd(fd_table, 32, names[i], 100,
+										  ProcessId::from_raw(1));
 		ASSERT_GT(fd, -1);
 	}
 

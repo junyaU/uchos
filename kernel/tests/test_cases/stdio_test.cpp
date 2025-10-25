@@ -1,13 +1,13 @@
 #include "tests/test_cases/stdio_test.hpp"
+#include <sys/types.h>
+#include <cstdint>
+#include <cstring>
+#include <libs/common/types.hpp>
 #include "fs/file_descriptor.hpp"
 #include "task/context.hpp"
 #include "task/task.hpp"
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
-#include <cstdint>
-#include <cstring>
-#include <libs/common/types.hpp>
-#include <sys/types.h>
 
 using kernel::task::create_task;
 using kernel::task::CURRENT_TASK;
@@ -19,7 +19,7 @@ namespace kernel::syscall
 {
 extern ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3);
 extern ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3);
-}  // namespace kernel::syscall
+} // namespace kernel::syscall
 
 void test_fd_table_init()
 {
@@ -55,7 +55,7 @@ void test_write_to_stdout()
 	// Test writing to stdout
 	const char* test_msg = "Hello, stdout!";
 	const ssize_t result = kernel::syscall::sys_write(
-	    STDOUT_FILENO, reinterpret_cast<uint64_t>(test_msg), strlen(test_msg));
+			STDOUT_FILENO, reinterpret_cast<uint64_t>(test_msg), strlen(test_msg));
 
 	// Should return number of bytes written
 	ASSERT_GT(result, 0);
@@ -77,7 +77,7 @@ void test_write_to_stderr()
 	// Test writing to stderr
 	const char* test_msg = "Error message";
 	const ssize_t result = kernel::syscall::sys_write(
-	    STDERR_FILENO, reinterpret_cast<uint64_t>(test_msg), strlen(test_msg));
+			STDERR_FILENO, reinterpret_cast<uint64_t>(test_msg), strlen(test_msg));
 
 	// Should return number of bytes written
 	ASSERT_GT(result, 0);
@@ -98,8 +98,8 @@ void test_read_from_stdin()
 
 	// Test reading from stdin (currently returns 0)
 	char buffer[128];
-	const ssize_t result =
-	    kernel::syscall::sys_read(STDIN_FILENO, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
+	const ssize_t result = kernel::syscall::sys_read(
+			STDIN_FILENO, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
 
 	// Currently stdin returns 0 (no data available)
 	ASSERT_EQ(result, 0);
@@ -119,18 +119,19 @@ void test_invalid_fd()
 
 	// Test invalid file descriptor (negative)
 	char buffer[128];
-	const ssize_t result =
-	    kernel::syscall::sys_write(-1, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
+	const ssize_t result = kernel::syscall::sys_write(
+			-1, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
 	ASSERT_EQ(result, ERR_INVALID_FD);
 
 	// Test invalid file descriptor (too large)
 	const ssize_t result2 = kernel::syscall::sys_write(
-	    MAX_FDS_PER_PROCESS + 1, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
+			MAX_FDS_PER_PROCESS + 1, reinterpret_cast<uint64_t>(buffer),
+			sizeof(buffer));
 	ASSERT_EQ(result2, ERR_INVALID_FD);
 
 	// Test uninitialized file descriptor
-	const ssize_t result3 =
-	    kernel::syscall::sys_write(10, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
+	const ssize_t result3 = kernel::syscall::sys_write(
+			10, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
 	ASSERT_EQ(result3, ERR_INVALID_FD);
 
 	// Restore previous task
@@ -144,8 +145,9 @@ void test_fd_inheritance()
 	ASSERT_NOT_NULL(parent);
 
 	// Modify parent's FD table - allocate a file descriptor
-	fd_t fd = kernel::fs::allocate_process_fd(
-	    parent->fd_table.data(), MAX_FDS_PER_PROCESS, "test.txt", 100, parent->id);
+	fd_t fd = kernel::fs::allocate_process_fd(parent->fd_table.data(),
+											  MAX_FDS_PER_PROCESS, "test.txt", 100,
+											  parent->id);
 	ASSERT_GT(fd, -1);
 
 	// Set parent as current task for copy_task
@@ -182,7 +184,7 @@ void test_stdout_redirection()
 
 	// Allocate a file descriptor to redirect to
 	fd_t file_fd = kernel::fs::allocate_process_fd(
-	    t->fd_table.data(), MAX_FDS_PER_PROCESS, "output.txt", 0, t->id);
+			t->fd_table.data(), MAX_FDS_PER_PROCESS, "output.txt", 0, t->id);
 	ASSERT_GT(file_fd, -1);
 
 	// TODO: Update test for new dup2 complete copy implementation
@@ -196,14 +198,14 @@ void test_stdout_redirection()
 	// Test writing to redirected stdout
 	const char* test_msg = "Redirected output";
 	const ssize_t result = kernel::syscall::sys_write(
-	    STDOUT_FILENO, reinterpret_cast<uint64_t>(test_msg), strlen(test_msg));
+			STDOUT_FILENO, reinterpret_cast<uint64_t>(test_msg), strlen(test_msg));
 
 	// Should return number of bytes written
 	ASSERT_EQ(result, strlen(test_msg));
 
 	// Verify that no message was sent to shell (since it's redirected)
-	// Note: In actual implementation, we'd check if FS_WRITE message was sent to FS_FAT32
-	// but for unit tests, we can't easily verify IPC messages
+	// Note: In actual implementation, we'd check if FS_WRITE message was sent to
+	// FS_FAT32 but for unit tests, we can't easily verify IPC messages
 
 	// Restore stdout
 	// t->fd_table[STDOUT_FILENO].redirect_to = NO_FD;
@@ -223,7 +225,7 @@ void test_stderr_redirection()
 
 	// Allocate a file descriptor to redirect to
 	fd_t file_fd = kernel::fs::allocate_process_fd(
-	    t->fd_table.data(), MAX_FDS_PER_PROCESS, "error.txt", 0, t->id);
+			t->fd_table.data(), MAX_FDS_PER_PROCESS, "error.txt", 0, t->id);
 	ASSERT_GT(file_fd, -1);
 
 	// Simulate redirection by setting redirect_to
@@ -232,7 +234,7 @@ void test_stderr_redirection()
 	// Test writing to redirected stderr
 	const char* test_msg = "Redirected error";
 	const ssize_t result = kernel::syscall::sys_write(
-	    STDERR_FILENO, reinterpret_cast<uint64_t>(test_msg), strlen(test_msg));
+			STDERR_FILENO, reinterpret_cast<uint64_t>(test_msg), strlen(test_msg));
 
 	// Should return number of bytes written
 	ASSERT_EQ(result, strlen(test_msg));
@@ -255,7 +257,7 @@ void test_large_write_redirection()
 
 	// Allocate a file descriptor to redirect to
 	fd_t file_fd = kernel::fs::allocate_process_fd(
-	    t->fd_table.data(), MAX_FDS_PER_PROCESS, "large.txt", 0, t->id);
+			t->fd_table.data(), MAX_FDS_PER_PROCESS, "large.txt", 0, t->id);
 	ASSERT_GT(file_fd, -1);
 
 	// TODO: Update test for new dup2 complete copy implementation
@@ -265,7 +267,8 @@ void test_large_write_redirection()
 	char large_buffer[512];
 	memset(large_buffer, 'A', sizeof(large_buffer));
 	const ssize_t result = kernel::syscall::sys_write(
-	    STDOUT_FILENO, reinterpret_cast<uint64_t>(large_buffer), sizeof(large_buffer));
+			STDOUT_FILENO, reinterpret_cast<uint64_t>(large_buffer),
+			sizeof(large_buffer));
 
 	// Should return 0 for large writes (not supported in Phase 1)
 	ASSERT_EQ(result, 0);

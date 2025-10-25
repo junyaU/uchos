@@ -11,9 +11,9 @@
 
 #pragma once
 
+#include <cstdint>
 #include "registers.hpp"
 #include "trb.hpp"
-#include <cstdint>
 
 namespace kernel::hw::usb::xhci
 {

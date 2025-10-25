@@ -1,8 +1,8 @@
 #include "acpi.hpp"
-#include "asm_utils.h"
-#include "graphics/log.hpp"
 #include <cstdint>
 #include <cstring>
+#include "asm_utils.h"
+#include "graphics/log.hpp"
 
 namespace kernel::timers::acpi
 {

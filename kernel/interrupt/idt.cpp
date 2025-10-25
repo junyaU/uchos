@@ -1,4 +1,5 @@
 #include "idt.hpp"
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include "fault.hpp"
@@ -7,9 +8,9 @@
 #include "handlers.hpp"
 #include "memory/segment.hpp"
 #include "vector.hpp"
-#include <array>
 
-namespace kernel::interrupt {
+namespace kernel::interrupt
+{
 
 std::array<IdtEntry, 256> idt;
 
@@ -39,7 +40,8 @@ void initialize_interrupt()
 
 	auto set_entry = [](int irq, auto handler, uint16_t ist = 0) {
 		set_idt_entry(idt[irq], reinterpret_cast<uint64_t>(handler),
-					  TypeAttr{ ist, gate_type::kInterruptGate, 0, 1 }, kernel::memory::KERNEL_CS);
+					  TypeAttr{ ist, gate_type::kInterruptGate, 0, 1 },
+					  kernel::memory::KERNEL_CS);
 	};
 
 	set_entry(InterruptVector::LOCAL_APIC_TIMER, on_timer_interrupt, IST_FOR_TIMER);

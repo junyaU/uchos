@@ -11,12 +11,12 @@
 
 #pragma once
 
+#include <cstdint>
+#include <cstring>
 #include "device_manager.hpp"
 #include "port.hpp"
 #include "registers.hpp"
 #include "ring.hpp"
-#include <cstdint>
-#include <cstring>
 
 namespace kernel::hw::usb::xhci
 {

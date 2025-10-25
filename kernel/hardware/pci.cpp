@@ -1,8 +1,8 @@
 #include "pci.hpp"
-#include "asm_utils.h"
-#include "hardware/mm_register.hpp"
 #include <cstddef>
 #include <cstdint>
+#include "asm_utils.h"
+#include "hardware/mm_register.hpp"
 
 namespace kernel::hw::pci
 {
@@ -294,14 +294,13 @@ void configure_msi(const Device& dev,
 	}
 
 	if (msix_capability_addr != 0) {
-		configure_msi_x_register(dev, msix_capability_addr, msg_addr,
-										msg_data);
+		configure_msi_x_register(dev, msix_capability_addr, msg_addr, msg_data);
 		return;
 	}
 
 	if (msi_capability_addr != 0) {
 		configure_msi_register(dev, msi_capability_addr, msg_addr, msg_data,
-									  num_vector_exponent);
+							   num_vector_exponent);
 		return;
 	}
 }

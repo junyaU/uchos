@@ -7,9 +7,9 @@
 
 struct FrameBufferConf;
 
+#include <cstdint>
 #include "color.hpp"
 #include "point2d.hpp"
-#include <cstdint>
 
 namespace kernel::graphics
 {

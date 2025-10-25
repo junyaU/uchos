@@ -11,7 +11,8 @@
 
 #include <cstddef>
 
-namespace kernel::memory {
+namespace kernel::memory
+{
 
 // Memory allocation functions are now provided by slab.hpp
 

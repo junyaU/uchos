@@ -47,8 +47,7 @@ void reset_port(Port& p)
 	}
 
 	if (addressing_port != 0) {
-		port_connection_states[p.number()] =
-				PortConnectionState::WAITING_ADDRESSED;
+		port_connection_states[p.number()] = PortConnectionState::WAITING_ADDRESSED;
 		return;
 	}
 

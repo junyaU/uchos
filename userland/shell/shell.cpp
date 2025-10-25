@@ -1,15 +1,12 @@
 #include "shell.hpp"
-#include "libs/common/types.hpp"
-#include "terminal.hpp"
+#include <unistd.h>
 #include <cstring>
 #include <libs/user/file.hpp>
 #include <libs/user/syscall.hpp>
-#include <unistd.h>
+#include "libs/common/types.hpp"
+#include "terminal.hpp"
 
-Shell::Shell()
-{
-	memset(histories, 0, sizeof(histories));
-}
+Shell::Shell() { memset(histories, 0, sizeof(histories)); }
 
 void Shell::process_input(char* input, Terminal& term)
 {

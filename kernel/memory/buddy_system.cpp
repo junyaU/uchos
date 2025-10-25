@@ -1,14 +1,15 @@
 #include "buddy_system.hpp"
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include "bit_utils.hpp"
 #include "graphics/log.hpp"
 #include "memory/page.hpp"
 #include "tests/framework.hpp"
 #include "tests/test_cases/memory_test.hpp"
-#include <algorithm>
-#include <cstddef>
-#include <cstdint>
 
-namespace kernel::memory {
+namespace kernel::memory
+{
 
 BuddySystem* memory_manager;
 
@@ -40,7 +41,8 @@ void BuddySystem::split_memory_block(int order)
 
 void* BuddySystem::allocate(size_t size)
 {
-	const int order = calculate_order((size + kernel::memory::PAGE_SIZE - 1) / kernel::memory::PAGE_SIZE);
+	const int order = calculate_order((size + kernel::memory::PAGE_SIZE - 1) /
+									  kernel::memory::PAGE_SIZE);
 	if (order == -1) {
 		LOG_ERROR("invalid size: %d", size);
 		return nullptr;
@@ -84,13 +86,15 @@ void* BuddySystem::allocate(size_t size)
 
 void BuddySystem::free(void* addr, size_t size)
 {
-	auto* start_page = &pages[reinterpret_cast<uintptr_t>(addr) / kernel::memory::PAGE_SIZE];
+	auto* start_page =
+			&pages[reinterpret_cast<uintptr_t>(addr) / kernel::memory::PAGE_SIZE];
 	if (start_page->is_free()) {
 		LOG_ERROR("double free detected at address: %p", addr);
 		return;
 	}
 
-	int order = calculate_order((size + kernel::memory::PAGE_SIZE - 1) / kernel::memory::PAGE_SIZE);
+	int order = calculate_order((size + kernel::memory::PAGE_SIZE - 1) /
+								kernel::memory::PAGE_SIZE);
 	if (order == -1) {
 		LOG_ERROR("invalid size: %d", size);
 		return;
@@ -154,7 +158,8 @@ void BuddySystem::register_memory_blocks(size_t num_total_pages, Page* start_pag
 		const auto aligned_addr =
 				static_cast<uintptr_t>(align_up(page_addr, alignment_size));
 
-		const size_t num_rounded_up_pages = (aligned_addr - page_addr) / kernel::memory::PAGE_SIZE;
+		const size_t num_rounded_up_pages =
+				(aligned_addr - page_addr) / kernel::memory::PAGE_SIZE;
 		if ((num_total_pages - num_rounded_up_pages) < (1 << order)) {
 			--order;
 		}

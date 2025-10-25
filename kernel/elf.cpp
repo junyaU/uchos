@@ -1,12 +1,12 @@
 #include "elf.hpp"
+#include <cstdint>
+#include <cstring>
 #include "asm_utils.h"
 #include "graphics/log.hpp"
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"
 #include "task/task.hpp"
-#include <cstdint>
-#include <cstring>
 
 int make_args(char* command,
 			  char* args,
@@ -102,7 +102,8 @@ void copy_load_segment(elf64_ehdr_t* elf_header)
 		dest_addr.data = program_header[i].p_vaddr;
 
 		const auto num_pages =
-				(program_header[i].p_memsz + kernel::memory::PAGE_SIZE - 1) / kernel::memory::PAGE_SIZE;
+				(program_header[i].p_memsz + kernel::memory::PAGE_SIZE - 1) /
+				kernel::memory::PAGE_SIZE;
 
 		kernel::memory::setup_page_tables(dest_addr, num_pages, true);
 
@@ -154,7 +155,8 @@ void exec_elf(void* buffer, const char* name, const char* args)
 
 	const int stack_size = kernel::memory::PAGE_SIZE * 8;
 	const kernel::memory::vaddr_t stack_addr{ 0xffff'ffff'ffff'f000 - stack_size };
-	kernel::memory::setup_page_tables(stack_addr, stack_size / kernel::memory::PAGE_SIZE, true);
+	kernel::memory::setup_page_tables(stack_addr,
+									  stack_size / kernel::memory::PAGE_SIZE, true);
 
 	enter_user_mode(argc, argv, kernel::memory::USER_SS, elf_header->e_entry,
 					stack_addr.data + stack_size - 8,

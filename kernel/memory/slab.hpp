@@ -5,19 +5,19 @@
  * This file contains the implementation of a slab allocator for efficient
  * memory management in a kernel environment. The slab allocator is designed to
  * minimize fragmentation by managing memory in fixed-size blocks called slabs.
- * 
+ *
  * @note Uses the unified error handling interface (see error.hpp)
  * @date 2024
  */
 
 #pragma once
 
-#include "error.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <list>
 #include <memory>
 #include <vector>
+#include "error.hpp"
 
 namespace kernel::memory
 {
@@ -158,11 +158,12 @@ void initialize_slab_allocator();
  * @param flags Allocation flags
  * @note Returns void if allocation fails, suitable for void functions
  */
-#define ALLOC_OR_RETURN(ptr, size, flags)                                         \
+#define ALLOC_OR_RETURN(ptr, size, flags)                                           \
 	do {                                                                            \
-		(ptr) = kernel::memory::alloc(size, flags);                               \
+		(ptr) = kernel::memory::alloc(size, flags);                                 \
 		if ((ptr) == nullptr) {                                                     \
-			LOG_ERROR("Memory allocation failed: %s (size=%zu)", #ptr, (size_t)(size)); \
+			LOG_ERROR("Memory allocation failed: %s (size=%zu)", #ptr,              \
+					  (size_t)(size));                                              \
 			return;                                                                 \
 		}                                                                           \
 	} while (0)
@@ -174,11 +175,12 @@ void initialize_slab_allocator();
  * @param flags Allocation flags
  * @note Returns ERR_NO_MEMORY if allocation fails
  */
-#define ALLOC_OR_RETURN_ERROR(ptr, size, flags)                                   \
+#define ALLOC_OR_RETURN_ERROR(ptr, size, flags)                                     \
 	do {                                                                            \
-		(ptr) = kernel::memory::alloc(size, flags);                               \
+		(ptr) = kernel::memory::alloc(size, flags);                                 \
 		if ((ptr) == nullptr) {                                                     \
-			LOG_ERROR("Memory allocation failed: %s (size=%zu)", #ptr, (size_t)(size)); \
+			LOG_ERROR("Memory allocation failed: %s (size=%zu)", #ptr,              \
+					  (size_t)(size));                                              \
 			return ERR_NO_MEMORY;                                                   \
 		}                                                                           \
 	} while (0)
@@ -188,13 +190,15 @@ void initialize_slab_allocator();
  * @param ptr Variable to store allocated pointer
  * @param size Size to allocate
  * @param flags Allocation flags
- * @note Returns nullptr if allocation fails, suitable for functions returning pointers
+ * @note Returns nullptr if allocation fails, suitable for functions returning
+ * pointers
  */
-#define ALLOC_OR_RETURN_NULL(ptr, size, flags)                                    \
+#define ALLOC_OR_RETURN_NULL(ptr, size, flags)                                      \
 	do {                                                                            \
-		(ptr) = kernel::memory::alloc(size, flags);                               \
+		(ptr) = kernel::memory::alloc(size, flags);                                 \
 		if ((ptr) == nullptr) {                                                     \
-			LOG_ERROR("Memory allocation failed: %s (size=%zu)", #ptr, (size_t)(size)); \
-			return nullptr;                                                        \
+			LOG_ERROR("Memory allocation failed: %s (size=%zu)", #ptr,              \
+					  (size_t)(size));                                              \
+			return nullptr;                                                         \
 		}                                                                           \
 	} while (0)

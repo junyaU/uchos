@@ -21,8 +21,9 @@ ExtendedRegisterList::iterator& ExtendedRegisterList::iterator::operator++()
 	return *this;
 }
 
-ExtendedRegisterList::ExtendedRegisterList(uint64_t mmio_base,
-											   kernel::hw::usb::xhci::hcc_params1_register hccp)
+ExtendedRegisterList::ExtendedRegisterList(
+		uint64_t mmio_base,
+		kernel::hw::usb::xhci::hcc_params1_register hccp)
 	: begin_(add_or_null(reinterpret_cast<value_type*>(mmio_base),
 						 hccp.bits.xhci_extended_capabilities_pointer))
 {

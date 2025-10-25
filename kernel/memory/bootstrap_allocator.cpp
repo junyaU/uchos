@@ -1,8 +1,8 @@
 #include "memory/bootstrap_allocator.hpp"
-#include <cstdint>
-#include <cstddef>
-#include <climits>
 #include <algorithm>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
 #include "../../UchLoaderPkg/memory_map.hpp"
 #include "graphics/log.hpp"
 #include "memory/buddy_system.hpp"
@@ -46,7 +46,8 @@ void* BootstrapAllocator::allocate(size_t size)
 				bitmap_[j / BITMAP_ENTRY_SIZE] |= 1UL << (j % BITMAP_ENTRY_SIZE);
 			}
 
-			return reinterpret_cast<void*>(consecutive_start_index * kernel::memory::PAGE_SIZE);
+			return reinterpret_cast<void*>(consecutive_start_index *
+										   kernel::memory::PAGE_SIZE);
 		}
 	}
 
@@ -58,7 +59,8 @@ void* BootstrapAllocator::allocate(size_t size)
 void BootstrapAllocator::free(void* addr, size_t size)
 {
 	auto start = reinterpret_cast<uintptr_t>(addr) / kernel::memory::PAGE_SIZE;
-	auto end = (reinterpret_cast<uintptr_t>(addr) + size) / kernel::memory::PAGE_SIZE;
+	auto end =
+			(reinterpret_cast<uintptr_t>(addr) + size) / kernel::memory::PAGE_SIZE;
 
 	for (auto i = start; i < end; i++) {
 		bitmap_[i / BITMAP_ENTRY_SIZE] &= ~(1UL << (i % BITMAP_ENTRY_SIZE));
@@ -68,13 +70,15 @@ void BootstrapAllocator::free(void* addr, size_t size)
 void BootstrapAllocator::mark_available(void* addr, size_t size)
 {
 	auto start = reinterpret_cast<uintptr_t>(addr) / kernel::memory::PAGE_SIZE;
-	auto end = (reinterpret_cast<uintptr_t>(addr) + size) / kernel::memory::PAGE_SIZE;
+	auto end =
+			(reinterpret_cast<uintptr_t>(addr) + size) / kernel::memory::PAGE_SIZE;
 
 	for (auto i = start; i < end; i++) {
 		bitmap_[i / BITMAP_ENTRY_SIZE] &= ~(1UL << (i % BITMAP_ENTRY_SIZE));
 	}
 
-	memory_end_ = std::max(memory_end_, reinterpret_cast<void*>(end * kernel::memory::PAGE_SIZE));
+	memory_end_ = std::max(memory_end_,
+						   reinterpret_cast<void*>(end * kernel::memory::PAGE_SIZE));
 }
 
 void BootstrapAllocator::show_available_memory() const
@@ -87,9 +91,10 @@ void BootstrapAllocator::show_available_memory() const
 		}
 	}
 
-	LOG_INFO("available memory: %u MiB / %u MiB",
-			 available_pages * kernel::memory::PAGE_SIZE / 1024 / 1024,
-			 (end_index() - start_index()) * kernel::memory::PAGE_SIZE / 1024 / 1024);
+	LOG_INFO(
+			"available memory: %u MiB / %u MiB",
+			available_pages * kernel::memory::PAGE_SIZE / 1024 / 1024,
+			(end_index() - start_index()) * kernel::memory::PAGE_SIZE / 1024 / 1024);
 }
 
 alignas(BootstrapAllocator) char bootstrap_allocator_buffer[sizeof(
@@ -99,7 +104,8 @@ BootstrapAllocator* boot_allocator;
 void initialize(const MemoryMap& mem_map)
 {
 	LOG_INFO("Initializing bootstrap allocator...");
-	kernel::memory::boot_allocator = new (kernel::memory::bootstrap_allocator_buffer) kernel::memory::BootstrapAllocator();
+	kernel::memory::boot_allocator = new (kernel::memory::bootstrap_allocator_buffer)
+			kernel::memory::BootstrapAllocator();
 
 	const auto mem_map_base = reinterpret_cast<uintptr_t>(mem_map.buffer);
 	const auto mem_map_end = mem_map_base + mem_map.map_size;
@@ -116,8 +122,9 @@ void initialize(const MemoryMap& mem_map)
 			continue;
 		}
 
-		kernel::memory::boot_allocator->mark_available(reinterpret_cast<void*>(desc->physical_start),
-									   desc->number_of_pages * kernel::memory::PAGE_SIZE);
+		kernel::memory::boot_allocator->mark_available(
+				reinterpret_cast<void*>(desc->physical_start),
+				desc->number_of_pages * kernel::memory::PAGE_SIZE);
 	}
 
 	kernel::memory::boot_allocator->show_available_memory();
@@ -148,7 +155,9 @@ void initialize_heap()
 void disable()
 {
 	if (kernel::memory::boot_allocator != nullptr) {
-		kernel::memory::memory_manager->free(kernel::memory::boot_allocator, sizeof(kernel::memory::BootstrapAllocator));
+		kernel::memory::memory_manager->free(
+				kernel::memory::boot_allocator,
+				sizeof(kernel::memory::BootstrapAllocator));
 		kernel::memory::boot_allocator = nullptr;
 	}
 

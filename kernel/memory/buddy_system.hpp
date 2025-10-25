@@ -12,13 +12,14 @@
 
 #pragma once
 
-#include "memory/custom_allocators.hpp"
-#include "memory/page.hpp"
 #include <array>
 #include <cstddef>
 #include <list>
+#include "memory/custom_allocators.hpp"
+#include "memory/page.hpp"
 
-namespace kernel::memory {
+namespace kernel::memory
+{
 
 static const auto MAX_ORDER = 18;
 

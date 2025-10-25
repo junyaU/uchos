@@ -1,11 +1,11 @@
 /**
  * @file tests/macros.hpp
  * @brief Test assertion macros for kernel unit testing
- * 
+ *
  * This file provides assertion and expectation macros for writing unit tests.
  * ASSERT macros will cause the test to return immediately on failure, while
  * EXPECT macros will log the failure but continue test execution.
- * 
+ *
  * @date 2024
  */
 
@@ -103,7 +103,7 @@
  */
 #define ASSERT_NULL(x)                                                              \
 	do {                                                                            \
-		if ((x) != nullptr) {                                                          \
+		if ((x) != nullptr) {                                                       \
 			LOG_TEST("ASSERT_NULL failed: %d", x);                                  \
 			return;                                                                 \
 		}                                                                           \
@@ -178,7 +178,7 @@
 
 #define EXPECT_NULL(x)                                                              \
 	do {                                                                            \
-		if ((x) != nullptr) {                                                          \
+		if ((x) != nullptr) {                                                       \
 			LOG_TEST("EXPECT_NULL failed: %d", x);                                  \
 		}                                                                           \
 	} while (0)

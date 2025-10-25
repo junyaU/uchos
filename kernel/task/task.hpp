@@ -1,11 +1,5 @@
 #pragma once
 
-#include "fs/file_descriptor.hpp"
-#include "fs/path.hpp"
-#include "list.hpp"
-#include "memory/paging.hpp"
-#include "memory/slab.hpp"
-#include "task/context.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -13,6 +7,12 @@
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 #include <queue>
+#include "fs/file_descriptor.hpp"
+#include "fs/path.hpp"
+#include "list.hpp"
+#include "memory/paging.hpp"
+#include "memory/slab.hpp"
+#include "task/context.hpp"
 
 namespace kernel::task
 {
@@ -42,16 +42,16 @@ struct Task {
 	std::array<kernel::fs::FileDescriptor, MAX_FDS_PER_PROCESS> fd_table;
 
 	Task(int id,
-	     const char* task_name,
-	     uint64_t task_addr,
-	     TaskState state,
-	     bool setup_context,
-	     bool is_initilized);
+		 const char* task_name,
+		 uint64_t task_addr,
+		 TaskState state,
+		 bool setup_context,
+		 bool is_initilized);
 
 	~Task()
 	{
 		kernel::memory::clean_page_tables(
-		    reinterpret_cast<kernel::memory::page_table_entry*>(ctx.cr3));
+				reinterpret_cast<kernel::memory::page_table_entry*>(ctx.cr3));
 	}
 
 	static void* operator new(size_t size)
@@ -89,7 +89,10 @@ static constexpr int MAX_TASKS = 100;
 extern std::array<Task*, MAX_TASKS> tasks;
 extern list_t run_queue;
 
-Task* create_task(const char* name, uint64_t task_addr, bool setup_context, bool is_initilized);
+Task* create_task(const char* name,
+				  uint64_t task_addr,
+				  bool setup_context,
+				  bool is_initilized);
 
 Task* copy_task(Task* parent, Context* parent_ctx);
 
@@ -113,7 +116,7 @@ void exit_task(int status);
 
 Message wait_for_message(MsgType type);
 
-}  // namespace kernel::task
+} // namespace kernel::task
 
 // For assembly and extern "C" compatibility
 using kernel::task::CURRENT_TASK;

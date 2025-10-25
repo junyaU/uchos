@@ -3,7 +3,8 @@
 #include <array>
 #include <cstdint>
 
-namespace kernel::interrupt {
+namespace kernel::interrupt
+{
 
 enum gate_type {
 	kTaskGate = 0x5,

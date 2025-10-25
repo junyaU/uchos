@@ -1,10 +1,10 @@
 #include "font.hpp"
-#include "log.hpp"
-#include "point2d.hpp"
-#include "screen.hpp"
 #include <cctype>
 #include <cstdint>
 #include <vector>
+#include "log.hpp"
+#include "point2d.hpp"
+#include "screen.hpp"
 
 extern const uint8_t _binary_hankaku_bin_start;
 extern const uint8_t _binary_hankaku_bin_end;
@@ -13,7 +13,8 @@ extern const uint8_t _binary_hankaku_bin_size;
 FT_Library ft_library;
 std::vector<uint8_t>* nihongo_font_data;
 
-namespace kernel::graphics {
+namespace kernel::graphics
+{
 
 BitmapFont::BitmapFont(int width, int height)
 	: font_data_{ &_binary_hankaku_bin_start }, width_{ width }, height_{ height }
@@ -41,7 +42,7 @@ void render_unicode(char32_t c, FT_Face face)
 	}
 
 	if (const int err = FT_Load_Glyph(face, glyph_index,
-								FT_LOAD_RENDER | FT_LOAD_TARGET_MONO)) {
+									  FT_LOAD_RENDER | FT_LOAD_TARGET_MONO)) {
 		LOG_ERROR("Failed to load glyph: %d", err);
 		return;
 	}
@@ -54,7 +55,7 @@ void write_ascii(Screen& scr, Point2D position, char c, uint32_t color_code)
 		for (int dy = 0; dy < kfont->height(); dy++) {
 			for (int dx = 0; dx < kfont->width(); dx++) {
 				if ((font[dy] << dx & 0x80) != 0) {
-				scr.put_pixel(position + Point2D{ dx, dy }, color_code);
+					scr.put_pixel(position + Point2D{ dx, dy }, color_code);
 				}
 			}
 		}
@@ -215,7 +216,7 @@ FT_Face new_face()
 	FT_Face face;
 
 	if (const int err = FT_New_Memory_Face(ft_library, nihongo_font_data->data(),
-									 nihongo_font_data->size(), 0, &face)) {
+										   nihongo_font_data->size(), 0, &face)) {
 		LOG_ERROR("Failed to create new face: %d", err);
 		return 0;
 	}

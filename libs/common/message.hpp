@@ -1,9 +1,9 @@
 #pragma once
 
-#include "process_id.hpp"
-#include "types.hpp"
 #include <cstddef>
 #include <cstdint>
+#include "process_id.hpp"
+#include "types.hpp"
 
 #define __user
 
@@ -38,10 +38,11 @@ enum class MsgType : int32_t {
 	FS_PWD,
 	FS_CHANGE_DIR,
 	FS_DUP2,
-	MAX_MESSAGE_TYPE,  // must be the last
+	MAX_MESSAGE_TYPE, // must be the last
 };
 
-constexpr int32_t TOTAL_MESSAGE_TYPES = static_cast<int32_t>(MsgType::MAX_MESSAGE_TYPE);
+constexpr int32_t TOTAL_MESSAGE_TYPES =
+		static_cast<int32_t>(MsgType::MAX_MESSAGE_TYPE);
 
 enum class TimeoutAction : uint8_t {
 	TERMINAL_CURSOR_BLINK,

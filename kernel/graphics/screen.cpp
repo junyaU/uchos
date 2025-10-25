@@ -1,12 +1,13 @@
 #include "screen.hpp"
+#include <cstdint>
+#include <new> // NOLINT(misc-include-cleaner)
 #include "../../UchLoaderPkg/frame_buffer_conf.hpp"
 #include "color.hpp"
 #include "font.hpp"
 #include "point2d.hpp"
-#include <cstdint>
-#include <new> // NOLINT(misc-include-cleaner)
 
-namespace kernel::graphics {
+namespace kernel::graphics
+{
 
 Screen::Screen(const FrameBufferConf& frame_buffer_conf, Color bg_color)
 	: pixels_per_scan_line_(frame_buffer_conf.pixels_per_scan_line),

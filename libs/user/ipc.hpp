@@ -1,8 +1,8 @@
 #pragma once
 
 #include <libs/common/message.hpp>
-#include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
+#include <libs/common/types.hpp>
 
 void receive_message(Message* msg);
 

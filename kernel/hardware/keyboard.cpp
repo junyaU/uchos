@@ -1,10 +1,10 @@
 #include "usb/class_driver/keyboard.hpp"
 #include <cstdint>
+#include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
+#include <libs/common/types.hpp>
 #include "keyboard.hpp"
 #include "task/ipc.hpp"
-#include <libs/common/message.hpp>
-#include <libs/common/types.hpp>
-#include <libs/common/process_id.hpp>
 
 namespace
 {
@@ -51,12 +51,13 @@ const char KEYCODE_MAP_SHIFTED[256] = {
 };
 } // namespace
 
-namespace kernel::hw {
+namespace kernel::hw
+{
 
 void initialize_keyboard()
 {
 	usb::KeyboardDriver::default_observer = [](uint8_t modifier, uint8_t keycode,
-												bool press) {
+											   bool press) {
 		if (!press) {
 			return;
 		}
@@ -65,7 +66,8 @@ void initialize_keyboard()
 		const char ascii =
 				shift ? KEYCODE_MAP_SHIFTED[keycode] : KEYCODE_MAP[keycode];
 
-		Message m{ .type = MsgType::NOTIFY_KEY_INPUT, .sender = process_ids::INTERRUPT };
+		Message m{ .type = MsgType::NOTIFY_KEY_INPUT,
+				   .sender = process_ids::INTERRUPT };
 		m.data.key_input.key_code = keycode;
 		m.data.key_input.modifier = modifier;
 		m.data.key_input.ascii = static_cast<uint8_t>(ascii);

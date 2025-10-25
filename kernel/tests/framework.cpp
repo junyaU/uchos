@@ -1,6 +1,6 @@
 #include "tests/framework.hpp"
-#include "graphics/log.hpp"
 #include <cstring>
+#include "graphics/log.hpp"
 
 struct TestCaseT {
 	const char* name;

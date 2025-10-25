@@ -1,40 +1,36 @@
 /**
  * @file error.hpp
  * @brief Unified kernel error handling interface
- * 
- * This file provides a unified error handling mechanism used throughout the UCHos kernel.
- * It includes various utilities for error code processing, logging, and error propagation.
- * 
+ *
+ * This file provides a unified error handling mechanism used throughout the UCHos
+ * kernel. It includes various utilities for error code processing, logging, and
+ * error propagation.
+ *
  * @date 2024
  */
 
 #pragma once
 
+#include <functional>
 #include <libs/common/types.hpp>
 #include "graphics/log.hpp"
-#include <functional>
 
-namespace kernel {
+namespace kernel
+{
 
 /**
  * @brief Check if an error code indicates success
  * @param err Error code to check
  * @return true if success, false if error
  */
-inline bool is_ok(error_t err)
-{
-	return !IS_ERR(err);
-}
+inline bool is_ok(error_t err) { return !IS_ERR(err); }
 
 /**
  * @brief Check if an error code indicates an error
  * @param err Error code to check
  * @return true if error, false if success
  */
-inline bool is_error(error_t err)
-{
-	return IS_ERR(err);
-}
+inline bool is_error(error_t err) { return IS_ERR(err); }
 
 /**
  * @brief Convert error code to human-readable string
@@ -79,21 +75,21 @@ inline const char* error_to_string(error_t err)
  * @param fmt Printf-style format string
  * @param ... Format arguments
  */
-#define LOG_ERROR_CODE(err, fmt, ...)                                             \
-	do {                                                                          \
-		LOG_ERROR(fmt " (error: %s)", ##__VA_ARGS__, error_to_string(err));      \
+#define LOG_ERROR_CODE(err, fmt, ...)                                               \
+	do {                                                                            \
+		LOG_ERROR(fmt " (error: %s)", ##__VA_ARGS__, error_to_string(err));         \
 	} while (0)
 
 /**
  * @brief Return immediately if expression evaluates to an error
  * @param expression Expression to evaluate (must return error_t)
  */
-#define RETURN_IF_ERROR(expression)                                               \
-	do {                                                                          \
-		const error_t __err = (expression);                                             \
-		if (IS_ERR(__err)) {                                                      \
-			return __err;                                                         \
-		}                                                                         \
+#define RETURN_IF_ERROR(expression)                                                 \
+	do {                                                                            \
+		const error_t __err = (expression);                                         \
+		if (IS_ERR(__err)) {                                                        \
+			return __err;                                                           \
+		}                                                                           \
 	} while (0)
 
 /**
@@ -102,19 +98,20 @@ inline const char* error_to_string(error_t err)
  * @param fmt Format string for error message
  * @param ... Format arguments
  */
-#define LOG_AND_RETURN_IF_ERROR(expression, fmt, ...)                            \
-	do {                                                                          \
-		const error_t __err = (expression);                                             \
-		if (IS_ERR(__err)) {                                                      \
-			LOG_ERROR_CODE(__err, fmt, ##__VA_ARGS__);                           \
-			return __err;                                                         \
-		}                                                                         \
+#define LOG_AND_RETURN_IF_ERROR(expression, fmt, ...)                               \
+	do {                                                                            \
+		const error_t __err = (expression);                                         \
+		if (IS_ERR(__err)) {                                                        \
+			LOG_ERROR_CODE(__err, fmt, ##__VA_ARGS__);                              \
+			return __err;                                                           \
+		}                                                                           \
 	} while (0)
 
 /**
- * @brief Result type that holds either a value on success or an error code on failure
+ * @brief Result type that holds either a value on success or an error code on
+ * failure
  * @tparam T Type of the success value
- * 
+ *
  * @example
  * result<int> divide(int a, int b) {
  *     if (b == 0) return ERR_INVALID_ARG;
@@ -122,21 +119,20 @@ inline const char* error_to_string(error_t err)
  * }
  */
 template<typename T>
-class Result {
+class Result
+{
 public:
 	Result(T value) : value_(value), error_(OK) {}
 	Result(error_t error) : value_(), error_(error) {}
-	
+
 	bool is_ok() const { return error_ == OK; }
 	bool is_error() const { return error_ != OK; }
-	
+
 	T value() const { return value_; }
 	error_t error() const { return error_; }
-	
-	T value_or(T default_value) const {
-		return is_ok() ? value_ : default_value;
-	}
-	
+
+	T value_or(T default_value) const { return is_ok() ? value_ : default_value; }
+
 private:
 	T value_;
 	error_t error_;
@@ -145,7 +141,7 @@ private:
 /**
  * @brief Optional type that represents whether a value exists or not
  * @tparam T Type of the held value
- * 
+ *
  * @example
  * optional<int> find_index(int* arr, int size, int target) {
  *     for (int i = 0; i < size; i++) {
@@ -155,19 +151,18 @@ private:
  * }
  */
 template<typename T>
-class Optional {
+class Optional
+{
 public:
 	Optional() : has_value_(false), value_() {}
 	Optional(T value) : has_value_(true), value_(value) {}
-	
+
 	bool has_value() const { return has_value_; }
 	T value() const { return value_; }
-	T value_or(T default_value) const {
-		return has_value_ ? value_ : default_value;
-	}
-	
+	T value_or(T default_value) const { return has_value_ ? value_ : default_value; }
+
 	explicit operator bool() const { return has_value_; }
-	
+
 private:
 	bool has_value_;
 	T value_;
@@ -192,7 +187,7 @@ inline error_t try_with_cleanup(T&& func, std::function<void()> cleanup)
 
 /**
  * @brief Class for chaining multiple operations with concise error handling
- * 
+ *
  * @example
  * error_t result = error_chain()
  *     .then([]() { return step1(); })
@@ -200,26 +195,29 @@ inline error_t try_with_cleanup(T&& func, std::function<void()> cleanup)
  *     .on_error([](error_t err) { LOG_ERROR("Failed: %s", error_to_string(err)); })
  *     .result();
  */
-class ErrorChain {
+class ErrorChain
+{
 public:
 	ErrorChain() : error_(OK) {}
-	
-	ErrorChain& then(std::function<error_t()> func) {
+
+	ErrorChain& then(std::function<error_t()> func)
+	{
 		if (is_ok(error_)) {
 			error_ = func();
 		}
 		return *this;
 	}
-	
-	ErrorChain& on_error(std::function<void(error_t)> handler) {
+
+	ErrorChain& on_error(std::function<void(error_t)> handler)
+	{
 		if (is_error(error_)) {
 			handler(error_);
 		}
 		return *this;
 	}
-	
+
 	error_t result() const { return error_; }
-	
+
 private:
 	error_t error_;
 };

@@ -1,14 +1,15 @@
 #include "memory/paging.hpp"
-#include "graphics/log.hpp"
-#include "memory/page.hpp"
-#include "memory/slab.hpp"
-#include "paging_utils.h"
 #include <array>
 #include <cstdint>
 #include <cstring>
 #include <libs/common/types.hpp>
+#include "graphics/log.hpp"
+#include "memory/page.hpp"
+#include "memory/slab.hpp"
+#include "paging_utils.h"
 
-namespace kernel::memory {
+namespace kernel::memory
+{
 
 namespace
 {
@@ -362,12 +363,13 @@ error_t map_frame_to_vaddr(page_table_entry* table,
 					table[i + j].bits.present = 1;
 					table[i + j].bits.writable = 0;
 					table[i + j].bits.user_accessible = 1;
-					table[i + j].bits.address = (frame + j * kernel::memory::PAGE_SIZE) >> 12;
+					table[i + j].bits.address =
+							(frame + j * kernel::memory::PAGE_SIZE) >> 12;
 
 					indices[4 - level] = i;
 
-					const vaddr_t addr = create_vaddr_from_index(indices[0], indices[1],
-														   indices[2], indices[3]);
+					const vaddr_t addr = create_vaddr_from_index(
+							indices[0], indices[1], indices[2], indices[3]);
 
 					if (j == 0) {
 						*start_addr = addr;

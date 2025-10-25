@@ -10,7 +10,8 @@
 
 #include <cstdint>
 
-namespace kernel::interrupt {
+namespace kernel::interrupt
+{
 
 struct InterruptFrame {
 	uint64_t rip;

@@ -1,9 +1,10 @@
 #include "xhci.hpp"
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
-#include <algorithm>
-#include "../../pci.hpp"
 #include "../../mm_register.hpp"
+#include "../../pci.hpp"
+#include "../endpoint.hpp"
 #include "asm_utils.h"
 #include "context.hpp"
 #include "graphics/log.hpp"
@@ -14,7 +15,6 @@
 #include "ring.hpp"
 #include "speed.hpp"
 #include "trb.hpp"
-#include "../endpoint.hpp"
 
 namespace
 {
@@ -135,9 +135,8 @@ void on_event(Controller& xhc, transfer_event_trb& trb)
 	dev->on_transfer_event_received(trb);
 
 	const auto port_id = dev->context()->slot.bits.root_hub_port_num;
-	if (dev->is_initialized() &&
-		port_connection_states[port_id] ==
-				PortConnectionState::INITIALIZING_DEVICE) {
+	if (dev->is_initialized() && port_connection_states[port_id] ==
+										 PortConnectionState::INITIALIZING_DEVICE) {
 		configure_endpoints(xhc, *dev);
 	}
 }
@@ -220,10 +219,9 @@ void request_hc_ownership(uintptr_t mmio_base, hcc_params1_register hccp)
 {
 	const ExtendedRegisterList extended_regs{ mmio_base, hccp };
 
-	auto ext_usb_legacy_support =
-			std::find_if(extended_regs.begin(), extended_regs.end(), [](auto& reg) {
-				return reg.read().bits.capability_id == 1;
-			});
+	auto ext_usb_legacy_support = std::find_if(
+			extended_regs.begin(), extended_regs.end(),
+			[](auto& reg) { return reg.read().bits.capability_id == 1; });
 	if (ext_usb_legacy_support == extended_regs.end()) {
 		return;
 	}
@@ -294,13 +292,19 @@ void Controller::initialize()
 
 	if (max_scratchpad_buffers > 0) {
 		void* scratchpad_buf_arr_ptr;
-		ALLOC_OR_RETURN(scratchpad_buf_arr_ptr, sizeof(void*) * max_scratchpad_buffers, kernel::memory::ALLOC_UNINITIALIZED);
+		ALLOC_OR_RETURN(scratchpad_buf_arr_ptr,
+						sizeof(void*) * max_scratchpad_buffers,
+						kernel::memory::ALLOC_UNINITIALIZED);
 		auto* scratchpad_buf_arr = reinterpret_cast<void**>(scratchpad_buf_arr_ptr);
 
 		for (int i = 0; i < max_scratchpad_buffers; i++) {
-			scratchpad_buf_arr[i] = kernel::memory::alloc(4096, kernel::memory::ALLOC_UNINITIALIZED);
+			scratchpad_buf_arr[i] =
+					kernel::memory::alloc(4096, kernel::memory::ALLOC_UNINITIALIZED);
 			if (scratchpad_buf_arr[i] == nullptr) {
-				LOG_ERROR("Memory allocation failed: scratchpad_buf_arr[%d] (size=4096)", i);
+				LOG_ERROR(
+						"Memory allocation failed: scratchpad_buf_arr[%d] "
+						"(size=4096)",
+						i);
 				return;
 			}
 		}
@@ -467,7 +471,8 @@ void initialize()
 	const uint8_t bsp_lapic_id = *reinterpret_cast<uint32_t*>(0xfee00020) >> 24;
 	kernel::hw::pci::configure_msi_fixed_destination(
 			*xhc_dev, bsp_lapic_id, kernel::hw::pci::MsiTriggerMode::LEVEL,
-			kernel::hw::pci::MsiDeliveryMode::FIXED, kernel::interrupt::InterruptVector::XHCI, 0);
+			kernel::hw::pci::MsiDeliveryMode::FIXED,
+			kernel::interrupt::InterruptVector::XHCI, 0);
 
 	const uint64_t bar = kernel::hw::pci::read_base_address_register(*xhc_dev, 0);
 	const uint64_t xhc_mmio_base = bar & ~static_cast<uint64_t>(0xf);

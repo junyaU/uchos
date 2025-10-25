@@ -50,8 +50,8 @@ void Device::on_control_completed(const ControlTransferData& data)
 {
 	if (is_initialized_) {
 		if (auto w = event_waiters_.get(data.setup_data)) {
-			w.value()->on_control_completed(data.ep_id, data.setup_data,
-												   data.buf, data.len);
+			w.value()->on_control_completed(data.ep_id, data.setup_data, data.buf,
+											data.len);
 			return;
 		}
 		return;
@@ -142,8 +142,8 @@ void Device::initialize_stage2(const uint8_t* buf, int len)
 	}
 
 	initialize_stage_ = 3;
-	set_configuration(*this, DEFAULT_CONTROL_PIPE_ID,
-							 conf_desc->configuration_value, true);
+	set_configuration(*this, DEFAULT_CONTROL_PIPE_ID, conf_desc->configuration_value,
+					  true);
 }
 
 void Device::initialize_stage3(const uint8_t* buf, int len)

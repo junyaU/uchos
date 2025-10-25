@@ -1,7 +1,7 @@
 #include "user.hpp"
-#include "graphics/log.hpp"
 #include <cstddef>
 #include <cstdint>
+#include "graphics/log.hpp"
 
 bool is_user_address(const void* addr, size_t n)
 {

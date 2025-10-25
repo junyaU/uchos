@@ -1,14 +1,14 @@
 #include "handlers.hpp"
+#include <cstdint>
+#include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
+#include <libs/common/types.hpp>
 #include "asm_utils.h"
 #include "graphics/log.hpp"
 #include "task/context.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 #include "timers/timer.hpp"
-#include <cstdint>
-#include <libs/common/message.hpp>
-#include <libs/common/types.hpp>
-#include <libs/common/process_id.hpp>
 
 namespace
 {
@@ -19,7 +19,8 @@ namespace
 }
 } // namespace
 
-namespace kernel::interrupt {
+namespace kernel::interrupt
+{
 
 __attribute__((interrupt)) void on_xhci_interrupt(InterruptFrame* frame)
 {
@@ -42,7 +43,6 @@ __attribute__((interrupt)) void on_virtio_blk_queue_interrupt(InterruptFrame* fr
 
 } // namespace kernel::interrupt
 
-
 extern "C" void switch_task_by_timer_interrupt(kernel::task::Context* ctx)
 {
 	const bool need_switch_task = kernel::timers::ktimer->increment_tick();
@@ -59,7 +59,8 @@ extern "C" void switch_task_by_interrupt(kernel::task::Context* ctx)
 	switch_task(*ctx);
 }
 
-namespace kernel::interrupt {
+namespace kernel::interrupt
+{
 
 void kill_userland(InterruptFrame* frame)
 {

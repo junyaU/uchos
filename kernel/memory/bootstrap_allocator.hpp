@@ -2,10 +2,10 @@
 
 struct MemoryMap;
 
-#include "page.hpp"
+#include <stddef.h>
 #include <array>
 #include <cstdint>
-#include <stddef.h>
+#include "page.hpp"
 
 namespace kernel::memory
 {

@@ -1,8 +1,8 @@
+#include <unistd.h>
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #include <libs/user/console.hpp>
-#include <unistd.h>
 
 void printu(const char* format, ...)
 {

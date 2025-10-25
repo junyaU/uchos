@@ -1,10 +1,10 @@
 /**
  * @file panic.hpp
  * @brief Kernel panic and assertion facilities
- * 
+ *
  * This file provides panic functionality for fatal kernel error handling
  * and assertion features for debugging and validation.
- * 
+ *
  * @date 2024
  */
 
@@ -22,8 +22,11 @@ namespace kernel
  * @param ... Format arguments
  * @note This function never returns ([[noreturn]])
  */
-[[noreturn]] void
-panic(const char* file, int line, const char* func, const char* fmt, ...);
+[[noreturn]] void panic(const char* file,
+						int line,
+						const char* func,
+						const char* fmt,
+						...);
 
 /**
  * @brief Macro to trigger a kernel panic

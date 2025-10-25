@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include "fat.hpp"
 #include <cstdint>
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
@@ -13,6 +12,7 @@
 #include <map>
 #include <queue>
 #include <string>
+#include "fat.hpp"
 
 namespace kernel::fs::fat
 {
@@ -42,8 +42,8 @@ void read_dir_entry_name(const kernel::fs::DirectoryEntry& entry, char* dest);
 bool entry_name_is_equal(const kernel::fs::DirectoryEntry& entry, const char* name);
 unsigned int calc_start_sector(cluster_t cluster_id);
 cluster_t next_cluster(cluster_t cluster_id);
-kernel::fs::DirectoryEntry*
-find_dir_entry(kernel::fs::DirectoryEntry* parent_dir, const char* name);
+kernel::fs::DirectoryEntry* find_dir_entry(kernel::fs::DirectoryEntry* parent_dir,
+										   const char* name);
 kernel::fs::DirectoryEntry* find_empty_dir_entry();
 cluster_t extend_cluster_chain(cluster_t last_cluster, int num_clusters);
 cluster_t allocate_cluster_chain(size_t num_clusters);
@@ -76,7 +76,8 @@ void send_file_data(fs_id_t id,
 					bool for_user);
 
 // Directory entry persistence
-void update_directory_entry_on_disk(kernel::fs::DirectoryEntry* entry, const char* name);
+void update_directory_entry_on_disk(kernel::fs::DirectoryEntry* entry,
+									const char* name);
 
 // Message handlers declarations
 void handle_initialize(const Message& m);

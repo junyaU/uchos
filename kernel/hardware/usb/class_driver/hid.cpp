@@ -45,9 +45,9 @@ void HidDriver::on_endpoints_configured()
 }
 
 void HidDriver::on_control_completed(EndpointId ep_id,
-									  SetupStageData setup_data,
-									  void* buf,
-									  int len)
+									 SetupStageData setup_data,
+									 void* buf,
+									 int len)
 {
 	if (initialized_stage_ == 1) {
 		initialized_stage_ = 2;
