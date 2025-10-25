@@ -11,7 +11,7 @@
 namespace kernel::hw::virtio
 {
 
-size_t find_VirtioPciCap(VirtioPciDevice& virtio_dev)
+size_t find_virtio_pci_cap(VirtioPciDevice& virtio_dev)
 {
 	uint8_t cap_id, cap_next;
 	uint32_t cap_addr = kernel::hw::pci::get_capability_pointer(*virtio_dev.dev);
@@ -131,7 +131,8 @@ error_t setup_virtqueue(VirtioPciDevice& virtio_dev)
 
 error_t configure_pci_common_cfg(VirtioPciDevice& virtio_dev)
 {
-	virtio_dev.common_cfg = get_VirtioPciCapability<VirtioPciCommonCfg>(virtio_dev);
+	virtio_dev.common_cfg =
+			get_virtio_pci_capability<VirtioPciCommonCfg>(virtio_dev);
 
 	virtio_dev.common_cfg->device_status = 0;
 	while (virtio_dev.common_cfg->device_status != 0) {
@@ -172,7 +173,7 @@ error_t configure_pci_notify_cfg(VirtioPciDevice& virtio_dev)
 	return OK;
 }
 
-error_t set_VirtioPciCapability(VirtioPciDevice& virtio_dev)
+error_t set_virtio_pci_capability(VirtioPciDevice& virtio_dev)
 {
 	while (virtio_dev.caps != nullptr) {
 		switch (virtio_dev.caps->first_dword.fields.cfg_type) {

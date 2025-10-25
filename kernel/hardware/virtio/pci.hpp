@@ -176,7 +176,7 @@ struct VirtioPciDevice {
  * @note The BAR must be memory-mapped for this to work correctly
  */
 template<typename T>
-T* get_VirtioPciCapability(VirtioPciDevice& virtio_dev)
+T* get_virtio_pci_capability(VirtioPciDevice& virtio_dev)
 {
 	uint64_t bar_addr = kernel::hw::pci::read_base_address_register(
 			*virtio_dev.dev, virtio_dev.caps->second_dword.fields.bar);
@@ -194,7 +194,7 @@ T* get_VirtioPciCapability(VirtioPciDevice& virtio_dev)
  * @param virtio_dev VirtIO PCI device to scan
  * @return size_t Number of capabilities found
  */
-size_t find_VirtioPciCap(VirtioPciDevice& virtio_dev);
+size_t find_virtio_pci_cap(VirtioPciDevice& virtio_dev);
 
 /**
  * @brief Set up VirtIO PCI device capabilities
@@ -205,7 +205,7 @@ size_t find_VirtioPciCap(VirtioPciDevice& virtio_dev);
  * @param virtio_dev VirtIO PCI device to configure
  * @return error_t Error code (kSuccess on success)
  */
-error_t set_VirtioPciCapability(VirtioPciDevice& virtio_dev);
+error_t set_virtio_pci_capability(VirtioPciDevice& virtio_dev);
 
 /**
  * @brief Notify the device about available buffers in a virtqueue

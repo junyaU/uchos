@@ -39,9 +39,9 @@ error_t init_virtio_pci_device(VirtioPciDevice* virtio_dev, int device_type)
 
 	virtio_dev->dev = dev;
 
-	find_VirtioPciCap(*virtio_dev);
+	find_virtio_pci_cap(*virtio_dev);
 
-	return set_VirtioPciCapability(*virtio_dev);
+	return set_virtio_pci_capability(*virtio_dev);
 }
 
 int push_virtio_entry(VirtioVirtqueue* queue,
