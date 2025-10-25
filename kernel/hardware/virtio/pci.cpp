@@ -208,7 +208,8 @@ error_t set_virtio_pci_capability(VirtioPciDevice& virtio_dev)
 				break;
 
 			case VIRTIO_PCI_CAP_DEVICE_CFG:
-				LOG_INFO("Device CFG not supported");
+				virtio_dev.device_cfg =
+						reinterpret_cast<VirtioPciCfgCap*>(virtio_dev.caps);
 				break;
 
 			case VIRTIO_PCI_CAP_PCI_CFG:

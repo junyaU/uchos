@@ -159,6 +159,7 @@ struct VirtioPciDevice {
 	VirtioPciCap* caps;				/* Capabilities. */
 	VirtioPciCommonCfg* common_cfg; /* Common configuration. */
 	VirtioPciNotifyCap* notify_cfg; /* Notifications. */
+	VirtioPciCfgCap* device_cfg;	/* Device-specific configuration. */
 	VirtioVirtqueue* queues;		/* Virtqueues. */
 	size_t num_queues;				/* Number of virtqueues. */
 	uintptr_t notify_base;			/* Base address for notifications. */

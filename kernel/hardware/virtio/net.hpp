@@ -27,5 +27,18 @@ constexpr uint64_t VIRTIO_NET_F_STATUS = (1ULL << 16);
 constexpr uint64_t VIRTIO_NET_F_CTRL_VQ = (1ULL << 17);
 constexpr uint64_t VIRTIO_NET_F_MQ = (1ULL << 22);
 
+struct VirtioNetConfig {
+	uint8_t mac[6];
+	uint16_t status;
+	uint16_t max_virtqueue_pairs;
+	uint16_t mtu;
+	uint32_t speed;
+	uint8_t duplex;
+	uint8_t rss_max_key_size;
+	uint16_t rss_max_indirection_table_length;
+	uint32_t supported_hash_types;
+	uint32_t supported_tunnel_types;
+};
+
 void virtio_net_service();
 } // namespace kernel::hw::virtio
