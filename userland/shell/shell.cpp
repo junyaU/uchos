@@ -1,5 +1,4 @@
 #include "shell.hpp"
-#include <unistd.h>
 #include <cstring>
 #include <libs/user/file.hpp>
 #include <libs/user/syscall.hpp>
