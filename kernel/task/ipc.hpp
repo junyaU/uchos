@@ -1,9 +1,10 @@
 /**
  * @file task/ipc.hpp
  * @brief Inter-process communication (IPC) interface
- * 
- * This file provides IPC functionality for sending and receiving messages between tasks.
- * 
+ *
+ * This file provides IPC functionality for sending and receiving messages between
+ * tasks.
+ *
  * @date 2024
  */
 
@@ -25,7 +26,8 @@ namespace kernel::task
  * @retval ERR_INVALID_ARG Invalid destination ID (-1 or same as sender)
  * @retval ERR_INVALID_TASK Destination task does not exist
  * @note Supports out-of-line memory transfer
- * @note [[gnu::no_caller_saved_registers]] attribute optimizes register saving on call
+ * @note [[gnu::no_caller_saved_registers]] attribute optimizes register saving on
+ * call
  */
 [[gnu::no_caller_saved_registers]] error_t send_message(ProcessId dst, Message& m);
 

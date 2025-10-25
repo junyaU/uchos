@@ -1,11 +1,12 @@
 #include "fault.hpp"
-#include <cstdint>
 #include <string.h> // NOLINT(misc-include-cleaner) - for strlcpy
+#include <cstdint>
 #include "graphics/log.hpp"
-#include "task/task.hpp"
 #include "handlers.hpp"
+#include "task/task.hpp"
 
-namespace kernel::interrupt {
+namespace kernel::interrupt
+{
 
 void get_fault_name(uint64_t code, char* buf)
 {

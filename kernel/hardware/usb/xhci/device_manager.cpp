@@ -1,11 +1,11 @@
 #include "device_manager.hpp"
+#include <cstddef>
+#include <cstdint>
 #include "context.hpp"
 #include "device.hpp"
 #include "graphics/log.hpp"
 #include "memory/slab.hpp"
 #include "registers.hpp"
-#include <cstddef>
-#include <cstdint>
 
 namespace kernel::hw::usb::xhci
 {
@@ -15,7 +15,8 @@ void DeviceManager::initialize(size_t max_slots)
 
 	// NOLINTNEXTLINE(bugprone-sizeof-expression)
 	void* devices_ptr;
-	ALLOC_OR_RETURN(devices_ptr, sizeof(Device*) * (max_slots_ + 1), kernel::memory::ALLOC_UNINITIALIZED);
+	ALLOC_OR_RETURN(devices_ptr, sizeof(Device*) * (max_slots_ + 1),
+					kernel::memory::ALLOC_UNINITIALIZED);
 	devices_ = reinterpret_cast<Device**>(devices_ptr);
 
 	contexts_ = reinterpret_cast<DeviceContext**>(
@@ -78,7 +79,7 @@ Device* DeviceManager::find_by_slot_id(uint8_t slot_id) const
 }
 
 void DeviceManager::allocate_device(uint8_t slot_id,
-									 kernel::hw::usb::xhci::DoorbellRegister* dbreg)
+									kernel::hw::usb::xhci::DoorbellRegister* dbreg)
 {
 	if (slot_id > max_slots_) {
 		LOG_ERROR("slot_id %d is out of range", slot_id);

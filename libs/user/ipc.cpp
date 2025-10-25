@@ -1,8 +1,8 @@
 #include "ipc.hpp"
-#include "syscall.hpp"
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include "syscall.hpp"
 
 void receive_message(Message* msg)
 {

@@ -1,6 +1,6 @@
 #include "base.hpp"
-#include "keyboard.hpp"
 #include "../descriptor.hpp"
+#include "keyboard.hpp"
 
 namespace kernel::hw::usb
 {

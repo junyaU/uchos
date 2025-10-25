@@ -335,7 +335,10 @@ union transfer_event_trb {
 		bits.trb_pointer = reinterpret_cast<uint64_t>(p);
 	}
 
-	kernel::hw::usb::EndpointId EndpointId() const { return kernel::hw::usb::EndpointId{ bits.EndpointId }; }
+	kernel::hw::usb::EndpointId EndpointId() const
+	{
+		return kernel::hw::usb::EndpointId{ bits.EndpointId };
+	}
 };
 
 union command_completion_event_trb {

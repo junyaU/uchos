@@ -1,27 +1,28 @@
 /**
  * @file memory/custom_allocators.hpp
  * @brief Custom allocator implementations for kernel use
- * 
+ *
  * This file provides custom allocator implementations that can be used with
  * STL containers in the kernel environment. These allocators use the kernel's
  * memory management system instead of standard malloc/free.
- * 
+ *
  * @date 2024
  */
 
 #pragma once
 
-#include "memory/slab.hpp"
 #include <cstddef>
 #include <limits>
+#include "memory/slab.hpp"
 
-namespace kernel::memory {
+namespace kernel::memory
+{
 
 /**
  * @brief Fixed-size pool allocator for efficient allocation of small objects
  * @tparam T Type of objects to allocate
  * @tparam pool_size Number of objects that can be stored in the pool
- * 
+ *
  * This allocator maintains a fixed-size pool of objects and uses a free list
  * for fast allocation and deallocation. It's ideal for frequently allocated/
  * deallocated objects of the same type.
@@ -93,14 +94,15 @@ public:
 	}
 
 private:
-	alignas(T) unsigned char pool_[sizeof(T) * pool_size]; /**< Fixed-size pool storage */
+	alignas(T) unsigned char pool_[sizeof(T) *
+								   pool_size]; /**< Fixed-size pool storage */
 	T* next_free_; /**< Pointer to next free object in the pool */
 };
 
 /**
  * @brief General-purpose kernel allocator that uses alloc/free
  * @tparam T Type of objects to allocate
- * 
+ *
  * This allocator provides a standard allocator interface for STL containers
  * but uses the kernel's alloc/free functions instead of standard malloc/free.
  * It's suitable for dynamic allocations of varying sizes.
@@ -121,7 +123,7 @@ public:
 	 * @brief Default constructor
 	 */
 	kernel_allocator() noexcept {}
-	
+
 	/**
 	 * @brief Copy constructor for allocator rebinding
 	 * @tparam U Type of the source allocator

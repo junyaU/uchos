@@ -21,9 +21,9 @@ namespace kernel::fs
  * read/write position.
  */
 struct FileDescriptor {
-	char name[11];  ///< File name (8.3 format for FAT compatibility)
-	size_t size;    ///< File size in bytes
-	size_t offset;  ///< Current read/write position
+	char name[11]; ///< File name (8.3 format for FAT compatibility)
+	size_t size;   ///< File size in bytes
+	size_t offset; ///< Current read/write position
 
 	/**
 	 * @brief Check if this file descriptor is unused
@@ -54,7 +54,10 @@ struct FileDescriptor {
 	 * @param target_name The name to compare against
 	 * @return true if the name matches, false otherwise
 	 */
-	bool has_name(const char* target_name) const { return strcmp(name, target_name) == 0; }
+	bool has_name(const char* target_name) const
+	{
+		return strcmp(name, target_name) == 0;
+	}
 };
 
 // Process-local file descriptor management functions
@@ -84,10 +87,10 @@ void init_process_fd_table(FileDescriptor* fd_table, size_t table_size);
  * @return fd_t The allocated file descriptor number, or NO_FD on failure
  */
 fd_t allocate_process_fd(FileDescriptor* fd_table,
-                         size_t table_size,
-                         const char* name,
-                         size_t size,
-                         ProcessId pid);
+						 size_t table_size,
+						 const char* name,
+						 size_t size,
+						 ProcessId pid);
 
 /**
  * @brief Get a file descriptor from a process's table
@@ -123,9 +126,9 @@ error_t release_process_fd(FileDescriptor* fd_table, size_t table_size, fd_t fd)
  * @return error_t OK on success, error code on failure
  */
 error_t copy_fd_table(FileDescriptor* dest,
-                      const FileDescriptor* src,
-                      size_t table_size,
-                      ProcessId child_pid);
+					  const FileDescriptor* src,
+					  size_t table_size,
+					  ProcessId child_pid);
 
 /**
  * @brief Release all file descriptors for a process
@@ -137,4 +140,4 @@ error_t copy_fd_table(FileDescriptor* dest,
  */
 void release_all_process_fds(FileDescriptor* fd_table, size_t table_size);
 
-}  // namespace kernel::fs
+} // namespace kernel::fs

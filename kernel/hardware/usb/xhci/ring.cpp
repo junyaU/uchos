@@ -1,12 +1,12 @@
 #include "ring.hpp"
-#include <cstdint>
-#include <cstddef>
 #include <array>
+#include <cstddef>
+#include <cstdint>
+#include "../../mm_register.hpp"
 #include "graphics/log.hpp"
 #include "memory/slab.hpp"
-#include "trb.hpp"
 #include "registers.hpp"
-#include "../../mm_register.hpp"
+#include "trb.hpp"
 
 namespace kernel::hw::usb::xhci
 {
@@ -18,7 +18,8 @@ void Ring::initialize(size_t buf_size)
 	write_index_ = 0;
 	buffer_size_ = buf_size;
 	void* buffer_ptr;
-	ALLOC_OR_RETURN(buffer_ptr, sizeof(trb) * buffer_size_, kernel::memory::ALLOC_ZEROED);
+	ALLOC_OR_RETURN(buffer_ptr, sizeof(trb) * buffer_size_,
+					kernel::memory::ALLOC_ZEROED);
 	buffer_ = reinterpret_cast<trb*>(buffer_ptr);
 }
 
@@ -51,18 +52,20 @@ trb* Ring::push(const std::array<uint32_t, 4>& data)
 }
 
 void EventRing::initialize(size_t buf_size,
-							InterrupterRegisterSet* interrupter_register)
+						   InterrupterRegisterSet* interrupter_register)
 {
 	cycle_bit_ = true;
 	buffer_size_ = buf_size;
 	interrupter_register_ = interrupter_register;
 
 	void* buffer_ptr;
-	ALLOC_OR_RETURN(buffer_ptr, sizeof(trb) * buffer_size_, kernel::memory::ALLOC_ZEROED);
+	ALLOC_OR_RETURN(buffer_ptr, sizeof(trb) * buffer_size_,
+					kernel::memory::ALLOC_ZEROED);
 	buffer_ = reinterpret_cast<trb*>(buffer_ptr);
 
 	segment_table_ = reinterpret_cast<event_ring_segment_table_entry*>(
-			kernel::memory::alloc(sizeof(event_ring_segment_table_entry), kernel::memory::ALLOC_ZEROED, 64));
+			kernel::memory::alloc(sizeof(event_ring_segment_table_entry),
+								  kernel::memory::ALLOC_ZEROED, 64));
 	if (segment_table_ == nullptr) {
 		kernel::memory::free(buffer_);
 		LOG_ERROR("failed to allocate memory for event ring segment table");

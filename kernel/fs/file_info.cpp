@@ -1,9 +1,9 @@
 #include "file_info.hpp"
 #include <cstddef>
 #include <cstring>
-#include <unordered_map>
-#include <libs/common/types.hpp>
 #include <libs/common/process_id.hpp>
+#include <libs/common/types.hpp>
+#include <unordered_map>
 
 namespace kernel::fs
 {
@@ -23,7 +23,9 @@ FileCache* find_file_cache_by_path(const char* path)
 	return nullptr;
 }
 
-FileCache* create_file_cache(const char* path, size_t total_size, ProcessId requester)
+FileCache* create_file_cache(const char* path,
+							 size_t total_size,
+							 ProcessId requester)
 {
 	const fs_id_t id = generate_fs_id();
 
@@ -48,9 +50,6 @@ FileCache* create_file_cache(const char* path, size_t total_size, ProcessId requ
 // TODO: Handle overflow
 fs_id_t generate_fs_id() { return id_offset++ % MAX_FILE_ID; }
 
-void init_read_contexts()
-{
-	file_caches = std::unordered_map<fs_id_t, FileCache>();
-}
+void init_read_contexts() { file_caches = std::unordered_map<fs_id_t, FileCache>(); }
 
 } // namespace kernel::fs

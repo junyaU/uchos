@@ -1,20 +1,20 @@
 #include "tests/test_cases/task_test.hpp"
 #include <cstdint>
 #include <cstring>
+#include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
 #include "task/context.hpp"
 #include "task/task.hpp"
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
-#include <libs/common/message.hpp>
-#include <libs/common/process_id.hpp>
 
-using kernel::task::Task;
 using kernel::task::create_task;
-using kernel::task::TASK_WAITING;
 using kernel::task::get_available_task_id;
-using kernel::task::MAX_TASKS;
-using kernel::task::get_task_id_by_name;
 using kernel::task::get_task;
+using kernel::task::get_task_id_by_name;
+using kernel::task::MAX_TASKS;
+using kernel::task::Task;
+using kernel::task::TASK_WAITING;
 
 void test_task_creation_basic()
 {
@@ -85,7 +85,8 @@ void test_task_message_handling()
 
 	// Test message queue
 	ASSERT_TRUE(t->messages.empty());
-	const Message test_msg = { .type = MsgType::IPC_EXIT_TASK, .sender = ProcessId::from_raw(0) };
+	const Message test_msg = { .type = MsgType::IPC_EXIT_TASK,
+							   .sender = ProcessId::from_raw(0) };
 	t->messages.push(test_msg);
 	ASSERT_FALSE(t->messages.empty());
 

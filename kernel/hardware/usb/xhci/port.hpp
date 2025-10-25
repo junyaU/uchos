@@ -33,8 +33,7 @@ class Device;
 class Port
 {
 public:
-	Port(uint8_t port_num, PortRegisterSet& regs)
-		: port_num_(port_num), regs_(regs)
+	Port(uint8_t port_num, PortRegisterSet& regs) : port_num_(port_num), regs_(regs)
 	{
 	}
 

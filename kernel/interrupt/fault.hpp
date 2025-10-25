@@ -36,11 +36,12 @@ enum exception_code {
 	VIRTUALIZATION_EXCEPTION = 20,
 };
 
-__attribute__((no_caller_saved_registers)) void
-get_fault_name(uint64_t code, char* buf);
+__attribute__((no_caller_saved_registers)) void get_fault_name(uint64_t code,
+															   char* buf);
 
-__attribute__((no_caller_saved_registers)) void
-log_fault_info(const char* fault_type, InterruptFrame* frame);
+__attribute__((no_caller_saved_registers)) void log_fault_info(
+		const char* fault_type,
+		InterruptFrame* frame);
 
 template<uint64_t error_code, bool has_error_code>
 struct fault_handler;
@@ -61,8 +62,8 @@ struct fault_handler<error_code, false> {
 // exisiting error code
 template<uint64_t error_code>
 struct fault_handler<error_code, true> {
-	static inline __attribute__((interrupt)) void
-	handler(InterruptFrame* frame, uint64_t code)
+	static inline __attribute__((interrupt)) void handler(InterruptFrame* frame,
+														  uint64_t code)
 	{
 		if (error_code == PAGE_FAULT) {
 			const uint64_t fault_addr = get_cr2();

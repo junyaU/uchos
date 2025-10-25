@@ -115,10 +115,10 @@ public:
 	MSlab* slab() const { return slab_; }
 
 private:
-	int status_;	 ///< Page status: 0 = free, 1 = used
+	int status_;	///< Page status: 0 = free, 1 = used
 	MCache* cache_; ///< Associated cache (for slab allocator)
-	MSlab* slab_;	 ///< Associated slab (for slab allocator)
-	void* ptr_;		 ///< Pointer to the page's memory
+	MSlab* slab_;	///< Associated slab (for slab allocator)
+	void* ptr_;		///< Pointer to the page's memory
 };
 
 /**

@@ -1,3 +1,13 @@
+#include <fcntl.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
+#include <libs/common/types.hpp>
+#include <vector>
 #include "fs/fat/fat.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
@@ -13,16 +23,6 @@
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 #include "timers/timer.hpp"
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <fcntl.h>
-#include <libs/common/message.hpp>
-#include <libs/common/process_id.hpp>
-#include <libs/common/types.hpp>
-#include <stdint.h>
-#include <sys/types.h>
-#include <vector>
 
 namespace kernel::syscall
 {
@@ -35,7 +35,8 @@ ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
 	// Validate file descriptor
-	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd].is_unused()) {
+	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS ||
+		t->fd_table[fd].is_unused()) {
 		return ERR_INVALID_FD;
 	}
 
@@ -58,19 +59,21 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
-	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS || t->fd_table[fd].is_unused()) {
+	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS ||
+		t->fd_table[fd].is_unused()) {
 		return ERR_INVALID_FD;
 	}
 
 	if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
-		if (t->fd_table[fd].has_name("stdout") || t->fd_table[fd].has_name("stderr")) {
+		if (t->fd_table[fd].has_name("stdout") ||
+			t->fd_table[fd].has_name("stderr")) {
 			// Standard output - send to terminal
 			Message m = { .type = MsgType::NOTIFY_WRITE, .sender = t->id };
 
 			// Copy data from user space
 			const size_t copy_size = count > sizeof(m.data.write_shell.buf) - 1
-			                             ? sizeof(m.data.write_shell.buf) - 1
-			                             : count;
+											 ? sizeof(m.data.write_shell.buf) - 1
+											 : count;
 			copy_from_user(m.data.write_shell.buf, buf, copy_size);
 			m.data.write_shell.buf[copy_size] = '\0';
 
@@ -106,8 +109,8 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	// The kernel doesn't directly handle file writes in Phase 2
 	// This allows proper IPC message handling in userland
 
-	// For now, return an error indicating the operation is not supported at syscall level
-	// User should use the file system API (fs_write) instead
+	// For now, return an error indicating the operation is not supported at syscall
+	// level User should use the file system API (fs_write) instead
 	return ERR_INVALID_FD;
 }
 
@@ -123,7 +126,11 @@ size_t sys_draw_text(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	return strlen(text);
 }
 
-error_t sys_fill_rect(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5)
+error_t sys_fill_rect(uint64_t arg1,
+					  uint64_t arg2,
+					  uint64_t arg3,
+					  uint64_t arg4,
+					  uint64_t arg5)
 {
 	const int x = arg1;
 	const int y = arg2;
@@ -131,7 +138,8 @@ error_t sys_fill_rect(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4
 	const int height = arg4;
 	const uint32_t color = arg5;
 
-	kernel::graphics::kscreen->fill_rectangle(Point2D{ x, y }, Point2D{ width, height }, color);
+	kernel::graphics::kscreen->fill_rectangle(Point2D{ x, y },
+											  Point2D{ width, height }, color);
 
 	return OK;
 }
@@ -227,31 +235,37 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	copy_from_user(copy_args.data(), args, args_len);
 	copy_args[args_len] = '\0';
 
-	Message msg{ .type = MsgType::IPC_GET_FILE_INFO, .sender = kernel::task::CURRENT_TASK->id };
+	Message msg{ .type = MsgType::IPC_GET_FILE_INFO,
+				 .sender = kernel::task::CURRENT_TASK->id };
 	memcpy(msg.data.fs.name, copy_path.data(), path_len + 1);
 	kernel::task::send_message(process_ids::FS_FAT32, msg);
 
-	const Message info_m = kernel::task::wait_for_message(MsgType::IPC_GET_FILE_INFO);
+	const Message info_m =
+			kernel::task::wait_for_message(MsgType::IPC_GET_FILE_INFO);
 
 	auto* entry = reinterpret_cast<kernel::fs::DirectoryEntry*>(info_m.data.fs.buf);
 	if (entry == nullptr) {
 		return ERR_NO_FILE;
 	}
 
-	Message read_msg{ .type = MsgType::IPC_READ_FILE_DATA, .sender = kernel::task::CURRENT_TASK->id };
+	Message read_msg{ .type = MsgType::IPC_READ_FILE_DATA,
+					  .sender = kernel::task::CURRENT_TASK->id };
 	read_msg.data.fs.buf = entry;
 	kernel::task::send_message(process_ids::FS_FAT32, read_msg);
 
-	const Message data_m = kernel::task::wait_for_message(MsgType::IPC_READ_FILE_DATA);
+	const Message data_m =
+			kernel::task::wait_for_message(MsgType::IPC_READ_FILE_DATA);
 	kernel::memory::free(entry);
 
 	// Save current FD table before cleaning page tables
 	auto saved_fd_table = kernel::task::CURRENT_TASK->fd_table;
 
-	kernel::memory::page_table_entry* current_page_table = kernel::memory::get_active_page_table();
+	kernel::memory::page_table_entry* current_page_table =
+			kernel::memory::get_active_page_table();
 	kernel::memory::clean_page_tables(current_page_table);
 
-	kernel::memory::page_table_entry* new_page_table = kernel::memory::config_new_page_table();
+	kernel::memory::page_table_entry* new_page_table =
+			kernel::memory::config_new_page_table();
 	if (new_page_table == nullptr) {
 		return ERR_NO_MEMORY;
 	}
@@ -267,10 +281,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	return OK;
 }
 
-void sys_exit(uint64_t arg1)
-{
-	kernel::task::exit_task(arg1);
-}
+void sys_exit(uint64_t arg1) { kernel::task::exit_task(arg1); }
 
 ProcessId sys_wait(uint64_t arg1)
 {
@@ -304,24 +315,18 @@ ProcessId sys_wait(uint64_t arg1)
 	return ProcessId::from_raw(-1);
 }
 
-ProcessId sys_getpid(void)
-{
-	return kernel::task::CURRENT_TASK->id;
-}
+ProcessId sys_getpid(void) { return kernel::task::CURRENT_TASK->id; }
 
-ProcessId sys_getppid(void)
-{
-	return kernel::task::CURRENT_TASK->parent_id;
-}
+ProcessId sys_getppid(void) { return kernel::task::CURRENT_TASK->parent_id; }
 
-}  // namespace kernel::syscall
+} // namespace kernel::syscall
 
 extern "C" uint64_t handle_syscall(uint64_t arg1,
-                                   uint64_t arg2,
-                                   uint64_t arg3,
-                                   uint64_t arg4,
-                                   uint64_t arg5,
-                                   uint64_t syscall_number)
+								   uint64_t arg2,
+								   uint64_t arg3,
+								   uint64_t arg4,
+								   uint64_t arg5,
+								   uint64_t syscall_number)
 {
 	uint64_t result = 0;
 

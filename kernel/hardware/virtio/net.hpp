@@ -10,6 +10,7 @@
  */
 #pragma once
 
-namespace kernel::hw::virtio {
+namespace kernel::hw::virtio
+{
 void virtio_net_service();
 } // namespace kernel::hw::virtio

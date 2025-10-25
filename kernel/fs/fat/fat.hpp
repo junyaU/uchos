@@ -86,9 +86,10 @@ constexpr unsigned int BOOT_SECTOR = 0;
 void fat32_service();
 
 // FAT32 public API
-namespace fat {
-    // Execute ELF file loaded from FAT32
-    void execute_file(void* data, const char* name, const char* args);
-}
+namespace fat
+{
+// Execute ELF file loaded from FAT32
+void execute_file(void* data, const char* name, const char* args);
+} // namespace fat
 
 } // namespace kernel::fs

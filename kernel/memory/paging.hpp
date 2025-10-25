@@ -10,7 +10,8 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 
-namespace kernel::memory {
+namespace kernel::memory
+{
 
 constexpr size_t USER_SPACE_START_INDEX = 256;
 constexpr size_t PT_ENTRIES = 512;

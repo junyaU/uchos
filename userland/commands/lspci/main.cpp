@@ -1,4 +1,3 @@
-#include "pci_device.hpp"
 #include <cstdio>
 #include <cstring>
 #include <libs/common/message.hpp>
@@ -6,6 +5,7 @@
 #include <libs/common/types.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/syscall.hpp>
+#include "pci_device.hpp"
 
 int main(int argc, char** argv)
 {
@@ -30,7 +30,8 @@ int main(int argc, char** argv)
 		};
 
 		char device_buf[100];
-		output_target_device(device_buf, 100, msg.data.pci.vendor_id, msg.data.pci.device_id);
+		output_target_device(device_buf, 100, msg.data.pci.vendor_id,
+							 msg.data.pci.device_id);
 
 		char buf[100];
 		sprintf(buf, "%s %s\n", msg.data.pci.bus_address, device_buf);

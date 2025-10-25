@@ -1,9 +1,9 @@
 #include "fs/file_descriptor.hpp"
-#include "graphics/log.hpp"
 #include <cstddef>
 #include <cstring>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include "graphics/log.hpp"
 
 namespace kernel::fs
 {
@@ -43,10 +43,10 @@ void init_process_fd_table(FileDescriptor* fd_table, size_t table_size)
 }
 
 fd_t allocate_process_fd(FileDescriptor* fd_table,
-                         size_t table_size,
-                         const char* name,
-                         size_t size,
-                         ProcessId pid)
+						 size_t table_size,
+						 const char* name,
+						 size_t size,
+						 ProcessId pid)
 {
 	if (fd_table == nullptr || name == nullptr) {
 		LOG_ERROR("Invalid arguments for allocate_process_fd");
@@ -104,9 +104,9 @@ error_t release_process_fd(FileDescriptor* fd_table, size_t table_size, fd_t fd)
 }
 
 error_t copy_fd_table(FileDescriptor* dest,
-                      const FileDescriptor* src,
-                      size_t table_size,
-                      ProcessId child_pid)
+					  const FileDescriptor* src,
+					  size_t table_size,
+					  ProcessId child_pid)
 {
 	if (dest == nullptr || src == nullptr) {
 		return ERR_INVALID_ARG;
@@ -141,4 +141,4 @@ void release_all_process_fds(FileDescriptor* fd_table, size_t table_size)
 	}
 }
 
-}  // namespace kernel::fs
+} // namespace kernel::fs

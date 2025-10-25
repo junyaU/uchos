@@ -1,20 +1,21 @@
 #include "slab.hpp"
+#include <stdio.h>
 #include <cstdint>
+#include <cstring>
+#include <iterator>
+#include <list>
+#include <memory>
+#include <unordered_map>
+#include <utility>
 #include "bit_utils.hpp"
 #include "buddy_system.hpp"
 #include "graphics/log.hpp"
 #include "page.hpp"
 #include "tests/framework.hpp"
 #include "tests/test_cases/memory_test.hpp"
-#include <cstring>
-#include <iterator>
-#include <list>
-#include <memory>
-#include <stdio.h>
-#include <unordered_map>
-#include <utility>
 
-namespace kernel::memory {
+namespace kernel::memory
+{
 
 MCache* get_cache_in_chain(char* name)
 {
@@ -69,8 +70,8 @@ MCache& m_cache_create(const char* name, size_t obj_size)
 		name = temp_name;
 	}
 
-	cache_chain.push_back(
-			std::make_unique<kernel::memory::MCache>(const_cast<char*>(name), obj_size));
+	cache_chain.push_back(std::make_unique<kernel::memory::MCache>(
+			const_cast<char*>(name), obj_size));
 
 	return *cache_chain.back();
 }
@@ -203,7 +204,8 @@ void MSlab::free_object(void* addr, size_t obj_size)
 
 std::unordered_map<void*, void*> aligned_to_raw_addr_map;
 
-namespace kernel::memory {
+namespace kernel::memory
+{
 
 void* alloc(size_t size, unsigned flags, int align)
 {

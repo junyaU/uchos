@@ -1,9 +1,9 @@
 #include "syscall.hpp"
+#include <cstdint>
 #include "asm_utils.h"
 #include "entry.h"
 #include "memory/segment.hpp"
 #include "msr.hpp"
-#include <cstdint>
 
 namespace kernel::syscall
 {

@@ -1,5 +1,4 @@
 #include "terminal.hpp"
-#include "shell.hpp"
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
@@ -8,9 +7,11 @@
 #include <libs/user/ipc.hpp>
 #include <libs/user/print.hpp>
 #include <libs/user/time.hpp>
+#include "shell.hpp"
 
 std::array<std::array<char, TERMINAL_WIDTH>, TERMINAL_HEIGHT> Terminal::buffer;
-std::array<std::array<uint32_t, TERMINAL_WIDTH>, TERMINAL_HEIGHT> Terminal::color_buffer;
+std::array<std::array<uint32_t, TERMINAL_WIDTH>, TERMINAL_HEIGHT>
+		Terminal::color_buffer;
 
 Terminal::Terminal(Shell* s) : shell_(s)
 {
@@ -40,10 +41,7 @@ void Terminal::blink_cursor()
 	cursor_visible = !cursor_visible;
 }
 
-int Terminal::adjusted_x(int x)
-{
-	return x * FONT_WIDTH + START_X;
-}
+int Terminal::adjusted_x(int x) { return x * FONT_WIDTH + START_X; }
 
 int Terminal::adjusted_y(int y)
 {
@@ -90,13 +88,15 @@ void Terminal::scroll()
 {
 	clear_screen();
 	memcpy(&buffer, &buffer[1], sizeof(buffer) - sizeof(buffer[0]));
-	memcpy(&color_buffer, &color_buffer[1], sizeof(color_buffer) - sizeof(color_buffer[0]));
+	memcpy(&color_buffer, &color_buffer[1],
+		   sizeof(color_buffer) - sizeof(color_buffer[0]));
 	memset(&buffer[TERMINAL_HEIGHT - 1], '\0', TERMINAL_WIDTH);
 	memset(&color_buffer[TERMINAL_HEIGHT - 1], 0, TERMINAL_WIDTH);
 
 	for (int y = 0; y < TERMINAL_HEIGHT - 1; ++y) {
 		for (int x = 0; x < TERMINAL_WIDTH; ++x) {
-			print_text(adjusted_x(x), adjusted_y(y), &buffer[y][x], color_buffer[y][x]);
+			print_text(adjusted_x(x), adjusted_y(y), &buffer[y][x],
+					   color_buffer[y][x]);
 		}
 	}
 
@@ -211,5 +211,6 @@ void Terminal::register_current_dir(const char* name)
 
 void set_cursor_timer(int ms)
 {
-	set_timer(ms, true, TimeoutAction::TERMINAL_CURSOR_BLINK, process_ids::SHELL.raw());
+	set_timer(ms, true, TimeoutAction::TERMINAL_CURSOR_BLINK,
+			  process_ids::SHELL.raw());
 }

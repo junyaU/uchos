@@ -6,11 +6,11 @@ BasedOnStyle:    Google
 
 # インデント設定（Googleスタイルは通常2スペースだが、UCHosはタブを使用）
 IndentWidth:     4
-UseTab:          ForIndentation
+UseTab:          Always
 TabWidth:        4
 
 # 行の長さ制限（Googleスタイルは80文字）
-ColumnLimit:     100
+ColumnLimit:     85
 
 # ブレーススタイル（Googleスタイルは同行だが、UCHosはK&R + 改行を維持）
 BreakBeforeBraces: Linux
@@ -36,7 +36,7 @@ IndentAccessModifiers: false
 # - マクロ・定数: ALL_CAPS
 
 # パラメータとアーギュメントの配置
-BinPackArguments: false
+BinPackArguments: true
 BinPackParameters: false
 AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: false
@@ -44,11 +44,15 @@ AllowAllParametersOfDeclarationOnNextLine: false
 # 短文の許可設定
 AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 AllowShortEnumsOnASingleLine: true
 AllowShortLambdasOnASingleLine: All
+
+# 戻り値型の配置
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
 
 # アライメント設定
 AlignAfterOpenBracket: Align
@@ -69,11 +73,12 @@ BreakBeforeConceptDeclarations: true
 BreakInheritanceList: BeforeColon
 BreakConstructorInitializers: BeforeColon
 ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 8
 PackConstructorInitializers: NextLine
 
 # コメント設定
 ReflowComments: true
-SpacesBeforeTrailingComments: 2
+SpacesBeforeTrailingComments: 1
 FixNamespaceComments: true
 
 # ポインタとリファレンス
@@ -138,4 +143,3 @@ StatementMacros:
   - ASSERT_NOT_NULL
   - EXPECT_EQ
 
-...

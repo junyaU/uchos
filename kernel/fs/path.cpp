@@ -1,6 +1,6 @@
 #include "fs/path.hpp"
-#include "fs/fat/fat.hpp"
 #include <cstring>
+#include "fs/fat/fat.hpp"
 
 Path init_path(kernel::fs::DirectoryEntry* root_dir)
 {

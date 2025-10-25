@@ -1,4 +1,9 @@
 #include "task/builtin.hpp"
+#include <cstddef>
+#include <cstring>
+#include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
+#include <libs/common/types.hpp>
 #include "fs/fat/fat.hpp"
 #include "fs/path.hpp"
 #include "graphics/log.hpp"
@@ -10,11 +15,6 @@
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
-#include <cstddef>
-#include <cstring>
-#include <libs/common/message.hpp>
-#include <libs/common/process_id.hpp>
-#include <libs/common/types.hpp>
 
 namespace
 {
@@ -25,14 +25,16 @@ void notify_xhci_handler(const Message& m)
 
 void handle_initialize_task(const Message& m)
 {
-	Message send_m = { .type = MsgType::INITIALIZE_TASK, .sender = process_ids::KERNEL };
+	Message send_m = { .type = MsgType::INITIALIZE_TASK,
+					   .sender = process_ids::KERNEL };
 	send_m.data.init.task_id = m.sender.raw();
 	kernel::task::send_message(m.sender, send_m);
 }
 
 void handle_memory_usage(const Message& m)
 {
-	Message send_m = { .type = MsgType::IPC_MEMORY_USAGE, .sender = process_ids::KERNEL };
+	Message send_m = { .type = MsgType::IPC_MEMORY_USAGE,
+					   .sender = process_ids::KERNEL };
 
 	size_t used_mem = 0;
 	size_t total_mem = 0;
@@ -80,11 +82,12 @@ void handle_fs_register_path(const Message& m)
 
 	kernel::memory::free(p);
 
-	Message reply = { .type = MsgType::FS_REGISTER_PATH, .sender = process_ids::KERNEL };
+	Message reply = { .type = MsgType::FS_REGISTER_PATH,
+					  .sender = process_ids::KERNEL };
 	reply.data.fs.result = 0;
 	kernel::task::send_message(m.sender, reply);
 };
-}  // namespace
+} // namespace
 
 namespace kernel::task
 {
@@ -115,7 +118,8 @@ void shell_service()
 	memcpy(m.data.fs.name, path, 6);
 	kernel::task::send_message(process_ids::FS_FAT32, m);
 
-	const Message info_m = kernel::task::wait_for_message(MsgType::IPC_GET_FILE_INFO);
+	const Message info_m =
+			kernel::task::wait_for_message(MsgType::IPC_GET_FILE_INFO);
 	auto* entry = reinterpret_cast<kernel::fs::DirectoryEntry*>(info_m.data.fs.buf);
 	if (entry == nullptr) {
 		LOG_ERROR("failed to find shell");
@@ -124,11 +128,13 @@ void shell_service()
 		}
 	}
 
-	Message read_m = { .type = MsgType::IPC_READ_FILE_DATA, .sender = process_ids::SHELL };
+	Message read_m = { .type = MsgType::IPC_READ_FILE_DATA,
+					   .sender = process_ids::SHELL };
 	read_m.data.fs.buf = info_m.data.fs.buf;
 	kernel::task::send_message(process_ids::FS_FAT32, read_m);
 
-	const Message data_m = kernel::task::wait_for_message(MsgType::IPC_READ_FILE_DATA);
+	const Message data_m =
+			kernel::task::wait_for_message(MsgType::IPC_READ_FILE_DATA);
 	CURRENT_TASK->is_initilized = true;
 	kernel::fs::fat::execute_file(data_m.data.fs.buf, "shell", nullptr);
 }
@@ -148,4 +154,4 @@ void usb_handler_service()
 	kernel::task::process_messages(t);
 }
 
-}  // namespace kernel::task
+} // namespace kernel::task

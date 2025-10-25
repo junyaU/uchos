@@ -1,12 +1,12 @@
 #include "segment.hpp"
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include "graphics/log.hpp"
 #include "interrupt/idt.hpp"
 #include "page.hpp"
 #include "segment_utils.h"
 #include "slab.hpp"
-#include <array>
-#include <cstddef>
-#include <cstdint>
 
 namespace kernel::memory
 {

@@ -12,13 +12,13 @@
 
 #pragma once
 
-#include "hid.hpp"
 #include <array>
 #include <functional>
+#include "hid.hpp"
 
 /**
  * @brief USB HID interface protocol value for keyboards
- * 
+ *
  * According to the USB HID specification, keyboards use protocol value 1.
  */
 const int KEYBOARD_INTERFACE_PROTOCOL = 1;
@@ -27,7 +27,7 @@ namespace kernel::hw::usb
 {
 /**
  * @brief USB keyboard driver implementation
- * 
+ *
  * This class handles USB keyboards by processing HID reports and
  * notifying observers about key press and release events.
  */
@@ -36,7 +36,7 @@ class KeyboardDriver : public HidDriver
 public:
 	/**
 	 * @brief Construct a new keyboard driver
-	 * 
+	 *
 	 * @param dev Parent USB device
 	 * @param interface_index Index of the keyboard interface
 	 */
@@ -44,15 +44,15 @@ public:
 
 	/**
 	 * @brief Custom memory allocation for keyboard driver
-	 * 
+	 *
 	 * @param size Size to allocate
 	 * @return void* Allocated memory
 	 */
 	void* operator new(size_t size);
-	
+
 	/**
 	 * @brief Custom memory deallocation for keyboard driver
-	 * 
+	 *
 	 * @param ptr Pointer to deallocate
 	 */
 	void operator delete(void* ptr) noexcept;
@@ -61,25 +61,25 @@ public:
 
 	/**
 	 * @brief Observer function type for keyboard events
-	 * 
+	 *
 	 * @param modifier Modifier keys state (Ctrl, Alt, Shift, etc.)
 	 * @param keycode HID keycode of the key
 	 * @param pressed true if key was pressed, false if released
 	 */
 	using observer_type = void(uint8_t modifier, uint8_t keycode, bool pressed);
-	
+
 	/**
 	 * @brief Subscribe to keyboard events
-	 * 
+	 *
 	 * @param observer Function to call when keys are pressed/released
-	 * 
+	 *
 	 * @note Maximum of 4 observers are supported
 	 */
 	void subscribe(std::function<observer_type> observer);
-	
+
 	/**
 	 * @brief Default keyboard event observer
-	 * 
+	 *
 	 * This observer is automatically subscribed when a keyboard is connected.
 	 */
 	static std::function<observer_type> default_observer;
@@ -89,7 +89,7 @@ private:
 	 * @brief Array of observer functions
 	 */
 	std::array<std::function<observer_type>, 4> observers_;
-	
+
 	/**
 	 * @brief Current number of registered observers
 	 */
@@ -97,7 +97,7 @@ private:
 
 	/**
 	 * @brief Notify all observers of a key event
-	 * 
+	 *
 	 * @param modifier Current modifier keys state
 	 * @param keycode HID keycode of the key
 	 * @param press true if pressed, false if released

@@ -3,15 +3,6 @@
  * @brief FAT32 directory operations implementation
  */
 
-#include "fat.hpp"
-#include "fs/path.hpp"
-#include "graphics/font.hpp"
-#include "graphics/log.hpp"
-#include "internal_common.hpp"
-#include "memory/page.hpp"
-#include "memory/slab.hpp"
-#include "task/ipc.hpp"
-#include "task/task.hpp"
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
@@ -22,6 +13,15 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "fat.hpp"
+#include "fs/path.hpp"
+#include "graphics/font.hpp"
+#include "graphics/log.hpp"
+#include "internal_common.hpp"
+#include "memory/page.hpp"
+#include "memory/slab.hpp"
+#include "task/ipc.hpp"
+#include "task/task.hpp"
 
 namespace kernel::fs::fat
 {
@@ -34,9 +34,11 @@ fs_id_t next_change_dir_id = 1000000;
 namespace
 {
 
-void update_directory_path_from_parent(kernel::task::Task* t, const std::string& parent_path)
+void update_directory_path_from_parent(kernel::task::Task* t,
+									   const std::string& parent_path)
 {
-	strncpy(t->fs_path.full_path, parent_path.c_str(), sizeof(t->fs_path.full_path) - 1);
+	strncpy(t->fs_path.full_path, parent_path.c_str(),
+			sizeof(t->fs_path.full_path) - 1);
 	t->fs_path.full_path[sizeof(t->fs_path.full_path) - 1] = '\0';
 
 	if (parent_path == "/") {
@@ -59,13 +61,12 @@ void update_directory_path_append(kernel::task::Task* t, const std::string& dir_
 	t->fs_path.current_dir_name[12] = '\0';
 
 	if (strcmp(t->fs_path.full_path, "/") == 0) {
-		snprintf(t->fs_path.full_path, sizeof(t->fs_path.full_path), "/%s", dir_name.c_str());
+		snprintf(t->fs_path.full_path, sizeof(t->fs_path.full_path), "/%s",
+				 dir_name.c_str());
 	} else {
 		const size_t len = strlen(t->fs_path.full_path);
-		snprintf(t->fs_path.full_path + len,
-		         sizeof(t->fs_path.full_path) - len,
-		         "/%s",
-		         dir_name.c_str());
+		snprintf(t->fs_path.full_path + len, sizeof(t->fs_path.full_path) - len,
+				 "/%s", dir_name.c_str());
 	}
 }
 
@@ -135,7 +136,8 @@ void handle_virtio_response(const Message& m)
 		return;
 	}
 
-	update_directory_entry(task, reinterpret_cast<DirectoryEntry*>(m.data.blk_io.buf));
+	update_directory_entry(task,
+						   reinterpret_cast<DirectoryEntry*>(m.data.blk_io.buf));
 	finalize_directory_change(m, task);
 }
 
@@ -143,7 +145,8 @@ void change_to_root(const Message& m, kernel::task::Task* t)
 {
 	change_to_root_directory(t);
 
-	Message reply = { .type = MsgType::FS_CHANGE_DIR, .sender = process_ids::FS_FAT32 };
+	Message reply = { .type = MsgType::FS_CHANGE_DIR,
+					  .sender = process_ids::FS_FAT32 };
 	reply.data.fs.name[0] = '/';
 	reply.data.fs.name[1] = '\0';
 	reply.data.fs.result = 0;
@@ -152,7 +155,8 @@ void change_to_root(const Message& m, kernel::task::Task* t)
 
 void send_error_response(const Message& m, const char* error_msg = nullptr)
 {
-	Message reply = { .type = MsgType::FS_CHANGE_DIR, .sender = process_ids::FS_FAT32 };
+	Message reply = { .type = MsgType::FS_CHANGE_DIR,
+					  .sender = process_ids::FS_FAT32 };
 	reply.data.fs.result = -1;
 	if (error_msg != nullptr) {
 		strncpy(reply.data.fs.name, error_msg, sizeof(reply.data.fs.name) - 1);
@@ -162,8 +166,8 @@ void send_error_response(const Message& m, const char* error_msg = nullptr)
 }
 
 void request_parent_directory_load(const Message& m,
-                                   kernel::task::Task* t,
-                                   DirectoryEntry* parent_entry)
+								   kernel::task::Task* t,
+								   DirectoryEntry* parent_entry)
 {
 	const fs_id_t request_id = next_change_dir_id++;
 	change_dir_requests[request_id] = t->id;
@@ -172,20 +176,19 @@ void request_parent_directory_load(const Message& m,
 	const std::string current_full_path = t->fs_path.full_path;
 	const size_t last_slash = current_full_path.rfind('/');
 	parent_dir_names[request_id] =
-	    (last_slash == 0) ? "/" : current_full_path.substr(0, last_slash);
+			(last_slash == 0) ? "/" : current_full_path.substr(0, last_slash);
 
 	send_read_req_to_blk_device(calc_start_sector(parent_entry->first_cluster()),
-	                            BYTES_PER_CLUSTER,
-	                            MsgType::FS_CHANGE_DIR,
-	                            request_id);
+								BYTES_PER_CLUSTER, MsgType::FS_CHANGE_DIR,
+								request_id);
 
-	Message reply = { .type = MsgType::FS_CHANGE_DIR, .sender = process_ids::FS_FAT32 };
+	Message reply = { .type = MsgType::FS_CHANGE_DIR,
+					  .sender = process_ids::FS_FAT32 };
 	if (parent_dir_names[request_id] == "/") {
 		memcpy(reply.data.fs.name, "/", 2);
 	} else {
-		memcpy(reply.data.fs.name,
-		       parent_dir_names[request_id].c_str(),
-		       parent_dir_names[request_id].length() + 1);
+		memcpy(reply.data.fs.name, parent_dir_names[request_id].c_str(),
+			   parent_dir_names[request_id].length() + 1);
 	}
 	reply.data.fs.result = 0;
 	kernel::task::send_message(m.sender, reply);
@@ -212,7 +215,9 @@ void handle_parent_directory_change(const Message& m, kernel::task::Task* t)
 	request_parent_directory_load(m, t, parent_entry);
 }
 
-void handle_normal_directory_change(const Message& m, kernel::task::Task* t, const char* path_name)
+void handle_normal_directory_change(const Message& m,
+									kernel::task::Task* t,
+									const char* path_name)
 {
 	char upper_name[256];
 	strncpy(upper_name, path_name, sizeof(upper_name) - 1);
@@ -230,11 +235,11 @@ void handle_normal_directory_change(const Message& m, kernel::task::Task* t, con
 	change_dir_names[request_id] = upper_name;
 
 	send_read_req_to_blk_device(calc_start_sector(entry->first_cluster()),
-	                            BYTES_PER_CLUSTER,
-	                            MsgType::FS_CHANGE_DIR,
-	                            request_id);
+								BYTES_PER_CLUSTER, MsgType::FS_CHANGE_DIR,
+								request_id);
 
-	Message reply = { .type = MsgType::FS_CHANGE_DIR, .sender = process_ids::FS_FAT32 };
+	Message reply = { .type = MsgType::FS_CHANGE_DIR,
+					  .sender = process_ids::FS_FAT32 };
 	memcpy(reply.data.fs.name, upper_name, strlen(upper_name) + 1);
 	reply.data.fs.result = 0;
 	kernel::task::send_message(m.sender, reply);
@@ -249,7 +254,7 @@ kernel::task::Task* get_effective_task(ProcessId sender)
 	return t;
 }
 
-}  // namespace
+} // namespace
 
 void handle_fs_change_dir(const Message& m)
 {
@@ -306,9 +311,8 @@ void handle_get_directory_contents(const Message& m)
 			continue;
 		}
 
-		memcpy(&entries[entries_count * sizeof(DirectoryEntry)],
-		       &current_dir[i],
-		       sizeof(DirectoryEntry));
+		memcpy(&entries[entries_count * sizeof(DirectoryEntry)], &current_dir[i],
+			   sizeof(DirectoryEntry));
 		++entries_count;
 	}
 
@@ -317,15 +321,17 @@ void handle_get_directory_contents(const Message& m)
 
 	for (int i = 0; i < entries_count; ++i) {
 		Stat* s = reinterpret_cast<Stat*>(buf) + i;
-		read_dir_entry_name(
-		    *reinterpret_cast<DirectoryEntry*>(&entries[i * sizeof(DirectoryEntry)]), s->name);
+		read_dir_entry_name(*reinterpret_cast<DirectoryEntry*>(
+									&entries[i * sizeof(DirectoryEntry)]),
+							s->name);
 		s->size = current_dir[i].file_size;
 		s->type = current_dir[i].attribute == entry_attribute::DIRECTORY
-		              ? StatType::DIRECTORY
-		              : StatType::REGULAR_FILE;
+						  ? StatType::DIRECTORY
+						  : StatType::REGULAR_FILE;
 	}
 
-	Message sm = { .type = MsgType::GET_DIRECTORY_CONTENTS, .sender = process_ids::FS_FAT32 };
+	Message sm = { .type = MsgType::GET_DIRECTORY_CONTENTS,
+				   .sender = process_ids::FS_FAT32 };
 	sm.tool_desc.addr = buf;
 	sm.tool_desc.size = entries_count * sizeof(Stat);
 	sm.tool_desc.present = true;
@@ -347,8 +353,8 @@ void handle_fs_pwd(const Message& m)
 		return;
 	}
 
-	memcpy(
-	    reply.data.fs.name, t->fs_path.current_dir_name, strlen(t->fs_path.current_dir_name) + 1);
+	memcpy(reply.data.fs.name, t->fs_path.current_dir_name,
+		   strlen(t->fs_path.current_dir_name) + 1);
 
 	kernel::task::send_message(m.sender, reply);
 }
@@ -387,11 +393,11 @@ void update_directory_entry_on_disk(DirectoryEntry* entry, const char* name)
 	const unsigned int root_dir_sector = calc_start_sector(VOLUME_BPB->root_cluster);
 
 	// Write the entire ROOT_DIR cluster back to disk
-	send_write_req_to_blk_device(
-	    write_buffer, root_dir_sector, BYTES_PER_CLUSTER, MsgType::FS_WRITE, 0, 0);
+	send_write_req_to_blk_device(write_buffer, root_dir_sector, BYTES_PER_CLUSTER,
+								 MsgType::FS_WRITE, 0, 0);
 
 	// Note: The buffer will be freed when the write operation completes
 	// TODO: This should be handled in the write completion handler
 }
 
-}  // namespace kernel::fs::fat
+} // namespace kernel::fs::fat
