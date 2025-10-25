@@ -5,6 +5,7 @@
 #include "bit_utils.hpp"
 #include "graphics/log.hpp"
 #include "hardware/pci.hpp"
+#include "hardware/virtio/net.hpp"
 #include "hardware/virtio/virtio.hpp"
 #include "memory/slab.hpp"
 
@@ -67,6 +68,22 @@ error_t negotiate_features(VirtioPciDevice& virtio_dev)
 
 	if ((device_features & (1ULL << VIRTIO_F_VERSION_1)) != 0) {
 		driver_features |= (1ULL << VIRTIO_F_VERSION_1);
+	}
+
+	switch (virtio_dev.dev->device_id) {
+		case VIRTIO_NET:
+			if ((device_features & VIRTIO_NET_F_MAC) != 0) {
+				driver_features |= VIRTIO_NET_F_MAC;
+			}
+			break;
+
+		case VIRTIO_BLK:
+			// Negotiate block device features here if needed
+			break;
+
+		default:
+			LOG_ERROR("Unknown Virtio device ID: %x", virtio_dev.dev->device_id);
+			return ERR_INVALID_ARG;
 	}
 
 	for (int i = 0; i < 2; ++i) {
