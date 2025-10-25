@@ -46,8 +46,10 @@ void initialize_interrupt()
 
 	set_entry(InterruptVector::LOCAL_APIC_TIMER, on_timer_interrupt, IST_FOR_TIMER);
 	set_entry(InterruptVector::XHCI, on_xhci_interrupt, IST_FOR_XHCI);
-	set_entry(InterruptVector::VIRTIO, on_virtio_interrupt);
-	set_entry(InterruptVector::VIRTQUEUE, on_virtio_blk_queue_interrupt);
+	set_entry(InterruptVector::VIRTIO_BLK, on_virtio_blk_interrupt);
+	set_entry(InterruptVector::VIRTQUEUE_BLK, on_virtio_blk_queue_interrupt);
+	set_entry(InterruptVector::VIRTIO_NET, on_virtio_net_interrupt);
+	set_entry(InterruptVector::VIRTQUEUE_NET, on_virtio_net_queue_interrupt);
 	set_entry(InterruptVector::SWITCH_TASK, interrupt_task_switch,
 			  IST_FOR_SWITCH_TASK);
 	set_entry(DIVIDE_ERROR, fault_handler<DIVIDE_ERROR, false>::handler);

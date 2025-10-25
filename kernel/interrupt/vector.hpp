@@ -41,20 +41,31 @@ public:
 		 */
 		XHCI = 0x41,
 		/**
-		 * @brief VirtIO device interrupt vector
+		 * @brief VirtIO block device interrupt vector
 		 *
-		 * Used for interrupts from VirtIO devices in virtualized environments.
-		 * This typically includes block devices, network devices, etc.
+		 * Used for interrupts from VirtIO block devices in virtualized environments.
 		 */
-		VIRTIO = 0x42,
+		VIRTIO_BLK = 0x42,
 		/**
-		 * @brief VirtIO queue notification interrupt vector
+		 * @brief VirtIO block device queue interrupt vector
 		 *
-		 * Used specifically for VirtIO virtqueue notifications, allowing
-		 * efficient communication between the guest and host in virtualized
+		 * Used for queue-specific interrupts from VirtIO block devices.
+		 */
+		VIRTQUEUE_BLK = 0x43,
+		/**
+		 * @brief VirtIO network device interrupt vector
+		 *
+		 * Used for interrupts from VirtIO network devices in virtualized
 		 * environments.
 		 */
-		VIRTQUEUE = 0x43,
+		VIRTIO_NET = 0x44,
+		/**
+		 * @brief VirtIO network device interrupt vector
+		 *
+		 * Used for interrupts from VirtIO network devices in virtualized
+		 * environments.
+		 */
+		VIRTQUEUE_NET = 0x45,
 		/**
 		 * @brief Task switching interrupt vector
 		 *
@@ -62,7 +73,7 @@ public:
 		 * This allows cooperative task switching without waiting for the
 		 * timer interrupt.
 		 */
-		SWITCH_TASK = 0x44,
+		SWITCH_TASK = 0x46
 	};
 };
 
