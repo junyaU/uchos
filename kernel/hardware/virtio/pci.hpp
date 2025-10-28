@@ -163,6 +163,7 @@ struct VirtioPciDevice {
 	VirtioVirtqueue* queues;		/* Virtqueues. */
 	size_t num_queues;				/* Number of virtqueues. */
 	uintptr_t notify_base;			/* Base address for notifications. */
+	uint64_t features;				/* Negotiated features. */
 };
 
 /**

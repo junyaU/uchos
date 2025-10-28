@@ -126,6 +126,7 @@ struct VirtioVirtqueue {
 	size_t top_free_idx;
 	size_t last_driver_idx;
 	uint16_t last_device_idx;
+	uint16_t notify_off;
 	VirtqDesc* desc;
 	VirtqDriver* driver;
 	VirtqDevice* device;
@@ -157,7 +158,8 @@ error_t init_virtqueue(VirtioVirtqueue* queue,
 					   size_t num_desc,
 					   uintptr_t desc_addr,
 					   uintptr_t driver_ring_addr,
-					   uintptr_t device_ring_addr);
+					   uintptr_t device_ring_addr,
+					   uint16_t notify_off);
 
 int push_virtio_entry(VirtioVirtqueue* queue,
 					  VirtioEntry* entry_chain,
