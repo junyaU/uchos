@@ -7,6 +7,22 @@
 #include "memory/slab.hpp"
 #include "task/task.hpp"
 
+namespace
+{
+void handle_send_packet_request(const Message& m)
+{
+	LOG_ERROR("send");
+	LOG_ERROR("request");
+}
+
+void handle_recv_packet_request(const Message& m)
+{
+	LOG_ERROR("recv");
+	LOG_ERROR("request");
+}
+
+} // namespace
+
 namespace kernel::hw::virtio
 {
 
@@ -142,6 +158,9 @@ void virtio_net_service()
 	setup_rx_buffers();
 
 	transmit_packet("Hello, VirtIO Net!", 18);
+
+	t->add_msg_handler(MsgType::IPC_NET_SEND_PACKET, handle_send_packet_request);
+	t->add_msg_handler(MsgType::IPC_NET_RECV_PACKET, handle_recv_packet_request);
 
 	kernel::task::process_messages(t);
 }

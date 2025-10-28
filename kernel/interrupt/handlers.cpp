@@ -47,9 +47,18 @@ __attribute__((interrupt)) void on_virtio_net_interrupt(InterruptFrame* frame)
 	notify_end_of_interrupt();
 }
 
-__attribute__((interrupt)) void on_virtio_net_queue_interrupt(InterruptFrame* frame)
+__attribute__((interrupt)) void on_virtio_net_rx_queue_interrupt(
+		InterruptFrame* frame)
 {
-	LOG_ERROR("virtio net queue interrupt");
+	LOG_ERROR("virtio net rx queue interrupt");
+	kernel::task::schedule_task(process_ids::VIRTIO_NET);
+	notify_end_of_interrupt();
+}
+
+__attribute__((interrupt)) void on_virtio_net_tx_queue_interrupt(
+		InterruptFrame* frame)
+{
+	LOG_ERROR("virtio net tx queue interrupt");
 	kernel::task::schedule_task(process_ids::VIRTIO_NET);
 	notify_end_of_interrupt();
 }

@@ -153,7 +153,7 @@ error_t setup_virtqueue(VirtioPciDevice& virtio_dev)
 		init_virtqueue(&virtio_dev.queues[i], i, num_desc, desc_addr,
 					   driver_ring_addr, device_ring_addr, queue_notify_off);
 
-		virtio_dev.common_cfg->queue_msix_vector = 1;
+		virtio_dev.common_cfg->queue_msix_vector = 1 + i;
 		if (virtio_dev.common_cfg->queue_msix_vector == NO_VECTOR) {
 			LOG_ERROR("Failed to allocate MSI-X vector for virtqueue");
 			return ERR_NO_MEMORY;

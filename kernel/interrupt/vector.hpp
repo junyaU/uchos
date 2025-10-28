@@ -60,12 +60,19 @@ public:
 		 */
 		VIRTIO_NET = 0x44,
 		/**
-		 * @brief VirtIO network device interrupt vector
+		 * @brief VirtIO network device interrupt vector for receive queue
 		 *
 		 * Used for interrupts from VirtIO network devices in virtualized
 		 * environments.
 		 */
-		VIRTQUEUE_NET = 0x45,
+		VIRTQUEUE_NET_RX = 0x45,
+		/**
+		 * @brief VirtIO network device interrupt vector for transmit queue
+		 *
+		 * Used for interrupts from VirtIO network devices in virtualized
+		 * environments.
+		 */
+		VIRTQUEUE_NET_TX = 0x46,
 		/**
 		 * @brief Task switching interrupt vector
 		 *
@@ -73,7 +80,7 @@ public:
 		 * This allows cooperative task switching without waiting for the
 		 * timer interrupt.
 		 */
-		SWITCH_TASK = 0x46
+		SWITCH_TASK = 0x47,
 	};
 };
 
