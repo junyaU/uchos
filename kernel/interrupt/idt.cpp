@@ -49,7 +49,8 @@ void initialize_interrupt()
 	set_entry(InterruptVector::VIRTIO_BLK, on_virtio_blk_interrupt);
 	set_entry(InterruptVector::VIRTQUEUE_BLK, on_virtio_blk_queue_interrupt);
 	set_entry(InterruptVector::VIRTIO_NET, on_virtio_net_interrupt);
-	set_entry(InterruptVector::VIRTQUEUE_NET, on_virtio_net_queue_interrupt);
+	set_entry(InterruptVector::VIRTQUEUE_NET_RX, on_virtio_net_rx_queue_interrupt);
+	set_entry(InterruptVector::VIRTQUEUE_NET_TX, on_virtio_net_tx_queue_interrupt);
 	set_entry(InterruptVector::SWITCH_TASK, interrupt_task_switch,
 			  IST_FOR_SWITCH_TASK);
 	set_entry(DIVIDE_ERROR, fault_handler<DIVIDE_ERROR, false>::handler);

@@ -29,7 +29,9 @@ void on_virtio_blk_queue_interrupt(InterruptFrame* frame);
 
 void on_virtio_net_interrupt(InterruptFrame* frame);
 
-void on_virtio_net_queue_interrupt(InterruptFrame* frame);
+void on_virtio_net_rx_queue_interrupt(InterruptFrame* frame);
+
+void on_virtio_net_tx_queue_interrupt(InterruptFrame* frame);
 
 [[gnu::no_caller_saved_registers]] void kill_userland(InterruptFrame* frame);
 
