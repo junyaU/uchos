@@ -185,7 +185,7 @@ error_t configure_pci_notify_cfg(VirtioPciDevice& virtio_dev)
 
 	virtio_dev.notify_base +=
 			static_cast<uintptr_t>(virtio_dev.notify_cfg->notify_off_multiplier *
-								   virtio_dev.common_cfg->num_queues);
+								   virtio_dev.common_cfg->queue_notify_off);
 
 	return OK;
 }
@@ -231,7 +231,7 @@ error_t set_virtio_pci_capability(VirtioPciDevice& virtio_dev)
 void notify_virtqueue(VirtioPciDevice& virtio_dev, size_t queue_idx)
 {
 	asm volatile("sfence" ::: "memory");
-	*(volatile uint32_t*)virtio_dev.notify_base = queue_idx;
+	*(volatile uint64_t*)virtio_dev.notify_base = queue_idx;
 }
 
 } // namespace kernel::hw::virtio
