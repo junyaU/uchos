@@ -27,17 +27,32 @@ size_t find_virtio_pci_cap(VirtioPciDevice& virtio_dev)
 		cap_next = header.bits.next_ptr;
 
 		if (cap_id == kernel::hw::pci::CAP_VIRTIO) {
-			void* addr = kernel::memory::alloc(sizeof(VirtioPciCap),
-											   kernel::memory::ALLOC_ZEROED);
-			VirtioPciCap* cap = new (addr) VirtioPciCap;
-			cap->first_dword.data =
+			auto first_dword =
 					kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr);
+			uint8_t cfg_type = (first_dword >> 24) & 0xFF;
+
+			size_t alloc_size = sizeof(VirtioPciCap);
+			if (cfg_type == VIRTIO_PCI_CAP_NOTIFY_CFG) {
+				alloc_size = sizeof(VirtioPciNotifyCap);
+			}
+
+			void* addr =
+					kernel::memory::alloc(alloc_size, kernel::memory::ALLOC_ZEROED);
+			VirtioPciCap* cap = new (addr) VirtioPciCap;
+			cap->first_dword.data = first_dword;
 			cap->second_dword.data =
 					kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr + 4);
 			cap->offset =
 					kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr + 8);
 			cap->length =
 					kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr + 12);
+
+			if (cfg_type == VIRTIO_PCI_CAP_NOTIFY_CFG) {
+				VirtioPciNotifyCap* notify_cap =
+						reinterpret_cast<VirtioPciNotifyCap*>(cap);
+				notify_cap->notify_off_multiplier = kernel::hw::pci::read_conf_reg(
+						*virtio_dev.dev, cap_addr + 16);
+			}
 
 			if (prev_cap != nullptr) {
 				prev_cap->next = cap;
@@ -92,6 +107,8 @@ error_t negotiate_features(VirtioPciDevice& virtio_dev)
 				(driver_features >> (i * 32)) & 0xffffffff;
 	}
 
+	virtio_dev.features = driver_features;
+
 	virtio_dev.common_cfg->device_status |= VIRTIO_STATUS_FEATURES_OK;
 	if ((virtio_dev.common_cfg->device_status & VIRTIO_STATUS_FEATURES_OK) == 0) {
 		LOG_ERROR("Virtio device does not support features");
@@ -131,8 +148,10 @@ error_t setup_virtqueue(VirtioPciDevice& virtio_dev)
 		virtio_dev.common_cfg->queue_driver = driver_ring_addr;
 		virtio_dev.common_cfg->queue_device = device_ring_addr;
 
+		uint16_t queue_notify_off = virtio_dev.common_cfg->queue_notify_off;
+
 		init_virtqueue(&virtio_dev.queues[i], i, num_desc, desc_addr,
-					   driver_ring_addr, device_ring_addr);
+					   driver_ring_addr, device_ring_addr, queue_notify_off);
 
 		virtio_dev.common_cfg->queue_msix_vector = 1;
 		if (virtio_dev.common_cfg->queue_msix_vector == NO_VECTOR) {
@@ -175,17 +194,12 @@ error_t configure_pci_common_cfg(VirtioPciDevice& virtio_dev)
 
 error_t configure_pci_notify_cfg(VirtioPciDevice& virtio_dev)
 {
-
 	uint64_t bar_addr = kernel::hw::pci::read_base_address_register(
 			*virtio_dev.dev, virtio_dev.notify_cfg->cap.second_dword.fields.bar);
 
 	bar_addr = bar_addr & ~0xfff;
 
 	virtio_dev.notify_base = bar_addr + virtio_dev.notify_cfg->cap.offset;
-
-	virtio_dev.notify_base +=
-			static_cast<uintptr_t>(virtio_dev.notify_cfg->notify_off_multiplier *
-								   virtio_dev.common_cfg->num_queues);
 
 	return OK;
 }
@@ -230,8 +244,15 @@ error_t set_virtio_pci_capability(VirtioPciDevice& virtio_dev)
 
 void notify_virtqueue(VirtioPciDevice& virtio_dev, size_t queue_idx)
 {
+	uint16_t queue_notify_off = virtio_dev.queues[queue_idx].notify_off;
+
+	uintptr_t notify_addr =
+			virtio_dev.notify_base + (static_cast<uintptr_t>(queue_notify_off) *
+									  virtio_dev.notify_cfg->notify_off_multiplier);
+
 	asm volatile("sfence" ::: "memory");
-	*(volatile uint32_t*)virtio_dev.notify_base = queue_idx;
+
+	*(volatile uint16_t*)notify_addr = static_cast<uint16_t>(queue_idx);
 }
 
 } // namespace kernel::hw::virtio

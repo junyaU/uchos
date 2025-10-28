@@ -172,11 +172,13 @@ error_t init_virtqueue(VirtioVirtqueue* queue,
 					   size_t num_desc,
 					   uintptr_t desc_addr,
 					   uintptr_t driver_ring_addr,
-					   uintptr_t device_ring_addr)
+					   uintptr_t device_ring_addr,
+					   uint16_t notify_off)
 {
 	queue->index = index;
 	queue->num_desc = num_desc;
 	queue->num_free_desc = num_desc;
+	queue->notify_off = notify_off;
 	queue->desc = reinterpret_cast<VirtqDesc*>(desc_addr);
 	queue->driver = reinterpret_cast<VirtqDriver*>(driver_ring_addr);
 	queue->device = reinterpret_cast<VirtqDevice*>(device_ring_addr);
