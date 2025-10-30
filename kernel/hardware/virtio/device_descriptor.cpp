@@ -4,12 +4,11 @@
  *
  * This file contains the definitions of all supported VirtIO devices
  * and their interrupt configurations.
- * @date 2025-01-28
  */
 #include "device_descriptor.hpp"
 
-#include "../../interrupt/handlers.hpp"
-#include "../../interrupt/vector.hpp"
+#include "interrupt/handlers.hpp"
+#include "interrupt/vector.hpp"
 #include "virtio.hpp"
 
 namespace kernel::hw::virtio

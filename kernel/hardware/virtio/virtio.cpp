@@ -125,6 +125,10 @@ int pop_virtio_entry(VirtioVirtqueue* queue,
 					 VirtioEntry* entry_chain,
 					 size_t num_entries)
 {
+	if (queue->last_device_idx == queue->device->index) {
+		return 0;
+	}
+
 	VirtqDeviceElem* elem =
 			&queue->device->ring[queue->last_device_idx % queue->num_desc];
 

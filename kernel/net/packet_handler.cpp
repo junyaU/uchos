@@ -5,6 +5,7 @@
 
 #include "packet_handler.hpp"
 #include <libs/common/message.hpp>
+#include "graphics/log.hpp"
 #include "task/task.hpp"
 
 namespace kernel::net
