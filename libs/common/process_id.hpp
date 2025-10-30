@@ -11,6 +11,7 @@ enum class SystemProcessId : pid_t {
 	FS_FAT32 = 4,
 	SHELL = 5,
 	VIRTIO_NET = 6,
+	NET = 7,
 	INTERRUPT = 100
 };
 
@@ -57,5 +58,6 @@ inline constexpr ProcessId VIRTIO_BLK{ SystemProcessId::VIRTIO_BLK };
 inline constexpr ProcessId FS_FAT32{ SystemProcessId::FS_FAT32 };
 inline constexpr ProcessId SHELL{ SystemProcessId::SHELL };
 inline constexpr ProcessId VIRTIO_NET{ SystemProcessId::VIRTIO_NET };
+inline constexpr ProcessId NET{ SystemProcessId::NET };
 inline constexpr ProcessId INTERRUPT{ SystemProcessId::INTERRUPT };
 } // namespace process_ids

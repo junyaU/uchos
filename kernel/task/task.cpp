@@ -18,6 +18,7 @@
 #include "memory/paging_utils.h"
 #include "memory/segment.hpp"
 #include "memory/slab.hpp"
+#include "net/packet_handler.hpp"
 #include "task/builtin.hpp"
 #include "task/context.hpp"
 #include "task/context_switch.h"
@@ -49,6 +50,9 @@ const InitialTaskInfo INITIAL_TASKS[] = {
 	{ "virtio_net",
 	  reinterpret_cast<uint64_t>(&kernel::hw::virtio::virtio_net_service), true,
 	  false },
+	{ "net", reinterpret_cast<uint64_t>(&kernel::net::packet_handler_service), true,
+	  false },
+
 };
 
 ProcessId get_available_task_id()

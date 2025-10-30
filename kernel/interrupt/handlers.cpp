@@ -50,8 +50,9 @@ __attribute__((interrupt)) void on_virtio_net_interrupt(InterruptFrame* frame)
 __attribute__((interrupt)) void on_virtio_net_rx_queue_interrupt(
 		InterruptFrame* frame)
 {
-	LOG_ERROR("virtio net rx queue interrupt");
-	kernel::task::schedule_task(process_ids::VIRTIO_NET);
+	Message m = { MsgType::NOTIFY_VIRTIO_NET_RX, process_ids::INTERRUPT, {} };
+	kernel::task::send_message(process_ids::VIRTIO_NET, m);
+
 	notify_end_of_interrupt();
 }
 
