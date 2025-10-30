@@ -9,25 +9,6 @@
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 
-namespace
-{
-void handle_rx_interrupt(const Message& m)
-{
-	Message msg = {
-		.type = MsgType::IPC_NET_RECV_PACKET,
-		.sender = kernel::task::CURRENT_TASK->id,
-	};
-
-	kernel::task::send_message(process_ids::NET, msg);
-}
-
-void handle_tx_interrupt(const Message& m)
-{
-	LOG_ERROR("tx");
-	LOG_ERROR("interrupt");
-}
-} // namespace
-
 namespace kernel::hw::virtio
 {
 
@@ -40,16 +21,16 @@ error_t setup_rx_buffers()
 {
 	for (size_t i = 0; i < NUM_RX_BUFFERS; ++i) {
 		void* buf;
-		ALLOC_OR_RETURN_ERROR(buf, RX_BUFFER_SIZE, kernel::memory::ALLOC_ZEROED);
+		ALLOC_OR_RETURN_ERROR(buf, sizeof(VirtioNetReq),
+							  kernel::memory::ALLOC_ZEROED);
 
-		rx_queue->desc[i].addr = reinterpret_cast<uint64_t>(buf);
-		rx_queue->desc[i].len = RX_BUFFER_SIZE;
-		rx_queue->desc[i].flags = VIRTQ_DESC_F_WRITE;
+		VirtioEntry chain[1];
+		chain[0].addr = (uint64_t)buf;
+		chain[0].len = sizeof(VirtioNetReq);
+		chain[0].write = true;
 
-		rx_queue->driver->ring[i] = i;
+		push_virtio_entry(rx_queue, chain, 1);
 	}
-
-	rx_queue->driver->index = NUM_RX_BUFFERS;
 
 	notify_virtqueue(*net_dev, rx_queue->index);
 
@@ -143,6 +124,34 @@ error_t transmit_packet(const void* data, size_t data_len)
 	notify_virtqueue(*net_dev, tx_queue->index);
 
 	return OK;
+}
+
+void handle_rx_interrupt(const Message& m)
+{
+	VirtioEntry entry_chain[1];
+	while (pop_virtio_entry(rx_queue, entry_chain, 1) > 0) {
+		VirtioNetReq* req = reinterpret_cast<VirtioNetReq*>(entry_chain[0].addr);
+		Message msg = {
+			.type = MsgType::IPC_NET_RECV_PACKET,
+			.sender = kernel::task::CURRENT_TASK->id,
+		};
+
+		size_t packet_len = entry_chain[0].len - sizeof(VirtioNetHdr);
+
+		memcpy(msg.data.net.packet_data, req->packet_data, packet_len);
+		msg.data.net.packet_len = packet_len;
+
+		kernel::task::send_message(process_ids::NET, msg);
+
+		push_virtio_entry(rx_queue, entry_chain, 1);
+		notify_virtqueue(*net_dev, rx_queue->index);
+	}
+}
+
+void handle_tx_interrupt(const Message& m)
+{
+	LOG_ERROR("tx");
+	LOG_ERROR("interrupt");
 }
 
 void virtio_net_service()
