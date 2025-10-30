@@ -93,13 +93,6 @@ error_t init_virtio_net_device()
 	return OK;
 }
 
-struct EthernetFrame {
-	uint8_t dst_mac[6];
-	uint8_t src_mac[6];
-	uint16_t ethertype; // ビッグエンディアン
-	uint8_t payload[];
-} __attribute__((packed));
-
 error_t transmit_packet(const void* data, size_t data_len)
 {
 	// Ethernetフレーム = ヘッダー(14) + データ
