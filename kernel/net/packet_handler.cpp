@@ -3,9 +3,11 @@
  * @brief Network Packet Handler Implementation
  */
 
-#include "packet_handler.hpp"
+#include "net/packet_handler.hpp"
+#include <libs/common/endian.hpp>
 #include <libs/common/message.hpp>
 #include "graphics/log.hpp"
+#include "net/ethernet.hpp"
 #include "task/task.hpp"
 
 namespace kernel::net
@@ -13,8 +15,22 @@ namespace kernel::net
 
 void handle_recv_packet(const Message& m)
 {
-	// Handle received network packet
-	LOG_ERROR("Received network packet");
+	EthernetFrame* frame = reinterpret_cast<EthernetFrame*>(m.data.net.packet_data);
+
+	switch (ntohs(frame->ethertype)) {
+		case ETHERTYPE_ARP:
+			LOG_ERROR("ARP packet received");
+			break;
+		case ETHERTYPE_IPV4:
+			LOG_ERROR("IPv4 packet received");
+			break;
+		case ETHERTYPE_IPV6:
+			LOG_ERROR("IPv6 packet received");
+			break;
+		default:
+			LOG_ERROR("Unknown Ethertype");
+			break;
+	}
 }
 
 void handle_send_packet(const Message& m)
