@@ -4,23 +4,28 @@
 #include "graphics/log.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
+#include "libs/common/message.hpp"
 #include "memory/slab.hpp"
+#include "task/ipc.hpp"
 #include "task/task.hpp"
 
 namespace
 {
-void handle_send_packet_request(const Message& m)
+void handle_rx_interrupt(const Message& m)
 {
-	LOG_ERROR("send");
-	LOG_ERROR("request");
+	Message msg = {
+		.type = MsgType::IPC_NET_RECV_PACKET,
+		.sender = kernel::task::CURRENT_TASK->id,
+	};
+
+	kernel::task::send_message(process_ids::NET, msg);
 }
 
-void handle_recv_packet_request(const Message& m)
+void handle_tx_interrupt(const Message& m)
 {
-	LOG_ERROR("recv");
-	LOG_ERROR("request");
+	LOG_ERROR("tx");
+	LOG_ERROR("interrupt");
 }
-
 } // namespace
 
 namespace kernel::hw::virtio
@@ -159,8 +164,8 @@ void virtio_net_service()
 
 	transmit_packet("Hello, VirtIO Net!", 18);
 
-	t->add_msg_handler(MsgType::IPC_NET_SEND_PACKET, handle_send_packet_request);
-	t->add_msg_handler(MsgType::IPC_NET_RECV_PACKET, handle_recv_packet_request);
+	t->add_msg_handler(MsgType::NOTIFY_VIRTIO_NET_RX, handle_rx_interrupt);
+	t->add_msg_handler(MsgType::NOTIFY_VIRTIO_NET_TX, handle_tx_interrupt);
 
 	kernel::task::process_messages(t);
 }

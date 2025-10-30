@@ -96,6 +96,7 @@ add_subdirectory(task)
 add_subdirectory(hardware)
 add_subdirectory(fs)
 add_subdirectory(syscall)
+add_subdirectory(net)
 add_subdirectory(tests)
 
 # Define the main target and link it with the necessary libraries.
@@ -116,5 +117,6 @@ target_link_libraries(
         UchosHardware
         UchosFileSystem
         UchosSyscall
+        UchosNet
         UchosTest
 )

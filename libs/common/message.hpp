@@ -17,6 +17,8 @@ enum class MsgType : int32_t {
 	NOTIFY_XHCI,
 	NOTIFY_TIMER_TIMEOUT,
 	NOTIFY_WRITE,
+	NOTIFY_VIRTIO_NET_RX,
+	NOTIFY_VIRTIO_NET_TX,
 	INITIALIZE_TASK,
 	IPC_TIME,
 	IPC_EXIT_TASK,
@@ -121,5 +123,11 @@ struct Message {
 			int operation;
 			int result;
 		} fs;
+
+		struct {
+			void* packet_data;
+			size_t packet_len;
+			int result;
+		} net;
 	} data;
 };
