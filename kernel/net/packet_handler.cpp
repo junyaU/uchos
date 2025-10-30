@@ -8,6 +8,7 @@
 #include <libs/common/message.hpp>
 #include "graphics/log.hpp"
 #include "net/ethernet.hpp"
+#include "net/ipv4.hpp"
 #include "task/task.hpp"
 
 namespace kernel::net
@@ -22,7 +23,7 @@ void handle_recv_packet(const Message& m)
 			LOG_ERROR("ARP packet received");
 			break;
 		case ETHERTYPE_IPV4:
-			LOG_ERROR("IPv4 packet received");
+			process_ipv4(reinterpret_cast<IPv4Header*>(frame->payload));
 			break;
 		case ETHERTYPE_IPV6:
 			LOG_ERROR("IPv6 packet received");
