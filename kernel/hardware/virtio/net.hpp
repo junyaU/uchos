@@ -33,6 +33,11 @@ constexpr size_t RX_BUFFER_SIZE = 2048;
 constexpr size_t NUM_RX_BUFFERS = 32;
 constexpr size_t MAX_PACKET_SIZE = 1514;
 
+//  host byte order
+constexpr uint32_t MY_IP = 0xC0A864C8;
+
+extern uint8_t mac_addr[6];
+
 struct VirtioNetConfig {
 	uint8_t mac[6];
 	uint16_t status;

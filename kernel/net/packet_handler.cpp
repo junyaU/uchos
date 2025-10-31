@@ -7,6 +7,7 @@
 #include <libs/common/endian.hpp>
 #include <libs/common/message.hpp>
 #include "graphics/log.hpp"
+#include "net/arp.hpp"
 #include "net/ethernet.hpp"
 #include "net/ipv4.hpp"
 #include "task/task.hpp"
@@ -18,14 +19,14 @@ void handle_recv_packet(const Message& m)
 {
 	EthernetFrame* frame = reinterpret_cast<EthernetFrame*>(m.data.net.packet_data);
 
-	switch (ntohs(frame->ethertype)) {
-		case ETHERTYPE_ARP:
-			LOG_ERROR("ARP packet received");
+	switch (static_cast<EthernetFrameType>(ntohs(frame->ethertype))) {
+		case EthernetFrameType::ARP:
+			process_arp(reinterpret_cast<ARPPacket*>(frame->payload));
 			break;
-		case ETHERTYPE_IPV4:
+		case EthernetFrameType::IPV4:
 			process_ipv4(reinterpret_cast<IPv4Header*>(frame->payload));
 			break;
-		case ETHERTYPE_IPV6:
+		case EthernetFrameType::IPV6:
 			LOG_ERROR("IPv6 packet received");
 			break;
 		default:
