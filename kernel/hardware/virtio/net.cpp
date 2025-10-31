@@ -154,6 +154,12 @@ void handle_tx_interrupt(const Message& m)
 	LOG_ERROR("interrupt");
 }
 
+void handle_transmit_request(const Message& m)
+{
+	// TODO: implement transmit handling
+	LOG_ERROR("aaaaaaaaaaaaaaaa");
+}
+
 void virtio_net_service()
 {
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
@@ -164,10 +170,9 @@ void virtio_net_service()
 
 	setup_rx_buffers();
 
-	transmit_packet("Hello, VirtIO Net!", 18);
-
 	t->add_msg_handler(MsgType::NOTIFY_VIRTIO_NET_RX, handle_rx_interrupt);
 	t->add_msg_handler(MsgType::NOTIFY_VIRTIO_NET_TX, handle_tx_interrupt);
+	t->add_msg_handler(MsgType::IPC_TRANSMIT_TO_NIC, handle_transmit_request);
 
 	kernel::task::process_messages(t);
 }
