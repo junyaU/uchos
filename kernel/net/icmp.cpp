@@ -14,9 +14,9 @@ void handle_icmp_echo_request(kernel::net::ICMPEchoHeader* echo_header,
 
 namespace kernel::net
 {
-void process_icmp(ICMPHeader* icmp_header)
+void process_icmp(const ICMPHeader& icmp_header)
 {
-	switch (static_cast<ICMPType>(icmp_header->type)) {
+	switch (static_cast<ICMPType>(icmp_header.type)) {
 		case ICMPType::ECHO_REQUEST:
 			LOG_ERROR("ICMP Echo Request received");
 			break;

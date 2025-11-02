@@ -42,6 +42,6 @@ struct ARPPacket {
 
 constexpr size_t MAC_ADDR_SIZE = 6;
 
-void process_arp(ARPPacket* arp_packet);
+void process_arp(const ARPPacket& arp_packet);
 
 } // namespace kernel::net

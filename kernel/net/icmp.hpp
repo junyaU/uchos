@@ -64,6 +64,6 @@ struct ICMPTimeExceeded {
 	uint8_t original_data[]; ///< Original IP header + 8 bytes
 } __attribute__((packed));
 
-void process_icmp(ICMPHeader* icmp_header);
+void process_icmp(const ICMPHeader& icmp_header);
 
 } // namespace kernel::net

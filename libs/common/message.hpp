@@ -126,7 +126,7 @@ struct Message {
 		} fs;
 
 		struct {
-			void* packet_data;
+			uint8_t packet_data[1514];  // Ethernet maximum frame size
 			size_t packet_len;
 			int result;
 		} net;

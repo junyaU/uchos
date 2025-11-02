@@ -70,4 +70,21 @@ struct VirtioNetReq {
 } __attribute__((packed));
 
 void virtio_net_service();
+
+/**
+ * @brief Enable RX queue interrupts
+ *
+ * Clears the VIRTQ_AVAIL_F_NO_INTERRUPT flag to allow the device
+ * to send interrupts when packets are received.
+ */
+void enable_rx_interrupt();
+
+/**
+ * @brief Disable RX queue interrupts
+ *
+ * Sets the VIRTQ_AVAIL_F_NO_INTERRUPT flag to suppress interrupts
+ * from the device when packets are received.
+ */
+void disable_rx_interrupt();
+
 } // namespace kernel::hw::virtio

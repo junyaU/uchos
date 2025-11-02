@@ -49,9 +49,6 @@ error_t read_mac_address()
 
 	memcpy(mac_addr, net_cfg->mac, 6);
 
-	LOG_INFO("MAC Address: %02x:%02x:%02x:%02x:%02x:%02x", mac_addr[0], mac_addr[1],
-			 mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-
 	return OK;
 }
 
@@ -128,6 +125,8 @@ error_t transmit_packet(const void* data, size_t data_len)
 
 void handle_rx_interrupt(const Message& m)
 {
+	disable_rx_interrupt();
+
 	VirtioEntry entry_chain[1];
 	while (pop_virtio_entry(rx_queue, entry_chain, 1) > 0) {
 		VirtioNetReq* req = reinterpret_cast<VirtioNetReq*>(entry_chain[0].addr);
@@ -146,6 +145,8 @@ void handle_rx_interrupt(const Message& m)
 		push_virtio_entry(rx_queue, entry_chain, 1);
 		notify_virtqueue(*net_dev, rx_queue->index);
 	}
+
+	enable_rx_interrupt();
 }
 
 void handle_tx_interrupt(const Message& m)
@@ -154,10 +155,51 @@ void handle_tx_interrupt(const Message& m)
 	LOG_ERROR("interrupt");
 }
 
+void enable_rx_interrupt()
+{
+	if (rx_queue == nullptr) {
+		LOG_ERROR("RX queue is not initialized");
+		return;
+	}
+
+	rx_queue->driver->flags &= ~VIRTQ_AVAIL_F_NO_INTERRUPT;
+	asm volatile("mfence" ::: "memory");
+}
+
+void disable_rx_interrupt()
+{
+	if (rx_queue == nullptr) {
+		LOG_ERROR("RX queue is not initialized");
+		return;
+	}
+
+	rx_queue->driver->flags |= VIRTQ_AVAIL_F_NO_INTERRUPT;
+	asm volatile("mfence" ::: "memory");
+}
+
 void handle_transmit_request(const Message& m)
 {
-	// TODO: implement transmit handling
-	LOG_ERROR("aaaaaaaaaaaaaaaa");
+	void* tx_buf;
+	ALLOC_OR_RETURN(tx_buf, sizeof(VirtioNetReq), kernel::memory::ALLOC_ZEROED);
+	VirtioNetReq* req = reinterpret_cast<VirtioNetReq*>(tx_buf);
+
+	req->net_hdr.flags = 0;
+	req->net_hdr.gso_type = NET_HDR_GSO_NONE;
+	req->net_hdr.gso_size = 0;
+	req->net_hdr.csum_offset = 0;
+	req->net_hdr.csum_start = 0;
+	req->net_hdr.num_buffers = 0;
+
+	memcpy(req->packet_data, m.data.net.packet_data, m.data.net.packet_len);
+
+	VirtioEntry chain[1];
+	chain[0].addr = (uint64_t)tx_buf;
+	chain[0].len = sizeof(VirtioNetHdr) + m.data.net.packet_len;
+	chain[0].write = false;
+
+	push_virtio_entry(tx_queue, chain, 1);
+
+	notify_virtqueue(*net_dev, tx_queue->index);
 }
 
 void virtio_net_service()

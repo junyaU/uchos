@@ -4,7 +4,6 @@
 #include "hardware/virtio/net.hpp"
 #include "libs/common/endian.hpp"
 #include "libs/common/message.hpp"
-#include "memory/slab.hpp"
 #include "net/arp.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
@@ -16,18 +15,19 @@ error_t transmit_ethernet_frame(const uint8_t* dst_mac,
 								const void* payload,
 								size_t payload_len)
 {
-	void* frame_buf;
-	ALLOC_OR_RETURN_ERROR(frame_buf, sizeof(EthernetFrame),
-						  kernel::memory::ALLOC_ZEROED);
+	uint8_t frame_buffer[sizeof(EthernetFrame) + payload_len];
+	EthernetFrame* frame = reinterpret_cast<EthernetFrame*>(frame_buffer);
 
-	EthernetFrame* frame = reinterpret_cast<EthernetFrame*>(frame_buf);
 	memcpy(frame->dst_mac, dst_mac, MAC_ADDR_SIZE);
 	memcpy(frame->src_mac, hw::virtio::mac_addr, MAC_ADDR_SIZE);
 	frame->ethertype = htons(static_cast<uint16_t>(type));
-
 	memcpy(frame->payload, payload, payload_len);
 
 	Message m = { MsgType::IPC_TRANSMIT_TO_NIC, task::CURRENT_TASK->id };
+
+	memcpy(m.data.net.packet_data, frame_buffer,
+		   sizeof(EthernetFrame) + payload_len);
+	m.data.net.packet_len = sizeof(EthernetFrame) + payload_len;
 
 	task::send_message(process_ids::VIRTIO_NET, m);
 

@@ -45,13 +45,17 @@ constexpr int VIRTIO_F_NOTIFICATION_DATA = 38;
 constexpr int VIRTIO_F_NOTIF_CONFIG_DATA = 39;
 constexpr int VIRTIO_F_RING_RESET = 40;
 
-// Virtqueue Flags
+// Virtqueue Descriptor Flags
 /* This marks a buffer as continuing via the next field. */
 constexpr int VIRTQ_DESC_F_NEXT = 1;
 /* This marks a buffer as write-only (otherwise read-only). */
 constexpr int VIRTQ_DESC_F_WRITE = 2;
 /* This means the buffer contains a list of buffer descriptors. */
 constexpr int VIRTQ_DESC_F_INDIRECT = 4;
+
+// Virtqueue Available Ring Flags
+/* The driver uses this to suppress device interrupts */
+constexpr uint16_t VIRTQ_AVAIL_F_NO_INTERRUPT = 1;
 
 /**
  * @struct VirtqDesc

@@ -12,7 +12,6 @@
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
 #include "graphics/screen.hpp"
-#include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/slab.hpp"
 #include "memory/user.hpp"
