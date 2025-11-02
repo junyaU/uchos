@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 namespace kernel::net
 {
@@ -22,6 +23,8 @@ enum class IPv4Protocol : uint8_t {
 
 constexpr uint32_t IPV4_BROADCAST_ADDR = 0xFFFFFFFF;
 constexpr uint32_t IPV4_ADDR_UNSPECIFIED = 0x00000000;
+
+constexpr size_t DEFAULT_TTL = 32;
 
 /**
  * @brief IPv4 Header Structure
@@ -40,5 +43,10 @@ struct IPv4Header {
 } __attribute__((packed));
 
 void process_ipv4(const IPv4Header& ip_header);
+
+void transmit_ipv4_packet(uint32_t dst_ip,
+						  IPv4Protocol protocol,
+						  const void* payload,
+						  size_t payload_len);
 
 } // namespace kernel::net
