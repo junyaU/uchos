@@ -1,5 +1,6 @@
 set(NET_SOURCE_FILES
 	arp.cpp
+	checksum.cpp
 	ethernet.cpp
 	icmp.cpp
 	ipv4.cpp
