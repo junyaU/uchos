@@ -28,6 +28,7 @@ enum class MsgType : int32_t {
 	IPC_READ_FROM_BLK_DEVICE,
 	IPC_NET_SEND_PACKET,
 	IPC_NET_RECV_PACKET,
+	IPC_TRANSMIT_TO_NIC,
 	IPC_OOL_MEMORY_DEALLOC,
 	GET_DIRECTORY_CONTENTS,
 	IPC_GET_FILE_INFO,
@@ -125,7 +126,7 @@ struct Message {
 		} fs;
 
 		struct {
-			void* packet_data;
+			uint8_t packet_data[1514];  // Ethernet maximum frame size
 			size_t packet_len;
 			int result;
 		} net;

@@ -39,6 +39,6 @@ struct IPv4Header {
 	uint32_t dst_ip;				///< Destination IP Address
 } __attribute__((packed));
 
-void process_ipv4(IPv4Header* ip_header);
+void process_ipv4(const IPv4Header& ip_header);
 
 } // namespace kernel::net

@@ -60,7 +60,6 @@ __attribute__((interrupt)) void on_virtio_net_tx_queue_interrupt(
 		InterruptFrame* frame)
 {
 	LOG_ERROR("virtio net tx queue interrupt");
-	kernel::task::schedule_task(process_ids::VIRTIO_NET);
 	notify_end_of_interrupt();
 }
 
