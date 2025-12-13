@@ -151,8 +151,10 @@ void handle_rx_interrupt(const Message& m)
 
 void handle_tx_interrupt(const Message& m)
 {
-	LOG_ERROR("tx");
-	LOG_ERROR("interrupt");
+	VirtioEntry entry_chain[1];
+	while (pop_virtio_entry(tx_queue, entry_chain, 1) > 0) {
+		kernel::memory::free(reinterpret_cast<void*>(entry_chain[0].addr));
+	}
 }
 
 void enable_rx_interrupt()
