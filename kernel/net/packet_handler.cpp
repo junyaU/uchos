@@ -7,7 +7,6 @@
 #include <libs/common/endian.hpp>
 #include <libs/common/message.hpp>
 #include "graphics/log.hpp"
-#include "memory/slab.hpp"
 #include "net/arp.hpp"
 #include "net/ethernet.hpp"
 #include "net/ipv4.hpp"
@@ -18,8 +17,8 @@ namespace kernel::net
 
 void handle_recv_packet(const Message& m)
 {
-	const EthernetFrame* frame = reinterpret_cast<const EthernetFrame*>(
-			m.data.net.packet_data);
+	const EthernetFrame* frame =
+			reinterpret_cast<const EthernetFrame*>(m.data.net.packet_data);
 
 	switch (static_cast<EthernetFrameType>(ntohs(frame->ethertype))) {
 		case EthernetFrameType::ARP:
@@ -46,6 +45,8 @@ void handle_send_packet(const Message& m)
 void packet_handler_service()
 {
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
+
+	arp_table.clear();
 
 	t->add_msg_handler(MsgType::IPC_NET_RECV_PACKET, handle_recv_packet);
 	t->add_msg_handler(MsgType::IPC_NET_SEND_PACKET, handle_send_packet);
