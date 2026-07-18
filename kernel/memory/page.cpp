@@ -30,12 +30,16 @@ void initialize_pages()
 
 Page* get_page(void* ptr)
 {
-	if (ptr == nullptr ||
-		pages.size() < reinterpret_cast<uintptr_t>(ptr) / PAGE_SIZE) {
+	if (ptr == nullptr) {
 		return nullptr;
 	}
 
-	return &pages[reinterpret_cast<uintptr_t>(ptr) / PAGE_SIZE];
+	const size_t index = reinterpret_cast<uintptr_t>(ptr) / PAGE_SIZE;
+	if (index >= pages.size()) {
+		return nullptr;
+	}
+
+	return &pages[index];
 }
 
 void get_memory_usage(size_t* total_mem, size_t* used_mem)

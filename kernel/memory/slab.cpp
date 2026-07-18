@@ -15,7 +15,7 @@
 namespace kernel::memory
 {
 
-MCache* get_cache_in_chain(char* name)
+MCache* get_cache_in_chain(const char* name)
 {
 	if (cache_chain.empty()) {
 		return nullptr;
@@ -30,7 +30,7 @@ MCache* get_cache_in_chain(char* name)
 	return nullptr;
 }
 
-MCache::MCache(char name[20], size_t object_size)
+MCache::MCache(const char* name, size_t object_size)
 	: object_size_(object_size),
 	  num_active_objects_(0),
 	  num_total_objects_(0),
@@ -39,7 +39,7 @@ MCache::MCache(char name[20], size_t object_size)
 	  num_pages_per_slab_(0)
 {
 	strncpy(name_, name, sizeof(name_) - 1);
-	name[sizeof(name_) - 1] = '\0';
+	name_[sizeof(name_) - 1] = '\0';
 
 	if (object_size <= kernel::memory::PAGE_SIZE) {
 		num_pages_per_slab_ = 1;
@@ -60,7 +60,7 @@ MSlab::MSlab(void* base_addr, size_t num_objs)
 
 MCache& m_cache_create(const char* name, size_t obj_size)
 {
-	obj_size = 1 << bit_width_ceil(obj_size);
+	obj_size = 1UL << bit_width_ceil(obj_size);
 
 	char temp_name[20];
 	if (name == nullptr) {
@@ -68,8 +68,8 @@ MCache& m_cache_create(const char* name, size_t obj_size)
 		name = temp_name;
 	}
 
-	cache_chain.push_back(std::make_unique<kernel::memory::MCache>(
-			const_cast<char*>(name), obj_size));
+	cache_chain.push_back(
+			std::make_unique<kernel::memory::MCache>(name, obj_size));
 
 	return *cache_chain.back();
 }
@@ -86,9 +86,20 @@ bool MCache::grow()
 	size_t const num_objs = bytes_per_slab / object_size_;
 	auto slab = std::make_unique<MSlab>(addr, num_objs);
 
-	Page* page = get_page(addr);
-	page->set_cache(this);
-	page->set_slab(slab.get());
+	// Mark every page of the slab so that free() can resolve the owning
+	// cache/slab from any object address.
+	for (size_t i = 0; i < num_pages_per_slab_; ++i) {
+		Page* page = get_page(reinterpret_cast<char*>(addr) +
+							  i * kernel::memory::PAGE_SIZE);
+		if (page == nullptr) {
+			LOG_ERROR("failed to look up page for slab at %p", addr);
+			kernel::memory::memory_manager->free(addr, bytes_per_slab);
+			return false;
+		}
+
+		page->set_cache(this);
+		page->set_slab(slab.get());
+	}
 
 	++num_total_slabs_;
 	num_total_objects_ += num_objs;
@@ -181,6 +192,7 @@ void* MSlab::alloc_object(size_t obj_size)
 	free_objects_index_.pop_front();
 
 	objects_[obj_index].increase_usage_count();
+	objects_[obj_index].set_in_use(true);
 
 	num_in_use_++;
 
@@ -188,14 +200,47 @@ void* MSlab::alloc_object(size_t obj_size)
 								   obj_index * obj_size);
 }
 
-void MSlab::free_object(void* addr, size_t obj_size)
+bool MSlab::free_object(void* addr, size_t obj_size)
 {
-	const size_t objs_index = (reinterpret_cast<uintptr_t>(addr) -
-							   reinterpret_cast<uintptr_t>(base_addr_)) /
-							  obj_size;
+	const uintptr_t offset = reinterpret_cast<uintptr_t>(addr) -
+							 reinterpret_cast<uintptr_t>(base_addr_);
+	if (offset % obj_size != 0) {
+		LOG_ERROR("free: %p is not an object boundary", addr);
+		return false;
+	}
 
+	const size_t objs_index = offset / obj_size;
+	if (objs_index >= objects_.size()) {
+		LOG_ERROR("free: %p is out of slab range", addr);
+		return false;
+	}
+
+	if (!objects_[objs_index].is_in_use()) {
+		LOG_ERROR("double free detected at address: %p", addr);
+		return false;
+	}
+
+	objects_[objs_index].set_in_use(false);
 	free_objects_index_.push_back(objs_index);
 	--num_in_use_;
+
+	return true;
+}
+
+bool MSlab::is_object_in_use(void* addr, size_t obj_size) const
+{
+	const uintptr_t offset = reinterpret_cast<uintptr_t>(addr) -
+							 reinterpret_cast<uintptr_t>(base_addr_);
+	if (offset % obj_size != 0) {
+		return false;
+	}
+
+	const size_t objs_index = offset / obj_size;
+	if (objs_index >= objects_.size()) {
+		return false;
+	}
+
+	return objects_[objs_index].is_in_use();
 }
 
 } // namespace kernel::memory
@@ -205,14 +250,28 @@ std::unordered_map<void*, void*> aligned_to_raw_addr_map;
 namespace kernel::memory
 {
 
+// Largest single allocation: the biggest block the buddy system can back
+// a slab with.
+constexpr size_t MAX_ALLOC_SIZE = (1UL << MAX_ORDER) * PAGE_SIZE;
+
 void* alloc(size_t size, unsigned flags, int align)
 {
+	if (size == 0) {
+		LOG_ERROR("alloc: size must be non-zero");
+		return nullptr;
+	}
+
 	if (align != 1 && (align & (align - 1)) != 0) {
 		LOG_ERROR("align must be a power of 2");
 		return nullptr;
 	}
 
-	size = 1 << bit_width_ceil(size + align - 1);
+	if (size > MAX_ALLOC_SIZE - (static_cast<size_t>(align) - 1)) {
+		LOG_ERROR("alloc: size %lu is too large", size);
+		return nullptr;
+	}
+
+	size = 1UL << bit_width_ceil(size + align - 1);
 	char name[20];
 	sprintf(name, "cache-%d", static_cast<int>(size));
 
@@ -247,6 +306,10 @@ void* alloc(size_t size, unsigned flags, int align)
 
 void free(void* addr)
 {
+	if (addr == nullptr) {
+		return;
+	}
+
 	auto it = aligned_to_raw_addr_map.find(addr);
 	if (it != aligned_to_raw_addr_map.end()) {
 		addr = it->second;
@@ -261,8 +324,15 @@ void free(void* addr)
 
 	MCache* cache = p->cache();
 	MSlab* slab = p->slab();
+	if (cache == nullptr || slab == nullptr) {
+		LOG_ERROR("free: %p was not allocated by the slab allocator", addr);
+		return;
+	}
 
-	slab->free_object(addr, cache->object_size());
+	if (!slab->free_object(addr, cache->object_size())) {
+		return;
+	}
+
 	cache->decrease_num_active_objects();
 
 	if (slab->status() == SlabStatus::FULL) {
@@ -273,6 +343,25 @@ void free(void* addr)
 		slab->move_list(*cache, SlabStatus::FREE);
 		cache->decrease_num_active_slabs();
 	}
+}
+
+bool is_slab_object_in_use(void* addr)
+{
+	if (addr == nullptr) {
+		return false;
+	}
+
+	auto it = aligned_to_raw_addr_map.find(addr);
+	if (it != aligned_to_raw_addr_map.end()) {
+		addr = it->second;
+	}
+
+	Page* p = get_page(addr);
+	if (p == nullptr || p->cache() == nullptr || p->slab() == nullptr) {
+		return false;
+	}
+
+	return p->slab()->is_object_in_use(addr, p->cache()->object_size());
 }
 
 std::list<std::unique_ptr<MCache>> cache_chain;

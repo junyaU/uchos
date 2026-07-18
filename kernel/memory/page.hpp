@@ -37,7 +37,7 @@ public:
 	 *
 	 * Initializes a page as free with no associated pointer.
 	 */
-	Page() : status_{ 0 }, ptr_{ nullptr } {}
+	Page() : status_{ 0 }, cache_{ nullptr }, slab_{ nullptr }, ptr_{ nullptr } {}
 
 	/**
 	 * @brief Get the page index based on its memory address

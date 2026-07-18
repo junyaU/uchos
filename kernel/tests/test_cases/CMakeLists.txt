@@ -1,4 +1,5 @@
 set(TESTCASES_SOURCE_FILES
+        bit_utils_test.cpp
         memory_test.cpp
         task_test.cpp
         timer_test.cpp

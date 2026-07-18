@@ -38,8 +38,13 @@ public:
 
 	void increase_usage_count() { usage_count_++; }
 
+	bool is_in_use() const { return in_use_; }
+
+	void set_in_use(bool in_use) { in_use_ = in_use; }
+
 private:
-	unsigned int usage_count_;
+	unsigned int usage_count_ = 0;
+	bool in_use_ = false;
 };
 
 class MCache;
@@ -64,7 +69,22 @@ public:
 
 	void* alloc_object(size_t obj_size);
 
-	void free_object(void* addr, size_t obj_size);
+	/**
+	 * @brief Return an object to this slab
+	 * @param addr Address previously returned by alloc_object
+	 * @param obj_size Object size of the owning cache
+	 * @return true on success, false if addr is not a live object of this
+	 * slab (out of range, misaligned, or already freed)
+	 */
+	bool free_object(void* addr, size_t obj_size);
+
+	/**
+	 * @brief Check whether addr is a live (allocated) object of this slab
+	 * @param addr Object address to check
+	 * @param obj_size Object size of the owning cache
+	 * @return true if addr is currently allocated
+	 */
+	bool is_object_in_use(void* addr, size_t obj_size) const;
 
 	void move_list(MCache& cache, SlabStatus to);
 
@@ -80,7 +100,7 @@ private:
 class MCache
 {
 public:
-	MCache(char name[20], size_t object_size);
+	MCache(const char* name, size_t object_size);
 
 	char* name() { return name_; }
 	size_t object_size() const { return object_size_; }
@@ -112,7 +132,7 @@ extern std::list<std::unique_ptr<MCache>> cache_chain;
  * @param name Name of the cache to retrieve
  * @return Pointer to the found cache, or nullptr if not found
  */
-MCache* get_cache_in_chain(char* name);
+MCache* get_cache_in_chain(const char* name);
 
 /**
  * @brief Create a new memory cache
@@ -138,6 +158,14 @@ void* alloc(size_t size, unsigned flags, int align = 1);
  * @note Does nothing if addr is nullptr
  */
 void free(void* addr);
+
+/**
+ * @brief Check whether addr points to a live slab allocation
+ * @param addr Address previously returned by alloc()
+ * @return true if addr is currently allocated by the slab allocator
+ * @note Intended for tests and debugging
+ */
+bool is_slab_object_in_use(void* addr);
 
 struct FreeDeleter {
 	void operator()(void* p) { free(p); }
