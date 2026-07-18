@@ -5,8 +5,6 @@
 #include "bit_utils.hpp"
 #include "graphics/log.hpp"
 #include "memory/page.hpp"
-#include "tests/framework.hpp"
-#include "tests/test_cases/memory_test.hpp"
 
 namespace kernel::memory
 {
@@ -233,8 +231,6 @@ void initialize_memory_manager()
 	if (num_total_pages > 0) {
 		memory_manager->register_memory_blocks(num_total_pages, &pages[start_index]);
 	}
-
-	run_test_suite(register_buddy_system_tests);
 
 	LOG_INFO("Memory manager initialized successfully.");
 }

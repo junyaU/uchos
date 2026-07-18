@@ -116,19 +116,16 @@ void test_fd_dup2()
 										   ProcessId::from_raw(1));
 	ASSERT_GT(file_fd, -1);
 
-	// Test redirection setup
-	// fd_table[STDOUT_FILENO].fd.redirect_to = file_fd;
+	// dup2 replaces the target entry with a copy of the source entry
+	// (see handle_fs_dup2 in kernel/fs/fat/file.cpp)
+	fs::FileDescriptor* src = fs::get_process_fd(fd_table, 32, file_fd);
+	ASSERT_NOT_NULL(src);
+	fd_table[STDOUT_FILENO] = *src;
 
-	// Verify redirection
-	fs::FileDescriptor* stdout_entry =
-			fs::get_process_fd(fd_table, 32, STDOUT_FILENO);
-	ASSERT_NOT_NULL(stdout_entry);
-	// ASSERT_EQ(stdout_entry->fd.redirect_to, file_fd);
-
-	// Get should follow redirection
 	fs::FileDescriptor* redirected = fs::get_process_fd(fd_table, 32, STDOUT_FILENO);
 	ASSERT_NOT_NULL(redirected);
 	ASSERT_EQ(strcmp(redirected->name, "output.txt"), 0);
+	ASSERT_EQ(redirected->size, src->size);
 }
 
 void test_fd_limits()

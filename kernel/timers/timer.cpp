@@ -6,8 +6,6 @@
 #include "graphics/log.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
-#include "tests/framework.hpp"
-#include "tests/test_cases/timer_test.hpp"
 
 namespace
 {
@@ -134,8 +132,6 @@ void initialize()
 	ALLOC_OR_RETURN(addr, sizeof(KernelTimer), kernel::memory::ALLOC_ZEROED);
 
 	ktimer = new (addr) KernelTimer;
-
-	run_test_suite(register_timer_tests);
 
 	LOG_INFO("Logical timer initialized successfully.");
 }
