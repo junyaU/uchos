@@ -41,8 +41,11 @@ jobs:
         sudo apt-get install -y build-essential uuid-dev python3 python-is-python3
         git clone --depth 1 --branch "$EDK2_TAG" https://github.com/tianocore/edk2.git "$HOME/edk2"
         cd "$HOME/edk2"
-        # Only BaseTools needs a submodule; the loader itself is MdePkg-only.
-        git submodule update --init --depth 1 BaseTools/Source/C/BrotliCompress/brotli
+        # Keep submodules minimal: BaseTools needs brotli, and MdePkg.dec
+        # references the mipisyst include directory.
+        git submodule update --init --depth 1 \
+            BaseTools/Source/C/BrotliCompress/brotli \
+            MdePkg/Library/MipiSysTLib/mipisyst
         make -C BaseTools -j"$(nproc)"
         ln -s "$GITHUB_WORKSPACE/UchLoaderPkg" UchLoaderPkg
         source edksetup.sh
