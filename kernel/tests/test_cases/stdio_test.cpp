@@ -21,6 +21,33 @@ extern ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3);
 extern ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3);
 } // namespace kernel::syscall
 
+namespace
+{
+// Impersonate `t` as CURRENT_TASK for a scope. The impersonated task must
+// be RUNNING while it is current: if a timer preemption hits while
+// CURRENT_TASK is WAITING, switch_task() does not requeue it and the test
+// runner's execution context is lost for good — the boot hangs with no
+// output (issue #313). RAII also restores CURRENT_TASK when an ASSERT
+// macro returns early.
+class ScopedCurrentTask
+{
+public:
+	explicit ScopedCurrentTask(Task* t) : prev_(CURRENT_TASK)
+	{
+		t->state = kernel::task::TASK_RUNNING;
+		CURRENT_TASK = t;
+	}
+
+	~ScopedCurrentTask() { CURRENT_TASK = prev_; }
+
+	ScopedCurrentTask(const ScopedCurrentTask&) = delete;
+	ScopedCurrentTask& operator=(const ScopedCurrentTask&) = delete;
+
+private:
+	Task* prev_;
+};
+} // namespace
+
 void test_fd_table_init()
 {
 	// Create a test task
@@ -49,8 +76,7 @@ void test_write_to_stdout()
 	Task* t = create_task("write_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	Task* prev_task = CURRENT_TASK;
-	CURRENT_TASK = t;
+	const ScopedCurrentTask scoped_task(t);
 
 	// Test writing to stdout
 	const char* test_msg = "Hello, stdout!";
@@ -61,8 +87,6 @@ void test_write_to_stdout()
 	ASSERT_GT(result, 0);
 	ASSERT_EQ(result, strlen(test_msg));
 
-	// Restore previous task
-	CURRENT_TASK = prev_task;
 }
 
 void test_write_to_stderr()
@@ -71,8 +95,7 @@ void test_write_to_stderr()
 	Task* t = create_task("stderr_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	Task* prev_task = CURRENT_TASK;
-	CURRENT_TASK = t;
+	const ScopedCurrentTask scoped_task(t);
 
 	// Test writing to stderr
 	const char* test_msg = "Error message";
@@ -83,8 +106,6 @@ void test_write_to_stderr()
 	ASSERT_GT(result, 0);
 	ASSERT_EQ(result, strlen(test_msg));
 
-	// Restore previous task
-	CURRENT_TASK = prev_task;
 }
 
 void test_read_from_stdin()
@@ -93,8 +114,7 @@ void test_read_from_stdin()
 	Task* t = create_task("read_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	Task* prev_task = CURRENT_TASK;
-	CURRENT_TASK = t;
+	const ScopedCurrentTask scoped_task(t);
 
 	// Test reading from stdin (currently returns 0)
 	char buffer[128];
@@ -104,8 +124,6 @@ void test_read_from_stdin()
 	// Currently stdin returns 0 (no data available)
 	ASSERT_EQ(result, 0);
 
-	// Restore previous task
-	CURRENT_TASK = prev_task;
 }
 
 void test_invalid_fd()
@@ -114,8 +132,7 @@ void test_invalid_fd()
 	Task* t = create_task("invalid_fd_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	Task* prev_task = CURRENT_TASK;
-	CURRENT_TASK = t;
+	const ScopedCurrentTask scoped_task(t);
 
 	// Test invalid file descriptor (negative)
 	char buffer[128];
@@ -134,8 +151,6 @@ void test_invalid_fd()
 			10, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
 	ASSERT_EQ(result3, ERR_INVALID_FD);
 
-	// Restore previous task
-	CURRENT_TASK = prev_task;
 }
 
 void test_fd_inheritance()
@@ -151,8 +166,7 @@ void test_fd_inheritance()
 	ASSERT_GT(fd, -1);
 
 	// Set parent as current task for copy_task
-	Task* prev_task = CURRENT_TASK;
-	CURRENT_TASK = parent;
+	const ScopedCurrentTask scoped_task(parent);
 
 	// Create child task (this would normally be done by fork)
 	kernel::task::Context dummy_ctx = {};
@@ -169,8 +183,6 @@ void test_fd_inheritance()
 	ASSERT_EQ(strcmp(child->fd_table[fd].name, "test.txt"), 0);
 	ASSERT_EQ(child->fd_table[fd].size, 100);
 
-	// Restore previous task
-	CURRENT_TASK = prev_task;
 }
 
 void test_stdout_redirection()
@@ -179,8 +191,7 @@ void test_stdout_redirection()
 	Task* t = create_task("redirect_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	Task* prev_task = CURRENT_TASK;
-	CURRENT_TASK = t;
+	const ScopedCurrentTask scoped_task(t);
 
 	// Allocate a file descriptor to redirect to
 	fd_t file_fd = kernel::fs::allocate_process_fd(
@@ -210,8 +221,6 @@ void test_stdout_redirection()
 	// Restore stdout
 	// t->fd_table[STDOUT_FILENO].redirect_to = NO_FD;
 
-	// Restore previous task
-	CURRENT_TASK = prev_task;
 }
 
 void test_stderr_redirection()
@@ -220,8 +229,7 @@ void test_stderr_redirection()
 	Task* t = create_task("stderr_redirect_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	Task* prev_task = CURRENT_TASK;
-	CURRENT_TASK = t;
+	const ScopedCurrentTask scoped_task(t);
 
 	// Allocate a file descriptor to redirect to
 	fd_t file_fd = kernel::fs::allocate_process_fd(
@@ -242,8 +250,6 @@ void test_stderr_redirection()
 	// Restore stderr
 	// t->fd_table[STDERR_FILENO].redirect_to = NO_FD;
 
-	// Restore previous task
-	CURRENT_TASK = prev_task;
 }
 
 void test_large_write_redirection()
@@ -252,8 +258,7 @@ void test_large_write_redirection()
 	Task* t = create_task("large_redirect_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
-	Task* prev_task = CURRENT_TASK;
-	CURRENT_TASK = t;
+	const ScopedCurrentTask scoped_task(t);
 
 	// Allocate a file descriptor to redirect to
 	fd_t file_fd = kernel::fs::allocate_process_fd(
@@ -276,8 +281,6 @@ void test_large_write_redirection()
 	// Restore stdout
 	// t->fd_table[STDOUT_FILENO].redirect_to = NO_FD;
 
-	// Restore previous task
-	CURRENT_TASK = prev_task;
 }
 
 void register_stdio_tests()
