@@ -9,7 +9,7 @@ namespace kernel::fs
 {
 
 const size_t MAX_FILE_CACHES = 50;
-std::unordered_map<fs_id_t, FileCache> file_caches;
+FileCacheMap file_caches;
 
 namespace
 {
@@ -17,9 +17,9 @@ fs_id_t next_fs_id = 0;
 uint64_t lru_tick = 0;
 } // namespace
 
-FileCache* find_file_cache_by_path(const char* path)
+FileCache* find_file_cache_by_path(FileCacheMap& caches, const char* path)
 {
-	for (auto& [id, cache] : file_caches) {
+	for (auto& [id, cache] : caches) {
 		if (strcmp(cache.path, path) == 0) {
 			cache.last_used = ++lru_tick;
 			return &cache;
@@ -29,20 +29,26 @@ FileCache* find_file_cache_by_path(const char* path)
 	return nullptr;
 }
 
-FileCache* create_file_cache(const char* path,
+FileCache* find_file_cache_by_path(const char* path)
+{
+	return find_file_cache_by_path(file_caches, path);
+}
+
+FileCache* create_file_cache(FileCacheMap& caches,
+							 const char* path,
 							 size_t total_size,
 							 ProcessId requester)
 {
-	if (file_caches.size() >= MAX_FILE_CACHES) {
+	if (caches.size() >= MAX_FILE_CACHES) {
 		// Evict the least recently used entry to make room.
-		auto oldest = file_caches.begin();
-		for (auto it = file_caches.begin(); it != file_caches.end(); ++it) {
+		auto oldest = caches.begin();
+		for (auto it = caches.begin(); it != caches.end(); ++it) {
 			if (it->second.last_used < oldest->second.last_used) {
 				oldest = it;
 			}
 		}
 
-		file_caches.erase(oldest);
+		caches.erase(oldest);
 	}
 
 	const fs_id_t id = generate_fs_id();
@@ -52,9 +58,16 @@ FileCache* create_file_cache(const char* path,
 	cache.path[sizeof(cache.path) - 1] = '\0';
 	cache.last_used = ++lru_tick;
 
-	auto result = file_caches.emplace(id, cache);
+	auto result = caches.emplace(id, cache);
 
 	return &result.first->second;
+}
+
+FileCache* create_file_cache(const char* path,
+							 size_t total_size,
+							 ProcessId requester)
+{
+	return create_file_cache(file_caches, path, total_size, requester);
 }
 
 bool remove_file_cache_by_path(const char* path)

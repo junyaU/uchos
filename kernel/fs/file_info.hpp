@@ -127,14 +127,29 @@ struct FileCache {
 };
 
 /**
+ * @brief Map type holding file caches keyed by cache id
+ */
+using FileCacheMap = std::unordered_map<fs_id_t, FileCache>;
+
+/**
  * @brief Global map of active file caches
  *
  * Maps cache IDs to their corresponding file cache objects.
  */
-extern std::unordered_map<fs_id_t, FileCache> file_caches;
+extern FileCacheMap file_caches;
 
 /**
- * @brief Find a file cache by file path
+ * @brief Find a file cache by file path in the given map
+ *
+ * @param caches Cache map to search (tests pass a private instance; the
+ * live FS task owns the global map and must never have it swapped out)
+ * @param path File path to search for
+ * @return file_cache* Pointer to cache if found, nullptr otherwise
+ */
+FileCache* find_file_cache_by_path(FileCacheMap& caches, const char* path);
+
+/**
+ * @brief Find a file cache by file path in the global map
  *
  * @param path File path to search for
  * @return file_cache* Pointer to cache if found, nullptr otherwise
@@ -142,7 +157,22 @@ extern std::unordered_map<fs_id_t, FileCache> file_caches;
 FileCache* find_file_cache_by_path(const char* path);
 
 /**
- * @brief Create a new file cache
+ * @brief Create a new file cache in the given map (evicts the LRU entry
+ * when the map is full)
+ *
+ * @param caches Cache map to insert into
+ * @param path File path to cache
+ * @param total_size Total size of the file
+ * @param requester Process requesting the cache
+ * @return file_cache* Pointer to the newly created cache
+ */
+FileCache* create_file_cache(FileCacheMap& caches,
+							 const char* path,
+							 size_t total_size,
+							 ProcessId requester);
+
+/**
+ * @brief Create a new file cache in the global map
  *
  * @param path File path to cache
  * @param total_size Total size of the file

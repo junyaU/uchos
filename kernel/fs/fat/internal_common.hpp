@@ -45,9 +45,24 @@ cluster_t next_cluster(cluster_t cluster_id);
 kernel::fs::DirectoryEntry* find_dir_entry(kernel::fs::DirectoryEntry* parent_dir,
 										   const char* name);
 kernel::fs::DirectoryEntry* find_empty_dir_entry();
+// The (fat, total_clusters) overloads operate on an explicit FAT so tests
+// can use a private table; the parameterless-FAT overloads wrap the live
+// globals. Tests must never swap the globals themselves: the FS task uses
+// them concurrently (issue #313 regression).
+cluster_t extend_cluster_chain(uint32_t* fat,
+							   size_t total_clusters,
+							   cluster_t last_cluster,
+							   int num_clusters);
 cluster_t extend_cluster_chain(cluster_t last_cluster, int num_clusters);
+cluster_t allocate_cluster_chain(uint32_t* fat,
+								 size_t total_clusters,
+								 size_t num_clusters);
 cluster_t allocate_cluster_chain(size_t num_clusters);
+void free_cluster_chain(uint32_t* fat,
+						cluster_t start_cluster,
+						cluster_t keep_until_cluster = 0);
 void free_cluster_chain(cluster_t start_cluster, cluster_t keep_until_cluster = 0);
+size_t count_free_clusters(const uint32_t* fat, size_t total_clusters);
 size_t count_free_clusters();
 size_t total_fat_clusters();
 
