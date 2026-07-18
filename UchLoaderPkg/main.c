@@ -86,8 +86,15 @@ EFI_STATUS OpenRootDir(EFI_HANDLE image_handle, EFI_FILE_PROTOCOL** buffer)
 EFI_STATUS ReadFile(EFI_FILE_PROTOCOL* file, VOID** buffer)
 {
 	EFI_STATUS status;
-	EFI_FILE_INFO* file_info = NULL;
-	UINTN file_info_size = sizeof(EFI_FILE_INFO) + sizeof(CHAR16) * 12;
+	// GetInfo needs a real buffer; passing NULL is undefined behavior that
+	// GCC RELEASE builds turn into a ud2 trap (#UD). The union keeps the
+	// buffer aligned for EFI_FILE_INFO while leaving room for the filename.
+	union {
+		EFI_FILE_INFO info;
+		UINT8 buf[sizeof(EFI_FILE_INFO) + sizeof(CHAR16) * 12];
+	} file_info_buffer;
+	EFI_FILE_INFO* file_info = &file_info_buffer.info;
+	UINTN file_info_size = sizeof(file_info_buffer);
 
 	status = file->GetInfo(file, &gEfiFileInfoGuid, &file_info_size, file_info);
 	if (EFI_ERROR(status)) {
