@@ -8,6 +8,7 @@
 #include "task/task.hpp"
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
+#include "tests/test_utils.hpp"
 
 using kernel::task::create_task;
 using kernel::task::CURRENT_TASK;
@@ -21,32 +22,7 @@ extern ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3);
 extern ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3);
 } // namespace kernel::syscall
 
-namespace
-{
-// Impersonate `t` as CURRENT_TASK for a scope. The impersonated task must
-// be RUNNING while it is current: if a timer preemption hits while
-// CURRENT_TASK is WAITING, switch_task() does not requeue it and the test
-// runner's execution context is lost for good — the boot hangs with no
-// output (issue #313). RAII also restores CURRENT_TASK when an ASSERT
-// macro returns early.
-class ScopedCurrentTask
-{
-public:
-	explicit ScopedCurrentTask(Task* t) : prev_(CURRENT_TASK)
-	{
-		t->state = kernel::task::TASK_RUNNING;
-		CURRENT_TASK = t;
-	}
-
-	~ScopedCurrentTask() { CURRENT_TASK = prev_; }
-
-	ScopedCurrentTask(const ScopedCurrentTask&) = delete;
-	ScopedCurrentTask& operator=(const ScopedCurrentTask&) = delete;
-
-private:
-	Task* prev_;
-};
-} // namespace
+using kernel::tests::ScopedCurrentTask;
 
 void test_fd_table_init()
 {
@@ -203,7 +179,7 @@ void test_stdout_redirection()
 
 	// Clear any existing messages
 	while (!t->messages.empty()) {
-		t->messages.pop();
+		t->messages.pop_front();
 	}
 
 	// Test writing to redirected stdout

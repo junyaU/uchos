@@ -15,6 +15,7 @@
 #include "tests/test_cases/stdio_test.hpp"
 #include "tests/test_cases/task_test.hpp"
 #include "tests/test_cases/timer_test.hpp"
+#include "tests/test_cases/user_test.hpp"
 #include "tests/test_cases/virtio_blk_test.hpp"
 
 #ifdef KERNEL_TEST_EXIT_ENABLED
@@ -80,6 +81,7 @@ void run_main_stage_tests()
 	run_test_suite(register_slab_tests);
 	run_test_suite(register_alloc_macro_tests);
 	run_test_suite(register_paging_tests);
+	run_test_suite(register_user_copy_tests);
 
 	snapshot_task_slots();
 	run_test_suite(register_task_tests);

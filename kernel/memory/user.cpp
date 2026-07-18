@@ -48,3 +48,28 @@ size_t copy_from_user(void* to, const void __user* from, size_t n)
 
 	return n;
 }
+
+ssize_t copy_string_from_user(char* to, const char __user* from, size_t max_len)
+{
+	if (to == nullptr || from == nullptr || max_len == 0) {
+		return -1;
+	}
+
+	const char* src = static_cast<const char*>(from);
+	for (size_t i = 0; i < max_len; ++i) {
+		if (!is_user_address(&src[i], 1)) {
+			LOG_ERROR("invalid address for copy_string_from_user: %p", &src[i]);
+			to[0] = '\0';
+			return -1;
+		}
+
+		to[i] = src[i];
+		if (src[i] == '\0') {
+			return static_cast<ssize_t>(i);
+		}
+	}
+
+	// No terminator within max_len: the string does not fit
+	to[max_len - 1] = '\0';
+	return -1;
+}

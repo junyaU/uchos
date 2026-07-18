@@ -3,10 +3,10 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
-#include <queue>
 #include "fs/file_descriptor.hpp"
 #include "fs/path.hpp"
 #include "list.hpp"
@@ -36,7 +36,7 @@ struct Task {
 	uint64_t kernel_stack_ptr;
 	alignas(16) Context ctx;
 	list_elem_t run_queue_elem;
-	std::queue<Message> messages;
+	std::deque<Message> messages;
 	std::array<message_handler_t, TOTAL_MESSAGE_TYPES> message_handlers;
 	std::array<kernel::fs::FileDescriptor, MAX_FDS_PER_PROCESS> fd_table;
 

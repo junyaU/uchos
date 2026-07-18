@@ -7,7 +7,6 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
-#include <vector>
 #include "fs/fat/fat.hpp"
 #include "graphics/font.hpp"
 #include "graphics/log.hpp"
@@ -115,14 +114,21 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 size_t sys_draw_text(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 {
-	const char* text = reinterpret_cast<const char*>(arg1);
+	const char __user* text = reinterpret_cast<const char*>(arg1);
 	const int x = arg2;
 	const int y = arg3;
 	const uint32_t color = arg4;
 
-	write_string(*kernel::graphics::kscreen, { x, y }, text, color);
+	// Copy the string out of user space before touching it (issue #313)
+	char buf[256];
+	const ssize_t len = copy_string_from_user(buf, text, sizeof(buf));
+	if (len < 0) {
+		return 0;
+	}
 
-	return strlen(text);
+	write_string(*kernel::graphics::kscreen, { x, y }, buf, color);
+
+	return len;
 }
 
 error_t sys_fill_rect(uint64_t arg1,
@@ -162,30 +168,37 @@ error_t sys_time(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 {
 	const int dest = arg1;
-	Message __user& m = *reinterpret_cast<Message*>(arg3);
+	Message __user* m = reinterpret_cast<Message*>(arg3);
 	const int flags = arg4;
 
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
-	t->state = kernel::task::TASK_WAITING;
 
 	if (flags == IPC_RECV) {
-		if (t->messages.empty()) {
-			m = {};
-			m.type = MsgType::NO_TASK;
-			return OK;
+		Message received{};
+		received.type = MsgType::NO_TASK;
+
+		__asm__("cli");
+		if (!t->messages.empty()) {
+			received = t->messages.front();
+			t->messages.pop_front();
 		}
+		__asm__("sti");
 
-		t->state = kernel::task::TASK_RUNNING;
-
-		copy_to_user(&m, &t->messages.front(), sizeof(m));
-		t->messages.pop();
+		// The task stays RUNNING even when the queue is empty: returning
+		// to user space as WAITING would drop the task from the run queue
+		// on the next preemption (issue #313).
+		if (copy_to_user(m, &received, sizeof(*m)) != sizeof(*m)) {
+			return ERR_INVALID_ARG;
+		}
 
 		return OK;
 	}
 
 	if (flags == IPC_SEND) {
 		Message copy_m;
-		copy_from_user(&copy_m, &m, sizeof(m));
+		if (copy_from_user(&copy_m, m, sizeof(copy_m)) != sizeof(copy_m)) {
+			return ERR_INVALID_ARG;
+		}
 
 		if (copy_m.type == MsgType::INITIALIZE_TASK) {
 			copy_m.sender = t->id;
@@ -224,19 +237,23 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	const char __user* path = reinterpret_cast<const char*>(arg1);
 	const char __user* args = reinterpret_cast<const char*>(arg2);
 
-	const size_t path_len = strlen(path);
-	std::vector<char> copy_path(path_len + 1);
-	copy_from_user(copy_path.data(), path, path_len);
-	copy_path[path_len] = '\0';
-
-	const size_t args_len = strlen(args);
-	std::vector<char> copy_args(args_len + 1);
-	copy_from_user(copy_args.data(), args, args_len);
-	copy_args[args_len] = '\0';
-
 	Message msg{ .type = MsgType::IPC_GET_FILE_INFO,
 				 .sender = kernel::task::CURRENT_TASK->id };
-	memcpy(msg.data.fs.name, copy_path.data(), path_len + 1);
+
+	// Copy the strings out of user space with bounds checks before using
+	// them; the path must also fit the fixed-size Message name field
+	// (issue #313)
+	if (copy_string_from_user(msg.data.fs.name, path, sizeof(msg.data.fs.name)) <
+		0) {
+		return ERR_INVALID_ARG;
+	}
+
+	char copy_args[256] = "";
+	if (args != nullptr &&
+		copy_string_from_user(copy_args, args, sizeof(copy_args)) < 0) {
+		return ERR_INVALID_ARG;
+	}
+
 	kernel::task::send_message(process_ids::FS_FAT32, msg);
 
 	const Message info_m =
@@ -274,7 +291,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::memory::clean_page_tables(old_page_table);
 
 	// TODO: fix this
-	kernel::fs::fat::execute_file(data_m.data.fs.buf, "", copy_args.data());
+	kernel::fs::fat::execute_file(data_m.data.fs.buf, "", copy_args);
 
 	return OK;
 }
@@ -285,32 +302,17 @@ ProcessId sys_wait(uint64_t arg1)
 {
 	auto __user* status = reinterpret_cast<int*>(arg1);
 
-	kernel::task::Task* t = kernel::task::CURRENT_TASK;
+	// Sleep until the child exits instead of busy-waiting (issue #313)
+	Message m = kernel::task::wait_for_message(MsgType::IPC_EXIT_TASK);
 
-	while (true) {
-		if (t->messages.empty()) {
-			t->state = kernel::task::TASK_WAITING;
-			asm("pause");
-			continue;
-		}
+	task::send_message(process_ids::SHELL, m);
 
-		t->state = kernel::task::TASK_RUNNING;
-
-		Message m = t->messages.front();
-		t->messages.pop();
-
-		if (m.type == MsgType::IPC_EXIT_TASK) {
-			task::send_message(process_ids::SHELL, m);
-			copy_to_user(status, &m.data.exit_task.status, sizeof(int));
-			return m.sender;
-		}
-
-		__asm__("cli");
-		t->messages.push(m);
-		__asm__("sti");
+	if (copy_to_user(status, &m.data.exit_task.status, sizeof(int)) !=
+		sizeof(int)) {
+		return ProcessId::from_raw(-1);
 	}
 
-	return ProcessId::from_raw(-1);
+	return m.sender;
 }
 
 ProcessId sys_getpid(void) { return kernel::task::CURRENT_TASK->id; }

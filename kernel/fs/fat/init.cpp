@@ -58,7 +58,7 @@ void handle_initialize(const Message& m)
 		while (!pending_messages.empty()) {
 			auto msg = pending_messages.front();
 			pending_messages.pop();
-			kernel::task::CURRENT_TASK->messages.push(msg);
+			kernel::task::CURRENT_TASK->messages.push_back(msg);
 		}
 	}
 }

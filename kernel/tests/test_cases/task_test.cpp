@@ -5,9 +5,17 @@
 #include <libs/common/process_id.hpp>
 #include "memory/slab.hpp"
 #include "task/context.hpp"
+#include "task/ipc.hpp"
 #include "task/task.hpp"
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
+#include "tests/test_utils.hpp"
+
+// Forward declaration for the syscall under test
+namespace kernel::syscall
+{
+extern error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4);
+} // namespace kernel::syscall
 
 using kernel::task::create_task;
 using kernel::task::get_available_task_id;
@@ -88,7 +96,7 @@ void test_task_message_handling()
 	ASSERT_TRUE(t->messages.empty());
 	const Message test_msg = { .type = MsgType::IPC_EXIT_TASK,
 							   .sender = ProcessId::from_raw(0) };
-	t->messages.push(test_msg);
+	t->messages.push_back(test_msg);
 	ASSERT_FALSE(t->messages.empty());
 
 	// Test message handling
@@ -145,6 +153,72 @@ void test_task_memory_management()
 	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(stack));
 }
 
+void test_wait_for_message_preserves_other_messages()
+{
+	Task* t = create_task("wait_msg_test", 0, true, true);
+	ASSERT_NOT_NULL(t);
+
+	Message other = { .type = MsgType::NOTIFY_WRITE,
+					  .sender = ProcessId::from_raw(1) };
+	Message target = { .type = MsgType::IPC_EXIT_TASK,
+					   .sender = ProcessId::from_raw(2) };
+	t->messages.push_back(other);
+	t->messages.push_back(target);
+
+	const kernel::tests::ScopedCurrentTask scoped_task(t);
+
+	// The matching message is extracted even when it is not at the front
+	const Message m = kernel::task::wait_for_message(MsgType::IPC_EXIT_TASK);
+	ASSERT_TRUE(m.type == MsgType::IPC_EXIT_TASK);
+	ASSERT_EQ(m.sender.raw(), 2);
+
+	// The unrelated message is still queued (issue #313: the old
+	// implementation spun on and reordered non-matching messages)
+	ASSERT_EQ(t->messages.size(), 1UL);
+	ASSERT_TRUE(t->messages.front().type == MsgType::NOTIFY_WRITE);
+	t->messages.clear();
+}
+
+void test_send_message_queue_cap()
+{
+	Task* t = create_task("queue_cap_test", 0, true, true);
+	ASSERT_NOT_NULL(t);
+
+	// Keep the receiver off the run queue while flooding it
+	t->state = kernel::task::TASK_RUNNING;
+
+	Message m = { .type = MsgType::NOTIFY_WRITE,
+				  .sender = kernel::task::CURRENT_TASK->id };
+
+	// NOTE: send_message is [[gnu::no_caller_saved_registers]], so its
+	// return value is not reliable at the call site; assert on the queue
+	// size instead.
+	for (size_t i = 0; i < kernel::task::MAX_QUEUED_MESSAGES + 8; ++i) {
+		kernel::task::send_message(t->id, m);
+	}
+
+	// The queue is capped instead of growing without bound (issue #313)
+	ASSERT_EQ(t->messages.size(), kernel::task::MAX_QUEUED_MESSAGES);
+	t->messages.clear();
+}
+
+void test_ipc_recv_empty_keeps_task_runnable()
+{
+	Task* t = create_task("ipc_recv_test", 0, true, true);
+	ASSERT_NOT_NULL(t);
+	ASSERT_TRUE(t->messages.empty());
+
+	const kernel::tests::ScopedCurrentTask scoped_task(t);
+
+	Message m;
+	kernel::syscall::sys_ipc(0, 0, reinterpret_cast<uint64_t>(&m), IPC_RECV);
+
+	// An empty queue must not leave the task WAITING while it returns to
+	// the caller; it would be dropped from the run queue on the next
+	// preemption (issue #313)
+	ASSERT_EQ(t->state, kernel::task::TASK_RUNNING);
+}
+
 void register_task_tests()
 {
 	test_register("task_creation_basic", test_task_creation_basic);
@@ -152,4 +226,9 @@ void register_task_tests()
 	test_register("task_message_handling", test_task_message_handling);
 	test_register("task_copy", test_task_copy);
 	test_register("task_memory_management", test_task_memory_management);
+	test_register("wait_for_message_preserves_other_messages",
+				  test_wait_for_message_preserves_other_messages);
+	test_register("send_message_queue_cap", test_send_message_queue_cap);
+	test_register("ipc_recv_empty_keeps_task_runnable",
+				  test_ipc_recv_empty_keeps_task_runnable);
 }
