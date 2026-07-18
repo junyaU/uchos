@@ -42,4 +42,4 @@ sudo qemu-system-x86_64 -m 1G \
     -device virtio-blk-pci,drive=drive-virtio-disk0,id=virtio-disk0 \
     -netdev tap,id=net0,ifname=tap0,script=no \
     -device virtio-net-pci,netdev=net0,mac=52:54:00:12:34:56 \
-    -serial stdio -S -gdb tcp::12345
+    -serial mon:stdio -S -gdb tcp::12345
