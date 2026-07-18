@@ -5,7 +5,6 @@
 #include <cstdint>
 #include "../../UchLoaderPkg/memory_map.hpp"
 #include "graphics/log.hpp"
-#include "memory/buddy_system.hpp"
 #include "memory/page.hpp"
 
 #include <sys/types.h>
@@ -148,16 +147,13 @@ void initialize_heap()
 	program_break_end = program_break + heap_size;
 }
 
-void disable()
+void release_bootstrap()
 {
-	if (kernel::memory::boot_allocator != nullptr) {
-		kernel::memory::memory_manager->free(
-				kernel::memory::boot_allocator,
-				sizeof(kernel::memory::BootstrapAllocator));
-		kernel::memory::boot_allocator = nullptr;
-	}
+	// The allocator lives in a static buffer inside the kernel BSS, so its
+	// pages must never be handed to the buddy system; just drop the pointer.
+	kernel::memory::boot_allocator = nullptr;
 
-	LOG_INFO("Bootstrap allocator disabled.");
+	LOG_INFO("Bootstrap allocator released.");
 }
 
 } // namespace kernel::memory

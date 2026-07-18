@@ -50,7 +50,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	kernel::memory::initialize_memory_manager();
 
-	kernel::memory::disable();
+	kernel::memory::release_bootstrap();
 
 	kernel::memory::initialize_slab_allocator();
 

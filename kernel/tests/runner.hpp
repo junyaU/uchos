@@ -18,8 +18,8 @@ namespace kernel::tests
  * @brief Run suites that need the bootstrap allocator to be alive
  *
  * Must be called after kernel::memory::initialize() and before
- * kernel::memory::disable(), because the bootstrap allocator suite
- * exercises the global boot_allocator directly.
+ * kernel::memory::release_bootstrap(), because the bootstrap allocator
+ * suite exercises the global boot_allocator directly.
  */
 void run_bootstrap_stage_tests();
 

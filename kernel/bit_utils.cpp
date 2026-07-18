@@ -12,6 +12,10 @@ unsigned int bit_width(unsigned int x)
 
 unsigned int bit_width_ceil(unsigned int x)
 {
+	if (x == 0) {
+		return 0;
+	}
+
 	if ((x & (x - 1)) == 0) {
 		return bit_width(x) - 1;
 	}

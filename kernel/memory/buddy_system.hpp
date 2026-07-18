@@ -84,11 +84,12 @@ private:
 	 * -1 is returned if the size is too large to be allocated by the buddy
 	 * system.
 	 *
-	 * \param size The size of the memory block.
-	 * \return The order of the memory block.
+	 * \param num_pages The number of pages of the memory block.
+	 * \return The order of the memory block, or -1 if num_pages is 0 or
+	 * exceeds the largest block the buddy system can manage.
 	 */
 
-	static size_t calculate_order(size_t num_pages);
+	static int calculate_order(size_t num_pages);
 
 	std::array<std::list<Page*, PoolAllocator<Page*, PAGE_SIZE>>, MAX_ORDER + 1>
 			free_lists_;

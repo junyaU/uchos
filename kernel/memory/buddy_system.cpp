@@ -11,15 +11,18 @@ namespace kernel::memory
 
 BuddySystem* memory_manager;
 
-size_t BuddySystem::calculate_order(size_t num_pages)
+int BuddySystem::calculate_order(size_t num_pages)
 {
-	const size_t order = bit_width_ceil(num_pages);
-
-	if (order > MAX_ORDER) {
-		return MAX_ORDER;
+	if (num_pages == 0) {
+		return -1;
 	}
 
-	return order;
+	const size_t order = bit_width_ceil(num_pages);
+	if (order > MAX_ORDER) {
+		return -1;
+	}
+
+	return static_cast<int>(order);
 }
 
 void BuddySystem::split_memory_block(int order)
@@ -140,12 +143,16 @@ void BuddySystem::register_memory_blocks(size_t num_total_pages, Page* start_pag
 	}
 
 	auto calc_max_order_in_total_pages = [](size_t num_total_pages) -> size_t {
-		size_t order = calculate_order(num_total_pages);
-		if (num_total_pages < (1 << order)) {
-			--order;
+		if (num_total_pages == 0) {
+			return 0;
 		}
 
-		return order;
+		// floor(log2(num_total_pages)), clamped so that regions larger than
+		// the biggest buddy block are chunked into MAX_ORDER blocks
+		const size_t order = bit_width(num_total_pages) - 1;
+		return order > static_cast<size_t>(MAX_ORDER)
+					   ? static_cast<size_t>(MAX_ORDER)
+					   : order;
 	};
 
 	size_t order = calc_max_order_in_total_pages(num_total_pages);

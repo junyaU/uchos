@@ -49,8 +49,20 @@ private:
 
 extern BootstrapAllocator* boot_allocator;
 
+/**
+ * @brief Backing storage for the bootstrap allocator (kernel BSS)
+ * @note Exposed for regression tests only; do not use directly
+ */
+extern char bootstrap_allocator_buffer[sizeof(BootstrapAllocator)];
+
 void initialize(const MemoryMap& mem_map);
 void initialize_heap();
-void disable();
+
+/**
+ * @brief Retire the bootstrap allocator once the buddy system is up
+ * @note Only drops the global pointer. The allocator's static BSS buffer
+ * must never be freed into the buddy system.
+ */
+void release_bootstrap();
 
 } // namespace kernel::memory

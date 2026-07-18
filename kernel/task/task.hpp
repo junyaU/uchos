@@ -50,8 +50,13 @@ struct Task {
 
 	~Task()
 	{
-		kernel::memory::clean_page_tables(
-				reinterpret_cast<kernel::memory::page_table_entry*>(ctx.cr3));
+		if (ctx.cr3 != 0) {
+			kernel::memory::clean_page_tables(
+					reinterpret_cast<kernel::memory::page_table_entry*>(
+							ctx.cr3));
+		}
+
+		kernel::memory::free(stack);
 	}
 
 	static void* operator new(size_t size)

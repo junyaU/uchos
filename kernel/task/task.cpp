@@ -225,8 +225,13 @@ void schedule_task(ProcessId id)
 void switch_task(const Context& current_ctx)
 {
 	if (CURRENT_TASK->state == TASK_EXITED) {
-		delete tasks[CURRENT_TASK->id.raw()];
-		tasks[CURRENT_TASK->id.raw()] = nullptr;
+		// ~Task frees the kernel stack we are still running on; keep
+		// interrupts off until restore_context switches to the next
+		// task's stack so nothing can reuse it in between.
+		asm volatile("cli");
+		const pid_t exited_id = CURRENT_TASK->id.raw();
+		delete tasks[exited_id];
+		tasks[exited_id] = nullptr;
 	} else {
 		memcpy(&CURRENT_TASK->ctx, &current_ctx, sizeof(Context));
 		if (CURRENT_TASK->state != TASK_WAITING) {
