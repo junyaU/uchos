@@ -20,9 +20,16 @@ Screen::Screen(const FrameBufferConf& frame_buffer_conf, Color bg_color)
 
 void Screen::put_pixel(Point2D point, uint32_t color_code)
 {
-	const uint64_t pixel_position =
-			pixels_per_scan_line_ * point.GetY() + point.GetX();
-	frame_buffer_[pixel_position] = color_code;
+	const int x = point.GetX();
+	const int y = point.GetY();
+
+	// Clip silently: logging here would recurse back into put_pixel
+	if (x < 0 || y < 0 || x >= static_cast<int>(horizontal_resolution_) ||
+		y >= static_cast<int>(vertical_resolution_)) {
+		return;
+	}
+
+	frame_buffer_[pixels_per_scan_line_ * y + x] = color_code;
 }
 
 void Screen::fill_rectangle(Point2D position,
