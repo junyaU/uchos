@@ -87,6 +87,10 @@ set(SOURCE_FILES
         panic.cpp
 )
 
+# Build the kernel test suites and run them at boot. Will default to OFF
+# once CI (issue #311 PR 3) becomes the primary way to run the tests.
+option(KERNEL_TESTS "Build kernel test suites and run them at boot" ON)
+
 # Add subdirectories that contain their own CMakeLists.txt files.
 add_subdirectory(memory)
 add_subdirectory(graphics)
@@ -97,7 +101,13 @@ add_subdirectory(hardware)
 add_subdirectory(fs)
 add_subdirectory(syscall)
 add_subdirectory(net)
-add_subdirectory(tests)
+
+set(KERNEL_TEST_LIBS "")
+if(KERNEL_TESTS)
+        add_compile_definitions(KERNEL_TESTS_ENABLED)
+        add_subdirectory(tests)
+        set(KERNEL_TEST_LIBS UchosTest)
+endif()
 
 # Define the main target and link it with the necessary libraries.
 add_executable(UchosKernel ${SOURCE_FILES})
@@ -118,5 +128,5 @@ target_link_libraries(
         UchosFileSystem
         UchosSyscall
         UchosNet
-        UchosTest
+        ${KERNEL_TEST_LIBS}
 )

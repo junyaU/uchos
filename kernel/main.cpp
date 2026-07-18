@@ -10,10 +10,7 @@
 #include "syscall/syscall.hpp"
 #include "task/builtin.hpp"
 #include "task/task.hpp"
-#include "tests/framework.hpp"
-#include "tests/test_cases/fd_test.hpp"
-#include "tests/test_cases/stdio_test.hpp"
-#include "tests/test_cases/virtio_blk_test.hpp"
+#include "tests/runner.hpp"
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"
@@ -42,6 +39,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	kernel::memory::initialize(memory_map);
 
+	kernel::tests::run_bootstrap_stage_tests();
+
 	kernel::memory::initialize_heap();
 
 	kernel::memory::initialize_pages();
@@ -58,16 +57,15 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	kernel::timers::initialize();
 
+	kernel::tests::run_timer_stage_tests();
+
 	kernel::timers::local_apic::initialize();
 
 	kernel::syscall::initialize();
 
 	kernel::task::initialize();
 
-	run_test_suite(register_virtio_blk_tests);
-	run_test_suite(register_stdio_tests);
-	run_test_suite(register_fd_tests);
-	test_print_summary();
+	kernel::tests::run_main_stage_tests();
 
 	kernel::task::kernel_service();
 }

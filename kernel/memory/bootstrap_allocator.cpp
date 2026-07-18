@@ -7,8 +7,6 @@
 #include "graphics/log.hpp"
 #include "memory/buddy_system.hpp"
 #include "memory/page.hpp"
-#include "tests/framework.hpp"
-#include "tests/test_cases/memory_test.hpp"
 
 #include <sys/types.h>
 
@@ -128,8 +126,6 @@ void initialize(const MemoryMap& mem_map)
 	}
 
 	kernel::memory::boot_allocator->show_available_memory();
-
-	run_test_suite(register_bootstrap_allocator_tests);
 
 	LOG_INFO("Bootstrap allocator initialized successfully.");
 }
