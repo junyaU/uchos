@@ -87,9 +87,15 @@ set(SOURCE_FILES
         panic.cpp
 )
 
-# Build the kernel test suites and run them at boot. Will default to OFF
-# once CI (issue #311 PR 3) becomes the primary way to run the tests.
+# Build the kernel test suites and run them at boot. Left ON by default for
+# interactive use; CI runs the same tests headlessly via KERNEL_TEST_EXIT
+# below instead of toggling this option off.
 option(KERNEL_TESTS "Build kernel test suites and run them at boot" ON)
+
+# Report the cumulative test result to QEMU via isa-debug-exit (port 0xf4)
+# and exit after the main-stage suites finish. For headless CI runs only;
+# leave OFF for interactive use so the boot continues into kernel_service.
+option(KERNEL_TEST_EXIT "Exit QEMU with the test result after tests complete" OFF)
 
 # Add subdirectories that contain their own CMakeLists.txt files.
 add_subdirectory(memory)
@@ -105,6 +111,14 @@ add_subdirectory(net)
 set(KERNEL_TEST_LIBS "")
 if(KERNEL_TESTS)
         add_compile_definitions(KERNEL_TESTS_ENABLED)
+
+        # Must be defined before add_subdirectory(tests): directory properties
+        # are inherited when the subdirectory is added, and runner.cpp (which
+        # consumes this define) is compiled there.
+        if(KERNEL_TEST_EXIT)
+                add_compile_definitions(KERNEL_TEST_EXIT_ENABLED)
+        endif()
+
         add_subdirectory(tests)
         set(KERNEL_TEST_LIBS UchosTest)
 endif()

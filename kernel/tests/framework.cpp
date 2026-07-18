@@ -79,16 +79,20 @@ void run_test_suite(void (*test_suite)())
 	kernel::graphics::change_log_level(kernel::graphics::LogLevel::ERROR);
 }
 
+bool test_all_passed()
+{
+	return total_stats.total > 0 && total_stats.failed == 0;
+}
+
 void test_print_summary()
 {
 	// printk only emits messages whose level matches the current log level
 	// exactly, so the summary must be printed while the level is TEST.
 	kernel::graphics::change_log_level(kernel::graphics::LogLevel::TEST);
 
-	const bool passed = total_stats.total > 0 && total_stats.failed == 0;
 	LOG_TEST("TEST_SUMMARY: total=%d passed=%d failed=%d result=%s",
 			 total_stats.total, total_stats.passed, total_stats.failed,
-			 passed ? "PASS" : "FAIL");
+			 test_all_passed() ? "PASS" : "FAIL");
 
 	kernel::graphics::change_log_level(kernel::graphics::LogLevel::ERROR);
 }

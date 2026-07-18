@@ -15,8 +15,27 @@
 #include "tests/test_cases/timer_test.hpp"
 #include "tests/test_cases/virtio_blk_test.hpp"
 
+#ifdef KERNEL_TEST_EXIT_ENABLED
+#include "asm_utils.h"
+#endif
+
 namespace
 {
+
+#ifdef KERNEL_TEST_EXIT_ENABLED
+constexpr uint16_t QEMU_ISA_DEBUG_EXIT_PORT = 0xf4;
+constexpr uint8_t QEMU_EXIT_CODE_PASS = 0x10; // QEMU exits with (0x10 << 1) | 1 = 33
+constexpr uint8_t QEMU_EXIT_CODE_FAIL = 0x11; // QEMU exits with (0x11 << 1) | 1 = 35
+
+// Writes the test result to the isa-debug-exit device so QEMU terminates
+// with a status the CI runner can check. When the device is absent
+// (interactive run), the write is ignored and boot continues normally.
+void exit_qemu(bool passed)
+{
+	write_to_io_port8(QEMU_ISA_DEBUG_EXIT_PORT,
+					   passed ? QEMU_EXIT_CODE_PASS : QEMU_EXIT_CODE_FAIL);
+}
+#endif
 
 std::array<bool, kernel::task::MAX_TASKS> slot_snapshot;
 
@@ -68,6 +87,10 @@ void run_main_stage_tests()
 	run_test_suite(register_fd_tests);
 
 	test_print_summary();
+
+#ifdef KERNEL_TEST_EXIT_ENABLED
+	exit_qemu(test_all_passed());
+#endif
 }
 
 } // namespace kernel::tests

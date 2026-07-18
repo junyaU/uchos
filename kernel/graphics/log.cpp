@@ -5,6 +5,7 @@
 #include <cstring>
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
+#include "hardware/serial.hpp"
 
 namespace
 {
@@ -32,6 +33,11 @@ void printk(kernel::graphics::LogLevel level, const char* format, ...)
 	va_start(ap, format);
 	vsnprintf(s, sizeof(s), format, ap);
 	va_end(ap);
+
+	// Mirror to the serial port; the framebuffer path below implicitly
+	// ends each message with a newline, so mirror that here too.
+	kernel::hw::serial::write_string(s);
+	kernel::hw::serial::write_string("\n");
 
 	for (size_t i = 0; i < strlen(s) && s[i] != '\0'; ++i) {
 		kernel::graphics::write_ascii(

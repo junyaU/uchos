@@ -30,6 +30,20 @@ write_to_io_port:
     out dx, eax
     ret
 
+global read_from_io_port8 ; uint8_t read_from_io_port8(uint16_t addr)
+read_from_io_port8:
+    mov dx, di
+    in al, dx
+    movzx eax, al
+    ret
+
+global write_to_io_port8 ; void write_to_io_port8(uint16_t addr, uint8_t value)
+write_to_io_port8:
+    mov dx, di
+    mov ax, si
+    out dx, al
+    ret
+
 global most_significant_bit ; int most_significant_bit(uint32_t value)
 most_significant_bit:
     bsr eax, edi

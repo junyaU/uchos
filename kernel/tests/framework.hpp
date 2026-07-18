@@ -73,6 +73,16 @@ void test_mark_failed();
 void test_print_summary();
 
 /**
+ * @brief Check the cumulative test result across all executed suites
+ *
+ * Reflects the same totals reported by test_print_summary(): the result
+ * across every suite run since boot.
+ *
+ * @return true if at least one test ran and none of them failed
+ */
+bool test_all_passed();
+
+/**
  * @brief Run a complete test suite
  *
  * Convenience function that initializes the test framework, runs the
