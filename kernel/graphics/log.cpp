@@ -12,6 +12,30 @@ namespace
 kernel::graphics::LogLevel current_log_level = kernel::graphics::LogLevel::ERROR;
 int kernel_cursor_x = 0;
 int kernel_cursor_y = 5;
+
+constexpr int GLYPH_WIDTH = 8;
+constexpr int GLYPH_HEIGHT = 16;
+
+// Advance the on-screen cursor to the next line, wrapping back to the top
+// when the bottom of the screen is reached. The kernel log used to keep
+// incrementing the row forever and write past the frame buffer
+// (issue #313); the serial log remains the full, unwrapped record.
+void advance_line()
+{
+	kernel_cursor_x = 0;
+	++kernel_cursor_y;
+
+	auto* screen = kernel::graphics::kscreen;
+	const int rows = screen->height() / GLYPH_HEIGHT;
+	if (kernel_cursor_y >= rows) {
+		kernel_cursor_y = 0;
+	}
+
+	// Erase whatever was on the line we are about to write
+	screen->fill_rectangle({ 0, kernel_cursor_y * GLYPH_HEIGHT },
+						   { screen->width(), GLYPH_HEIGHT },
+						   screen->bg_color().GetCode());
+}
 } // namespace
 
 namespace kernel::graphics
@@ -48,20 +72,18 @@ void printk(kernel::graphics::LogLevel level, const char* format, ...)
 	for (size_t i = 0; i < strlen(s) && s[i] != '\0'; ++i) {
 		kernel::graphics::write_ascii(
 				*kernel::graphics::kscreen,
-				{ kernel_cursor_x++ * 8, kernel_cursor_y * 16 }, s[i], 0xffff00);
+				{ kernel_cursor_x++ * GLYPH_WIDTH, kernel_cursor_y * GLYPH_HEIGHT },
+				s[i], 0xffff00);
 
 		if (s[i] == '\n') {
-			kernel_cursor_x = 0;
-			++kernel_cursor_y;
+			advance_line();
 			continue;
 		}
 
 		if (kernel_cursor_x >= 98) {
-			kernel_cursor_x = 0;
-			++kernel_cursor_y;
+			advance_line();
 		}
 	}
 
-	kernel_cursor_x = 0;
-	++kernel_cursor_y;
+	advance_line();
 }

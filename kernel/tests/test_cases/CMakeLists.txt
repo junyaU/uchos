@@ -9,6 +9,7 @@ set(TESTCASES_SOURCE_FILES
         stdio_test.cpp
         fs_test.cpp
         fd_test.cpp
+        graphics_test.cpp
 )
 
 add_library(UchosTestCases ${TESTCASES_SOURCE_FILES})

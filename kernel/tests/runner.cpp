@@ -10,6 +10,7 @@
 #include "tests/test_cases/bit_utils_test.hpp"
 #include "tests/test_cases/fd_test.hpp"
 #include "tests/test_cases/fs_test.hpp"
+#include "tests/test_cases/graphics_test.hpp"
 #include "tests/test_cases/memory_test.hpp"
 #include "tests/test_cases/paging_test.hpp"
 #include "tests/test_cases/stdio_test.hpp"
@@ -82,6 +83,7 @@ void run_main_stage_tests()
 	run_test_suite(register_alloc_macro_tests);
 	run_test_suite(register_paging_tests);
 	run_test_suite(register_user_copy_tests);
+	run_test_suite(register_graphics_tests);
 
 	snapshot_task_slots();
 	run_test_suite(register_task_tests);
