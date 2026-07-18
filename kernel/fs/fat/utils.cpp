@@ -162,23 +162,24 @@ size_t total_fat_clusters()
 	return total_clusters < 0x0FFFFFF8UL ? total_clusters : 0x0FFFFFF8UL;
 }
 
-cluster_t extend_cluster_chain(cluster_t last_cluster, int num_clusters)
+cluster_t extend_cluster_chain(uint32_t* fat,
+							   size_t total_clusters,
+							   cluster_t last_cluster,
+							   int num_clusters)
 {
-	const size_t total_clusters = total_fat_clusters();
-
 	cluster_t current_cluster = last_cluster;
 	int num_allocated = 0;
 	for (size_t i = 2; i < total_clusters && num_allocated < num_clusters; ++i) {
-		if (FAT_TABLE[i] != 0) {
+		if (fat[i] != 0) {
 			continue;
 		}
 
-		FAT_TABLE[current_cluster] = i;
+		fat[current_cluster] = i;
 		current_cluster = i;
 		++num_allocated;
 	}
 
-	FAT_TABLE[current_cluster] = END_OF_CLUSTER_CHAIN;
+	fat[current_cluster] = END_OF_CLUSTER_CHAIN;
 
 	if (num_allocated < num_clusters) {
 		LOG_ERROR("disk full: allocated %d of %d clusters", num_allocated,
@@ -189,12 +190,18 @@ cluster_t extend_cluster_chain(cluster_t last_cluster, int num_clusters)
 	return current_cluster;
 }
 
-cluster_t allocate_cluster_chain(size_t num_clusters)
+cluster_t extend_cluster_chain(cluster_t last_cluster, int num_clusters)
 {
-	const size_t total_clusters = total_fat_clusters();
+	return extend_cluster_chain(FAT_TABLE, total_fat_clusters(), last_cluster,
+								num_clusters);
+}
 
+cluster_t allocate_cluster_chain(uint32_t* fat,
+								 size_t total_clusters,
+								 size_t num_clusters)
+{
 	cluster_t first_cluster = 2;
-	while (first_cluster < total_clusters && FAT_TABLE[first_cluster] != 0) {
+	while (first_cluster < total_clusters && fat[first_cluster] != 0) {
 		++first_cluster;
 	}
 
@@ -203,12 +210,13 @@ cluster_t allocate_cluster_chain(size_t num_clusters)
 		return 0;
 	}
 
-	FAT_TABLE[first_cluster] = END_OF_CLUSTER_CHAIN;
+	fat[first_cluster] = END_OF_CLUSTER_CHAIN;
 
 	if (num_clusters > 1) {
-		if (extend_cluster_chain(first_cluster, num_clusters - 1) == 0) {
+		if (extend_cluster_chain(fat, total_clusters, first_cluster,
+								 num_clusters - 1) == 0) {
 			// Roll back the partially allocated chain
-			free_cluster_chain(first_cluster, 0);
+			free_cluster_chain(fat, first_cluster, 0);
 			return 0;
 		}
 	}
@@ -216,14 +224,17 @@ cluster_t allocate_cluster_chain(size_t num_clusters)
 	return first_cluster;
 }
 
-size_t count_free_clusters()
+cluster_t allocate_cluster_chain(size_t num_clusters)
 {
-	const size_t total_clusters = total_fat_clusters();
+	return allocate_cluster_chain(FAT_TABLE, total_fat_clusters(), num_clusters);
+}
 
+size_t count_free_clusters(const uint32_t* fat, size_t total_clusters)
+{
 	size_t free_count = 0;
 	// Start from cluster 2 (0 and 1 are reserved)
 	for (size_t i = 2; i < total_clusters; i++) {
-		if (FAT_TABLE[i] == 0) {
+		if (fat[i] == 0) {
 			free_count++;
 		}
 	}
@@ -231,7 +242,14 @@ size_t count_free_clusters()
 	return free_count;
 }
 
-void free_cluster_chain(cluster_t start_cluster, cluster_t keep_until_cluster)
+size_t count_free_clusters()
+{
+	return count_free_clusters(FAT_TABLE, total_fat_clusters());
+}
+
+void free_cluster_chain(uint32_t* fat,
+						cluster_t start_cluster,
+						cluster_t keep_until_cluster)
 {
 	if (start_cluster == 0 || start_cluster >= 0x0FFFFFF8UL) {
 		return;
@@ -241,16 +259,16 @@ void free_cluster_chain(cluster_t start_cluster, cluster_t keep_until_cluster)
 	bool found_keep_until = (keep_until_cluster == 0);
 
 	while (current != END_OF_CLUSTER_CHAIN && current < 0x0FFFFFF8UL) {
-		cluster_t next = FAT_TABLE[current];
+		cluster_t next = fat[current];
 
 		if (current == keep_until_cluster) {
-			FAT_TABLE[current] = END_OF_CLUSTER_CHAIN;
+			fat[current] = END_OF_CLUSTER_CHAIN;
 			found_keep_until = true;
 			break;
 		}
 
 		if (found_keep_until) {
-			FAT_TABLE[current] = 0;
+			fat[current] = 0;
 		}
 
 		current = next;
@@ -263,11 +281,16 @@ void free_cluster_chain(cluster_t start_cluster, cluster_t keep_until_cluster)
 		// Free entire chain
 		current = start_cluster;
 		while (current != END_OF_CLUSTER_CHAIN && current < 0x0FFFFFF8UL) {
-			cluster_t next = FAT_TABLE[current];
-			FAT_TABLE[current] = 0;
+			cluster_t next = fat[current];
+			fat[current] = 0;
 			current = next;
 		}
 	}
+}
+
+void free_cluster_chain(cluster_t start_cluster, cluster_t keep_until_cluster)
+{
+	free_cluster_chain(FAT_TABLE, start_cluster, keep_until_cluster);
 }
 
 void send_read_req_to_blk_device(unsigned int sector,

@@ -17,12 +17,6 @@
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
 
-namespace kernel::fs::fat
-{
-// Forward declarations for testing
-extern kernel::fs::DirectoryEntry* ROOT_DIR;
-extern uint32_t* FAT_TABLE;
-} // namespace kernel::fs::fat
 
 using namespace kernel::fs::fat;
 
@@ -186,32 +180,26 @@ void test_fs_id_monotonic_and_nonzero()
  */
 void test_file_cache_eviction_terminates()
 {
-	// Run against a private map so in-flight caches of the live FS task are
-	// not disturbed; restore the original map before asserting.
-	auto saved_caches = std::move(kernel::fs::file_caches);
-	kernel::fs::file_caches.clear();
+	// A private map keeps the test fully isolated from the live FS task,
+	// which uses the global file_caches concurrently (issue #313: swapping
+	// the global out mid-boot lost the shell's in-flight cache).
+	kernel::fs::FileCacheMap local_caches;
 
 	bool all_created = true;
 	char path[13];
 	for (int i = 0; i < 60; ++i) {
 		snprintf(path, sizeof(path), "F%d", i);
 		kernel::fs::FileCache* c = kernel::fs::create_file_cache(
-				path, 16, ProcessId::from_raw(1));
+				local_caches, path, 16, ProcessId::from_raw(1));
 		all_created = all_created && c != nullptr && c->id != 0;
 	}
 
-	const size_t cache_count = kernel::fs::file_caches.size();
-	const bool oldest_evicted =
-			kernel::fs::find_file_cache_by_path("F0") == nullptr;
-	const bool newest_present =
-			kernel::fs::find_file_cache_by_path("F59") != nullptr;
-
-	kernel::fs::file_caches = std::move(saved_caches);
-
 	ASSERT_TRUE(all_created);
-	ASSERT_TRUE(cache_count <= 50);
-	ASSERT_TRUE(oldest_evicted);
-	ASSERT_TRUE(newest_present);
+	ASSERT_TRUE(local_caches.size() <= 50);
+	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "F0") ==
+				nullptr);
+	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "F59") !=
+				nullptr);
 }
 
 /**
@@ -219,32 +207,29 @@ void test_file_cache_eviction_terminates()
  */
 void test_file_cache_lru_order()
 {
-	auto saved_caches = std::move(kernel::fs::file_caches);
-	kernel::fs::file_caches.clear();
+	kernel::fs::FileCacheMap local_caches;
 
 	char path[13];
 	for (int i = 0; i < 50; ++i) {
 		snprintf(path, sizeof(path), "L%d", i);
-		kernel::fs::create_file_cache(path, 16, ProcessId::from_raw(1));
+		kernel::fs::create_file_cache(local_caches, path, 16,
+									  ProcessId::from_raw(1));
 	}
 
 	// Touch the oldest entry so "L1" becomes the least recently used one
-	const bool touched = kernel::fs::find_file_cache_by_path("L0") != nullptr;
+	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "L0") !=
+				nullptr);
 
 	// Cache is full: this create must evict exactly the LRU entry ("L1")
-	kernel::fs::create_file_cache("L50", 16, ProcessId::from_raw(1));
+	kernel::fs::create_file_cache(local_caches, "L50", 16,
+								  ProcessId::from_raw(1));
 
-	const bool touched_survived =
-			kernel::fs::find_file_cache_by_path("L0") != nullptr;
-	const bool lru_evicted = kernel::fs::find_file_cache_by_path("L1") == nullptr;
-	const bool new_present = kernel::fs::find_file_cache_by_path("L50") != nullptr;
-
-	kernel::fs::file_caches = std::move(saved_caches);
-
-	ASSERT_TRUE(touched);
-	ASSERT_TRUE(touched_survived);
-	ASSERT_TRUE(lru_evicted);
-	ASSERT_TRUE(new_present);
+	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "L0") !=
+				nullptr);
+	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "L1") ==
+				nullptr);
+	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "L50") !=
+				nullptr);
 }
 
 /**
@@ -291,10 +276,8 @@ void test_read_dir_entry_name_boundary()
  */
 void test_cluster_chain_disk_full()
 {
-	auto* saved_fat = FAT_TABLE;
-	auto* saved_bpb = VOLUME_BPB;
-
-	// Tiny fake volume: clusters 0-7 (2-7 usable), canaries after the table
+	// A private FAT keeps the test isolated from the live FS task; the
+	// globals must never be swapped while the FS task may run (issue #313)
 	constexpr size_t total_test_clusters = 8;
 	constexpr uint32_t canary_value = 0xDEADBEEF;
 	uint32_t fake_fat[total_test_clusters + 4];
@@ -305,34 +288,27 @@ void test_cluster_chain_disk_full()
 		fake_fat[i] = canary_value;
 	}
 
-	kernel::fs::BiosParameterBlock fake_bpb;
-	memset(&fake_bpb, 0, sizeof(fake_bpb));
-	fake_bpb.total_sectors_32 = total_test_clusters;
-	fake_bpb.sectors_per_cluster = 1;
-
-	FAT_TABLE = fake_fat;
-	VOLUME_BPB = &fake_bpb;
-
-	const size_t free_before = count_free_clusters();
-	const cluster_t first_chain = allocate_cluster_chain(4);
-	const size_t free_mid = count_free_clusters();
+	const size_t free_before = count_free_clusters(fake_fat, total_test_clusters);
+	const cluster_t first_chain =
+			allocate_cluster_chain(fake_fat, total_test_clusters, 4);
+	const size_t free_mid = count_free_clusters(fake_fat, total_test_clusters);
 
 	// Only 2 clusters left: this must fail and roll back, not scan past the
 	// end of the FAT
-	const cluster_t failed_chain = allocate_cluster_chain(4);
-	const size_t free_after = count_free_clusters();
+	const cluster_t failed_chain =
+			allocate_cluster_chain(fake_fat, total_test_clusters, 4);
+	const size_t free_after = count_free_clusters(fake_fat, total_test_clusters);
 
 	// Fully exhaust the remaining clusters, then fail again
-	const cluster_t second_chain = allocate_cluster_chain(2);
-	const cluster_t exhausted_chain = allocate_cluster_chain(1);
+	const cluster_t second_chain =
+			allocate_cluster_chain(fake_fat, total_test_clusters, 2);
+	const cluster_t exhausted_chain =
+			allocate_cluster_chain(fake_fat, total_test_clusters, 1);
 
 	bool canaries_intact = true;
 	for (size_t i = total_test_clusters; i < total_test_clusters + 4; ++i) {
 		canaries_intact = canaries_intact && fake_fat[i] == canary_value;
 	}
-
-	FAT_TABLE = saved_fat;
-	VOLUME_BPB = saved_bpb;
 
 	ASSERT_EQ(free_before, 6UL);
 	ASSERT_EQ(first_chain, 2UL);
