@@ -5,12 +5,12 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
-#include <queue>
 #include "fs/fat/fat.hpp"
 #include "fs/path.hpp"
 #include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
 #include "hardware/virtio/net.hpp"
+#include "interrupt/irq_guard.hpp"
 #include "interrupt/vector.hpp"
 #include "list.hpp"
 #include "memory/page.hpp"
@@ -224,10 +224,14 @@ Task* get_scheduled_task()
 void schedule_task(ProcessId id)
 {
 	const pid_t raw_id = id.raw();
-	if (tasks.size() <= raw_id || tasks[raw_id] == nullptr) {
+	if (raw_id < 0 || tasks.size() <= static_cast<size_t>(raw_id) ||
+		tasks[raw_id] == nullptr) {
 		LOG_ERROR("schedule_task: task %d is not found", raw_id);
 		return;
 	}
+
+	// The run queue is shared with interrupt handlers
+	const kernel::interrupt::IrqGuard guard;
 
 	tasks[raw_id]->state = TASK_READY;
 
@@ -287,15 +291,22 @@ void exit_task(int status)
 [[noreturn]] void process_messages(Task* t)
 {
 	while (true) {
+		__asm__("cli");
 		if (t->messages.empty()) {
-			switch_next_task(true);
+			// Declare WAITING while interrupts are off so a sender cannot
+			// slip in between the emptiness check and the sleep (lost
+			// wakeup). The INT in switch_next_task is not blocked by IF.
+			t->state = TASK_WAITING;
+			__asm__("sti");
+			switch_next_task(false);
 			continue;
 		}
 
 		t->state = TASK_RUNNING;
 
 		const Message m = t->messages.front();
-		t->messages.pop();
+		t->messages.pop_front();
+		__asm__("sti");
 
 		if (m.type == MsgType::NO_TASK || m.type >= MsgType::MAX_MESSAGE_TYPE) {
 			continue;
@@ -339,7 +350,7 @@ Task::Task(int raw_id,
 	  state{ state },
 	  fs_path({ nullptr, nullptr, nullptr }),
 	  stack{ nullptr },
-	  messages{ std::queue<Message>() },
+	  messages{},
 	  message_handlers({ std::array<message_handler_t, TOTAL_MESSAGE_TYPES>() }),
 	  fd_table()
 {
@@ -384,24 +395,27 @@ Message wait_for_message(MsgType type)
 	Task* t = CURRENT_TASK;
 
 	while (true) {
-		if (t->messages.empty()) {
-			switch_next_task(true);
-			continue;
-		}
+		__asm__("cli");
+		for (auto it = t->messages.begin(); it != t->messages.end(); ++it) {
+			if (it->type != type) {
+				continue;
+			}
 
-		t->state = TASK_RUNNING;
-
-		Message m = t->messages.front();
-		t->messages.pop();
-
-		if (m.type != type) {
-			__asm__("cli");
-			t->messages.push(m);
+			const Message m = *it;
+			t->messages.erase(it);
+			t->state = TASK_RUNNING;
 			__asm__("sti");
-			continue;
+
+			return m;
 		}
 
-		return m;
+		// No matching message yet: sleep instead of spinning, and leave
+		// the other queued messages untouched (issue #313 livelock).
+		// WAITING is declared while interrupts are off so a sender cannot
+		// slip in between the scan and the sleep.
+		t->state = TASK_WAITING;
+		__asm__("sti");
+		switch_next_task(false);
 	}
 }
 

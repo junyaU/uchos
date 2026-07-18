@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <sys/types.h>
 #include <cstddef>
 
 /**
@@ -45,9 +46,9 @@ bool is_user_address(const void* addr, size_t n);
  * @param to User space destination buffer
  * @param from Kernel space source buffer
  * @param n Number of bytes to copy
- * @return Number of bytes NOT copied (0 on success)
+ * @return Number of bytes copied: n on success, 0 on failure
  *
- * @note Returns non-zero if the copy fails (e.g., invalid user address)
+ * @note Callers must treat a return value different from n as a failure
  * @warning The user space buffer must be writable
  */
 size_t copy_to_user(void __user* to, const void* from, size_t n);
@@ -61,9 +62,23 @@ size_t copy_to_user(void __user* to, const void* from, size_t n);
  * @param to Kernel space destination buffer
  * @param from User space source buffer
  * @param n Number of bytes to copy
- * @return Number of bytes NOT copied (0 on success)
+ * @return Number of bytes copied: n on success, 0 on failure
  *
- * @note Returns non-zero if the copy fails (e.g., invalid user address)
+ * @note Callers must treat a return value different from n as a failure
  * @warning The kernel buffer must be large enough to hold n bytes
  */
 size_t copy_from_user(void* to, const void __user* from, size_t n);
+
+/**
+ * @brief Copy a NUL-terminated string from user space
+ *
+ * Validates every byte as a user-space address and always leaves a
+ * NUL-terminated string in the destination buffer.
+ *
+ * @param to Kernel destination buffer of at least max_len bytes
+ * @param from User space string
+ * @param max_len Destination buffer size in bytes (must be > 0)
+ * @return Length of the copied string (excluding the terminator), or -1
+ * if the pointer is invalid or the string does not fit in max_len bytes
+ */
+ssize_t copy_string_from_user(char* to, const char __user* from, size_t max_len);

@@ -5,6 +5,8 @@
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 #include "error.hpp"
+#include "graphics/log.hpp"
+#include "interrupt/irq_guard.hpp"
 #include "memory/paging.hpp"
 #include "memory/user.hpp"
 #include "task.hpp"
@@ -74,11 +76,21 @@ error_t send_message(ProcessId dst_id, Message& m)
 		RETURN_IF_ERROR(handle_ool_memory_alloc(m, dst));
 	}
 
+	// The queue is shared with interrupt handlers; keep the wakeup check
+	// and the push atomic so a receiver going to sleep cannot miss it
+	const kernel::interrupt::IrqGuard guard;
+
+	if (dst->messages.size() >= MAX_QUEUED_MESSAGES) {
+		LOG_ERROR_CODE(ERR_QUEUE_FULL, "message queue full: dest = %d, type = %d",
+					   dst_raw, static_cast<int>(m.type));
+		return ERR_QUEUE_FULL;
+	}
+
 	if (dst->state == TASK_WAITING) {
 		schedule_task(dst_id);
 	}
 
-	dst->messages.push(m);
+	dst->messages.push_back(m);
 
 	return OK;
 }
