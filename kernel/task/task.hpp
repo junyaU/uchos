@@ -35,7 +35,6 @@ struct Task {
 	size_t stack_size;
 	uint64_t kernel_stack_ptr;
 	alignas(16) Context ctx;
-	kernel::memory::page_table_entry* page_table_snapshot;
 	list_elem_t run_queue_elem;
 	std::queue<Message> messages;
 	std::array<message_handler_t, TOTAL_MESSAGE_TYPES> message_handlers;

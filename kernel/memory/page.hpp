@@ -37,7 +37,14 @@ public:
 	 *
 	 * Initializes a page as free with no associated pointer.
 	 */
-	Page() : status_{ 0 }, cache_{ nullptr }, slab_{ nullptr }, ptr_{ nullptr } {}
+	Page()
+		: status_{ 0 },
+		  cache_{ nullptr },
+		  slab_{ nullptr },
+		  ref_count_{ 0 },
+		  ptr_{ nullptr }
+	{
+	}
 
 	/**
 	 * @brief Get the page index based on its memory address
@@ -114,11 +121,39 @@ public:
 	 */
 	MSlab* slab() const { return slab_; }
 
+	/**
+	 * @brief Add a reference to this page (shared user mapping)
+	 */
+	void inc_ref() { ++ref_count_; }
+
+	/**
+	 * @brief Drop a reference to this page
+	 *
+	 * @return size_t Remaining reference count (0 means the page is free
+	 * to release)
+	 */
+	size_t dec_ref()
+	{
+		if (ref_count_ > 0) {
+			--ref_count_;
+		}
+
+		return ref_count_;
+	}
+
+	/**
+	 * @brief Get the current reference count
+	 *
+	 * @return size_t Number of user mappings referencing this page
+	 */
+	size_t ref_count() const { return ref_count_; }
+
 private:
-	int status_;	///< Page status: 0 = free, 1 = used
-	MCache* cache_; ///< Associated cache (for slab allocator)
-	MSlab* slab_;	///< Associated slab (for slab allocator)
-	void* ptr_;		///< Pointer to the page's memory
+	int status_;	   ///< Page status: 0 = free, 1 = used
+	MCache* cache_;	   ///< Associated cache (for slab allocator)
+	MSlab* slab_;	   ///< Associated slab (for slab allocator)
+	size_t ref_count_; ///< Number of user mappings (CoW sharing)
+	void* ptr_;		   ///< Pointer to the page's memory
 };
 
 /**

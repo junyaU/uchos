@@ -83,7 +83,9 @@ union page_table_entry {
 		uint64_t dirty : 1;
 		uint64_t huge_page : 1;
 		uint64_t global : 1;
-		uint64_t : 3;
+		uint64_t owned : 1; ///< OS bit: leaf page is owned (slab-backed user
+							///< page freed via ref count on clean)
+		uint64_t : 2;
 		uint64_t address : 40;
 		uint64_t : 11;
 		uint64_t no_execute : 1;
@@ -109,6 +111,21 @@ paddr_t get_paddr(page_table_entry* table, vaddr_t addr);
 void dump_page_tables(vaddr_t addr);
 
 page_table_entry* new_page_table();
+
+/**
+ * @brief Map num_pages of newly allocated user memory at addr in a table
+ * @param page_table Root (PML4) table to build the mapping in
+ * @param page_table_level Table level of page_table (4 for a root table)
+ * @param addr Start virtual address
+ * @param num_pages Number of pages to map
+ * @param writable Whether the leaf mappings are writable
+ * @return Number of pages left unmapped (0 on success), or -1 on failure
+ */
+int setup_page_table(page_table_entry* page_table,
+					 int page_table_level,
+					 vaddr_t addr,
+					 size_t num_pages,
+					 bool writable);
 
 void setup_page_tables(vaddr_t addr, size_t num_pages, bool writable);
 

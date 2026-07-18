@@ -124,6 +124,7 @@ int setup_page_table(page_table_entry* page_table,
 {
 	while (num_pages > 0) {
 		const int page_table_index = addr.part(page_table_level);
+		const bool was_present = page_table[page_table_index].bits.present;
 		auto* child_table = set_new_page_table(page_table[page_table_index]);
 		if (child_table == nullptr) {
 			LOG_ERROR("Failed to setup page table: level=%d", page_table_level);
@@ -132,6 +133,14 @@ int setup_page_table(page_table_entry* page_table,
 
 		if (page_table_level == 1) {
 			page_table[page_table_index].bits.writable = writable;
+			if (!was_present) {
+				// Freshly allocated user data page: this mapping owns it
+				page_table[page_table_index].bits.owned = 1;
+				Page* page = get_page(child_table);
+				if (page != nullptr) {
+					page->inc_ref();
+				}
+			}
 			--num_pages;
 		} else {
 			page_table[page_table_index].bits.writable = 1;
@@ -194,15 +203,27 @@ void clean_page_table(page_table_entry* table, int page_table_level)
 		}
 
 		if (page_table_level > 1) {
+			// Intermediate tables are exclusively owned by this address
+			// space (clones deep-copy them), so always free them.
 			clean_page_table(entry.get_next_level_table(), page_table_level - 1);
-		}
-
-		// skip CoW pages
-		if (!table[i].bits.writable && page_table_level == 1) {
+			kernel::memory::free(entry.get_next_level_table());
+			table[i].data = 0;
 			continue;
 		}
 
-		kernel::memory::free(entry.get_next_level_table());
+		// Level 1: leaf data page
+		if (!entry.bits.owned) {
+			// Foreign frame mapping (e.g. IPC shared memory): unmap only
+			table[i].data = 0;
+			continue;
+		}
+
+		void* data_page = entry.get_next_level_table();
+		Page* page = get_page(data_page);
+		if (page == nullptr || page->dec_ref() == 0) {
+			// Last reference (or untracked page): release it
+			kernel::memory::free(data_page);
+		}
 		table[i].data = 0;
 	}
 }
@@ -234,6 +255,14 @@ void copy_page_tables(page_table_entry* dst,
 			if (src[i].bits.present) {
 				dst[i] = src[i];
 				dst[i].bits.writable = writable;
+
+				if (src[i].bits.owned) {
+					// The new address space shares this data page (CoW)
+					Page* page = get_page(src[i].get_next_level_table());
+					if (page != nullptr) {
+						page->inc_ref();
+					}
+				}
 			}
 		}
 	} else {
@@ -259,6 +288,7 @@ void set_page_table_entry(page_table_entry* table,
 	const size_t pt_index = addr.part(1);
 	pt[pt_index].set_next_level_table(entry);
 	pt[pt_index].bits.writable = 1;
+	pt[pt_index].bits.owned = 1;
 	pt[pt_index].bits.present = 1;
 
 	flush_tlb(addr.data);
@@ -275,7 +305,26 @@ error_t copy_target_page(uint64_t addr)
 	const auto aligned_addr = addr & ~0xfff;
 	memcpy(page, reinterpret_cast<void*>(aligned_addr), kernel::memory::PAGE_SIZE);
 
+	// This address space stops referencing the shared CoW page
+	void* shared_page = nullptr;
+	auto* pte = get_pte(get_active_page_table(), vaddr_t{ addr }, 1);
+	if (pte != nullptr && pte->bits.present && pte->bits.owned) {
+		shared_page = pte->get_next_level_table();
+	}
+
+	Page* new_page = get_page(page);
+	if (new_page != nullptr) {
+		new_page->inc_ref();
+	}
+
 	set_page_table_entry(get_active_page_table(), vaddr_t{ addr }, page);
+
+	if (shared_page != nullptr) {
+		Page* old_page = get_page(shared_page);
+		if (old_page == nullptr || old_page->dec_ref() == 0) {
+			kernel::memory::free(shared_page);
+		}
+	}
 
 	return OK;
 }
