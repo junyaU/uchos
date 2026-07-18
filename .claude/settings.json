@@ -1,0 +1,35 @@
+{
+	"permissions": {
+		"allow": [
+			"Bash(cmake:*)",
+			"Bash(make:*)",
+			"Bash(./lint.sh)",
+			"Bash(./scripts/format_all.sh)",
+			"Bash(clang-format:*)",
+			"Bash(clang-format-18:*)",
+			"Bash(clang-tidy:*)",
+			"Bash(rg:*)",
+			"Bash(grep:*)",
+			"Bash(find:*)",
+			"Bash(ls:*)",
+			"Bash(cat:*)"
+		],
+		"deny": [
+			"Bash(./run_qemu.sh:*)",
+			"Bash(sudo:*)"
+		]
+	},
+	"hooks": {
+		"PostToolUse": [
+			{
+				"matcher": "Edit|Write",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "f=$(python3 -c 'import sys,json;print(json.load(sys.stdin).get(\"tool_input\",{}).get(\"file_path\",\"\"))'); case \"$f\" in */x86_64-elf/*|*/build/*|*/UchLoaderPkg/*) ;; *.cpp|*.hpp|*.h|*.cc) clang-format-18 -i \"$f\" ;; esac"
+					}
+				]
+			}
+		]
+	}
+}

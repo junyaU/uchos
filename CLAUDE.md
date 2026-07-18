@@ -14,337 +14,124 @@ Please respond in Japanese.
 - **システムコールは極力少なく** - 必要最小限のインターフェース
 
 ### システム仕様
-- **対応アーキテクチャ**: x86_64
-- **カーネルアーキテクチャ**: マイクロカーネル（ぽいもの）
-- **プロセッサ**: シングルプロセッサ対応
-- **ブートローダー**: UEFI (EDK2)
-- **エミュレータ**: QEMU
-
-## システム構成
-
-### コアカーネル機能
-```
-カーネル空間
-├── プロセス管理
-├── メモリ管理
-│   ├── slab allocator
-│   └── buddy system
-├── プロセス間通信（IPC）
-├── 割り込み処理
-├── タイマー
-├── ファイルシステム
-│   └── FAT32
-└── デバイスドライバ
-    ├── virtio-blk
-    └── xhci キーボードドライバ
-```
-
-### ユーザーランド
-```
-ユーザー空間
-├── ターミナル
-└── コマンド群
-```
+- **アーキテクチャ**: x86_64 / シングルプロセッサ
+- **ブート**: UEFI (EDK2) / **実行環境**: QEMU (OVMF, virtio-blk, virtio-net + TAP, XHCI キーボード, GDB サーバー tcp::12345)
+- **言語・ツール**: C++17 / Clang / ld.lld / CMake (カーネル) + Make (ユーザーランド)
 
 ## 🚀 ビルド & 実行コマンド
 
-### 基本コマンド
 ```bash
-# 全体ビルド & QEMU実行（claude codeはこれを実行しない）
-./run_qemu.sh
-
-# カーネルのみビルド（claude codeはこれを実行する）
+# カーネルのみビルド(Claude Code はこれを実行する)
 cmake -B build kernel && cmake --build build
 
-# ユーザーランドプログラムビルド（個別）
-cd userland/commands/[コマンド名]
-make clean && make
+# ユーザーランドコマンドの個別ビルド
+cd userland/commands/[コマンド名] && make clean && make
 
 # コード品質チェック (clang-tidy)
 ./lint.sh
+
+# 全体ビルド & QEMU 実行(Claude Code は実行しない。settings.json で deny 済み)
+./run_qemu.sh
 ```
 
-### ⚠️ 重要：コード品質管理
-**Claude Codeは、コードを書き変えた後は必ず `./lint.sh` を実行し、警告が出ている場合は必ず修正すること。**
-これにより、コードの品質と一貫性を保つ。
-
-### QEMU起動オプション
-run_qemu.sh は以下の設定でQEMUを起動:
-- メモリ: 1GB
-- UEFI: OVMF
-- USB: XHCI + キーボード
-- ストレージ: virtio-blk
-- デバッグ: GDBサーバー (tcp::12345)
-
-## 🧪 テスト戦略
-
-### テスト方針
-バグ修正による開発停滞を避けるため、包括的なテスト機構を構築する。
-
-### 1. カーネル内部テスト
-
-#### テストフレームワーク
-```cpp
-// kernel/tests/framework.hpp - シンプルなテストフレームワーク
-test_register("test_name", test_function);  // テスト登録
-run_test_suite(test_suite_function);        // テストスイート実行
-
-// kernel/tests/macros.hpp - アサーションマクロ
-ASSERT_EQ(x, y)    // 失敗時は即座にreturn
-ASSERT_TRUE(x)
-ASSERT_NOT_NULL(x)
-EXPECT_EQ(x, y)    // 失敗してもテスト継続
-```
-
-#### 実装済みテストケース
-```
-kernel/tests/test_cases/
-├── memory_test.cpp      // メモリ管理テスト
-├── task_test.cpp        // タスク管理テスト
-├── timer_test.cpp       // タイマーテスト
-└── virtio_blk_test.cpp  // VirtIO ブロックデバイステスト
-```
-
-### 2. テスト実行
-```cpp
-// kernel/main.cpp でのテスト実行例
-run_test_suite(register_virtio_blk_tests);  // 個別テスト実行
-
-// 新しいテストスイート追加時
-void register_my_tests() {
-    test_register("test_basic", test_basic_function);
-    test_register("test_advanced", test_advanced_function);
-}
-run_test_suite(register_my_tests);
-```
-
-### 3. ユーザーランドからのテスト
-将来的にユーザーランドテストアプリケーションを実装予定
+### ⚠️ コード品質管理
+- **コード変更後は必ず `./lint.sh` を実行し、警告が出ている場合は必ず修正すること**
+- clang-format は PostToolUse フック(.claude/settings.json)で編集後に自動適用される。手動実行は不要
+- すべてのテキストファイルは改行で終わること
 
 ## 📝 コーディング規約
 
-### x86_64 固有の考慮事項
-```cpp
-// アドレス幅: 64bit
-using vaddr_t = uint64_t;
-using paddr_t = uint64_t;
+- Google C++ Style Guide 準拠。詳細なフォーマットは `.clang-format` が唯一の正
+- タブインデント、K&R + 開きブレース後改行
 
-// ページサイズ: 4KB
-constexpr size_t PAGE_SIZE = 4096;
-
-// CPU固有操作
-inline void cpu_halt() {
-    asm volatile("hlt");
-}
-```
-
-### 基本設定
-- **C++標準**: C++17
-- **コンパイラ**: Clang
-- **リンカー**: ld.lld
-- **アーキテクチャ**: x86_64
-- **文字エンコーディング**: UTF-8
-- **ビルドシステム**: CMake
-- **コーディング規約**: Google C++ Style Guide準拠
-
-### フォーマット規則
-```cpp
-// K&R + 開きブレース後改行
-if (condition) {
-	do_something();  // タブインデント
-}
-```
-
-### ⚠️ 重要：ファイル作成・編集時の規則
-**Claude Codeは、以下の規則を必ず守ること：**
-
-1. **clang-format の適用**
-   - 新規ファイル作成後、既存ファイル編集後は必ず clang-format を適用する
-   - プロジェクトのフォーマット設定に従い、一貫性のあるコードスタイルを維持
-
-2. **ファイル終端の改行**
-   - すべてのテキストファイル（ソースコード、ヘッダー、設定ファイル等）は必ず改行で終わること
-   - ファイルの最後に空行がない場合は追加する
-
-3. **適用例**
-   ```bash
-   # ファイル編集後の処理
-   clang-format -i edited_file.cpp  # フォーマット適用
-   # ファイル終端に改行があることを確認
-   ```
-
-### 命名規則（Google C++ Style Guide準拠）
 | 対象 | 形式 | 例 |
 |------|------|-----|
 | 変数・関数・名前空間 | snake_case | `page_allocator`, `get_free_pages()` |
-| クラス・構造体・列挙型 | PascalCase | `PageTable`, `ProcessManager`, `Device`, `VirtioBlkReq` |
+| クラス・構造体・列挙型 | PascalCase | `PageTable`, `VirtioBlkReq` |
 | マクロ・定数 | ALL_CAPS | `KERNEL_VIRTUAL_BASE` |
 
-### マイクロカーネル設計指針
-```cpp
-// ✅ カーネルは最小限の機能のみ
-namespace kernel {
-    void handle_syscall();      // システムコール処理
-    void schedule_process();    // プロセス切り替え
-    void handle_interrupt();    // 割り込み処理
-}
-
-// ✅ 複雑な処理はユーザーランドへ
-// ファイルシステムの高レベル操作
-// ネットワークプロトコルスタック
-// グラフィックス処理
-```
-
-### システムコール設計
-システムコールは最小限に抑える方針
-
 ### エラーハンドリング
+カーネル内では panic よりログを優先する(`kernel/graphics/log.hpp`、printf 形式):
+
 ```cpp
-// カーネル内では panic よりログを優先
-LOG_ERROR("メモリ不足: 要求サイズ {}", size);
-LOG_WARN("非推奨システムコール: {}", syscall_num);
-LOG_INFO("プロセス {} 開始", pid);
+LOG_ERROR("out of memory: size %lu", size);
+LOG_INFO("process %d started", pid);
+LOG_TEST("test result");  // テスト専用
 ```
 
-## 📁 プロジェクト構造
+## 🏗️ マイクロカーネル設計指針
+
+- **カーネルに実装するもの**: メモリ管理、プロセス管理、IPC、割り込み、基本的なデバイスドライバのみ
+- **ユーザーランドに実装するもの**: それ以外のすべて(高レベルなファイル操作、アプリケーションロジック等)
+- **機能追加時は「カーネルに本当に必要か?」を必ず再考すること**
+- システムコールの追加は最小限に。インターフェースは後から変更困難
+
+## 🧪 テスト
+
+カーネル内部テストは `kernel/tests/` のフレームワークを使用(詳細は `.claude/rules/tests.md` が該当ファイル編集時に自動ロードされる):
+
+```cpp
+// kernel/main.cpp で実行
+run_test_suite(register_my_tests);  // テストスイート登録関数を渡す
+```
+
+新機能追加時は `kernel/tests/test_cases/` にテストを必ず書くこと。
+
+## 📁 プロジェクト構造(概要)
+
 ```
 uchos/
-├── kernel/              # カーネルソースコード
-│   ├── main.cpp        # カーネルエントリーポイント
-│   ├── memory/         # メモリ管理（buddy, slab）
-│   ├── task/           # タスク管理・IPC
-│   ├── file_system/    # ファイルシステム
-│   ├── hardware/       # ハードウェアドライバ
-│   │   ├── usb/        # USB (XHCI)
-│   │   └── virtio/     # VirtIO デバイス
-│   ├── interrupt/      # 割り込み処理 (IDT)
+├── kernel/
+│   ├── main.cpp        # エントリーポイント & テストスイート実行
+│   ├── memory/         # buddy system(物理ページ)+ slab allocator(カーネルヒープ)
+│   ├── task/           # タスク管理・IPC(メッセージパッシング、ラウンドロビン)
+│   ├── fs/             # FAT32(カスタム実装)、ファイル記述子
+│   ├── net/            # ネットワークスタック(Ethernet / ARP / IPv4 / ICMP)
+│   ├── hardware/       # PCI, XHCI キーボード, virtio(blk / net)
+│   ├── interrupt/      # IDT・割り込み処理
 │   ├── syscall/        # システムコール
-│   ├── timers/         # タイマー (ACPI, LAPIC)
-│   ├── graphics/       # 画面描画・フォント
-│   └── tests/          # カーネル内部テスト
-├── UchLoaderPkg/       # UEFI ブートローダー
-├── userland/           # ユーザーランド
-│   ├── shell/          # シェル
-│   ├── commands/       # コマンド群 (ls, cat, echo等)
-│   └── sandbox/        # テスト用プログラム
-├── libs/               # 共有ライブラリ
-│   ├── common/         # カーネル・ユーザー共通
-│   └── user/           # ユーザーランド用
-├── x86_64-elf/         # クロスコンパイル環境
-│   ├── include/        # newlib, libc++ ヘッダ
-│   └── lib/            # ライブラリファイル
-└── build/              # ビルド出力ディレクトリ
+│   ├── timers/         # ACPI, LAPIC
+│   ├── graphics/       # 画面描画・フォント・ログ
+│   └── tests/          # カーネル内部テストフレームワーク
+├── UchLoaderPkg/       # UEFI ブートローダー(EDK2)
+├── userland/           # shell/ と commands/(ls, cat, echo, ping 等)
+├── libs/               # common(カーネル・ユーザー共通)/ user(ユーザーランドランタイム)
+├── scripts/            # ビルド・ディスクイメージ作成・TAP 設定スクリプト
+└── x86_64-elf/         # クロスコンパイル用 newlib / libc++(編集禁止)
 ```
 
-## 🏗️ アーキテクチャ詳細
-
-### メモリ管理
-- **物理メモリ**: Buddy System でページ管理
-- **カーネルヒープ**: Slab Allocator (オブジェクトキャッシュ)
-- **仮想メモリ**: 4レベルページング (PML4)
-- **ブートストラップ**: 初期化時の一時的アロケータ
-
-### タスク管理
-- **スケジューリング**: ラウンドロビン
-- **コンテキストスイッチ**: context_switch.asm
-- **IPC**: メッセージパッシング方式
-- **タスク状態**: 実行中/待機/スリープ
-
-### ファイルシステム
-- **フォーマット**: FAT (カスタム実装)
-- **VFS**: 未実装（直接FAT操作）
-- **ファイル記述子**: プロセス毎に管理
-
-### デバイスドライバ
-- **USB**: XHCI コントローラ (キーボードのみ)
-- **ストレージ**: VirtIO Block Device
-- **PCI**: 基本的な列挙とコンフィグレーション
+最新の構造はディレクトリを直接確認すること。このツリーは概要であり網羅ではない。
 
 ## ⚡ 開発Tips
 
-### デバッグ
 ```bash
-# GDBでカーネルデバッグ (別ターミナルで)
+# GDB でカーネルデバッグ(QEMU 起動後に別ターミナルで)
 gdb build/UchosKernel
 target remote :12345
-break KernelMain
-continue
 ```
-
-### ログ出力
-```cpp
-LOG_INFO("メッセージ");
-LOG_ERROR("エラー: %s", error_msg);
-LOG_TEST("テスト結果");  // テスト専用
-```
-
-### 新機能追加時の注意点
-1. カーネル機能は最小限に - 複雑な処理はユーザーランドへ
-2. システムコールは慎重に追加 - インターフェースは変更困難
-3. テストを必ず書く - kernel/tests/test_cases/ に追加
-4. lint.sh でコード品質チェック
 
 ## 📌 重要な開発指針
+
 - **既存ファイル優先**: 新規ファイル作成より既存ファイル編集を優先
 - **ドキュメント作成**: 明示的に要求された場合のみ .md ファイルを作成
-- **シンプルさ重視**: UCHosの基本方針「とにかくシンプルに」を常に意識
-- **マイクロカーネル**: 機能追加時は「カーネルに本当に必要か？」を再考
+- **シンプルさ重視**: UCHos の基本方針「とにかくシンプルに」を常に意識
 
-## 📚 コードドキュメント規約
+## 📚 コードドキュメント規約(Doxygen)
 
-### ドキュメントスタイル
-- **言語**: 英語（Doxygenスタイル）
-- **形式**: C++標準のDoxygenコメント
-- **必須要素**: @file, @brief, @param, @return, @note
+- **言語**: 英語 / **形式**: Doxygen スタイル
+- **必須要素**: ファイルヘッダに `@file` `@brief`、公開関数に `@brief` `@param` `@return`
+- メンバ変数は `///<` で簡潔に。*what* ではなく *why* を書く
 
-### ヘッダーファイルのドキュメント例
 ```cpp
 /**
- * @file filename.hpp
- * @brief Brief description of the file's purpose
- * @date YYYY-MM-DD
+ * @brief Allocate a physical page from the buddy system
+ * @param order Allocation order (2^order pages)
+ * @return Pointer to the allocated page, or nullptr on failure
  */
 ```
 
-### 関数ドキュメント例
-```cpp
-/**
- * @brief Brief description of what the function does
- *
- * More detailed description if needed, explaining the function's
- * behavior, algorithms used, or important considerations.
- *
- * @param param1 Description of first parameter
- * @param param2 Description of second parameter
- * @return Description of return value
- *
- * @note Any important notes or warnings
- * @example Optional usage example
- */
-```
+## 🔧 Claude Code 設定の構成
 
-### クラス/構造体ドキュメント例
-```cpp
-/**
- * @brief Brief description of the class/struct
- *
- * Detailed description explaining the purpose, usage,
- * and any important design decisions.
- */
-class MyClass {
-    int member_;  ///< Brief description of member variable
-};
-```
-
-### 列挙型ドキュメント例
-```cpp
-/**
- * @brief Brief description of the enum
- * @{
- */
-enum MyEnum {
-    VALUE1,  ///< Description of VALUE1
-    VALUE2   ///< Description of VALUE2
-};
-/** @} */
-```
+- `.claude/settings.json` - 共有の権限設定と clang-format 自動適用フック(コミット対象)
+- `.claude/rules/` - パススコープのルール(kernel / userland / tests)。該当ファイル編集時に自動ロード
+- `.claude/skills/` - 定型作業の手順書(`/add-userland-command`, `/kernel-testing`, `/net-debug`)
