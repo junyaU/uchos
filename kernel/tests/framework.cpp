@@ -19,6 +19,7 @@ constexpr int MAX_TEST_CASES = 100;
 TestCaseT test_cases[MAX_TEST_CASES];
 int test_count = 0;
 TestStatsT stats = { 0, 0, 0 };
+TestStatsT total_stats = { 0, 0, 0 };
 bool current_test_failed = false;
 } // namespace
 void test_init()
@@ -28,6 +29,8 @@ void test_init()
 	current_test_failed = false;
 	memset(test_cases, 0, sizeof(test_cases));
 }
+
+void test_mark_failed() { current_test_failed = true; }
 
 void test_register(const char* name, test_func_t func)
 {
@@ -42,13 +45,28 @@ void test_register(const char* name, test_func_t func)
 void test_run()
 {
 	stats.total = test_count;
+
 	for (int i = 0; i < test_count; i++) {
-		LOG_INFO("Running test: %s", test_cases[i].name);
+		current_test_failed = false;
 		test_cases[i].func();
 
-		if (!current_test_failed) {
+		if (current_test_failed) {
+			stats.failed++;
+			LOG_TEST("FAIL: %s", test_cases[i].name);
+		} else {
 			stats.passed++;
 		}
+	}
+
+	total_stats.total += stats.total;
+	total_stats.passed += stats.passed;
+	total_stats.failed += stats.failed;
+
+	// The screen console cannot scroll yet, so stay silent unless something
+	// failed; the cumulative result is printed by test_print_summary().
+	if (stats.failed > 0) {
+		LOG_TEST("suite result: total=%d passed=%d failed=%d", stats.total,
+				 stats.passed, stats.failed);
 	}
 }
 
@@ -58,5 +76,19 @@ void run_test_suite(void (*test_suite)())
 	test_init();
 	test_suite();
 	test_run();
+	kernel::graphics::change_log_level(kernel::graphics::LogLevel::ERROR);
+}
+
+void test_print_summary()
+{
+	// printk only emits messages whose level matches the current log level
+	// exactly, so the summary must be printed while the level is TEST.
+	kernel::graphics::change_log_level(kernel::graphics::LogLevel::TEST);
+
+	const bool passed = total_stats.total > 0 && total_stats.failed == 0;
+	LOG_TEST("TEST_SUMMARY: total=%d passed=%d failed=%d result=%s",
+			 total_stats.total, total_stats.passed, total_stats.failed,
+			 passed ? "PASS" : "FAIL");
+
 	kernel::graphics::change_log_level(kernel::graphics::LogLevel::ERROR);
 }
