@@ -5,6 +5,7 @@
 #include <cstring>
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
+#include "hardware/serial.hpp"
 
 namespace
 {
@@ -22,7 +23,7 @@ void change_log_level(LogLevel level) { current_log_level = level; }
 
 void printk(kernel::graphics::LogLevel level, const char* format, ...)
 {
-	if (level != current_log_level || format == nullptr) {
+	if (format == nullptr) {
 		return;
 	}
 
@@ -32,6 +33,17 @@ void printk(kernel::graphics::LogLevel level, const char* format, ...)
 	va_start(ap, format);
 	vsnprintf(s, sizeof(s), format, ap);
 	va_end(ap);
+
+	// The serial port receives every message regardless of the on-screen
+	// log level: it is the only output visible in headless runs and serves
+	// as a full boot trace when debugging CI failures.
+	kernel::hw::serial::write_string(s);
+	kernel::hw::serial::write_string("\n");
+
+	// The screen shows only messages that match the current log level.
+	if (level != current_log_level) {
+		return;
+	}
 
 	for (size_t i = 0; i < strlen(s) && s[i] != '\0'; ++i) {
 		kernel::graphics::write_ascii(

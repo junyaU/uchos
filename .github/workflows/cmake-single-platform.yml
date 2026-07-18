@@ -1,5 +1,6 @@
-# This starter workflow is for a CMake project running on a single platform. There is a different starter workflow if you need cross-platform coverage.
-# See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-multi-platform.yml
+# Build the kernel, run the kernel test suites headlessly in QEMU, and lint.
+# The UEFI loader is built from UchLoaderPkg with EDK2 and cached; the cache
+# is only invalidated when UchLoaderPkg/ or the pinned EDK2 tag changes.
 name: CMake on a single platform
 
 on:
@@ -11,41 +12,70 @@ on:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
+  EDK2_TAG: edk2-stable202405
 
 jobs:
   build:
-    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
-    # You can convert this to a matrix build if you need cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - name: Install dependencie
+    - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y nasm clang lld clang-tidy iwyu
+        sudo apt-get install -y nasm clang lld clang-tidy qemu-system-x86 ovmf mtools dosfstools
         curl -L https://github.com/uchan-nos/mikanos-build/releases/download/v2.0/x86_64-elf.tar.gz -o x86_64-elf.tar.gz
-        tar -xzvf x86_64-elf.tar.gz
-        
+        tar -xzf x86_64-elf.tar.gz
+
+    - name: Cache UEFI loader
+      id: cache-loader
+      uses: actions/cache@v4
+      with:
+        path: Loader.efi
+        key: loader-${{ env.EDK2_TAG }}-${{ hashFiles('UchLoaderPkg/**') }}
+
+    - name: Build UEFI loader
+      if: steps.cache-loader.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get install -y build-essential uuid-dev python3 python-is-python3
+        git clone --depth 1 --branch "$EDK2_TAG" https://github.com/tianocore/edk2.git "$HOME/edk2"
+        cd "$HOME/edk2"
+        # Keep submodules minimal: BaseTools needs brotli, and MdePkg.dec
+        # references the mipisyst include directory.
+        git submodule update --init --depth 1 \
+            BaseTools/Source/C/BrotliCompress/brotli \
+            MdePkg/Library/MipiSysTLib/mipisyst
+        make -C BaseTools -j"$(nproc)"
+        ln -s "$GITHUB_WORKSPACE/UchLoaderPkg" UchLoaderPkg
+        source edksetup.sh
+        build -p UchLoaderPkg/UchLoaderPkg.dsc -b RELEASE -a X64 -t GCC
+        cp Build/UchLoaderPkgX64/RELEASE_GCC/X64/Loader.efi "$GITHUB_WORKSPACE/Loader.efi"
+
     - name: Configure CMake
       run: |
-        IWYU_PATH=$(which include-what-you-use)
         cmake -S kernel -B build \
               -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+              -DKERNEL_TESTS=ON \
+              -DKERNEL_TEST_EXIT=ON
 
     - name: Build
-      run: | 
-          cmake --build build --config ${{env.BUILD_TYPE}} 
+      run: cmake --build build --config ${{env.BUILD_TYPE}}
 
-    - name: Test
-      working-directory: build
-      # Execute tests defined by the CMake configuration.
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C ${{env.BUILD_TYPE}}
-  
+    - name: Run kernel tests in QEMU
+      run: |
+        chmod +x ./scripts/run_kernel_tests.sh
+        WORK_DIR=qemu-test ./scripts/run_kernel_tests.sh
+
+    - name: Upload serial log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernel-test-serial-log
+        path: qemu-test/serial.log
+        if-no-files-found: ignore
+
     - name: Run clang-tidy
       run: |
         chmod +x ./lint.sh
@@ -55,4 +85,3 @@ jobs:
           echo "clang-tidy found warnings or errors"
           exit 1
         fi
-

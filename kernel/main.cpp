@@ -1,5 +1,6 @@
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
+#include "hardware/serial.hpp"
 #include "interrupt/idt.hpp"
 #include "memory/bootstrap_allocator.hpp"
 #include "memory/buddy_system.hpp"
@@ -27,6 +28,8 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 					 const MemoryMap& memory_map,
 					 const kernel::timers::acpi::RootSystemDescriptionPointer& rsdp)
 {
+	kernel::hw::serial::initialize();
+
 	kernel::graphics::initialize(frame_buffer_conf, { 0, 0, 0 });
 
 	kernel::graphics::initialize_font();
