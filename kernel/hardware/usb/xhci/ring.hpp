@@ -28,11 +28,23 @@ public:
 
 	void initialize(size_t buf_size);
 
+	/**
+	 * @brief Push a TRB to the ring
+	 * @param trb TRB to push
+	 * @return Pointer to the TRB written on the ring, or nullptr when the ring
+	 * is full or not initialized
+	 */
 	template<class trb_type>
 	trb* push(const trb_type& trb)
 	{
 		return push(trb.data);
 	}
+
+	/**
+	 * @brief Advance the consumer position past a TRB the xHC has processed
+	 * @param consumed_trb Pointer to the processed TRB reported by an event
+	 */
+	void on_consumed(const trb* consumed_trb);
 
 	trb* buffer() const { return buffer_; }
 
@@ -42,6 +54,7 @@ private:
 
 	bool cycle_bit_;
 	size_t write_index_;
+	size_t read_index_ = 0;
 
 	void copy_to_last(const std::array<uint32_t, 4>& data);
 

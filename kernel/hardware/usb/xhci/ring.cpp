@@ -16,6 +16,7 @@ void Ring::initialize(size_t buf_size)
 {
 	cycle_bit_ = true;
 	write_index_ = 0;
+	read_index_ = 0;
 	buffer_size_ = buf_size;
 	void* buffer_ptr;
 	ALLOC_OR_RETURN(buffer_ptr, sizeof(trb) * buffer_size_,
@@ -35,6 +36,22 @@ void Ring::copy_to_last(const std::array<uint32_t, 4>& data)
 
 trb* Ring::push(const std::array<uint32_t, 4>& data)
 {
+	if (buffer_ == nullptr || buffer_size_ < 2) {
+		LOG_ERROR("ring is not initialized");
+		return nullptr;
+	}
+
+	// The last slot is reserved for the link TRB.
+	size_t next_write_index = write_index_ + 1;
+	if (next_write_index == buffer_size_ - 1) {
+		next_write_index = 0;
+	}
+
+	if (next_write_index == read_index_) {
+		LOG_ERROR("ring is full");
+		return nullptr;
+	}
+
 	auto* trb_ptr = &buffer_[write_index_];
 	copy_to_last(data);
 
@@ -49,6 +66,21 @@ trb* Ring::push(const std::array<uint32_t, 4>& data)
 	}
 
 	return trb_ptr;
+}
+
+void Ring::on_consumed(const trb* consumed_trb)
+{
+	if (buffer_ == nullptr || consumed_trb < buffer_ ||
+		consumed_trb >= buffer_ + buffer_size_) {
+		return;
+	}
+
+	size_t next_read_index = static_cast<size_t>(consumed_trb - buffer_) + 1;
+	if (next_read_index >= buffer_size_ - 1) {
+		next_read_index = 0;
+	}
+
+	read_index_ = next_read_index;
 }
 
 void EventRing::initialize(size_t buf_size,

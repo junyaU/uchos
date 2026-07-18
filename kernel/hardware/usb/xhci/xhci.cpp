@@ -20,6 +20,32 @@ namespace
 {
 using namespace kernel::hw::usb::xhci;
 
+// xHCI completion code indicating a successful command (xHCI spec 6.4.5).
+constexpr uint32_t COMPLETION_CODE_SUCCESS = 1;
+
+// Upper bound for register polling loops so that broken hardware cannot
+// hang the kernel forever.
+constexpr int SPIN_TIMEOUT_ITERATIONS = 1'000'000;
+
+/**
+ * @brief Poll a condition with a bounded spin loop
+ * @param condition Callable returning true when the wait is over
+ * @return true if the condition became true, false on timeout
+ */
+template<class Condition>
+bool wait_with_timeout(Condition condition)
+{
+	for (int i = 0; i < SPIN_TIMEOUT_ITERATIONS; ++i) {
+		if (condition()) {
+			return true;
+		}
+
+		asm volatile("pause");
+	}
+
+	return false;
+}
+
 unsigned int determine_max_packet_size_for_control_pipe(int port_speed)
 {
 	switch (port_speed) {
@@ -29,6 +55,33 @@ unsigned int determine_max_packet_size_for_control_pipe(int port_speed)
 			return 64;
 		default:
 			return 8;
+	}
+}
+
+/**
+ * @brief Kick the reset of the next port waiting to be addressed, if any
+ */
+void proceed_to_next_waiting_port(Controller& xhc)
+{
+	addressing_port = 0;
+	for (int i = 0; i < static_cast<int>(port_connection_states.size()); i++) {
+		if (port_connection_states[i] == PortConnectionState::WAITING_ADDRESSED) {
+			auto p = xhc.port_at(i);
+			reset_port(p);
+			break;
+		}
+	}
+}
+
+/**
+ * @brief Abort the initialization of a single port, keeping the controller
+ * and the other ports running
+ */
+void abort_port_initialization(Controller& xhc, uint8_t port_id)
+{
+	port_connection_states[port_id] = PortConnectionState::DISCONNECTED;
+	if (addressing_port == port_id) {
+		proceed_to_next_waiting_port(xhc);
 	}
 }
 
@@ -42,7 +95,12 @@ void enable_slot(Controller& xhc, Port& p)
 		port_connection_states[p.number()] = PortConnectionState::ENABLEING_SLOT;
 
 		const enable_slot_command_trb cmd{};
-		xhc.command_ring()->push(cmd);
+		if (xhc.command_ring()->push(cmd) == nullptr) {
+			LOG_ERROR("failed to push enable slot command for port %d", p.number());
+			abort_port_initialization(xhc, p.number());
+			return;
+		}
+
 		xhc.doorbell_register_at(0)->ring(0);
 	}
 }
@@ -101,7 +159,12 @@ void address_device(Controller& xhc, uint8_t port_id, uint8_t slot_id)
 	port_connection_states[port_id] = PortConnectionState::ADDRESSING_DEVICE;
 
 	const address_device_command_trb cmd{ dev->input_context(), slot_id };
-	xhc.command_ring()->push(cmd);
+	if (xhc.command_ring()->push(cmd) == nullptr) {
+		LOG_ERROR("failed to push address device command for port %d", port_id);
+		abort_port_initialization(xhc, port_id);
+		return;
+	}
+
 	xhc.doorbell_register_at(0)->ring(0);
 }
 
@@ -145,12 +208,23 @@ void on_event(Controller& xhc, command_completion_event_trb& trb)
 {
 	const auto issuer_type = trb.pointer()->bits.trb_type;
 	const auto slot_id = trb.bits.slot_id;
+	const auto completion_code = trb.bits.completion_code;
+
+	// The command TRB pointed to by this event has been consumed by the xHC.
+	xhc.command_ring()->on_consumed(trb.pointer());
 
 	switch (issuer_type) {
 		case enable_slot_command_trb::TYPE:
 			if (port_connection_states[addressing_port] !=
 				PortConnectionState::ENABLEING_SLOT) {
 				LOG_ERROR("port %d is not enabling slot", addressing_port);
+				break;
+			}
+
+			if (completion_code != COMPLETION_CODE_SUCCESS) {
+				LOG_ERROR("enable slot command failed on port %d: completion code %u",
+						  addressing_port, completion_code);
+				abort_port_initialization(xhc, addressing_port);
 				break;
 			}
 
@@ -177,15 +251,15 @@ void on_event(Controller& xhc, command_completion_event_trb& trb)
 				break;
 			}
 
-			addressing_port = 0;
-			for (int i = 0; i < port_connection_states.size(); i++) {
-				if (port_connection_states[i] ==
-					PortConnectionState::WAITING_ADDRESSED) {
-					auto p = xhc.port_at(i);
-					reset_port(p);
-					break;
-				}
+			if (completion_code != COMPLETION_CODE_SUCCESS) {
+				LOG_ERROR(
+						"address device command failed on port %d: completion code %u",
+						port_id, completion_code);
+				abort_port_initialization(xhc, port_id);
+				break;
 			}
+
+			proceed_to_next_waiting_port(xhc);
 
 			initialize_device(xhc, port_id, slot_id);
 			break;
@@ -205,6 +279,14 @@ void on_event(Controller& xhc, command_completion_event_trb& trb)
 				break;
 			}
 
+			if (completion_code != COMPLETION_CODE_SUCCESS) {
+				LOG_ERROR("configure endpoint command failed on port %d: completion "
+						  "code %u",
+						  port_id, completion_code);
+				abort_port_initialization(xhc, port_id);
+				break;
+			}
+
 			complete_configuration(xhc, port_id, slot_id);
 			break;
 		}
@@ -215,7 +297,7 @@ void on_event(Controller& xhc, command_completion_event_trb& trb)
 	}
 }
 
-void request_hc_ownership(uintptr_t mmio_base, hcc_params1_register hccp)
+bool request_hc_ownership(uintptr_t mmio_base, hcc_params1_register hccp)
 {
 	const ExtendedRegisterList extended_regs{ mmio_base, hccp };
 
@@ -223,22 +305,26 @@ void request_hc_ownership(uintptr_t mmio_base, hcc_params1_register hccp)
 			extended_regs.begin(), extended_regs.end(),
 			[](auto& reg) { return reg.read().bits.capability_id == 1; });
 	if (ext_usb_legacy_support == extended_regs.end()) {
-		return;
+		return true;
 	}
 
 	auto& reg = reinterpret_cast<MemoryMappedRegister<usb_legacy_support_bitmap>&>(
 			*ext_usb_legacy_support);
 	auto r = reg.read();
 	if (r.bits.hc_os_owned_semaphore) {
-		return;
+		return true;
 	}
 
 	r.bits.hc_os_owned_semaphore = 1;
 	reg.write(r);
 
-	do {
-		r = reg.read();
-	} while (r.bits.hc_os_owned_semaphore == 0);
+	if (!wait_with_timeout(
+				[&reg] { return reg.read().bits.hc_os_owned_semaphore != 0; })) {
+		LOG_ERROR("timed out waiting for xHC ownership handover from BIOS");
+		return false;
+	}
+
+	return true;
 }
 } // namespace
 
@@ -253,11 +339,13 @@ Controller::Controller(uintptr_t mmio_base)
 {
 }
 
-void Controller::initialize()
+bool Controller::initialize()
 {
 	device_manager_.initialize(DEVICE_SIZE);
 
-	request_hc_ownership(mmio_base_, cap_regs_->hcc_params1.read());
+	if (!request_hc_ownership(mmio_base_, cap_regs_->hcc_params1.read())) {
+		return false;
+	}
 
 	// Stop the controller for initialization
 	auto usb_command = op_regs_->usb_cmd.read();
@@ -269,16 +357,29 @@ void Controller::initialize()
 	}
 
 	op_regs_->usb_cmd.write(usb_command);
-	while (!op_regs_->usb_sts.read().bits.host_controller_halted) {
+	if (!wait_with_timeout([this] {
+			return op_regs_->usb_sts.read().bits.host_controller_halted != 0;
+		})) {
+		LOG_ERROR("timed out waiting for xHC to halt");
+		return false;
 	}
 
 	// Reset controller
 	usb_command = op_regs_->usb_cmd.read();
 	usb_command.bits.host_controller_reset = true;
 	op_regs_->usb_cmd.write(usb_command);
-	while (op_regs_->usb_cmd.read().bits.host_controller_reset) {
+	if (!wait_with_timeout([this] {
+			return op_regs_->usb_cmd.read().bits.host_controller_reset == 0;
+		})) {
+		LOG_ERROR("timed out waiting for xHC reset to complete");
+		return false;
 	}
-	while (op_regs_->usb_sts.read().bits.controller_not_ready) {
+
+	if (!wait_with_timeout([this] {
+			return op_regs_->usb_sts.read().bits.controller_not_ready == 0;
+		})) {
+		LOG_ERROR("timed out waiting for xHC to become ready");
+		return false;
 	}
 
 	auto config = op_regs_->config.read();
@@ -291,10 +392,15 @@ void Controller::initialize()
 			(hcs_params2.bits.max_scratchpad_buffers_high << 5);
 
 	if (max_scratchpad_buffers > 0) {
-		void* scratchpad_buf_arr_ptr;
-		ALLOC_OR_RETURN(scratchpad_buf_arr_ptr,
-						sizeof(void*) * max_scratchpad_buffers,
-						kernel::memory::ALLOC_UNINITIALIZED);
+		void* scratchpad_buf_arr_ptr = kernel::memory::alloc(
+				sizeof(void*) * max_scratchpad_buffers,
+				kernel::memory::ALLOC_UNINITIALIZED);
+		if (scratchpad_buf_arr_ptr == nullptr) {
+			LOG_ERROR("Memory allocation failed: scratchpad_buf_arr_ptr (size=%zu)",
+					  sizeof(void*) * max_scratchpad_buffers);
+			return false;
+		}
+
 		auto* scratchpad_buf_arr = reinterpret_cast<void**>(scratchpad_buf_arr_ptr);
 
 		for (int i = 0; i < max_scratchpad_buffers; i++) {
@@ -305,7 +411,7 @@ void Controller::initialize()
 						"Memory allocation failed: scratchpad_buf_arr[%d] "
 						"(size=4096)",
 						i);
-				return;
+				return false;
 			}
 		}
 
@@ -332,16 +438,24 @@ void Controller::initialize()
 	usb_command = op_regs_->usb_cmd.read();
 	usb_command.bits.interrupter_enable = true;
 	op_regs_->usb_cmd.write(usb_command);
+
+	return true;
 }
 
-void Controller::run()
+bool Controller::run()
 {
 	auto usb_command = op_regs_->usb_cmd.read();
 	usb_command.bits.run_stop = true;
 	op_regs_->usb_cmd.write(usb_command);
 
-	while (op_regs_->usb_sts.read().bits.host_controller_halted) {
+	if (!wait_with_timeout([this] {
+			return op_regs_->usb_sts.read().bits.host_controller_halted == 0;
+		})) {
+		LOG_ERROR("timed out waiting for xHC to start running");
+		return false;
 	}
+
+	return true;
 }
 
 DoorbellRegister* Controller::doorbell_register_at(uint8_t index)
@@ -420,7 +534,12 @@ void configure_endpoints(Controller& xhc, Device& dev)
 	port_connection_states[port_id] = PortConnectionState::CONFIGURING_ENDPOINTS;
 
 	const configure_endpoint_command_trb cmd{ dev.input_context(), dev.slot_id() };
-	xhc.command_ring()->push(cmd);
+	if (xhc.command_ring()->push(cmd) == nullptr) {
+		LOG_ERROR("failed to push configure endpoint command for port %d", port_id);
+		abort_port_initialization(xhc, port_id);
+		return;
+	}
+
 	xhc.doorbell_register_at(0)->ring(0);
 }
 
@@ -481,9 +600,11 @@ void initialize()
 
 	Controller& xhc = *host_controller;
 
-	xhc.initialize();
-
-	xhc.run();
+	if (!xhc.initialize() || !xhc.run()) {
+		LOG_ERROR("failed to initialize xHCI controller, continuing without USB");
+		host_controller = nullptr;
+		return;
+	}
 
 	for (int i = 1; i < xhc.max_ports(); i++) {
 		auto p = xhc.port_at(i);
@@ -500,6 +621,10 @@ void initialize()
 
 void process_events()
 {
+	if (host_controller == nullptr) {
+		return;
+	}
+
 	while (host_controller->primary_event_ring()->has_front()) {
 		process_event(*host_controller);
 	}

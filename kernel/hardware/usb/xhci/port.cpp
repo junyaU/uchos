@@ -5,6 +5,13 @@
 
 namespace kernel::hw::usb::xhci
 {
+
+namespace
+{
+// Bounded wait so that broken hardware cannot hang the kernel forever
+constexpr int SPIN_TIMEOUT_ITERATIONS = 1'000'000;
+} // namespace
+
 uint8_t Port::number() const { return port_num_; }
 
 bool Port::is_connected() const
@@ -29,14 +36,23 @@ bool Port::is_port_reset_changed() const
 
 int Port::speed() const { return regs_.port_sc.read().bits.port_speed; }
 
-void Port::reset()
+bool Port::reset()
 {
 	auto portsc = regs_.port_sc.read();
 	portsc.data[0] &= 0x0e00c3e0U;
 	portsc.data[0] |= 0x00020010U;
 	regs_.port_sc.write(portsc);
-	while (regs_.port_sc.read().bits.port_reset) {
+
+	for (int i = 0; i < SPIN_TIMEOUT_ITERATIONS; ++i) {
+		if (!regs_.port_sc.read().bits.port_reset) {
+			return true;
+		}
+
+		asm volatile("pause");
 	}
+
+	LOG_ERROR("timed out waiting for port %d reset to complete", port_num_);
+	return false;
 }
 
 void reset_port(Port& p)
@@ -60,7 +76,11 @@ void reset_port(Port& p)
 
 	addressing_port = p.number();
 	port_connection_states[p.number()] = PortConnectionState::RESETTING_PORT;
-	p.reset();
+	if (!p.reset()) {
+		// Give up on this port so that other ports can still be addressed.
+		port_connection_states[p.number()] = PortConnectionState::DISCONNECTED;
+		addressing_port = 0;
+	}
 }
 
 void configure_port(Port& p)
