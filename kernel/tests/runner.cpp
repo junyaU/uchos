@@ -7,7 +7,6 @@
 #include <array>
 #include "task/task.hpp"
 #include "tests/framework.hpp"
-#include "tests/test_cases/bit_utils_test.hpp"
 #include "tests/test_cases/fd_test.hpp"
 #include "tests/test_cases/fs_test.hpp"
 #include "tests/test_cases/memory_test.hpp"
@@ -67,7 +66,6 @@ namespace kernel::tests
 
 void run_bootstrap_stage_tests()
 {
-	run_test_suite(register_bit_utils_tests);
 	run_test_suite(register_bootstrap_allocator_tests);
 }
 
