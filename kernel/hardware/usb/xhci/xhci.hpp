@@ -24,8 +24,20 @@ class Controller
 {
 public:
 	Controller(uintptr_t mmio_base);
-	void initialize();
-	void run();
+
+	/**
+	 * @brief Reset and set up the controller
+	 * @return true on success, false when the hardware does not respond in
+	 * time or a required allocation fails
+	 */
+	bool initialize();
+
+	/**
+	 * @brief Start the controller
+	 * @return true on success, false when the controller does not leave the
+	 * halted state in time
+	 */
+	bool run();
 	Ring* command_ring() { return &command_ring_; }
 	EventRing* primary_event_ring() { return &event_ring_; }
 	DoorbellRegister* doorbell_register_at(uint8_t index);

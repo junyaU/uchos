@@ -52,22 +52,42 @@ void Device::control_in(const ControlTransferData& data)
 	auto status_trb = status_stage_trb{};
 
 	if (data.buf != nullptr) {
-		auto* setup_trb_position = trb_dynamic_cast<setup_stage_trb>(
-				transfer_ring->push(make_setup_stage_trb(
-						data.setup_data, setup_stage_trb::IN_DATA_STAGE)));
+		trb* pushed_setup_trb = transfer_ring->push(make_setup_stage_trb(
+				data.setup_data, setup_stage_trb::IN_DATA_STAGE));
+		if (pushed_setup_trb == nullptr) {
+			LOG_ERROR("failed to push setup stage trb");
+			return;
+		}
+
+		auto* setup_trb_position =
+				trb_dynamic_cast<setup_stage_trb>(pushed_setup_trb);
 		auto data_trb = make_data_stage_trb(data.buf, data.len, true);
 		data_trb.bits.interrupt_on_completion = true;
 		auto* data_trb_position = transfer_ring->push(data_trb);
+		if (data_trb_position == nullptr ||
+			transfer_ring->push(status_trb) == nullptr) {
+			LOG_ERROR("failed to push control transfer trbs");
+			return;
+		}
 
-		transfer_ring->push(status_trb);
 		setup_stages_.put(data_trb_position, setup_trb_position);
 	} else {
-		auto* setup_trb_position = trb_dynamic_cast<setup_stage_trb>(
-				transfer_ring->push(make_setup_stage_trb(
-						data.setup_data, setup_stage_trb::NO_DATA_STAGE)));
+		trb* pushed_setup_trb = transfer_ring->push(make_setup_stage_trb(
+				data.setup_data, setup_stage_trb::NO_DATA_STAGE));
+		if (pushed_setup_trb == nullptr) {
+			LOG_ERROR("failed to push setup stage trb");
+			return;
+		}
+
+		auto* setup_trb_position =
+				trb_dynamic_cast<setup_stage_trb>(pushed_setup_trb);
 		status_trb.bits.direction = true;
 		status_trb.bits.interrupt_on_completion = true;
 		auto* status_trb_position = transfer_ring->push(status_trb);
+		if (status_trb_position == nullptr) {
+			LOG_ERROR("failed to push status stage trb");
+			return;
+		}
 
 		setup_stages_.put(status_trb_position, setup_trb_position);
 	}
@@ -95,21 +115,41 @@ void Device::control_out(const ControlTransferData& data)
 	status_trb.bits.direction = true;
 
 	if (data.buf != nullptr) {
-		auto* setup_trb_position = trb_dynamic_cast<setup_stage_trb>(
-				transfer_ring->push(make_setup_stage_trb(
-						data.setup_data, setup_stage_trb::OUT_DATA_STAGE)));
+		trb* pushed_setup_trb = transfer_ring->push(make_setup_stage_trb(
+				data.setup_data, setup_stage_trb::OUT_DATA_STAGE));
+		if (pushed_setup_trb == nullptr) {
+			LOG_ERROR("failed to push setup stage trb");
+			return;
+		}
+
+		auto* setup_trb_position =
+				trb_dynamic_cast<setup_stage_trb>(pushed_setup_trb);
 		auto data_trb = make_data_stage_trb(data.buf, data.len, false);
 		data_trb.bits.interrupt_on_completion = true;
 		auto* data_trb_position = transfer_ring->push(data_trb);
-		transfer_ring->push(status_trb);
+		if (data_trb_position == nullptr ||
+			transfer_ring->push(status_trb) == nullptr) {
+			LOG_ERROR("failed to push control transfer trbs");
+			return;
+		}
 
 		setup_stages_.put(data_trb_position, setup_trb_position);
 	} else {
-		auto* setup_trb_position = trb_dynamic_cast<setup_stage_trb>(
-				transfer_ring->push(make_setup_stage_trb(
-						data.setup_data, setup_stage_trb::NO_DATA_STAGE)));
+		trb* pushed_setup_trb = transfer_ring->push(make_setup_stage_trb(
+				data.setup_data, setup_stage_trb::NO_DATA_STAGE));
+		if (pushed_setup_trb == nullptr) {
+			LOG_ERROR("failed to push setup stage trb");
+			return;
+		}
+
+		auto* setup_trb_position =
+				trb_dynamic_cast<setup_stage_trb>(pushed_setup_trb);
 		status_trb.bits.interrupt_on_completion = true;
 		auto* status_trb_position = transfer_ring->push(status_trb);
+		if (status_trb_position == nullptr) {
+			LOG_ERROR("failed to push status stage trb");
+			return;
+		}
 
 		setup_stages_.put(status_trb_position, setup_trb_position);
 	}
@@ -134,7 +174,11 @@ void Device::interrupt_in(const InterruptTransferData& data)
 	trb.bits.interrupt_on_short_packet = true;
 	trb.bits.interrupt_on_completion = true;
 
-	transfer_ring->push(trb);
+	if (transfer_ring->push(trb) == nullptr) {
+		LOG_ERROR("failed to push interrupt transfer trb");
+		return;
+	}
+
 	doorbell_register_->ring(dc_index.value);
 }
 
@@ -149,6 +193,14 @@ void Device::interrupt_out(const InterruptTransferData& data)
 void Device::on_transfer_event_received(const transfer_event_trb& event_trb)
 {
 	const auto residual_length = event_trb.bits.trb_transfer_length;
+
+	// Advance the transfer ring's consumer position so that Ring::push can
+	// detect a full ring.
+	const DeviceContextIndex event_dc_index{ event_trb.EndpointId() };
+	if (event_dc_index.value >= 1 && event_dc_index.value <= 31 &&
+		transfer_rings_[event_dc_index.value - 1] != nullptr) {
+		transfer_rings_[event_dc_index.value - 1]->on_consumed(event_trb.pointer());
+	}
 
 	const bool is_success = event_trb.bits.completion_code == 1 ||
 							event_trb.bits.completion_code == 13;

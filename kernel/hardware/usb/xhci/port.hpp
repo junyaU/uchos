@@ -43,7 +43,12 @@ public:
 	bool is_connect_status_changed() const;
 	bool is_port_reset_changed() const;
 	int speed() const;
-	void reset();
+
+	/**
+	 * @brief Reset the port
+	 * @return true on success, false when the reset does not complete in time
+	 */
+	bool reset();
 
 	void clear_connect_status_changed() { CLEAR_STATUS_BIT(connect_status_change); }
 

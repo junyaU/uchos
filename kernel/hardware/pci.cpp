@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "asm_utils.h"
+#include "graphics/log.hpp"
 #include "hardware/mm_register.hpp"
 
 namespace kernel::hw::pci
@@ -63,6 +64,12 @@ bool is_single_function_device(uint8_t header_type)
 
 void read_function(uint8_t bus, uint8_t dev, uint8_t func)
 {
+	if (num_devices >= static_cast<int>(devices.size())) {
+		LOG_ERROR("pci device table is full: ignoring device %d:%d.%d", bus, dev,
+				  func);
+		return;
+	}
+
 	auto header_type = read_header_type(bus, dev, func);
 	auto class_code = read_class_code(bus, dev, func);
 
@@ -75,8 +82,7 @@ void read_function(uint8_t bus, uint8_t dev, uint8_t func)
 	d.vendor_id = read_vendor_id(bus, dev, func);
 	d.device_id = read_device_id(bus, dev, func);
 
-	devices[dev] = d;
-	++num_devices;
+	devices[num_devices++] = d;
 }
 
 void read_device(uint8_t bus, uint8_t device)
