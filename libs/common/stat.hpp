@@ -14,7 +14,7 @@ enum class StatType : uint8_t {
 };
 
 struct Stat {
-	char name[11];
+	char name[13]; ///< 8.3 name: up to 12 characters plus null terminator
 	size_t size;
 	StatType type;
 	uint64_t fs_id;

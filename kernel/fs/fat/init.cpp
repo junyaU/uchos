@@ -11,6 +11,7 @@
 #include <queue>
 #include "fat.hpp"
 #include "fs/path.hpp"
+#include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
 #include "internal_common.hpp"
 #include "memory/slab.hpp"
@@ -30,6 +31,12 @@ std::queue<Message> pending_messages;
 
 void handle_initialize(const Message& m)
 {
+	if (IS_ERR(m.data.blk_io.result) || m.data.blk_io.buf == nullptr) {
+		LOG_ERROR("FAT32 init read failed: sector=%u result=%d",
+				  m.data.blk_io.sector, m.data.blk_io.result);
+		return;
+	}
+
 	if (m.data.blk_io.sector == BOOT_SECTOR) {
 		VOLUME_BPB =
 				reinterpret_cast<kernel::fs::BiosParameterBlock*>(m.data.blk_io.buf);

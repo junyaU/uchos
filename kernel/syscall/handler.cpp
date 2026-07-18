@@ -273,6 +273,11 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 			kernel::task::wait_for_message(MsgType::IPC_READ_FILE_DATA);
 	kernel::memory::free(entry);
 
+	if (data_m.data.fs.buf == nullptr) {
+		LOG_ERROR("failed to read file data for exec");
+		return ERR_FAILED_READ_FROM_DEVICE;
+	}
+
 	// Build the new address space and switch CR3 to it BEFORE releasing the
 	// old one: config_new_page_table() copies the kernel space out of the
 	// active table, and the CPU keeps translating through the old table

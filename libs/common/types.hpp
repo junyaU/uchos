@@ -30,6 +30,8 @@ constexpr int ERR_NO_DEVICE = -9;
 constexpr int ERR_FAILED_INIT_DEVICE = -10;
 constexpr int ERR_FAILED_WRITE_TO_DEVICE = -11;
 constexpr int ERR_QUEUE_FULL = -12;
+constexpr int ERR_FAILED_READ_FROM_DEVICE = -13;
+constexpr int ERR_NO_SPACE = -14;
 
 // file descriptor
 constexpr int NO_FD = -1;

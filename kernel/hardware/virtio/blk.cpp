@@ -12,47 +12,75 @@
 
 namespace
 {
-void handle_read_request(const Message& m)
+// Pre-fill a reply so error responses always carry the request id and the
+// error kind: an all-zero reply used to collide with cached request id 0 and
+// made the FS side memcpy from a null buffer (issue #313).
+Message make_blk_reply(const Message& m)
 {
 	Message reply = { .type = m.data.blk_io.dst_type,
 					  .sender = process_ids::VIRTIO_BLK };
+	reply.data.blk_io.buf = nullptr;
+	reply.data.blk_io.sector = m.data.blk_io.sector;
+	reply.data.blk_io.len = m.data.blk_io.len;
+	reply.data.blk_io.sequence = m.data.blk_io.sequence;
+	reply.data.blk_io.request_id = m.data.blk_io.request_id;
+	reply.data.blk_io.result = OK;
+
+	return reply;
+}
+
+void handle_read_request(const Message& m)
+{
+	Message reply = make_blk_reply(m);
 
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len;
 
-	void* buf_ptr;
-	ALLOC_OR_RETURN(buf_ptr, len, kernel::memory::ALLOC_ZEROED);
+	void* buf_ptr = kernel::memory::alloc(len, kernel::memory::ALLOC_ZEROED);
+	if (buf_ptr == nullptr) {
+		LOG_ERROR("failed to allocate read buffer: len=%d", len);
+		reply.data.blk_io.result = ERR_NO_MEMORY;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
+
 	char* buf = static_cast<char*>(buf_ptr);
 
-	if (IS_ERR(kernel::hw::virtio::read_from_blk_device(buf, sector, len))) {
-		LOG_ERROR("failed to read from blk device");
+	const error_t err = kernel::hw::virtio::read_from_blk_device(buf, sector, len);
+	if (IS_ERR(err)) {
+		LOG_ERROR("failed to read from blk device: %d", err);
 		kernel::memory::free(buf);
+		reply.data.blk_io.result = err;
 		kernel::task::send_message(m.sender, reply);
 		return;
 	}
 
 	reply.data.blk_io.buf = buf;
-	reply.data.blk_io.sector = sector;
-	reply.data.blk_io.len = len;
-	reply.data.blk_io.sequence = m.data.blk_io.sequence;
-	reply.data.blk_io.request_id = m.data.blk_io.request_id;
 
 	kernel::task::send_message(m.sender, reply);
 }
 
 void handle_write_request(const Message& m)
 {
+	Message reply = make_blk_reply(m);
+
 	const int sector = m.data.blk_io.sector;
 	const int len = m.data.blk_io.len < kernel::hw::virtio::SECTOR_SIZE
 							? kernel::hw::virtio::SECTOR_SIZE
 							: m.data.blk_io.len;
 
-	if (IS_ERR(kernel::hw::virtio::write_to_blk_device(
-				static_cast<const char*>(m.data.blk_io.buf), sector, len))) {
-		LOG_ERROR("failed to write to blk device");
+	const error_t err = kernel::hw::virtio::write_to_blk_device(
+			static_cast<const char*>(m.data.blk_io.buf), sector, len);
+	if (IS_ERR(err)) {
+		LOG_ERROR("failed to write to blk device: %d", err);
+		reply.data.blk_io.result = err;
 	}
 
 	kernel::memory::free(m.data.blk_io.buf);
+
+	// Always report completion so the FS side can acknowledge the requester
+	// instead of claiming success before the device write finished.
+	kernel::task::send_message(m.sender, reply);
 }
 } // namespace
 
@@ -150,7 +178,7 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 		LOG_ERROR("Failed to read from block device. status: %d", req->status);
 		kernel::memory::free(req);
 
-		return ERR_FAILED_WRITE_TO_DEVICE;
+		return ERR_FAILED_READ_FROM_DEVICE;
 	}
 
 	kernel::memory::free(req);

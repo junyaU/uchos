@@ -135,6 +135,13 @@ void shell_service()
 
 	const Message data_m =
 			kernel::task::wait_for_message(MsgType::IPC_READ_FILE_DATA);
+	if (data_m.data.fs.buf == nullptr) {
+		LOG_ERROR("failed to read shell binary");
+		while (true) {
+			__asm__("hlt");
+		}
+	}
+
 	CURRENT_TASK->is_initilized = true;
 	kernel::fs::fat::execute_file(data_m.data.fs.buf, "shell", nullptr);
 }

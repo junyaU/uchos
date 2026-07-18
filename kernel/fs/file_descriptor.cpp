@@ -22,21 +22,24 @@ void init_process_fd_table(FileDescriptor* fd_table, size_t table_size)
 	// Set up standard file descriptors
 	// stdin
 	if (STDIN_FILENO < table_size) {
-		strncpy(fd_table[STDIN_FILENO].name, "stdin", 11);
+		strncpy(fd_table[STDIN_FILENO].name, "stdin",
+				sizeof(fd_table[STDIN_FILENO].name) - 1);
 		fd_table[STDIN_FILENO].size = 0;
 		fd_table[STDIN_FILENO].offset = 0;
 	}
 
 	// stdout
 	if (STDOUT_FILENO < table_size) {
-		strncpy(fd_table[STDOUT_FILENO].name, "stdout", 11);
+		strncpy(fd_table[STDOUT_FILENO].name, "stdout",
+				sizeof(fd_table[STDOUT_FILENO].name) - 1);
 		fd_table[STDOUT_FILENO].size = 0;
 		fd_table[STDOUT_FILENO].offset = 0;
 	}
 
 	// stderr
 	if (STDERR_FILENO < table_size) {
-		strncpy(fd_table[STDERR_FILENO].name, "stderr", 11);
+		strncpy(fd_table[STDERR_FILENO].name, "stderr",
+				sizeof(fd_table[STDERR_FILENO].name) - 1);
 		fd_table[STDERR_FILENO].size = 0;
 		fd_table[STDERR_FILENO].offset = 0;
 	}
@@ -58,8 +61,8 @@ fd_t allocate_process_fd(FileDescriptor* fd_table,
 		if (fd_table[i].is_unused()) {
 			fd_table[i].size = size;
 			fd_table[i].offset = 0;
-			strncpy(fd_table[i].name, name, 10);
-			fd_table[i].name[10] = '\0';
+			strncpy(fd_table[i].name, name, sizeof(fd_table[i].name) - 1);
+			fd_table[i].name[sizeof(fd_table[i].name) - 1] = '\0';
 			return i;
 		}
 	}
