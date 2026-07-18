@@ -45,7 +45,6 @@ void test_register(const char* name, test_func_t func)
 void test_run()
 {
 	stats.total = test_count;
-	LOG_TEST("running %d tests", test_count);
 
 	for (int i = 0; i < test_count; i++) {
 		current_test_failed = false;
@@ -63,8 +62,12 @@ void test_run()
 	total_stats.passed += stats.passed;
 	total_stats.failed += stats.failed;
 
-	LOG_TEST("suite result: total=%d passed=%d failed=%d", stats.total, stats.passed,
-			 stats.failed);
+	// The screen console cannot scroll yet, so stay silent unless something
+	// failed; the cumulative result is printed by test_print_summary().
+	if (stats.failed > 0) {
+		LOG_TEST("suite result: total=%d passed=%d failed=%d", stats.total,
+				 stats.passed, stats.failed);
+	}
 }
 
 void run_test_suite(void (*test_suite)())

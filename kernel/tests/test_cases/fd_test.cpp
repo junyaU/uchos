@@ -38,8 +38,6 @@ void test_fd_allocation()
 									   ProcessId::from_raw(1));
 	ASSERT_NE(fd1, fd2);
 	ASSERT_GT(fd2, -1);
-
-	LOG_TEST("test_fd_allocation passed");
 }
 
 void test_fd_release()
@@ -66,8 +64,6 @@ void test_fd_release()
 
 	result = fs::release_process_fd(fd_table, 32, STDOUT_FILENO);
 	ASSERT_EQ(result, ERR_INVALID_FD);
-
-	LOG_TEST("test_fd_release passed");
 }
 
 void test_fd_fork_copy()
@@ -107,8 +103,6 @@ void test_fd_fork_copy()
 	ASSERT_TRUE(child_table[STDIN_FILENO].is_used());
 	ASSERT_TRUE(child_table[STDOUT_FILENO].is_used());
 	ASSERT_TRUE(child_table[STDERR_FILENO].is_used());
-
-	LOG_TEST("test_fd_fork_copy passed");
 }
 
 void test_fd_dup2()
@@ -135,8 +129,6 @@ void test_fd_dup2()
 	fs::FileDescriptor* redirected = fs::get_process_fd(fd_table, 32, STDOUT_FILENO);
 	ASSERT_NOT_NULL(redirected);
 	ASSERT_EQ(strcmp(redirected->name, "output.txt"), 0);
-
-	LOG_TEST("test_fd_dup2 passed");
 }
 
 void test_fd_limits()
@@ -167,8 +159,6 @@ void test_fd_limits()
 	fd_t new_fd = fs::allocate_process_fd(fd_table, 8, "new.txt", 100,
 										  ProcessId::from_raw(1));
 	ASSERT_EQ(new_fd, fds[0]); // Should reuse the freed slot
-
-	LOG_TEST("test_fd_limits passed");
 }
 
 void test_release_all_fds()
@@ -201,8 +191,6 @@ void test_release_all_fds()
 	ASSERT_TRUE(fd_table[STDIN_FILENO].is_used());
 	ASSERT_TRUE(fd_table[STDOUT_FILENO].is_used());
 	ASSERT_TRUE(fd_table[STDERR_FILENO].is_used());
-
-	LOG_TEST("test_release_all_fds passed");
 }
 
 void register_fd_tests()
