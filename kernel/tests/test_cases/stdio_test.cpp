@@ -280,13 +280,8 @@ void test_large_write_redirection()
 	CURRENT_TASK = prev_task;
 }
 
-// TEMPORARY: intentional failure to prove the CI gate detects failing
-// tests (issue #311 completion criterion). Reverted immediately after.
-void test_intentional_ci_gate_check() { ASSERT_EQ(1, 2); }
-
 void register_stdio_tests()
 {
-	test_register("test_intentional_ci_gate_check", test_intentional_ci_gate_check);
 	test_register("test_fd_table_init", test_fd_table_init);
 	test_register("test_write_to_stdout", test_write_to_stdout);
 	test_register("test_write_to_stderr", test_write_to_stderr);
