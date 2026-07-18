@@ -138,16 +138,32 @@ error_t Task::copy_parent_page_table()
 		return ERR_NO_TASK;
 	}
 
-	parent->page_table_snapshot =
+	kernel::memory::page_table_entry* snapshot =
 			reinterpret_cast<kernel::memory::page_table_entry*>(parent->ctx.cr3);
 
 	kernel::memory::page_table_entry* parent_table =
-			kernel::memory::clone_page_table(parent->page_table_snapshot, false);
+			kernel::memory::clone_page_table(snapshot, false);
+	if (parent_table == nullptr) {
+		return ERR_NO_MEMORY;
+	}
+
+	// Move the running parent onto its CoW clone. Update ctx.cr3 too so an
+	// exit before the next context save does not tear down the wrong table.
 	set_cr3(reinterpret_cast<uint64_t>(parent_table));
+	parent->ctx.cr3 = reinterpret_cast<uint64_t>(parent_table);
 
 	kernel::memory::page_table_entry* child_table =
-			kernel::memory::clone_page_table(parent->page_table_snapshot, false);
+			kernel::memory::clone_page_table(snapshot, false);
+	if (child_table == nullptr) {
+		return ERR_NO_MEMORY;
+	}
+
 	ctx.cr3 = reinterpret_cast<uint64_t>(child_table);
+
+	// Both clones hold their own references to the CoW data pages now, and
+	// nothing runs on the pre-fork table anymore; release it (issue #313
+	// page table leak).
+	kernel::memory::clean_page_tables(snapshot);
 
 	return OK;
 }

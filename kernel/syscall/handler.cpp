@@ -256,12 +256,12 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 			kernel::task::wait_for_message(MsgType::IPC_READ_FILE_DATA);
 	kernel::memory::free(entry);
 
-	// Save current FD table before cleaning page tables
-	auto saved_fd_table = kernel::task::CURRENT_TASK->fd_table;
-
-	kernel::memory::page_table_entry* current_page_table =
+	// Build the new address space and switch CR3 to it BEFORE releasing the
+	// old one: config_new_page_table() copies the kernel space out of the
+	// active table, and the CPU keeps translating through the old table
+	// until the switch (issue #313 use-after-free).
+	kernel::memory::page_table_entry* old_page_table =
 			kernel::memory::get_active_page_table();
-	kernel::memory::clean_page_tables(current_page_table);
 
 	kernel::memory::page_table_entry* new_page_table =
 			kernel::memory::config_new_page_table();
@@ -271,8 +271,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	kernel::task::CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(new_page_table);
 
-	// Restore FD table after page table switch
-	kernel::task::CURRENT_TASK->fd_table = saved_fd_table;
+	kernel::memory::clean_page_tables(old_page_table);
 
 	// TODO: fix this
 	kernel::fs::fat::execute_file(data_m.data.fs.buf, "", copy_args.data());
