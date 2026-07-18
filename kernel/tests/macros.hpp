@@ -5,6 +5,8 @@
  * This file provides assertion and expectation macros for writing unit tests.
  * ASSERT macros will cause the test to return immediately on failure, while
  * EXPECT macros will log the failure but continue test execution.
+ * Both mark the current test as failed via test_mark_failed() so the
+ * framework counts it in the suite statistics.
  *
  * @date 2024
  */
@@ -13,6 +15,7 @@
 
 #include <cstddef>
 #include "graphics/log.hpp"
+#include "tests/framework.hpp"
 
 /**
  * @brief Assert that two values are equal
@@ -23,6 +26,7 @@
 #define ASSERT_EQ(x, y)                                                             \
 	do {                                                                            \
 		if ((x) != (y)) {                                                           \
+			test_mark_failed();                                                     \
 			LOG_TEST("ASSERT_EQ failed: %d != %d", x, y);                           \
 			return;                                                                 \
 		}                                                                           \
@@ -37,6 +41,7 @@
 #define ASSERT_NE(x, y)                                                             \
 	do {                                                                            \
 		if ((x) == (y)) {                                                           \
+			test_mark_failed();                                                     \
 			LOG_TEST("ASSERT_NE failed: %d == %d", x, y);                           \
 			return;                                                                 \
 		}                                                                           \
@@ -51,6 +56,7 @@
 #define ASSERT_GT(x, y)                                                             \
 	do {                                                                            \
 		if ((x) <= (y)) {                                                           \
+			test_mark_failed();                                                     \
 			LOG_TEST("ASSERT_GT failed: %d <= %d", x, y);                           \
 			return;                                                                 \
 		}                                                                           \
@@ -65,6 +71,7 @@
 #define ASSERT_LT(x, y)                                                             \
 	do {                                                                            \
 		if ((x) >= (y)) {                                                           \
+			test_mark_failed();                                                     \
 			LOG_TEST("ASSERT_LT failed: %d >= %d", x, y);                           \
 			return;                                                                 \
 		}                                                                           \
@@ -78,6 +85,7 @@
 #define ASSERT_TRUE(x)                                                              \
 	do {                                                                            \
 		if (!(x)) {                                                                 \
+			test_mark_failed();                                                     \
 			LOG_TEST("ASSERT_TRUE failed: %d", x);                                  \
 			return;                                                                 \
 		}                                                                           \
@@ -91,6 +99,7 @@
 #define ASSERT_FALSE(x)                                                             \
 	do {                                                                            \
 		if (x) {                                                                    \
+			test_mark_failed();                                                     \
 			LOG_TEST("ASSERT_FALSE failed: %d", x);                                 \
 			return;                                                                 \
 		}                                                                           \
@@ -104,6 +113,7 @@
 #define ASSERT_NULL(x)                                                              \
 	do {                                                                            \
 		if ((x) != nullptr) {                                                       \
+			test_mark_failed();                                                     \
 			LOG_TEST("ASSERT_NULL failed: %d", x);                                  \
 			return;                                                                 \
 		}                                                                           \
@@ -117,6 +127,7 @@
 #define ASSERT_NOT_NULL(x)                                                          \
 	do {                                                                            \
 		if ((x) == NULL) {                                                          \
+			test_mark_failed();                                                     \
 			LOG_TEST("ASSERT_NOT_NULL failed: %d", x);                              \
 			return;                                                                 \
 		}                                                                           \
@@ -131,6 +142,7 @@
 #define EXPECT_EQ(x, y)                                                             \
 	do {                                                                            \
 		if ((x) != (y)) {                                                           \
+			test_mark_failed();                                                     \
 			LOG_TEST("EXPECT_EQ failed: %d != %d", x, y);                           \
 		}                                                                           \
 	} while (0)
@@ -144,6 +156,7 @@
 #define EXPECT_NE(x, y)                                                             \
 	do {                                                                            \
 		if ((x) == (y)) {                                                           \
+			test_mark_failed();                                                     \
 			LOG_TEST("EXPECT_NE failed: %d == %d", x, y);                           \
 		}                                                                           \
 	} while (0)
@@ -151,6 +164,7 @@
 #define EXPECT_GT(x, y)                                                             \
 	do {                                                                            \
 		if ((x) <= (y)) {                                                           \
+			test_mark_failed();                                                     \
 			LOG_TEST("EXPECT_GT failed: %d <= %d", x, y);                           \
 		}                                                                           \
 	} while (0)
@@ -158,6 +172,7 @@
 #define EXPECT_LT(x, y)                                                             \
 	do {                                                                            \
 		if ((x) >= (y)) {                                                           \
+			test_mark_failed();                                                     \
 			LOG_TEST("EXPECT_LT failed: %d >= %d", x, y);                           \
 		}                                                                           \
 	} while (0)
@@ -165,6 +180,7 @@
 #define EXPECT_TRUE(x)                                                              \
 	do {                                                                            \
 		if (!(x)) {                                                                 \
+			test_mark_failed();                                                     \
 			LOG_TEST("EXPECT_TRUE failed: %d", x);                                  \
 		}                                                                           \
 	} while (0)
@@ -172,6 +188,7 @@
 #define EXPECT_FALSE(x)                                                             \
 	do {                                                                            \
 		if (x) {                                                                    \
+			test_mark_failed();                                                     \
 			LOG_TEST("EXPECT_FALSE failed: %d", x);                                 \
 		}                                                                           \
 	} while (0)
@@ -179,6 +196,7 @@
 #define EXPECT_NULL(x)                                                              \
 	do {                                                                            \
 		if ((x) != nullptr) {                                                       \
+			test_mark_failed();                                                     \
 			LOG_TEST("EXPECT_NULL failed: %d", x);                                  \
 		}                                                                           \
 	} while (0)
@@ -191,6 +209,7 @@
 #define EXPECT_NOT_NULL(x)                                                          \
 	do {                                                                            \
 		if ((x) == NULL) {                                                          \
+			test_mark_failed();                                                     \
 			LOG_TEST("EXPECT_NOT_NULL failed: %d", x);                              \
 		}                                                                           \
 	} while (0)

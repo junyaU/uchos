@@ -96,6 +96,13 @@ void test_fd_fork_copy()
 	ASSERT_EQ(strcmp(parent_entry1->name, child_entry1->name), 0);
 	ASSERT_EQ(parent_entry1->size, child_entry1->size);
 
+	fs::FileDescriptor* parent_entry2 = fs::get_process_fd(parent_table, 32, fd2);
+	fs::FileDescriptor* child_entry2 = fs::get_process_fd(child_table, 32, fd2);
+	ASSERT_NOT_NULL(parent_entry2);
+	ASSERT_NOT_NULL(child_entry2);
+	ASSERT_EQ(strcmp(parent_entry2->name, child_entry2->name), 0);
+	ASSERT_EQ(parent_entry2->size, child_entry2->size);
+
 	// Verify standard descriptors are also copied
 	ASSERT_TRUE(child_table[STDIN_FILENO].is_used());
 	ASSERT_TRUE(child_table[STDOUT_FILENO].is_used());
@@ -200,10 +207,10 @@ void test_release_all_fds()
 
 void register_fd_tests()
 {
-	// test_register("test_fd_allocation", test_fd_allocation);
-	// test_register("test_fd_release", test_fd_release);
-	// test_register("test_fd_fork_copy", test_fd_fork_copy);
-	// test_register("test_fd_dup2", test_fd_dup2);
-	// test_register("test_fd_limits", test_fd_limits);
-	// test_register("test_release_all_fds", test_release_all_fds);
+	test_register("test_fd_allocation", test_fd_allocation);
+	test_register("test_fd_release", test_fd_release);
+	test_register("test_fd_fork_copy", test_fd_fork_copy);
+	test_register("test_fd_dup2", test_fd_dup2);
+	test_register("test_fd_limits", test_fd_limits);
+	test_register("test_release_all_fds", test_release_all_fds);
 }

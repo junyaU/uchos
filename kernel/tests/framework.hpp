@@ -53,6 +53,26 @@ void test_register(const char* name, test_func_t func);
 void test_run();
 
 /**
+ * @brief Mark the currently running test as failed
+ *
+ * Called by the assertion macros in tests/macros.hpp when a check fails.
+ * The failure is counted in the statistics reported by test_run().
+ */
+void test_mark_failed();
+
+/**
+ * @brief Print the cumulative test results across all executed suites
+ *
+ * Prints a machine-readable summary line
+ * (TEST_SUMMARY: total=N passed=N failed=N result=PASS|FAIL) covering every
+ * suite executed since boot. Call once after all test suites have run so
+ * CI can parse the overall result.
+ *
+ * @note result is PASS only if at least one test ran and none failed
+ */
+void test_print_summary();
+
+/**
  * @brief Run a complete test suite
  *
  * Convenience function that initializes the test framework, runs the
