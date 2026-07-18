@@ -4,11 +4,15 @@
  */
 
 #include "tests/test_cases/fs_test.hpp"
+#include <cstdio>
 #include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
+#include <libs/common/stat.hpp>
 #include "fs/fat/fat.hpp"
 #include "fs/fat/internal_common.hpp"
+#include "fs/file_descriptor.hpp"
+#include "fs/file_info.hpp"
 #include "task/task.hpp"
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
@@ -21,6 +25,16 @@ extern uint32_t* FAT_TABLE;
 } // namespace kernel::fs::fat
 
 using namespace kernel::fs::fat;
+
+// 8.3 names are up to 12 characters ("ABCDEFGH.EXT") plus a null terminator;
+// these buffers used to be 11 bytes and overflowed (issue #313).
+static_assert(sizeof(Stat::name) >= 13, "Stat::name must hold an 8.3 name");
+static_assert(sizeof(kernel::fs::FileInfo::name) >= 13,
+			  "FileInfo::name must hold an 8.3 name");
+static_assert(sizeof(kernel::fs::FileDescriptor::name) >= 13,
+			  "FileDescriptor::name must hold an 8.3 name");
+static_assert(sizeof(kernel::fs::FileCache::path) >= 13,
+			  "FileCache::path must hold an 8.3 name");
 
 /**
  * @brief Test basic file write within existing cluster
@@ -146,6 +160,191 @@ void test_fat_table_persistence()
 }
 
 /**
+ * @brief Test that generated fs ids are monotonically increasing and nonzero
+ *
+ * The old implementation cycled ids modulo the cache capacity, so ids
+ * collided and reads were served from another file's cache (issue #313).
+ */
+void test_fs_id_monotonic_and_nonzero()
+{
+	fs_id_t prev = kernel::fs::generate_fs_id();
+	ASSERT_TRUE(prev != 0);
+
+	for (int i = 0; i < 200; ++i) {
+		const fs_id_t id = kernel::fs::generate_fs_id();
+		ASSERT_TRUE(id != 0);
+		ASSERT_TRUE(id > prev);
+		prev = id;
+	}
+}
+
+/**
+ * @brief Test that filling the cache beyond capacity terminates and evicts
+ *
+ * The old eviction loop had no iterator increment and spun forever once the
+ * cache reached 50 entries (issue #313).
+ */
+void test_file_cache_eviction_terminates()
+{
+	// Run against a private map so in-flight caches of the live FS task are
+	// not disturbed; restore the original map before asserting.
+	auto saved_caches = std::move(kernel::fs::file_caches);
+	kernel::fs::file_caches.clear();
+
+	bool all_created = true;
+	char path[13];
+	for (int i = 0; i < 60; ++i) {
+		snprintf(path, sizeof(path), "F%d", i);
+		kernel::fs::FileCache* c = kernel::fs::create_file_cache(
+				path, 16, ProcessId::from_raw(1));
+		all_created = all_created && c != nullptr && c->id != 0;
+	}
+
+	const size_t cache_count = kernel::fs::file_caches.size();
+	const bool oldest_evicted =
+			kernel::fs::find_file_cache_by_path("F0") == nullptr;
+	const bool newest_present =
+			kernel::fs::find_file_cache_by_path("F59") != nullptr;
+
+	kernel::fs::file_caches = std::move(saved_caches);
+
+	ASSERT_TRUE(all_created);
+	ASSERT_TRUE(cache_count <= 50);
+	ASSERT_TRUE(oldest_evicted);
+	ASSERT_TRUE(newest_present);
+}
+
+/**
+ * @brief Test that eviction removes the least recently used entry
+ */
+void test_file_cache_lru_order()
+{
+	auto saved_caches = std::move(kernel::fs::file_caches);
+	kernel::fs::file_caches.clear();
+
+	char path[13];
+	for (int i = 0; i < 50; ++i) {
+		snprintf(path, sizeof(path), "L%d", i);
+		kernel::fs::create_file_cache(path, 16, ProcessId::from_raw(1));
+	}
+
+	// Touch the oldest entry so "L1" becomes the least recently used one
+	const bool touched = kernel::fs::find_file_cache_by_path("L0") != nullptr;
+
+	// Cache is full: this create must evict exactly the LRU entry ("L1")
+	kernel::fs::create_file_cache("L50", 16, ProcessId::from_raw(1));
+
+	const bool touched_survived =
+			kernel::fs::find_file_cache_by_path("L0") != nullptr;
+	const bool lru_evicted = kernel::fs::find_file_cache_by_path("L1") == nullptr;
+	const bool new_present = kernel::fs::find_file_cache_by_path("L50") != nullptr;
+
+	kernel::fs::file_caches = std::move(saved_caches);
+
+	ASSERT_TRUE(touched);
+	ASSERT_TRUE(touched_survived);
+	ASSERT_TRUE(lru_evicted);
+	ASSERT_TRUE(new_present);
+}
+
+/**
+ * @brief Test 8.3 name conversion at the maximum length boundary
+ *
+ * A full 8.3 name ("ABCDEFGH.EXT") is 12 characters plus null terminator and
+ * used to overflow the 11-byte destination buffers (issue #313).
+ */
+void test_read_dir_entry_name_boundary()
+{
+	kernel::fs::DirectoryEntry entry;
+	memset(&entry, 0, sizeof(entry));
+	memcpy(entry.name, "ABCDEFGHEXT", 11);
+
+	char dest[16];
+	memset(dest, 0x7F, sizeof(dest));
+	read_dir_entry_name_raw(entry, dest);
+
+	ASSERT_EQ(strcmp(dest, "ABCDEFGH.EXT"), 0);
+	ASSERT_EQ(strlen(dest), 12UL);
+	// Nothing may be written past the 13 bytes an 8.3 name needs
+	ASSERT_EQ(dest[13], 0x7F);
+	ASSERT_TRUE(entry_name_is_equal(entry, "ABCDEFGH.EXT"));
+
+	// A converted name must fit into Stat::name without truncation
+	Stat s;
+	memset(&s, 0, sizeof(s));
+	read_dir_entry_name(entry, s.name);
+	ASSERT_EQ(strcmp(s.name, "abcdefgh.ext"), 0);
+
+	// Name without extension keeps trailing spaces trimmed
+	kernel::fs::DirectoryEntry no_ext;
+	memset(&no_ext, 0, sizeof(no_ext));
+	memcpy(no_ext.name, "NOEXT      ", 11);
+	read_dir_entry_name_raw(no_ext, dest);
+	ASSERT_EQ(strcmp(dest, "NOEXT"), 0);
+}
+
+/**
+ * @brief Test cluster chain allocation against a full disk
+ *
+ * allocate_cluster_chain / extend_cluster_chain used to scan past the end of
+ * the FAT when no free cluster existed (issue #313).
+ */
+void test_cluster_chain_disk_full()
+{
+	auto* saved_fat = FAT_TABLE;
+	auto* saved_bpb = VOLUME_BPB;
+
+	// Tiny fake volume: clusters 0-7 (2-7 usable), canaries after the table
+	constexpr size_t total_test_clusters = 8;
+	constexpr uint32_t canary_value = 0xDEADBEEF;
+	uint32_t fake_fat[total_test_clusters + 4];
+	memset(fake_fat, 0, sizeof(fake_fat));
+	fake_fat[0] = 0x0FFFFFF8;
+	fake_fat[1] = 0x0FFFFFFF;
+	for (size_t i = total_test_clusters; i < total_test_clusters + 4; ++i) {
+		fake_fat[i] = canary_value;
+	}
+
+	kernel::fs::BiosParameterBlock fake_bpb;
+	memset(&fake_bpb, 0, sizeof(fake_bpb));
+	fake_bpb.total_sectors_32 = total_test_clusters;
+	fake_bpb.sectors_per_cluster = 1;
+
+	FAT_TABLE = fake_fat;
+	VOLUME_BPB = &fake_bpb;
+
+	const size_t free_before = count_free_clusters();
+	const cluster_t first_chain = allocate_cluster_chain(4);
+	const size_t free_mid = count_free_clusters();
+
+	// Only 2 clusters left: this must fail and roll back, not scan past the
+	// end of the FAT
+	const cluster_t failed_chain = allocate_cluster_chain(4);
+	const size_t free_after = count_free_clusters();
+
+	// Fully exhaust the remaining clusters, then fail again
+	const cluster_t second_chain = allocate_cluster_chain(2);
+	const cluster_t exhausted_chain = allocate_cluster_chain(1);
+
+	bool canaries_intact = true;
+	for (size_t i = total_test_clusters; i < total_test_clusters + 4; ++i) {
+		canaries_intact = canaries_intact && fake_fat[i] == canary_value;
+	}
+
+	FAT_TABLE = saved_fat;
+	VOLUME_BPB = saved_bpb;
+
+	ASSERT_EQ(free_before, 6UL);
+	ASSERT_EQ(first_chain, 2UL);
+	ASSERT_EQ(free_mid, 2UL);
+	ASSERT_EQ(failed_chain, 0UL);
+	ASSERT_EQ(free_after, 2UL);
+	ASSERT_TRUE(second_chain != 0);
+	ASSERT_EQ(exhausted_chain, 0UL);
+	ASSERT_TRUE(canaries_intact);
+}
+
+/**
  * @brief Register all file system test cases
  */
 void register_fs_tests()
@@ -156,4 +355,12 @@ void register_fs_tests()
 	test_register("test_fat_table_update", test_fat_table_update);
 	test_register("test_write_extend_file", test_write_extend_file);
 	test_register("test_fat_table_persistence", test_fat_table_persistence);
+	test_register("test_fs_id_monotonic_and_nonzero",
+				  test_fs_id_monotonic_and_nonzero);
+	test_register("test_file_cache_eviction_terminates",
+				  test_file_cache_eviction_terminates);
+	test_register("test_file_cache_lru_order", test_file_cache_lru_order);
+	test_register("test_read_dir_entry_name_boundary",
+				  test_read_dir_entry_name_boundary);
+	test_register("test_cluster_chain_disk_full", test_cluster_chain_disk_full);
 }

@@ -112,6 +112,7 @@ struct Message {
 			size_t len;
 			size_t sequence;
 			MsgType dst_type;
+			int result; ///< OK on success, negative error code on failure
 		} blk_io;
 
 		struct {

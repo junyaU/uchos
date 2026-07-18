@@ -21,7 +21,7 @@ namespace kernel::fs
  * read/write position.
  */
 struct FileDescriptor {
-	char name[11]; ///< File name (8.3 format for FAT compatibility)
+	char name[13]; ///< 8.3 file name: up to 12 characters plus null
 	size_t size;   ///< File size in bytes
 	size_t offset; ///< Current read/write position
 
@@ -81,7 +81,7 @@ void init_process_fd_table(FileDescriptor* fd_table, size_t table_size);
  *
  * @param fd_table Process's file descriptor table
  * @param table_size Size of the file descriptor table
- * @param name File name (max 10 characters for 8.3 format)
+ * @param name File name (max 12 characters for 8.3 format)
  * @param size File size in bytes
  * @param pid Process ID that owns this descriptor
  * @return fd_t The allocated file descriptor number, or NO_FD on failure

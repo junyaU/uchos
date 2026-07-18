@@ -9,6 +9,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include <map>
 #include <vector>
 #include "elf.hpp"
 #include "fat.hpp"
@@ -24,15 +25,89 @@
 namespace kernel::fs::fat
 {
 
+namespace
+{
+
+/// In-flight file data writes waiting for a block device completion,
+/// keyed by request id.
+struct PendingWrite {
+	ProcessId requester; ///< Process waiting for the FS_WRITE reply
+	size_t write_len;	 ///< Bytes to report on success
+};
+
+std::map<fs_id_t, PendingWrite> pending_writes;
+
+/// Reply with an empty payload so the requester blocked in
+/// wait_for_message() is always released, even on failure.
+void send_empty_reply(MsgType type, ProcessId requester)
+{
+	Message reply = { .type = type, .sender = process_ids::FS_FAT32 };
+	reply.data.fs.buf = nullptr;
+	reply.data.fs.len = 0;
+	kernel::task::send_message(requester, reply);
+}
+
+/// Build the cache key used by the file cache: the raw 11-byte 8.3 name.
+void entry_cache_key(const DirectoryEntry* entry, char (&key)[12])
+{
+	memcpy(key, entry->name, 11);
+	key[11] = '\0';
+}
+
+void process_write_completion(const Message& m)
+{
+	auto it = pending_writes.find(m.data.blk_io.request_id);
+	if (it == pending_writes.end()) {
+		// Metadata writes (FAT table, directory entries) are not tracked;
+		// still surface device errors instead of dropping them silently.
+		if (IS_ERR(m.data.blk_io.result)) {
+			LOG_ERROR("block write failed: result=%d sector=%u",
+					  m.data.blk_io.result, m.data.blk_io.sector);
+		}
+		return;
+	}
+
+	Message reply = { .type = MsgType::FS_WRITE, .sender = process_ids::FS_FAT32 };
+	if (IS_ERR(m.data.blk_io.result)) {
+		LOG_ERROR("block write failed: result=%d sector=%u", m.data.blk_io.result,
+				  m.data.blk_io.sector);
+		reply.data.fs.len = 0;
+	} else {
+		reply.data.fs.len = it->second.write_len;
+	}
+
+	kernel::task::send_message(it->second.requester, reply);
+	pending_writes.erase(it);
+}
+
+} // namespace
+
 error_t process_read_data_response(const Message& m, bool for_user)
 {
 	auto it = file_caches.find(m.data.blk_io.request_id);
 	if (it == file_caches.end()) {
-		LOG_ERROR("request id not found");
+		LOG_ERROR("request id not found: %lu", m.data.blk_io.request_id);
+		if (m.data.blk_io.buf != nullptr) {
+			kernel::memory::free(m.data.blk_io.buf);
+		}
 		return ERR_INVALID_ARG;
 	}
 
 	auto& ctx = it->second;
+
+	if (IS_ERR(m.data.blk_io.result) || m.data.blk_io.buf == nullptr) {
+		// Device read failed: release the requester with an error reply and
+		// drop the partially filled cache so it never serves stale data.
+		LOG_ERROR("block read failed: result=%d sector=%u", m.data.blk_io.result,
+				  m.data.blk_io.sector);
+		send_empty_reply(m.type, ctx.requester);
+		if (m.data.blk_io.buf != nullptr) {
+			kernel::memory::free(m.data.blk_io.buf);
+		}
+		file_caches.erase(it);
+		return ERR_FAILED_READ_FROM_DEVICE;
+	}
+
 	const size_t offset = m.data.blk_io.sequence * BYTES_PER_CLUSTER;
 
 	// オフセットがファイルサイズを超えている場合は無視
@@ -60,9 +135,8 @@ error_t process_file_read_request(const Message& m,
 								  DirectoryEntry* entry,
 								  bool for_user)
 {
-	char file_name[12] = { 0 };
-	memcpy(file_name, entry->name, 11);
-	file_name[11] = 0;
+	char file_name[12];
+	entry_cache_key(entry, file_name);
 
 	FileCache* c = find_file_cache_by_path(file_name);
 	if (c != nullptr) {
@@ -71,11 +145,20 @@ error_t process_file_read_request(const Message& m,
 		return OK;
 	}
 
-	int target_cluster = entry->first_cluster();
+	// An empty file has no cluster chain to read; reply immediately so the
+	// requester does not block forever waiting for data that never arrives.
+	if (entry->file_size == 0 || entry->first_cluster() == 0) {
+		send_file_data(m.data.fs.request_id, nullptr, 0, m.sender, m.type,
+					   for_user);
+		return OK;
+	}
+
+	cluster_t target_cluster = entry->first_cluster();
 	size_t sequence = 0;
 	FileCache* cache = create_file_cache(file_name, entry->file_size, m.sender);
 	if (cache == nullptr) {
 		LOG_ERROR("failed to create file cache");
+		send_empty_reply(m.type, m.sender);
 		return ERR_NO_MEMORY;
 	}
 
@@ -123,9 +206,14 @@ void handle_get_file_info(const Message& m)
 		}
 
 		if (entry_name_is_equal(ROOT_DIR[i], name)) {
-			void* buf;
-			ALLOC_OR_RETURN(buf, sizeof(DirectoryEntry),
-							kernel::memory::ALLOC_ZEROED);
+			void* buf = kernel::memory::alloc(sizeof(DirectoryEntry),
+											  kernel::memory::ALLOC_ZEROED);
+			if (buf == nullptr) {
+				// Fall through and reply with buf == nullptr so the
+				// requester is not left blocking forever.
+				LOG_ERROR("failed to allocate directory entry buffer");
+				break;
+			}
 			memcpy(buf, &ROOT_DIR[i], sizeof(DirectoryEntry));
 			sm.data.fs.buf = buf;
 			break;
@@ -245,6 +333,12 @@ void handle_fs_close(const Message& m)
 
 void handle_fs_write(const Message& m)
 {
+	// Completion (or failure) notification from the block device
+	if (m.sender == process_ids::VIRTIO_BLK) {
+		process_write_completion(m);
+		return;
+	}
+
 	Message reply = { .type = MsgType::FS_WRITE, .sender = process_ids::FS_FAT32 };
 
 	kernel::task::Task* t = kernel::task::get_task(m.sender);
@@ -275,14 +369,14 @@ void handle_fs_write(const Message& m)
 	const size_t new_size = fd->offset + m.data.fs.len;
 
 	if (entry->first_cluster() == 0) {
-		if (count_free_clusters() < 1) {
+		cluster_t new_cluster = allocate_cluster_chain(1);
+		if (new_cluster == 0) {
 			LOG_ERROR("disk full: no free clusters available");
 			reply.data.fs.len = 0;
 			kernel::task::send_message(m.sender, reply);
 			return;
 		}
 
-		cluster_t new_cluster = allocate_cluster_chain(1);
 		entry->first_cluster_low = new_cluster & 0xFFFF;
 		entry->first_cluster_high = (new_cluster >> 16) & 0xFFFF;
 		write_fat_table_to_disk();
@@ -296,7 +390,7 @@ void handle_fs_write(const Message& m)
 	if (needed_clusters > current_clusters) {
 		const size_t clusters_to_add = needed_clusters - current_clusters;
 		if (count_free_clusters() < clusters_to_add) {
-			LOG_ERROR("disk full: need {} clusters but only {} free",
+			LOG_ERROR("disk full: need %lu clusters but only %lu free",
 					  clusters_to_add, count_free_clusters());
 			reply.data.fs.len = 0;
 			kernel::task::send_message(m.sender, reply);
@@ -309,7 +403,12 @@ void handle_fs_write(const Message& m)
 			last_cluster = next;
 		}
 
-		extend_cluster_chain(last_cluster, clusters_to_add);
+		if (extend_cluster_chain(last_cluster, clusters_to_add) == 0) {
+			LOG_ERROR("failed to extend cluster chain");
+			reply.data.fs.len = 0;
+			kernel::task::send_message(m.sender, reply);
+			return;
+		}
 		write_fat_table_to_disk();
 	}
 
@@ -331,8 +430,14 @@ void handle_fs_write(const Message& m)
 		return;
 	}
 
-	void* cluster_buffer;
-	ALLOC_OR_RETURN(cluster_buffer, BYTES_PER_CLUSTER, kernel::memory::ALLOC_ZEROED);
+	void* cluster_buffer =
+			kernel::memory::alloc(BYTES_PER_CLUSTER, kernel::memory::ALLOC_ZEROED);
+	if (cluster_buffer == nullptr) {
+		LOG_ERROR("failed to allocate cluster buffer");
+		reply.data.fs.len = 0;
+		kernel::task::send_message(m.sender, reply);
+		return;
+	}
 
 	// Handle partial cluster writes
 	if (offset_in_cluster != 0 || write_len < BYTES_PER_CLUSTER) {
@@ -362,9 +467,20 @@ void handle_fs_write(const Message& m)
 		memcpy(cluster_buffer, write_data, write_len);
 	}
 
+	// Invalidate the cached file contents so a read after this write does not
+	// return stale data (issue #313).
+	char cache_key[12];
+	entry_cache_key(entry, cache_key);
+	remove_file_cache_by_path(cache_key);
+
+	// Track the write and reply to the requester when the device reports
+	// completion, instead of claiming success before the write happened.
+	const fs_id_t write_request_id = generate_fs_id();
+	pending_writes[write_request_id] = PendingWrite{ m.sender, write_len };
+
 	send_write_req_to_blk_device(cluster_buffer, calc_start_sector(target_cluster),
 								 BYTES_PER_CLUSTER, MsgType::FS_WRITE,
-								 m.data.fs.request_id);
+								 write_request_id);
 
 	fd->offset += write_len;
 
@@ -405,9 +521,8 @@ void handle_fs_write(const Message& m)
 		update_directory_entry_on_disk(entry, fd->name);
 	}
 
-	// All writes completed successfully, send successful reply
-	reply.data.fs.len = write_len;
-	kernel::task::send_message(m.sender, reply);
+	// The FS_WRITE reply is sent from process_write_completion() once the
+	// block device acknowledges the data write.
 
 	if (m.tool_desc.present) {
 		kernel::memory::free(m.tool_desc.addr);
@@ -421,27 +536,33 @@ void handle_fs_mkfile(const Message& m)
 	const char* name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
+	kernel::task::Task* t = kernel::task::get_task(m.sender);
+	if (t == nullptr) {
+		// Requester is gone; there is no one to reply to.
+		LOG_ERROR("Task %d not found - likely already exited", m.sender.raw());
+		return;
+	}
+
 	DirectoryEntry* existing_entry = find_dir_entry(ROOT_DIR, name);
 	if (existing_entry != nullptr) {
 		LOG_ERROR("File already exists: %s", name);
+		reply.data.fs.fd = NO_FD;
+		kernel::task::send_message(m.sender, reply);
 		return;
 	}
 
 	DirectoryEntry* entry = find_empty_dir_entry();
 	if (entry == nullptr) {
 		LOG_ERROR("No empty directory entry found");
+		reply.data.fs.fd = NO_FD;
+		kernel::task::send_message(m.sender, reply);
 		return;
 	}
 
-	memcpy(entry->name, name, strlen(name));
+	const size_t name_len = std::min(strlen(name), sizeof(entry->name));
+	memcpy(entry->name, name, name_len);
 	entry->attribute = entry_attribute::ARCHIVE;
 	entry->file_size = 0;
-
-	kernel::task::Task* t = kernel::task::get_task(m.sender);
-	if (t == nullptr) {
-		LOG_ERROR("Task %d not found - likely already exited", m.sender.raw());
-		return;
-	}
 
 	fd_t fd = kernel::fs::allocate_process_fd(t->fd_table.data(),
 											  kernel::task::MAX_FDS_PER_PROCESS,

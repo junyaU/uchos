@@ -148,11 +148,27 @@ DirectoryEntry* find_empty_dir_entry()
 	return nullptr;
 }
 
+size_t total_fat_clusters()
+{
+	if (FAT_TABLE == nullptr || VOLUME_BPB == nullptr ||
+		VOLUME_BPB->sectors_per_cluster == 0) {
+		return 0;
+	}
+
+	const size_t total_clusters =
+			VOLUME_BPB->total_sectors_32 / VOLUME_BPB->sectors_per_cluster;
+
+	// Cluster numbers above 0x0FFFFFF7 are reserved in FAT32
+	return total_clusters < 0x0FFFFFF8UL ? total_clusters : 0x0FFFFFF8UL;
+}
+
 cluster_t extend_cluster_chain(cluster_t last_cluster, int num_clusters)
 {
+	const size_t total_clusters = total_fat_clusters();
+
 	cluster_t current_cluster = last_cluster;
-	size_t num_allocated = 0;
-	for (int i = 2; num_allocated < num_clusters; ++i) {
+	int num_allocated = 0;
+	for (size_t i = 2; i < total_clusters && num_allocated < num_clusters; ++i) {
 		if (FAT_TABLE[i] != 0) {
 			continue;
 		}
@@ -164,19 +180,37 @@ cluster_t extend_cluster_chain(cluster_t last_cluster, int num_clusters)
 
 	FAT_TABLE[current_cluster] = END_OF_CLUSTER_CHAIN;
 
+	if (num_allocated < num_clusters) {
+		LOG_ERROR("disk full: allocated %d of %d clusters", num_allocated,
+				  num_clusters);
+		return 0;
+	}
+
 	return current_cluster;
 }
 
 cluster_t allocate_cluster_chain(size_t num_clusters)
 {
+	const size_t total_clusters = total_fat_clusters();
+
 	cluster_t first_cluster = 2;
-	while (FAT_TABLE[first_cluster] != 0) {
+	while (first_cluster < total_clusters && FAT_TABLE[first_cluster] != 0) {
 		++first_cluster;
 	}
+
+	if (first_cluster >= total_clusters) {
+		LOG_ERROR("disk full: no free cluster found");
+		return 0;
+	}
+
 	FAT_TABLE[first_cluster] = END_OF_CLUSTER_CHAIN;
 
 	if (num_clusters > 1) {
-		extend_cluster_chain(first_cluster, num_clusters - 1);
+		if (extend_cluster_chain(first_cluster, num_clusters - 1) == 0) {
+			// Roll back the partially allocated chain
+			free_cluster_chain(first_cluster, 0);
+			return 0;
+		}
 	}
 
 	return first_cluster;
@@ -184,16 +218,11 @@ cluster_t allocate_cluster_chain(size_t num_clusters)
 
 size_t count_free_clusters()
 {
-	if (FAT_TABLE == nullptr || VOLUME_BPB == nullptr) {
-		return 0;
-	}
+	const size_t total_clusters = total_fat_clusters();
 
 	size_t free_count = 0;
-	const size_t total_clusters =
-			VOLUME_BPB->total_sectors_32 / VOLUME_BPB->sectors_per_cluster;
-
 	// Start from cluster 2 (0 and 1 are reserved)
-	for (size_t i = 2; i < total_clusters && i < 0x0FFFFFF8UL; i++) {
+	for (size_t i = 2; i < total_clusters; i++) {
 		if (FAT_TABLE[i] == 0) {
 			free_count++;
 		}
@@ -360,10 +389,20 @@ void send_file_data(fs_id_t id,
 	m.data.fs.request_id = id;
 
 	if (for_user) {
+		if (size == 0) {
+			// Nothing to transfer (e.g. empty file): reply without an OOL
+			// buffer so the requester is not left blocking forever.
+			m.data.fs.len = 0;
+			kernel::task::send_message(requester, m);
+			return;
+		}
+
 		void* user_buf = kernel::memory::alloc(size, kernel::memory::ALLOC_ZEROED,
 											   memory::PAGE_SIZE);
 		if (user_buf == nullptr) {
 			LOG_ERROR("failed to allocate memory");
+			m.data.fs.len = 0;
+			kernel::task::send_message(requester, m);
 			return;
 		}
 

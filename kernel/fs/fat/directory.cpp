@@ -136,6 +136,17 @@ void handle_virtio_response(const Message& m)
 		return;
 	}
 
+	if (IS_ERR(m.data.blk_io.result) || m.data.blk_io.buf == nullptr) {
+		// Device read failed: keep the current directory instead of
+		// pointing it at a null buffer.
+		LOG_ERROR("failed to read directory cluster: result=%d",
+				  m.data.blk_io.result);
+		change_dir_names.erase(m.data.blk_io.request_id);
+		parent_dir_names.erase(m.data.blk_io.request_id);
+		change_dir_requests.erase(m.data.blk_io.request_id);
+		return;
+	}
+
 	update_directory_entry(task,
 						   reinterpret_cast<DirectoryEntry*>(m.data.blk_io.buf));
 	finalize_directory_change(m, task);
@@ -184,12 +195,11 @@ void request_parent_directory_load(const Message& m,
 
 	Message reply = { .type = MsgType::FS_CHANGE_DIR,
 					  .sender = process_ids::FS_FAT32 };
-	if (parent_dir_names[request_id] == "/") {
-		memcpy(reply.data.fs.name, "/", 2);
-	} else {
-		memcpy(reply.data.fs.name, parent_dir_names[request_id].c_str(),
-			   parent_dir_names[request_id].length() + 1);
-	}
+	// Truncate to the reply buffer: full_path can be far longer than
+	// data.fs.name and an unchecked memcpy corrupts the Message (issue #313).
+	strncpy(reply.data.fs.name, parent_dir_names[request_id].c_str(),
+			sizeof(reply.data.fs.name) - 1);
+	reply.data.fs.name[sizeof(reply.data.fs.name) - 1] = '\0';
 	reply.data.fs.result = 0;
 	kernel::task::send_message(m.sender, reply);
 }
@@ -240,7 +250,8 @@ void handle_normal_directory_change(const Message& m,
 
 	Message reply = { .type = MsgType::FS_CHANGE_DIR,
 					  .sender = process_ids::FS_FAT32 };
-	memcpy(reply.data.fs.name, upper_name, strlen(upper_name) + 1);
+	strncpy(reply.data.fs.name, upper_name, sizeof(reply.data.fs.name) - 1);
+	reply.data.fs.name[sizeof(reply.data.fs.name) - 1] = '\0';
 	reply.data.fs.result = 0;
 	kernel::task::send_message(m.sender, reply);
 }
@@ -291,11 +302,27 @@ void handle_get_directory_contents(const Message& m)
 	}
 
 	auto* t = kernel::task::get_task(m.sender);
+	if (t == nullptr) {
+		// Requester is gone; there is no one to reply to.
+		LOG_ERROR("Task %d not found", m.sender.raw());
+		return;
+	}
+
 	if (t->parent_id != process_ids::INVALID) {
-		t = kernel::task::get_task(t->parent_id);
+		kernel::task::Task* parent = kernel::task::get_task(t->parent_id);
+		if (parent != nullptr) {
+			t = parent;
+		}
 	}
 
 	DirectoryEntry* current_dir = t->fs_path.current_dir;
+	if (current_dir == nullptr) {
+		LOG_ERROR("current directory not set");
+		Message sm = { .type = MsgType::GET_DIRECTORY_CONTENTS,
+					   .sender = process_ids::FS_FAT32 };
+		kernel::task::send_message(m.sender, sm);
+		return;
+	}
 	std::vector<char> entries(ENTRIES_PER_CLUSTER * sizeof(DirectoryEntry));
 	int entries_count = 0;
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
@@ -316,16 +343,25 @@ void handle_get_directory_contents(const Message& m)
 		++entries_count;
 	}
 
-	void* buf;
-	ALLOC_OR_RETURN(buf, entries_count * sizeof(Stat), kernel::memory::ALLOC_ZEROED);
+	void* buf = nullptr;
+	if (entries_count > 0) {
+		buf = kernel::memory::alloc(entries_count * sizeof(Stat),
+									kernel::memory::ALLOC_ZEROED);
+		if (buf == nullptr) {
+			// Reply with an empty listing so the requester is not left
+			// blocking forever.
+			LOG_ERROR("failed to allocate stat buffer");
+			entries_count = 0;
+		}
+	}
 
 	for (int i = 0; i < entries_count; ++i) {
 		Stat* s = reinterpret_cast<Stat*>(buf) + i;
-		read_dir_entry_name(*reinterpret_cast<DirectoryEntry*>(
-									&entries[i * sizeof(DirectoryEntry)]),
-							s->name);
-		s->size = current_dir[i].file_size;
-		s->type = current_dir[i].attribute == entry_attribute::DIRECTORY
+		const DirectoryEntry* e = reinterpret_cast<const DirectoryEntry*>(
+				&entries[i * sizeof(DirectoryEntry)]);
+		read_dir_entry_name(*e, s->name);
+		s->size = e->file_size;
+		s->type = e->attribute == entry_attribute::DIRECTORY
 						  ? StatType::DIRECTORY
 						  : StatType::REGULAR_FILE;
 	}
@@ -334,7 +370,7 @@ void handle_get_directory_contents(const Message& m)
 				   .sender = process_ids::FS_FAT32 };
 	sm.tool_desc.addr = buf;
 	sm.tool_desc.size = entries_count * sizeof(Stat);
-	sm.tool_desc.present = true;
+	sm.tool_desc.present = buf != nullptr;
 
 	kernel::task::send_message(m.sender, sm);
 }
@@ -344,8 +380,17 @@ void handle_fs_pwd(const Message& m)
 	Message reply = { .type = MsgType::FS_PWD, .sender = process_ids::FS_FAT32 };
 
 	kernel::task::Task* t = kernel::task::get_task(m.sender);
+	if (t == nullptr) {
+		// Requester is gone; there is no one to reply to.
+		LOG_ERROR("Task %d not found", m.sender.raw());
+		return;
+	}
+
 	if (t->parent_id != process_ids::INVALID) {
-		t = kernel::task::get_task(t->parent_id);
+		kernel::task::Task* parent = kernel::task::get_task(t->parent_id);
+		if (parent != nullptr) {
+			t = parent;
+		}
 	}
 
 	if (t->fs_path.current_dir == nullptr) {
@@ -353,8 +398,9 @@ void handle_fs_pwd(const Message& m)
 		return;
 	}
 
-	memcpy(reply.data.fs.name, t->fs_path.current_dir_name,
-		   strlen(t->fs_path.current_dir_name) + 1);
+	strncpy(reply.data.fs.name, t->fs_path.current_dir_name,
+			sizeof(reply.data.fs.name) - 1);
+	reply.data.fs.name[sizeof(reply.data.fs.name) - 1] = '\0';
 
 	kernel::task::send_message(m.sender, reply);
 }

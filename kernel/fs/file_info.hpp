@@ -77,7 +77,7 @@ enum class file_system_type_t : uint8_t {
  * Contains all metadata about a file or directory entry.
  */
 struct FileInfo {
-	char name[11];				///< File name in 8.3 format
+	char name[13];				///< 8.3 name: up to 12 characters plus null
 	size_t size;				///< File size in bytes
 	uint32_t attributes;		///< File attributes (combination of ATTR_* flags)
 	uint64_t creation_time;		///< Creation timestamp
@@ -100,7 +100,8 @@ struct FileCache {
 	std::vector<uint8_t> buffer; ///< Buffer containing file data
 	size_t total_size;			 ///< Total size of the file
 	size_t read_size;			 ///< Bytes read so far
-	char path[11];				 ///< File path
+	uint64_t last_used;			 ///< LRU tick of the most recent access
+	char path[13];				 ///< 8.3 name: up to 12 characters plus null
 
 	/**
 	 * @brief Construct a new file cache
@@ -110,7 +111,8 @@ struct FileCache {
 	 * @param requester Process requesting the cache
 	 */
 	FileCache(size_t total_size, fs_id_t id, ProcessId requester)
-		: id(id), requester(requester), total_size(total_size), read_size(0)
+		: id(id), requester(requester), total_size(total_size), read_size(0),
+		  last_used(0)
 	{
 		buffer.resize(total_size);
 	}
@@ -152,7 +154,20 @@ FileCache* create_file_cache(const char* path,
 							 ProcessId requester);
 
 /**
+ * @brief Remove a file cache entry by file path
+ *
+ * Used to invalidate stale cached data after a file is written.
+ *
+ * @param path File path of the cache to remove
+ * @return true if an entry was removed, false if none matched
+ */
+bool remove_file_cache_by_path(const char* path);
+
+/**
  * @brief Generate a unique file system ID
+ *
+ * Monotonically increasing; never returns 0 (0 is reserved as the
+ * invalid/untracked request id).
  *
  * @return fs_id_t New unique identifier
  */
