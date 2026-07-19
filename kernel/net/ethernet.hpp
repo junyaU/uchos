@@ -19,6 +19,9 @@ enum class EthernetFrameType : uint16_t {
 	IPV6 = 0x86DD,
 };
 
+/// Length of a MAC address in bytes
+constexpr size_t MAC_ADDR_SIZE = 6;
+
 /**
  * @brief Ethernet Frame Header
  */

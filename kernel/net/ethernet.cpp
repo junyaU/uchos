@@ -1,10 +1,9 @@
 #include "net/ethernet.hpp"
 #include <cstddef>
 #include <libs/common/types.hpp>
-#include "hardware/virtio/net.hpp"
 #include "libs/common/endian.hpp"
 #include "libs/common/message.hpp"
-#include "net/arp.hpp"
+#include "net/host.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 
@@ -19,7 +18,7 @@ error_t transmit_ethernet_frame(const uint8_t* dst_mac,
 	EthernetFrame* frame = reinterpret_cast<EthernetFrame*>(frame_buffer);
 
 	memcpy(frame->dst_mac, dst_mac, MAC_ADDR_SIZE);
-	memcpy(frame->src_mac, hw::virtio::mac_addr, MAC_ADDR_SIZE);
+	memcpy(frame->src_mac, host_mac(), MAC_ADDR_SIZE);
 	frame->ethertype = htons(static_cast<uint16_t>(type));
 	memcpy(frame->payload, payload, payload_len);
 

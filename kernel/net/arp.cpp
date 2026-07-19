@@ -1,10 +1,11 @@
 #include "net/arp.hpp"
 #include <cstring>
-#include "hardware/virtio/net.hpp"
 #include "libs/common/endian.hpp"
 #include "log/log.hpp"
 #include "memory/slab.hpp"
 #include "net/ethernet.hpp"
+#include "net/host.hpp"
+#include "net/ipv4.hpp"
 
 namespace kernel::net
 {
@@ -71,7 +72,7 @@ void ARPTable::clear()
 
 void handle_arp_request(const ARPPacket& arp_packet)
 {
-	if (arp_packet.target_ip != htonl(hw::virtio::MY_IP)) {
+	if (arp_packet.target_ip != htonl(HOST_IP)) {
 		return;
 	}
 
@@ -82,14 +83,14 @@ void handle_arp_request(const ARPPacket& arp_packet)
 	ALLOC_OR_RETURN(buf, sizeof(ARPPacket), kernel::memory::ALLOC_ZEROED);
 
 	ARPPacket& reply = *reinterpret_cast<ARPPacket*>(buf);
-	reply.hw_type = htons(1);			 // Ethernet
-	reply.protocol_type = htons(0x0800); // IPv4
+	reply.hw_type = htons(static_cast<uint16_t>(ARPHardwareType::ETHERNET));
+	reply.protocol_type = htons(static_cast<uint16_t>(EthernetFrameType::IPV4));
 	reply.hw_size = MAC_ADDR_SIZE;
-	reply.protocol_size = 4;
+	reply.protocol_size = IPV4_ADDR_SIZE;
 	reply.opcode = htons(static_cast<uint16_t>(ARPOpcode::REPLY));
 	reply.sender_ip = arp_packet.target_ip;
 	reply.target_ip = arp_packet.sender_ip;
-	memcpy(reply.sender_mac, hw::virtio::mac_addr, MAC_ADDR_SIZE);
+	memcpy(reply.sender_mac, host_mac(), MAC_ADDR_SIZE);
 	memcpy(reply.target_mac, arp_packet.sender_mac, MAC_ADDR_SIZE);
 
 	transmit_ethernet_frame(arp_packet.sender_mac, EthernetFrameType::ARP, &reply,
