@@ -65,8 +65,8 @@ void handle_write_request(const Message& m)
 	Message reply = make_blk_reply(m);
 
 	const int sector = m.data.blk_io.sector;
-	const int len = m.data.blk_io.len < kernel::hw::virtio::SECTOR_SIZE
-							? kernel::hw::virtio::SECTOR_SIZE
+	const int len = m.data.blk_io.len < SECTOR_SIZE
+							? SECTOR_SIZE
 							: m.data.blk_io.len;
 
 	const error_t err = kernel::hw::virtio::write_to_blk_device(

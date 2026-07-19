@@ -11,6 +11,10 @@
 constexpr int IPC_RECV = 0;
 constexpr int IPC_SEND = 1;
 
+// Sector size of the block-device IPC contract: blk_io.sector is expressed in
+// this unit and blk_io.len is expected to be a multiple of it.
+constexpr size_t SECTOR_SIZE = 512;
+
 enum class MsgType : int32_t {
 	NO_TASK = -1,
 	NOTIFY_KEY_INPUT,
