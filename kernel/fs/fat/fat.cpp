@@ -18,7 +18,7 @@ namespace kernel::fs::fat
 void fat32_service()
 {
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
-	t->is_initilized = false;
+	t->is_initialized = false;
 	pending_messages = std::queue<Message>();
 
 	init_read_contexts();

@@ -198,7 +198,7 @@ error_t init_blk_device()
 
 	ASSERT_OK(init_virtio_pci_device(blk_dev, VIRTIO_BLK));
 
-	kernel::task::CURRENT_TASK->is_initilized = true;
+	kernel::task::CURRENT_TASK->is_initialized = true;
 
 	return OK;
 }
@@ -212,7 +212,7 @@ void virtio_blk_service()
 	t->add_msg_handler(MsgType::IPC_READ_FROM_BLK_DEVICE, handle_read_request);
 	t->add_msg_handler(MsgType::IPC_WRITE_TO_BLK_DEVICE, handle_write_request);
 
-	t->is_initilized = true;
+	t->is_initialized = true;
 
 	kernel::task::process_messages(t);
 }

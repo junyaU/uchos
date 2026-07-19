@@ -60,7 +60,7 @@ void handle_initialize(const Message& m)
 									BYTES_PER_CLUSTER, MsgType::INITIALIZE_TASK);
 	} else {
 		ROOT_DIR = reinterpret_cast<kernel::fs::DirectoryEntry*>(m.data.blk_io.buf);
-		kernel::task::CURRENT_TASK->is_initilized = true;
+		kernel::task::CURRENT_TASK->is_initialized = true;
 
 		while (!pending_messages.empty()) {
 			auto msg = pending_messages.front();
@@ -72,7 +72,7 @@ void handle_initialize(const Message& m)
 
 void handle_fs_register_path(const Message& m)
 {
-	if (!kernel::task::CURRENT_TASK->is_initilized) {
+	if (!kernel::task::CURRENT_TASK->is_initialized) {
 		pending_messages.push(m);
 		return;
 	}

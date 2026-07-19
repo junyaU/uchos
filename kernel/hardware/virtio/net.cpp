@@ -66,7 +66,7 @@ error_t init_virtio_net_device()
 	rx_queue = &net_dev->queues[0];
 	tx_queue = &net_dev->queues[1];
 
-	kernel::task::CURRENT_TASK->is_initilized = true;
+	kernel::task::CURRENT_TASK->is_initialized = true;
 
 	return OK;
 }

@@ -1,5 +1,6 @@
 #include "fault.hpp"
 #include <string.h> // NOLINT(misc-include-cleaner) - for strlcpy
+#include <cstddef>
 #include <cstdint>
 #include "graphics/log.hpp"
 #include "handlers.hpp"
@@ -8,76 +9,41 @@
 namespace kernel::interrupt
 {
 
+// Indexed by ExceptionCode; must stay in the same order as that enum.
+static constexpr const char* FAULT_NAMES[] = {
+	"Divide Error",					 // DIVIDE_ERROR
+	"Debug",						 // DEBUG
+	"Non-Maskable Interrupt",		 // NMI
+	"Breakpoint",					 // BREAKPOINT
+	"Overflow",						 // OVERFLOW
+	"Bound Range Exceeded",			 // BOUND_RANGE_EXCEEDED
+	"Invalid Opcode",				 // INVALID_OPCODE
+	"Device Not Available",			 // DEVICE_NOT_AVAILABLE
+	"Double Fault",					 // DOUBLE_FAULT
+	"Coprocessor Segment Overrun",	 // COPROCESSOR_SEGMENT_OVERRUN
+	"Invalid TSS",					 // INVALID_TSS
+	"Segment Not Present",			 // SEGMENT_NOT_PRESENT
+	"Stack Segment Fault",			 // STACK_SEGMENT_FAULT
+	"General Protection",			 // GENERAL_PROTECTION
+	"Page Fault",					 // PAGE_FAULT
+	"Reserved",						 // RESERVED
+	"x87 FPU Error",				 // X87_FPU_ERROR
+	"Alignment Check",				 // ALIGNMENT_CHECK
+	"Machine Check",				 // MACHINE_CHECK
+	"SIMD Floating-Point Exception", // SIMD_FP_EXCEPTION
+	"Virtualization Exception",		 // VIRTUALIZATION_EXCEPTION
+};
+static constexpr size_t FAULT_NAMES_COUNT =
+		sizeof(FAULT_NAMES) / sizeof(FAULT_NAMES[0]);
+
+// Destination buffer size used by get_fault_name/report_fault below.
+static constexpr size_t FAULT_NAME_BUF_SIZE = 30;
+
 void get_fault_name(uint64_t code, char* buf)
 {
-	switch (code) {
-		case DIVIDE_ERROR:
-			strlcpy(buf, "Divide Error", 13); // NOLINT(misc-include-cleaner)
-			break;
-		case DEBUG:
-			strlcpy(buf, "Debug", 6);
-			break;
-		case NMI:
-			strlcpy(buf, "Non-Maskable Interrupt", 23);
-			break;
-		case BREAKPOINT:
-			strlcpy(buf, "Breakpoint", 11);
-			break;
-		case OVERFLOW:
-			strlcpy(buf, "Overflow", 9);
-			break;
-		case BOUND_RANGE_EXCEEDED:
-			strlcpy(buf, "Bound Range Exceeded", 20);
-			break;
-		case INVALID_OPCODE:
-			strlcpy(buf, "Invalid Opcode", 14);
-			break;
-		case DEVICE_NOT_AVAILABLE:
-			strlcpy(buf, "Device Not Available", 20);
-			break;
-		case DOUBLE_FAULT:
-			strlcpy(buf, "Double Fault", 12);
-			break;
-		case COPROCESSOR_SEGMENT_OVERRUN:
-			strlcpy(buf, "Coprocessor Segment Overrun", 27);
-			break;
-		case INVALID_TSS:
-			strlcpy(buf, "Invalid TSS", 11);
-			break;
-		case SEGMENT_NOT_PRESENT:
-			strlcpy(buf, "Segment Not Present", 19);
-			break;
-		case STACK_SEGMENT_FAULT:
-			strlcpy(buf, "Stack Segment Fault", 19);
-			break;
-		case GENERAL_PROTECTION:
-			strlcpy(buf, "General Protection", 18);
-			break;
-		case PAGE_FAULT:
-			strlcpy(buf, "Page Fault", 10);
-			break;
-		case RESERVED:
-			strlcpy(buf, "Reserved", 8);
-			break;
-		case X87_FPU_ERROR:
-			strlcpy(buf, "x87 FPU Error", 13);
-			break;
-		case ALIGNMENT_CHECK:
-			strlcpy(buf, "Alignment Check", 15);
-			break;
-		case MACHINE_CHECK:
-			strlcpy(buf, "Machine Check", 13);
-			break;
-		case SIMD_FP_EXCEPTION:
-			strlcpy(buf, "SIMD Floating-Point Exception", 29);
-			break;
-		case VIRTUALIZATION_EXCEPTION:
-			strlcpy(buf, "Virtualization Exception", 24);
-			break;
-		default:
-			strlcpy(buf, "Unknown Exception", 17);
-			break;
-	}
+	const char* name =
+			code < FAULT_NAMES_COUNT ? FAULT_NAMES[code] : "Unknown Exception";
+	strlcpy(buf, name, FAULT_NAME_BUF_SIZE); // NOLINT(misc-include-cleaner)
 }
 
 void log_fault_info(const char* fault_type, InterruptFrame* frame)
@@ -90,6 +56,14 @@ void log_fault_info(const char* fault_type, InterruptFrame* frame)
 	LOG_ERROR("RFLAGS: 0x%016lx", frame->rflags);
 	LOG_ERROR("CS: 0x%016lx", frame->cs);
 	LOG_ERROR("SS: 0x%016lx", frame->ss);
+}
+
+const char* report_fault(uint64_t code, InterruptFrame* frame)
+{
+	static char buf[FAULT_NAME_BUF_SIZE];
+	get_fault_name(code, buf);
+	log_fault_info(buf, frame);
+	return buf;
 }
 
 } // namespace kernel::interrupt

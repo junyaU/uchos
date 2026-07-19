@@ -40,7 +40,7 @@ void initialize_interrupt()
 
 	auto set_entry = [](int irq, auto handler, uint16_t ist = 0) {
 		set_idt_entry(idt[irq], reinterpret_cast<uint64_t>(handler),
-					  TypeAttr{ ist, gate_type::kInterruptGate, 0, 1 },
+					  TypeAttr{ ist, GateType::INTERRUPT_GATE, 0, 1 },
 					  kernel::memory::KERNEL_CS);
 	};
 
@@ -53,30 +53,28 @@ void initialize_interrupt()
 	set_entry(InterruptVector::VIRTQUEUE_NET_TX, on_virtio_net_tx_queue_interrupt);
 	set_entry(InterruptVector::SWITCH_TASK, interrupt_task_switch,
 			  IST_FOR_SWITCH_TASK);
-	set_entry(DIVIDE_ERROR, fault_handler<DIVIDE_ERROR, false>::handler);
-	set_entry(DEBUG, fault_handler<DEBUG, false>::handler);
-	set_entry(BREAKPOINT, fault_handler<BREAKPOINT, false>::handler);
-	set_entry(OVERFLOW, fault_handler<OVERFLOW, false>::handler);
+	set_entry(DIVIDE_ERROR, FaultHandler<DIVIDE_ERROR, false>::handler);
+	set_entry(DEBUG, FaultHandler<DEBUG, false>::handler);
+	set_entry(BREAKPOINT, FaultHandler<BREAKPOINT, false>::handler);
+	set_entry(OVERFLOW, FaultHandler<OVERFLOW, false>::handler);
 	set_entry(BOUND_RANGE_EXCEEDED,
-			  fault_handler<BOUND_RANGE_EXCEEDED, false>::handler);
-	set_entry(INVALID_OPCODE, fault_handler<INVALID_OPCODE, false>::handler);
+			  FaultHandler<BOUND_RANGE_EXCEEDED, false>::handler);
+	set_entry(INVALID_OPCODE, FaultHandler<INVALID_OPCODE, false>::handler);
 	set_entry(DEVICE_NOT_AVAILABLE,
-			  fault_handler<DEVICE_NOT_AVAILABLE, false>::handler);
-	set_entry(DOUBLE_FAULT, fault_handler<DOUBLE_FAULT, true>::handler);
-	set_entry(INVALID_TSS, fault_handler<INVALID_TSS, true>::handler);
-	set_entry(SEGMENT_NOT_PRESENT,
-			  fault_handler<SEGMENT_NOT_PRESENT, true>::handler);
-	set_entry(STACK_SEGMENT_FAULT,
-			  fault_handler<STACK_SEGMENT_FAULT, true>::handler);
-	set_entry(GENERAL_PROTECTION, fault_handler<GENERAL_PROTECTION, true>::handler);
-	set_entry(PAGE_FAULT, fault_handler<PAGE_FAULT, true>::handler);
-	set_entry(RESERVED, fault_handler<RESERVED, false>::handler);
-	set_entry(X87_FPU_ERROR, fault_handler<X87_FPU_ERROR, false>::handler);
-	set_entry(ALIGNMENT_CHECK, fault_handler<ALIGNMENT_CHECK, true>::handler);
-	set_entry(MACHINE_CHECK, fault_handler<MACHINE_CHECK, false>::handler);
-	set_entry(SIMD_FP_EXCEPTION, fault_handler<SIMD_FP_EXCEPTION, false>::handler);
+			  FaultHandler<DEVICE_NOT_AVAILABLE, false>::handler);
+	set_entry(DOUBLE_FAULT, FaultHandler<DOUBLE_FAULT, true>::handler);
+	set_entry(INVALID_TSS, FaultHandler<INVALID_TSS, true>::handler);
+	set_entry(SEGMENT_NOT_PRESENT, FaultHandler<SEGMENT_NOT_PRESENT, true>::handler);
+	set_entry(STACK_SEGMENT_FAULT, FaultHandler<STACK_SEGMENT_FAULT, true>::handler);
+	set_entry(GENERAL_PROTECTION, FaultHandler<GENERAL_PROTECTION, true>::handler);
+	set_entry(PAGE_FAULT, FaultHandler<PAGE_FAULT, true>::handler);
+	set_entry(RESERVED, FaultHandler<RESERVED, false>::handler);
+	set_entry(X87_FPU_ERROR, FaultHandler<X87_FPU_ERROR, false>::handler);
+	set_entry(ALIGNMENT_CHECK, FaultHandler<ALIGNMENT_CHECK, true>::handler);
+	set_entry(MACHINE_CHECK, FaultHandler<MACHINE_CHECK, false>::handler);
+	set_entry(SIMD_FP_EXCEPTION, FaultHandler<SIMD_FP_EXCEPTION, false>::handler);
 	set_entry(VIRTUALIZATION_EXCEPTION,
-			  fault_handler<VIRTUALIZATION_EXCEPTION, false>::handler);
+			  FaultHandler<VIRTUALIZATION_EXCEPTION, false>::handler);
 
 	load_idt(sizeof(idt), reinterpret_cast<uint64_t>(idt.data()));
 

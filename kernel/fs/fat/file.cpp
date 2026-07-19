@@ -148,8 +148,7 @@ error_t process_file_read_request(const Message& m,
 	// An empty file has no cluster chain to read; reply immediately so the
 	// requester does not block forever waiting for data that never arrives.
 	if (entry->file_size == 0 || entry->first_cluster() == 0) {
-		send_file_data(m.data.fs.request_id, nullptr, 0, m.sender, m.type,
-					   for_user);
+		send_file_data(m.data.fs.request_id, nullptr, 0, m.sender, m.type, for_user);
 		return OK;
 	}
 
@@ -180,7 +179,7 @@ void execute_file(void* data, const char* name, const char* args)
 
 void handle_get_file_info(const Message& m)
 {
-	if (!kernel::task::CURRENT_TASK->is_initilized) {
+	if (!kernel::task::CURRENT_TASK->is_initialized) {
 		pending_messages.push(m);
 		return;
 	}
@@ -225,7 +224,7 @@ void handle_get_file_info(const Message& m)
 
 void handle_read_file_data(const Message& m)
 {
-	if (!kernel::task::CURRENT_TASK->is_initilized) {
+	if (!kernel::task::CURRENT_TASK->is_initialized) {
 		pending_messages.push(m);
 		return;
 	}
