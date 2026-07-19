@@ -18,27 +18,16 @@ namespace kernel
 {
 
 /**
- * @brief Check if an error code indicates success
- * @param err Error code to check
- * @return true if success, false if error
- */
-inline bool is_ok(error_t err) { return !IS_ERR(err); }
-
-/**
- * @brief Check if an error code indicates an error
- * @param err Error code to check
- * @return true if error, false if success
- */
-inline bool is_error(error_t err) { return IS_ERR(err); }
-
-/**
  * @brief Convert error code to human-readable string
  * @param err Error code to convert
  * @return String representation of the error code
+ *
+ * The switch is exhaustive over ErrorCode (no default label) so -Wswitch
+ * flags a missing case here whenever a new ErrorCode value is added.
  */
 inline const char* error_to_string(error_t err)
 {
-	switch (err) {
+	switch (static_cast<ErrorCode>(err)) {
 		case OK:
 			return "OK";
 		case ERR_FORK_FAILED:
@@ -63,9 +52,15 @@ inline const char* error_to_string(error_t err)
 			return "Failed to initialize device";
 		case ERR_FAILED_WRITE_TO_DEVICE:
 			return "Failed to write to device";
-		default:
-			return "Unknown error";
+		case ERR_QUEUE_FULL:
+			return "Message queue full";
+		case ERR_FAILED_READ_FROM_DEVICE:
+			return "Failed to read from device";
+		case ERR_NO_SPACE:
+			return "No space";
 	}
+
+	return "Unknown error";
 }
 
 /**

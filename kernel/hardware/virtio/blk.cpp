@@ -3,6 +3,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include "error.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
 #include "log/log.hpp"
@@ -102,7 +103,7 @@ error_t validate_length(uint32_t len)
 
 error_t write_to_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 {
-	ASSERT_OK(validate_length(len));
+	RETURN_IF_ERROR(validate_length(len));
 
 	void* req_ptr;
 	ALLOC_OR_RETURN_ERROR(req_ptr, sizeof(VirtioBlkReq),
@@ -145,7 +146,7 @@ error_t write_to_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 
 error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 {
-	ASSERT_OK(validate_length(len));
+	RETURN_IF_ERROR(validate_length(len));
 
 	void* req_ptr;
 	ALLOC_OR_RETURN_ERROR(req_ptr, sizeof(VirtioBlkReq),
@@ -196,7 +197,7 @@ error_t init_blk_device()
 
 	blk_dev = new (buffer) VirtioPciDevice();
 
-	ASSERT_OK(init_virtio_pci_device(blk_dev, VIRTIO_BLK));
+	RETURN_IF_ERROR(init_virtio_pci_device(blk_dev, VIRTIO_BLK));
 
 	kernel::task::CURRENT_TASK->is_initialized = true;
 

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 #include "bit_utils.hpp"
+#include "error.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/virtio/net.hpp"
 #include "hardware/virtio/virtio.hpp"
@@ -173,7 +174,7 @@ error_t configure_pci_common_cfg(VirtioPciDevice& virtio_dev)
 	virtio_dev.common_cfg->device_status = VIRTIO_STATUS_ACKNOWLEDGE;
 	virtio_dev.common_cfg->device_status |= VIRTIO_STATUS_DRIVER;
 
-	ASSERT_OK(negotiate_features(virtio_dev));
+	RETURN_IF_ERROR(negotiate_features(virtio_dev));
 
 	virtio_dev.common_cfg->config_msix_vector = 0;
 	if (virtio_dev.common_cfg->config_msix_vector == NO_VECTOR) {
@@ -181,7 +182,7 @@ error_t configure_pci_common_cfg(VirtioPciDevice& virtio_dev)
 		return ERR_NO_MEMORY;
 	}
 
-	ASSERT_OK(setup_virtqueue(virtio_dev));
+	RETURN_IF_ERROR(setup_virtqueue(virtio_dev));
 
 	virtio_dev.common_cfg->device_status |= VIRTIO_STATUS_DRIVER_OK;
 
@@ -233,7 +234,7 @@ error_t set_virtio_pci_capability(VirtioPciDevice& virtio_dev)
 		virtio_dev.caps = virtio_dev.caps->next;
 	}
 
-	ASSERT_OK(configure_pci_notify_cfg(virtio_dev));
+	RETURN_IF_ERROR(configure_pci_notify_cfg(virtio_dev));
 
 	return OK;
 }

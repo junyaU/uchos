@@ -142,7 +142,14 @@ int setup_page_table(page_table_entry* page_table,
 					 size_t num_pages,
 					 bool writable);
 
-void setup_page_tables(vaddr_t addr, size_t num_pages, bool writable);
+/**
+ * @brief Map num_pages of newly allocated user memory at addr and flush the TLB
+ * @param addr Start virtual address
+ * @param num_pages Number of pages to map
+ * @param writable Whether the leaf mappings are writable
+ * @return OK on success, or an error code if a page table allocation failed
+ */
+error_t setup_page_tables(vaddr_t addr, size_t num_pages, bool writable);
 
 page_table_entry* config_new_page_table();
 

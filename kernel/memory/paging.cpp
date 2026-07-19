@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include <libs/common/types.hpp>
+#include "error.hpp"
 #include "log/log.hpp"
 #include "memory/page.hpp"
 #include "memory/slab.hpp"
@@ -167,18 +168,20 @@ int setup_page_table(page_table_entry* page_table,
 	return num_pages;
 }
 
-void setup_page_tables(vaddr_t addr, size_t num_pages, bool writable)
+error_t setup_page_tables(vaddr_t addr, size_t num_pages, bool writable)
 {
 	const int num_remaining_pages =
 			setup_page_table(get_active_page_table(), 4, addr, num_pages, writable);
 	if (num_remaining_pages == -1) {
 		LOG_ERROR("Failed to setup page tables.");
-		return;
+		return ERR_NO_MEMORY;
 	}
 
 	for (size_t i = 0; i < num_pages; i++) {
 		flush_tlb(addr.data + i * PAGE_SIZE);
 	}
+
+	return OK;
 }
 
 page_table_entry* config_new_page_table()
@@ -356,7 +359,7 @@ error_t handle_page_fault(uint64_t error_code, uint64_t fault_addr)
 	auto user = (error_code >> 2) & 1;
 
 	if ((user != 0) && (rw != 0) && (exist != 0)) {
-		ASSERT_OK(copy_target_page(fault_addr));
+		RETURN_IF_ERROR(copy_target_page(fault_addr));
 	} else {
 		LOG_ERROR("Page fault: user=%d, rw=%d, exist=%d", user, rw, exist);
 		return ERR_PAGE_NOT_PRESENT;

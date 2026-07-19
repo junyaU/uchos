@@ -27,7 +27,7 @@ void test_copy_string_from_user_roundtrip()
 {
 	// Map one user page in the active address space and place a string
 	const kernel::memory::vaddr_t addr{ TEST_USER_STR_VADDR };
-	kernel::memory::setup_page_tables(addr, 1, true);
+	ASSERT_EQ(kernel::memory::setup_page_tables(addr, 1, true), OK);
 
 	char* user_buf = reinterpret_cast<char*>(addr.data);
 	strlcpy(user_buf, "hello", 6); // NOLINT(misc-include-cleaner)

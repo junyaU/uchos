@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <cstring>
 #include "asm_utils.h"
+#include "error.hpp"
 #include "log/log.hpp"
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
@@ -90,7 +91,7 @@ bool is_elf(elf64_ehdr_t* elf_header)
 				  4) == 0;
 }
 
-void copy_load_segment(elf64_ehdr_t* elf_header)
+error_t copy_load_segment(elf64_ehdr_t* elf_header)
 {
 	auto* program_header = get_program_header(elf_header);
 	for (int i = 0; i < elf_header->e_phnum; i++) {
@@ -105,7 +106,8 @@ void copy_load_segment(elf64_ehdr_t* elf_header)
 				(program_header[i].p_memsz + kernel::memory::PAGE_SIZE - 1) /
 				kernel::memory::PAGE_SIZE;
 
-		kernel::memory::setup_page_tables(dest_addr, num_pages, true);
+		RETURN_IF_ERROR(
+				kernel::memory::setup_page_tables(dest_addr, num_pages, true));
 
 		auto* const src =
 				reinterpret_cast<uint8_t*>(elf_header) + program_header[i].p_offset;
@@ -115,21 +117,24 @@ void copy_load_segment(elf64_ehdr_t* elf_header)
 		memset(dest + program_header[i].p_filesz, 0,
 			   program_header[i].p_memsz - program_header[i].p_filesz);
 	}
+
+	return OK;
 }
 
-void load_elf(elf64_ehdr_t* elf_header)
+error_t load_elf(elf64_ehdr_t* elf_header)
 {
 	if (elf_header->e_type != ET_EXEC) {
-		return;
+		LOG_ERROR("not an executable ELF file");
+		return ERR_INVALID_ARG;
 	}
 
 	const auto first_load_addr = get_first_load_addr(elf_header);
 	if (first_load_addr < 0xffff'8000'0000'0000) {
 		LOG_ERROR("invalid load address: %p", first_load_addr);
-		return;
+		return ERR_INVALID_ARG;
 	}
 
-	copy_load_segment(elf_header);
+	return copy_load_segment(elf_header);
 }
 
 void exec_elf(void* buffer, const char* name, const char* args)
@@ -140,10 +145,18 @@ void exec_elf(void* buffer, const char* name, const char* args)
 		return;
 	}
 
-	load_elf(elf_header);
+	error_t err = load_elf(elf_header);
+	if (IS_ERR(err)) {
+		LOG_ERROR("failed to load ELF file: %s", name);
+		return;
+	}
 
 	const kernel::memory::vaddr_t argv_addr{ 0xffff'ffff'ffff'f000 };
-	kernel::memory::setup_page_tables(argv_addr, 1, true);
+	err = kernel::memory::setup_page_tables(argv_addr, 1, true);
+	if (IS_ERR(err)) {
+		LOG_ERROR("failed to setup argv page table: %s", name);
+		return;
+	}
 
 	auto* argv = reinterpret_cast<char**>(argv_addr.data);
 	const int arg_v_len = 32;
@@ -155,8 +168,12 @@ void exec_elf(void* buffer, const char* name, const char* args)
 
 	const int stack_size = kernel::memory::PAGE_SIZE * 8;
 	const kernel::memory::vaddr_t stack_addr{ 0xffff'ffff'ffff'f000 - stack_size };
-	kernel::memory::setup_page_tables(stack_addr,
-									  stack_size / kernel::memory::PAGE_SIZE, true);
+	err = kernel::memory::setup_page_tables(
+			stack_addr, stack_size / kernel::memory::PAGE_SIZE, true);
+	if (IS_ERR(err)) {
+		LOG_ERROR("failed to setup stack page table: %s", name);
+		return;
+	}
 
 	enter_user_mode(argc, argv, kernel::memory::USER_SS, elf_header->e_entry,
 					stack_addr.data + stack_size - 8,
