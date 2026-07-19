@@ -57,6 +57,10 @@ std::unordered_map<void*, size_t> poisoned_objs;
 
 Stats g_stats = { 0, 0, 0 };
 
+// Depth of nested ExpectedViolation scopes currently alive. While non-zero,
+// violation LOG_ERROR calls are suppressed (stats() still updates).
+int g_expected_violations = 0;
+
 void poison_fill(void* addr, size_t n)
 {
 	auto* p = static_cast<uint8_t*>(addr);
@@ -101,6 +105,7 @@ void initialize()
 	live_allocs = std::unordered_map<void*, AllocInfo>();
 	poisoned_objs = std::unordered_map<void*, size_t>();
 	g_stats = { 0, 0, 0 };
+	g_expected_violations = 0;
 }
 
 size_t redzone_reserve() { return REDZONE_SIZE; }
@@ -113,10 +118,12 @@ void* on_alloc(void* raw, size_t user_size, size_t object_size, void* caller)
 	if (pit != poisoned_objs.end()) {
 		if (!poison_intact(raw, pit->second)) {
 			++g_stats.use_after_free;
-			LOG_ERROR(
-					"heap-debug: use-after-free in object %p (size %lu), "
-					"reallocated from %p",
-					raw, static_cast<unsigned long>(pit->second), caller);
+			if (g_expected_violations == 0) {
+				LOG_ERROR(
+						"heap-debug: use-after-free in object %p (size %lu), "
+						"reallocated from %p",
+						raw, static_cast<unsigned long>(pit->second), caller);
+			}
 		}
 		poisoned_objs.erase(pit);
 	}
@@ -146,8 +153,10 @@ void* on_free(void* user, void* caller)
 	auto it = live_allocs.find(user);
 	if (it == live_allocs.end()) {
 		++g_stats.double_free;
-		LOG_ERROR("heap-debug: invalid or double free of %p (freed from %p)", user,
-				  caller);
+		if (g_expected_violations == 0) {
+			LOG_ERROR("heap-debug: invalid or double free of %p (freed from %p)",
+					  user, caller);
+		}
 		return nullptr;
 	}
 
@@ -159,11 +168,13 @@ void* on_free(void* user, void* caller)
 	if (!redzone_intact(reinterpret_cast<void*>(tail),
 						base + info.object_size - tail)) {
 		++g_stats.redzone;
-		LOG_ERROR(
-				"heap-debug: buffer overflow on %p (size %lu, allocated from "
-				"%p, freed from %p)",
-				user, static_cast<unsigned long>(info.user_size), info.caller,
-				caller);
+		if (g_expected_violations == 0) {
+			LOG_ERROR(
+					"heap-debug: buffer overflow on %p (size %lu, allocated from "
+					"%p, freed from %p)",
+					user, static_cast<unsigned long>(info.user_size), info.caller,
+					caller);
+		}
 	}
 
 	poison_fill(info.raw, info.object_size);
@@ -223,6 +234,10 @@ void report_leaks(int top_n)
 }
 
 Stats stats() { return g_stats; }
+
+ExpectedViolation::ExpectedViolation() { ++g_expected_violations; }
+
+ExpectedViolation::~ExpectedViolation() { --g_expected_violations; }
 
 } // namespace kernel::memory::heap_debug
 
