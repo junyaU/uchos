@@ -46,7 +46,7 @@ public:
 	 *
 	 * @return uint32_t The 32-bit color code
 	 */
-	uint32_t GetCode() const;
+	uint32_t code() const;
 
 private:
 	uint8_t r_; ///< Red component (0-255)

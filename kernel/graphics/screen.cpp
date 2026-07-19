@@ -53,7 +53,7 @@ void initialize(const FrameBufferConf& frame_buffer_conf, Color bg_color)
 	kscreen = new (screen_buffer) Screen{ frame_buffer_conf, bg_color };
 
 	kscreen->fill_rectangle(Point2D{ 0, 0 }, kscreen->size(),
-							kscreen->bg_color().GetCode());
+							kscreen->bg_color().code());
 
 	// From here on log lines can be drawn; everything logged before this
 	// point exists on the serial console only.

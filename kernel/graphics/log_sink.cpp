@@ -35,7 +35,7 @@ void advance_line()
 	// Erase whatever was on the line we are about to write
 	screen->fill_rectangle({ 0, kernel_cursor_y * GLYPH_HEIGHT },
 						   { screen->width(), GLYPH_HEIGHT },
-						   screen->bg_color().GetCode());
+						   screen->bg_color().code());
 }
 } // namespace
 
