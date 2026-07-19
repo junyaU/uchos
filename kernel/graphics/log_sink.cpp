@@ -1,15 +1,16 @@
-#include "graphics/log.hpp"
-#include <cstdarg>
+/**
+ * @file log_sink.cpp
+ * @brief On-screen rendering of kernel log lines
+ */
+
+#include "graphics/log_sink.hpp"
 #include <cstddef>
-#include <cstdio>
 #include <cstring>
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
-#include "hardware/serial.hpp"
 
 namespace
 {
-kernel::graphics::LogLevel current_log_level = kernel::graphics::LogLevel::ERROR;
 int kernel_cursor_x = 0;
 int kernel_cursor_y = 5;
 
@@ -41,41 +42,15 @@ void advance_line()
 namespace kernel::graphics
 {
 
-void change_log_level(LogLevel level) { current_log_level = level; }
-
-} // namespace kernel::graphics
-
-void printk(kernel::graphics::LogLevel level, const char* format, ...)
+void screen_log_sink(const char* line)
 {
-	if (format == nullptr) {
-		return;
-	}
-
-	va_list ap;
-	char s[1024];
-
-	va_start(ap, format);
-	vsnprintf(s, sizeof(s), format, ap);
-	va_end(ap);
-
-	// The serial port receives every message regardless of the on-screen
-	// log level: it is the only output visible in headless runs and serves
-	// as a full boot trace when debugging CI failures.
-	kernel::hw::serial::write_string(s);
-	kernel::hw::serial::write_string("\n");
-
-	// The screen shows only messages that match the current log level.
-	if (level != current_log_level) {
-		return;
-	}
-
-	for (size_t i = 0; i < strlen(s) && s[i] != '\0'; ++i) {
-		kernel::graphics::write_ascii(
-				*kernel::graphics::kscreen,
+	for (size_t i = 0; i < strlen(line) && line[i] != '\0'; ++i) {
+		write_ascii(
+				*kscreen,
 				{ kernel_cursor_x++ * GLYPH_WIDTH, kernel_cursor_y * GLYPH_HEIGHT },
-				s[i], 0xffff00);
+				line[i], 0xffff00);
 
-		if (s[i] == '\n') {
+		if (line[i] == '\n') {
 			advance_line();
 			continue;
 		}
@@ -87,3 +62,5 @@ void printk(kernel::graphics::LogLevel level, const char* format, ...)
 
 	advance_line();
 }
+
+} // namespace kernel::graphics

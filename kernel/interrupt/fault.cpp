@@ -1,8 +1,8 @@
 #include "fault.hpp"
 #include <string.h> // NOLINT(misc-include-cleaner) - for strlcpy
 #include <cstdint>
-#include "graphics/log.hpp"
 #include "handlers.hpp"
+#include "log/log.hpp"
 #include "task/task.hpp"
 
 namespace kernel::interrupt

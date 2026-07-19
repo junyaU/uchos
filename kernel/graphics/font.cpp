@@ -2,7 +2,6 @@
 #include <cctype>
 #include <cstdint>
 #include <new> // NOLINT(misc-include-cleaner)
-#include "log.hpp"
 #include "point2d.hpp"
 #include "screen.hpp"
 

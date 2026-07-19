@@ -16,8 +16,8 @@
 #include "fs/file_descriptor.hpp"
 #include "fs/file_info.hpp"
 #include "graphics/font.hpp"
-#include "graphics/log.hpp"
 #include "internal_common.hpp"
+#include "log/log.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
@@ -148,8 +148,7 @@ error_t process_file_read_request(const Message& m,
 	// An empty file has no cluster chain to read; reply immediately so the
 	// requester does not block forever waiting for data that never arrives.
 	if (entry->file_size == 0 || entry->first_cluster() == 0) {
-		send_file_data(m.data.fs.request_id, nullptr, 0, m.sender, m.type,
-					   for_user);
+		send_file_data(m.data.fs.request_id, nullptr, 0, m.sender, m.type, for_user);
 		return OK;
 	}
 

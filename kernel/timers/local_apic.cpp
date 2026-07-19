@@ -1,7 +1,7 @@
 #include "local_apic.hpp"
 #include <cstdint>
-#include "graphics/log.hpp"
 #include "interrupt/vector.hpp"
+#include "log/log.hpp"
 #include "timers/acpi.hpp"
 #include "timers/timer.hpp"
 

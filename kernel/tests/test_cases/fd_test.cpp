@@ -7,7 +7,7 @@
 #include <cstring>
 #include <libs/common/types.hpp>
 #include "fs/file_descriptor.hpp"
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "task/task.hpp"
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
