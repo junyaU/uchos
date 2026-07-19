@@ -159,8 +159,8 @@ void test_task_memory_management()
 	// ~Task must free the kernel stack along with the page tables (issue #313).
 	// Deliberately probes a freed pointer; see ExpectedViolation-style tests
 	// in memory_test.cpp for the same pattern.
-	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(
-			stack)); // NOLINT(clang-analyzer-unix.Malloc)
+	// NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(stack));
 }
 
 void test_wait_for_message_preserves_other_messages()
