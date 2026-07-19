@@ -10,7 +10,7 @@
 int main(int argc, char** argv)
 {
 	pid_t pid = sys_getpid();
-	Message m = { .type = MsgType::IPC_PCI, .sender = ProcessId::from_raw(pid) };
+	Message m = make_request(MsgType::IPC_PCI);
 	send_message(process_ids::KERNEL, &m);
 
 	Message msg;
