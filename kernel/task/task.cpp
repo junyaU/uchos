@@ -34,24 +34,37 @@ std::array<Task*, MAX_TASKS> tasks;
 Task* CURRENT_TASK = nullptr;
 Task* IDLE_TASK = nullptr;
 
-const InitialTaskInfo INITIAL_TASKS[] = {
-	{ "main", 0, false, true },
-	{ "idle", reinterpret_cast<uint64_t>(&kernel::task::idle_service), true, true },
-	{ "usb_handler", reinterpret_cast<uint64_t>(&kernel::task::usb_handler_service),
+constexpr InitialTaskInfo INITIAL_TASKS[] = {
+	{ SystemProcessId::KERNEL, "main", nullptr, false, true },
+	{ SystemProcessId::IDLE, "idle", &kernel::task::idle_service, true, true },
+	{ SystemProcessId::XHCI, "usb_handler", &kernel::task::usb_handler_service,
 	  true, true },
-	{ "virtio_blk",
-	  reinterpret_cast<uint64_t>(&kernel::hw::virtio::virtio_blk_service), true,
+	{ SystemProcessId::VIRTIO_BLK, "virtio_blk",
+	  &kernel::hw::virtio::virtio_blk_service, true, false },
+	{ SystemProcessId::FS_FAT32, "fat32", &kernel::fs::fat32_service, true, true },
+	{ SystemProcessId::SHELL, "shell", &kernel::task::shell_service, true, false },
+	{ SystemProcessId::VIRTIO_NET, "virtio_net",
+	  &kernel::hw::virtio::virtio_net_service, true, false },
+	{ SystemProcessId::NET, "net", &kernel::net::packet_handler_service, true,
 	  false },
-	{ "fat32", reinterpret_cast<uint64_t>(&kernel::fs::fat32_service), true, true },
-	{ "shell", reinterpret_cast<uint64_t>(&kernel::task::shell_service), true,
-	  false },
-	{ "virtio_net",
-	  reinterpret_cast<uint64_t>(&kernel::hw::virtio::virtio_net_service), true,
-	  false },
-	{ "net", reinterpret_cast<uint64_t>(&kernel::net::packet_handler_service), true,
-	  false },
-
 };
+
+namespace
+{
+// create_task() hands out slots in ascending order, so each entry's declared
+// SystemProcessId only holds if the array is ordered by those ids with no gap.
+constexpr bool initial_tasks_match_their_slots()
+{
+	for (size_t i = 0; i < sizeof(INITIAL_TASKS) / sizeof(INITIAL_TASKS[0]); ++i) {
+		if (static_cast<pid_t>(INITIAL_TASKS[i].id) != static_cast<pid_t>(i)) {
+			return false;
+		}
+	}
+	return true;
+}
+static_assert(initial_tasks_match_their_slots(),
+			  "INITIAL_TASKS must be ordered by SystemProcessId, gap-free");
+} // namespace
 
 ProcessId get_available_task_id()
 {
@@ -346,15 +359,16 @@ void initialize()
 	list_init(&run_queue);
 
 	for (const auto& t_info : INITIAL_TASKS) {
-		Task* new_task = create_task(t_info.name, t_info.addr, t_info.setup_context,
-									 t_info.is_initialized);
+		Task* new_task =
+				create_task(t_info.name, reinterpret_cast<uint64_t>(t_info.entry),
+							t_info.setup_context, t_info.is_initialized);
 		if (new_task != nullptr) {
 			schedule_task(new_task->id);
 		}
 	}
 
-	CURRENT_TASK = tasks[0];
-	IDLE_TASK = tasks[1];
+	CURRENT_TASK = tasks[process_ids::KERNEL.raw()];
+	IDLE_TASK = tasks[process_ids::IDLE.raw()];
 
 	CURRENT_TASK->state = TASK_RUNNING;
 }
