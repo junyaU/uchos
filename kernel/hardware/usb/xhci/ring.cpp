@@ -2,8 +2,8 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include "../../mm_register.hpp"
 #include "graphics/log.hpp"
+#include "hardware/mm_register.hpp"
 #include "memory/slab.hpp"
 #include "registers.hpp"
 #include "trb.hpp"

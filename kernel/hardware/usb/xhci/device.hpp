@@ -6,10 +6,10 @@
 
 #pragma once
 
-#include "../array_map.hpp"
-#include "../class_driver/base.hpp"
-#include "../device.hpp"
 #include "context.hpp"
+#include "hardware/usb/array_map.hpp"
+#include "hardware/usb/class_driver/base.hpp"
+#include "hardware/usb/device.hpp"
 #include "registers.hpp"
 #include "ring.hpp"
 

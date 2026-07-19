@@ -14,58 +14,54 @@ namespace kernel::hw::virtio
 
 size_t find_virtio_pci_cap(VirtioPciDevice& virtio_dev)
 {
-	uint8_t cap_id, cap_next;
-	uint32_t cap_addr = kernel::hw::pci::get_capability_pointer(*virtio_dev.dev);
 	VirtioPciCap* prev_cap = nullptr;
 	size_t num_caps = 0;
 	virtio_dev.caps = nullptr;
 
-	while (cap_addr != 0) {
-		auto header =
-				kernel::hw::pci::read_capability_header(*virtio_dev.dev, cap_addr);
-		cap_id = header.bits.cap_id;
-		cap_next = header.bits.next_ptr;
+	kernel::hw::pci::for_each_capability(
+			*virtio_dev.dev,
+			[&](const kernel::hw::pci::capability_header& header, uint8_t cap_addr) {
+				if (header.bits.cap_id != kernel::hw::pci::CAP_VIRTIO) {
+					return;
+				}
 
-		if (cap_id == kernel::hw::pci::CAP_VIRTIO) {
-			auto first_dword =
-					kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr);
-			uint8_t cfg_type = (first_dword >> 24) & 0xFF;
+				auto first_dword =
+						kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr);
+				uint8_t cfg_type = (first_dword >> 24) & 0xFF;
 
-			size_t alloc_size = sizeof(VirtioPciCap);
-			if (cfg_type == VIRTIO_PCI_CAP_NOTIFY_CFG) {
-				alloc_size = sizeof(VirtioPciNotifyCap);
-			}
+				size_t alloc_size = sizeof(VirtioPciCap);
+				if (cfg_type == VIRTIO_PCI_CAP_NOTIFY_CFG) {
+					alloc_size = sizeof(VirtioPciNotifyCap);
+				}
 
-			void* addr =
-					kernel::memory::alloc(alloc_size, kernel::memory::ALLOC_ZEROED);
-			VirtioPciCap* cap = new (addr) VirtioPciCap;
-			cap->first_dword.data = first_dword;
-			cap->second_dword.data =
-					kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr + 4);
-			cap->offset =
-					kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr + 8);
-			cap->length =
-					kernel::hw::pci::read_conf_reg(*virtio_dev.dev, cap_addr + 12);
+				void* addr = kernel::memory::alloc(alloc_size,
+												   kernel::memory::ALLOC_ZEROED);
+				VirtioPciCap* cap = new (addr) VirtioPciCap;
+				cap->first_dword.data = first_dword;
+				cap->second_dword.data = kernel::hw::pci::read_conf_reg(
+						*virtio_dev.dev, cap_addr + 4);
+				cap->offset = kernel::hw::pci::read_conf_reg(*virtio_dev.dev,
+															 cap_addr + 8);
+				cap->length = kernel::hw::pci::read_conf_reg(*virtio_dev.dev,
+															 cap_addr + 12);
 
-			if (cfg_type == VIRTIO_PCI_CAP_NOTIFY_CFG) {
-				VirtioPciNotifyCap* notify_cap =
-						reinterpret_cast<VirtioPciNotifyCap*>(cap);
-				notify_cap->notify_off_multiplier = kernel::hw::pci::read_conf_reg(
-						*virtio_dev.dev, cap_addr + 16);
-			}
+				if (cfg_type == VIRTIO_PCI_CAP_NOTIFY_CFG) {
+					VirtioPciNotifyCap* notify_cap =
+							reinterpret_cast<VirtioPciNotifyCap*>(cap);
+					notify_cap->notify_off_multiplier =
+							kernel::hw::pci::read_conf_reg(*virtio_dev.dev,
+														   cap_addr + 16);
+				}
 
-			if (prev_cap != nullptr) {
-				prev_cap->next = cap;
-			} else {
-				virtio_dev.caps = cap;
-			}
+				if (prev_cap != nullptr) {
+					prev_cap->next = cap;
+				} else {
+					virtio_dev.caps = cap;
+				}
 
-			prev_cap = cap;
-			++num_caps;
-		}
-
-		cap_addr = cap_next;
-	}
+				prev_cap = cap;
+				++num_caps;
+			});
 
 	return num_caps;
 }

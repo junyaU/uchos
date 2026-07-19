@@ -97,7 +97,7 @@ private:
  * @tparam T The underlying data type
  *
  * This structure provides a simple wrapper around a single data element,
- * making it compatible with the memory_mapped_register template which
+ * making it compatible with the MemoryMappedRegister template which
  * expects types with a 'data' array member.
  */
 template<typename T>

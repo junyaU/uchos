@@ -39,8 +39,8 @@ int Port::speed() const { return regs_.port_sc.read().bits.port_speed; }
 bool Port::reset()
 {
 	auto portsc = regs_.port_sc.read();
-	portsc.data[0] &= 0x0e00c3e0U;
-	portsc.data[0] |= 0x00020010U;
+	portsc.data[0] &= PORTSC_RESET_PRESERVE_MASK;
+	portsc.data[0] |= PORTSC_RESET_SET_BITS;
 	regs_.port_sc.write(portsc);
 
 	for (int i = 0; i < SPIN_TIMEOUT_ITERATIONS; ++i) {
