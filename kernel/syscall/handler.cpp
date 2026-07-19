@@ -174,19 +174,13 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
 	if (flags == IPC_RECV) {
-		Message received{};
-		received.type = MsgType::NO_TASK;
+		// Blocking receive (issue #314 Stage A): the sleep happens here on
+		// the task's kernel stack, so the task never returns to user space
+		// in the WAITING state (which would drop it from the run queue on
+		// the next preemption, issue #313). Polling NO_TASK is gone; the
+		// receiver consumes no CPU until a sender or doorbell wakes it.
+		const Message received = kernel::task::receive_blocking();
 
-		__asm__("cli");
-		if (!t->messages.empty()) {
-			received = t->messages.front();
-			t->messages.pop_front();
-		}
-		__asm__("sti");
-
-		// The task stays RUNNING even when the queue is empty: returning
-		// to user space as WAITING would drop the task from the run queue
-		// on the next preemption (issue #313).
 		if (copy_to_user(m, &received, sizeof(*m)) != sizeof(*m)) {
 			return ERR_INVALID_ARG;
 		}

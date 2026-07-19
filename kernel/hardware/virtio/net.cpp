@@ -4,6 +4,8 @@
 #include "error.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
+#include "interrupt/routing.hpp"
+#include "interrupt/vector.hpp"
 #include "libs/common/message.hpp"
 #include "log/log.hpp"
 #include "memory/slab.hpp"
@@ -216,6 +218,15 @@ void virtio_net_service()
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
 	init_virtio_net_device();
+
+	// Wire the queue interrupts to this service's doorbells; the interrupt
+	// layer itself no longer knows any destination PID
+	kernel::interrupt::register_irq_notification(
+			kernel::interrupt::InterruptVector::VIRTQUEUE_NET_RX, t->id,
+			kernel::task::NotifyType::VIRTIO_NET_RX);
+	kernel::interrupt::register_irq_notification(
+			kernel::interrupt::InterruptVector::VIRTQUEUE_NET_TX, t->id,
+			kernel::task::NotifyType::VIRTIO_NET_TX);
 
 	read_mac_address();
 	kernel::net::set_host_mac(mac_addr);

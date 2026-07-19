@@ -6,6 +6,8 @@
 #include "error.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
+#include "interrupt/routing.hpp"
+#include "interrupt/vector.hpp"
 #include "log/log.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
@@ -66,9 +68,8 @@ void handle_write_request(const Message& m)
 	Message reply = make_blk_reply(m);
 
 	const int sector = m.data.blk_io.sector;
-	const int len = m.data.blk_io.len < SECTOR_SIZE
-							? SECTOR_SIZE
-							: m.data.blk_io.len;
+	const int len =
+			m.data.blk_io.len < SECTOR_SIZE ? SECTOR_SIZE : m.data.blk_io.len;
 
 	const error_t err = kernel::hw::virtio::write_to_blk_device(
 			static_cast<const char*>(m.data.blk_io.buf), sector, len);
@@ -130,7 +131,12 @@ error_t write_to_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 
 	notify_virtqueue(*blk_dev, 0);
 
-	kernel::task::switch_next_task(true);
+	// Sleep until the completion doorbell. The old bare sleep was woken by
+	// ANY incoming message, and a request arriving mid-wait made the
+	// zero-initialized status (VIRTIO_BLK_S_OK == 0) read as premature
+	// success before the device finished the DMA (issue #314 Stage A).
+	kernel::task::wait_notification(
+			kernel::task::notify_bit(kernel::task::NotifyType::VIRTIO_BLK));
 
 	if (req->status != VIRTIO_BLK_S_OK) {
 		LOG_ERROR("Failed to write to block device.");
@@ -173,7 +179,10 @@ error_t read_from_blk_device(const char* buffer, uint64_t sector, uint32_t len)
 
 	notify_virtqueue(*blk_dev, 0);
 
-	kernel::task::switch_next_task(true);
+	// See write_to_blk_device: wait for the completion doorbell instead of
+	// a bare sleep that any sender could cut short
+	kernel::task::wait_notification(
+			kernel::task::notify_bit(kernel::task::NotifyType::VIRTIO_BLK));
 
 	if (req->status != VIRTIO_BLK_S_OK) {
 		LOG_ERROR("Failed to read from block device. status: %d", req->status);
@@ -198,6 +207,12 @@ error_t init_blk_device()
 	blk_dev = new (buffer) VirtioPciDevice();
 
 	RETURN_IF_ERROR(init_virtio_pci_device(blk_dev, VIRTIO_BLK));
+
+	// Wire the completion interrupt to this service's doorbell; the
+	// interrupt layer itself no longer knows any destination PID
+	RETURN_IF_ERROR(kernel::interrupt::register_irq_notification(
+			kernel::interrupt::InterruptVector::VIRTQUEUE_BLK,
+			kernel::task::CURRENT_TASK->id, kernel::task::NotifyType::VIRTIO_BLK));
 
 	kernel::task::CURRENT_TASK->is_initialized = true;
 

@@ -12,6 +12,7 @@
 #include "tests/test_cases/fs_test.hpp"
 #include "tests/test_cases/graphics_test.hpp"
 #include "tests/test_cases/heap_debug_test.hpp"
+#include "tests/test_cases/ipc_test.hpp"
 #include "tests/test_cases/memory_test.hpp"
 #include "tests/test_cases/paging_test.hpp"
 #include "tests/test_cases/stdio_test.hpp"
@@ -101,6 +102,7 @@ void run_main_stage_tests()
 	// Tasks created here intentionally outlive the suite: their slots are
 	// cleared (not deleted) below, so a leak check would always fire (#313).
 	run_test_suite(register_task_tests, /*check_leaks=*/false);
+	run_test_suite(register_ipc_tests, /*check_leaks=*/false);
 	run_test_suite(register_stdio_tests, /*check_leaks=*/false);
 	release_new_task_slots();
 

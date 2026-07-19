@@ -14,6 +14,41 @@
 namespace kernel::task
 {
 
+namespace
+{
+// Message type synthesized when the corresponding NotifyType bit is drained
+// by a receive. Indexed by the NotifyType value (= bit position).
+constexpr MsgType NOTIFY_MESSAGE_TYPES[] = {
+	MsgType::NOTIFY_XHCI,		   // NotifyType::XHCI
+	MsgType::NOTIFY_VIRTIO_BLK,	   // NotifyType::VIRTIO_BLK
+	MsgType::NOTIFY_VIRTIO_NET_RX, // NotifyType::VIRTIO_NET_RX
+	MsgType::NOTIFY_VIRTIO_NET_TX, // NotifyType::VIRTIO_NET_TX
+	MsgType::NOTIFY_TIMER_TIMEOUT, // NotifyType::TIMER
+};
+static_assert(sizeof(NOTIFY_MESSAGE_TYPES) / sizeof(NOTIFY_MESSAGE_TYPES[0]) ==
+					  static_cast<size_t>(NotifyType::COUNT),
+			  "every NotifyType needs a synthesized MsgType");
+
+/**
+ * @brief Pop the lowest pending notification bit as a synthesized message
+ * @note Caller must have interrupts disabled
+ */
+bool pop_notification(Task* t, Message* out)
+{
+	if (t->pending_notifications == 0) {
+		return false;
+	}
+
+	const int bit = __builtin_ctz(t->pending_notifications);
+	t->pending_notifications &= t->pending_notifications - 1;
+
+	*out = Message{ .type = NOTIFY_MESSAGE_TYPES[bit],
+					.sender = process_ids::INTERRUPT };
+
+	return true;
+}
+} // namespace
+
 error_t handle_ool_memory_dealloc(const Message& m)
 {
 	const kernel::memory::vaddr_t addr{ reinterpret_cast<uint64_t>(
@@ -79,23 +114,108 @@ error_t send_message(ProcessId dst_id, Message& m)
 		RETURN_IF_ERROR(handle_ool_memory_alloc(m, dst));
 	}
 
-	// The queue is shared with interrupt handlers; keep the wakeup check
-	// and the push atomic so a receiver going to sleep cannot miss it
+	// Keep the push and the wakeup check atomic so a receiver going to
+	// sleep cannot miss the message (lost wakeup)
 	const kernel::interrupt::IrqGuard guard;
 
-	if (dst->messages.size() >= MAX_QUEUED_MESSAGES) {
+	if (!dst->messages.push(m)) {
 		LOG_ERROR_CODE(ERR_QUEUE_FULL, "message queue full: dest = %d, type = %d",
 					   dst_raw, static_cast<int>(m.type));
 		return ERR_QUEUE_FULL;
 	}
 
-	if (dst->state == TASK_WAITING) {
+	// A NOTIFY waiter is parked until its doorbell fires; waking it here
+	// would resume a device wait before the device finished (the queued
+	// message is handled once the waiter returns to its receive loop)
+	if (dst->state == TASK_WAITING && dst->wait_reason != WaitReason::NOTIFY) {
 		schedule_task(dst_id);
 	}
 
-	dst->messages.push_back(m);
-
 	return OK;
+}
+
+[[gnu::no_caller_saved_registers]] void notify(ProcessId dst_id, NotifyType type)
+{
+	const pid_t dst_raw = dst_id.raw();
+	if (dst_raw < 0 || dst_raw >= MAX_TASKS) {
+		return;
+	}
+
+	const kernel::interrupt::IrqGuard guard;
+
+	Task* dst = tasks[dst_raw];
+	if (dst == nullptr) {
+		// Interrupt context: a doorbell for a vanished task is dropped
+		return;
+	}
+
+	dst->pending_notifications |= notify_bit(type);
+
+	if (dst->state != TASK_WAITING) {
+		return;
+	}
+
+	if (dst->wait_reason == WaitReason::NOTIFY &&
+		(dst->wait_notify_mask & notify_bit(type)) == 0) {
+		return;
+	}
+
+	schedule_task(dst_id);
+}
+
+bool try_receive(Task* t, Message* out)
+{
+	const kernel::interrupt::IrqGuard guard;
+
+	return pop_notification(t, out) || t->messages.pop(out);
+}
+
+Message receive_blocking()
+{
+	Task* t = CURRENT_TASK;
+	Message m;
+
+	while (true) {
+		__asm__("cli");
+		if (pop_notification(t, &m) || t->messages.pop(&m)) {
+			t->state = TASK_RUNNING;
+			t->wait_reason = WaitReason::NONE;
+			__asm__("sti");
+			return m;
+		}
+
+		// Declare WAITING while interrupts are off so a sender cannot
+		// slip in between the emptiness check and the sleep (lost
+		// wakeup). The INT in switch_next_task is not blocked by IF.
+		t->wait_reason = WaitReason::RECEIVE;
+		t->state = TASK_WAITING;
+		__asm__("sti");
+		switch_next_task(false);
+	}
+}
+
+void wait_notification(uint32_t mask)
+{
+	Task* t = CURRENT_TASK;
+
+	while (true) {
+		__asm__("cli");
+		if ((t->pending_notifications & mask) != 0) {
+			t->pending_notifications &= ~mask;
+			t->wait_reason = WaitReason::NONE;
+			__asm__("sti");
+			return;
+		}
+
+		// Same lost-wakeup discipline as receive_blocking: the doorbell
+		// bit is sticky, so a notify that fired before this point is seen
+		// by the check above instead of being lost
+		t->wait_reason = WaitReason::NOTIFY;
+		t->wait_notify_mask = mask;
+		t->state = TASK_WAITING;
+		__asm__("sti");
+		switch_next_task(false);
+	}
 }
 
 } // namespace kernel::task

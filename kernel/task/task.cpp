@@ -37,8 +37,8 @@ Task* IDLE_TASK = nullptr;
 constexpr InitialTaskInfo INITIAL_TASKS[] = {
 	{ SystemProcessId::KERNEL, "main", nullptr, false, true },
 	{ SystemProcessId::IDLE, "idle", &kernel::task::idle_service, true, true },
-	{ SystemProcessId::XHCI, "usb_handler", &kernel::task::usb_handler_service,
-	  true, true },
+	{ SystemProcessId::XHCI, "usb_handler", &kernel::task::usb_handler_service, true,
+	  true },
 	{ SystemProcessId::VIRTIO_BLK, "virtio_blk",
 	  &kernel::hw::virtio::virtio_blk_service, true, false },
 	{ SystemProcessId::FS_FAT32, "fat32", &kernel::fs::fat32_service, true, true },
@@ -189,6 +189,14 @@ void Task::add_msg_handler(MsgType type, message_handler_t handler)
 	message_handlers[static_cast<int32_t>(type)] = handler;
 }
 
+void Task::dispatch_message(const Message& m)
+{
+	if (m.type == MsgType::NO_TASK || m.type >= MsgType::MAX_MESSAGE_TYPE) {
+		return;
+	}
+	message_handlers[static_cast<int32_t>(m.type)](m);
+}
+
 Task* copy_task(Task* parent, Context* parent_ctx)
 {
 	Task* child = create_task(parent->name, 0, false, true);
@@ -302,6 +310,8 @@ void switch_task(const Context& current_ctx)
 void switch_next_task(bool sleep_current_task)
 {
 	if (sleep_current_task) {
+		// Bare sleep: no specific wake condition, so any sender may wake it
+		CURRENT_TASK->wait_reason = WaitReason::NONE;
 		CURRENT_TASK->state = TASK_WAITING;
 	}
 
@@ -328,28 +338,10 @@ void exit_task(int status)
 [[noreturn]] void process_messages(Task* t)
 {
 	while (true) {
-		__asm__("cli");
-		if (t->messages.empty()) {
-			// Declare WAITING while interrupts are off so a sender cannot
-			// slip in between the emptiness check and the sleep (lost
-			// wakeup). The INT in switch_next_task is not blocked by IF.
-			t->state = TASK_WAITING;
-			__asm__("sti");
-			switch_next_task(false);
-			continue;
-		}
-
-		t->state = TASK_RUNNING;
-
-		const Message m = t->messages.front();
-		t->messages.pop_front();
-		__asm__("sti");
-
-		if (m.type == MsgType::NO_TASK || m.type >= MsgType::MAX_MESSAGE_TYPE) {
-			continue;
-		}
-
-		t->message_handlers[static_cast<int32_t>(m.type)](m);
+		// Blocks until a message or doorbell arrives; the lost-wakeup
+		// discipline lives in receive_blocking (issue #314 Stage A)
+		const Message m = receive_blocking();
+		t->dispatch_message(m);
 	}
 }
 
@@ -403,6 +395,9 @@ Task::Task(int raw_id,
 	  fs_path({ nullptr, nullptr, nullptr }),
 	  stack{ nullptr },
 	  messages{},
+	  pending_notifications{ 0 },
+	  wait_reason{ WaitReason::NONE },
+	  wait_notify_mask{ 0 },
 	  message_handlers({ std::array<message_handler_t, TOTAL_MESSAGE_TYPES>() }),
 	  fd_table()
 {
@@ -445,26 +440,24 @@ Task::Task(int raw_id,
 Message wait_for_message(MsgType type)
 {
 	Task* t = CURRENT_TASK;
+	Message m;
 
 	while (true) {
 		__asm__("cli");
-		for (auto it = t->messages.begin(); it != t->messages.end(); ++it) {
-			if (it->type != type) {
-				continue;
-			}
-
-			const Message m = *it;
-			t->messages.erase(it);
+		if (t->messages.pop_first_of_type(type, &m)) {
 			t->state = TASK_RUNNING;
+			t->wait_reason = WaitReason::NONE;
 			__asm__("sti");
-
 			return m;
 		}
 
 		// No matching message yet: sleep instead of spinning, and leave
 		// the other queued messages untouched (issue #313 livelock).
 		// WAITING is declared while interrupts are off so a sender cannot
-		// slip in between the scan and the sleep.
+		// slip in between the scan and the sleep. RECEIVE so any new
+		// message triggers a rescan; pending notification bits are left
+		// alone here (they are drained by receive_blocking only).
+		t->wait_reason = WaitReason::RECEIVE;
 		t->state = TASK_WAITING;
 		__asm__("sti");
 		switch_next_task(false);

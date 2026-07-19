@@ -45,9 +45,8 @@ void handle_initialize(const Message& m)
 		ENTRIES_PER_CLUSTER = BYTES_PER_CLUSTER / sizeof(kernel::fs::DirectoryEntry);
 		FAT_TABLE_SECTOR = VOLUME_BPB->reserved_sector_count;
 
-		const size_t table_size =
-				static_cast<size_t>(VOLUME_BPB->fat_size_32) *
-				static_cast<size_t>(SECTOR_SIZE);
+		const size_t table_size = static_cast<size_t>(VOLUME_BPB->fat_size_32) *
+								  static_cast<size_t>(SECTOR_SIZE);
 
 		send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size,
 									MsgType::INITIALIZE_TASK);
@@ -61,10 +60,13 @@ void handle_initialize(const Message& m)
 		ROOT_DIR = reinterpret_cast<kernel::fs::DirectoryEntry*>(m.data.blk_io.buf);
 		kernel::task::CURRENT_TASK->is_initialized = true;
 
+		// Replay the backlog by dispatching directly: the message ring is
+		// sealed against direct pushes (issue #314), and these messages
+		// would only come back to this task's own handler table anyway
 		while (!pending_messages.empty()) {
-			auto msg = pending_messages.front();
+			const Message msg = pending_messages.front();
 			pending_messages.pop();
-			kernel::task::CURRENT_TASK->messages.push_back(msg);
+			kernel::task::CURRENT_TASK->dispatch_message(msg);
 		}
 	}
 }

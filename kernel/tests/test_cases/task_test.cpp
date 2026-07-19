@@ -87,21 +87,28 @@ void test_task_message_handling()
 	Task* t = create_task("message_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
+	// Keep the receiver off the run queue while the test feeds it
+	t->state = kernel::task::TASK_RUNNING;
+
 	// Test message handler registration
 	g_handler_called = false;
 	t->add_msg_handler(MsgType::IPC_EXIT_TASK, test_message_handler);
 	ASSERT_FALSE(g_handler_called);
 
-	// Test message queue
+	// The ring is sealed against direct pushes; messages enter through
+	// send_message only (issue #314)
 	ASSERT_TRUE(t->messages.empty());
-	const Message test_msg = { .type = MsgType::IPC_EXIT_TASK,
-							   .sender = ProcessId::from_raw(0) };
-	t->messages.push_back(test_msg);
+	Message test_msg = { .type = MsgType::IPC_EXIT_TASK,
+						 .sender = ProcessId::from_raw(0) };
+	ASSERT_EQ(kernel::task::send_message(t->id, test_msg), OK);
 	ASSERT_FALSE(t->messages.empty());
 
-	// Test message handling
-	t->message_handlers[static_cast<int32_t>(MsgType::IPC_EXIT_TASK)](test_msg);
+	// Test message handling through the shared dispatch point
+	Message received;
+	ASSERT_TRUE(kernel::task::try_receive(t, &received));
+	t->dispatch_message(received);
 	ASSERT_TRUE(g_handler_called);
+	ASSERT_TRUE(t->messages.empty());
 }
 
 void test_task_copy()
@@ -158,12 +165,14 @@ void test_wait_for_message_preserves_other_messages()
 	Task* t = create_task("wait_msg_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
 
+	t->state = kernel::task::TASK_RUNNING;
+
 	Message other = { .type = MsgType::NOTIFY_WRITE,
 					  .sender = ProcessId::from_raw(1) };
 	Message target = { .type = MsgType::IPC_EXIT_TASK,
 					   .sender = ProcessId::from_raw(2) };
-	t->messages.push_back(other);
-	t->messages.push_back(target);
+	ASSERT_EQ(kernel::task::send_message(t->id, other), OK);
+	ASSERT_EQ(kernel::task::send_message(t->id, target), OK);
 
 	const kernel::tests::ScopedCurrentTask scoped_task(t);
 
@@ -175,8 +184,9 @@ void test_wait_for_message_preserves_other_messages()
 	// The unrelated message is still queued (issue #313: the old
 	// implementation spun on and reordered non-matching messages)
 	ASSERT_EQ(t->messages.size(), 1UL);
-	ASSERT_TRUE(t->messages.front().type == MsgType::NOTIFY_WRITE);
-	t->messages.clear();
+	Message remaining;
+	ASSERT_TRUE(kernel::task::try_receive(t, &remaining));
+	ASSERT_TRUE(remaining.type == MsgType::NOTIFY_WRITE);
 }
 
 void test_send_message_queue_cap()
@@ -190,32 +200,50 @@ void test_send_message_queue_cap()
 	Message m = { .type = MsgType::NOTIFY_WRITE,
 				  .sender = kernel::task::CURRENT_TASK->id };
 
-	// NOTE: send_message is [[gnu::no_caller_saved_registers]], so its
-	// return value is not reliable at the call site; assert on the queue
-	// size instead.
-	for (size_t i = 0; i < kernel::task::MAX_QUEUED_MESSAGES + 8; ++i) {
-		kernel::task::send_message(t->id, m);
+	// The return value is reliable now that the ISR-only attribute moved
+	// to notify() (issue #314)
+	for (size_t i = 0; i < kernel::task::MessageQueue::CAPACITY; ++i) {
+		ASSERT_EQ(kernel::task::send_message(t->id, m), OK);
 	}
 
-	// The queue is capped instead of growing without bound (issue #313)
-	ASSERT_EQ(t->messages.size(), kernel::task::MAX_QUEUED_MESSAGES);
-	t->messages.clear();
+	// The ring rejects the overflowing message instead of growing (the
+	// backpressure decision of issue #314: fail fast, never block)
+	ASSERT_EQ(kernel::task::send_message(t->id, m), ERR_QUEUE_FULL);
+	ASSERT_EQ(t->messages.size(), kernel::task::MessageQueue::CAPACITY);
+
+	Message drained;
+	while (kernel::task::try_receive(t, &drained)) {
+	}
+	ASSERT_TRUE(t->messages.empty());
 }
 
-void test_ipc_recv_empty_keeps_task_runnable()
+void test_ipc_recv_returns_queued_message()
 {
 	Task* t = create_task("ipc_recv_test", 0, true, true);
 	ASSERT_NOT_NULL(t);
-	ASSERT_TRUE(t->messages.empty());
+	t->state = kernel::task::TASK_RUNNING;
+
+	// sys_ipc(IPC_RECV) blocks on an empty queue now (issue #314), so the
+	// single-threaded test feeds the queue first and asserts the delivery
+	Message queued = { .type = MsgType::NOTIFY_WRITE,
+					   .sender = kernel::task::CURRENT_TASK->id };
+	ASSERT_EQ(kernel::task::send_message(t->id, queued), OK);
 
 	const kernel::tests::ScopedCurrentTask scoped_task(t);
 
+	// The out-pointer is a kernel address here, so copy_to_user rejects it
+	// after the receive; draining the ring below still proves the blocking
+	// path popped the message. Capture the result instead of calling
+	// sys_ipc inside an ASSERT: the macros re-evaluate their arguments on
+	// failure, and a second IPC_RECV would block forever on the empty ring.
 	Message m;
-	kernel::syscall::sys_ipc(0, 0, reinterpret_cast<uint64_t>(&m), IPC_RECV);
+	const error_t err =
+			kernel::syscall::sys_ipc(0, 0, reinterpret_cast<uint64_t>(&m), IPC_RECV);
+	ASSERT_EQ(err, ERR_INVALID_ARG);
+	ASSERT_TRUE(t->messages.empty());
 
-	// An empty queue must not leave the task WAITING while it returns to
-	// the caller; it would be dropped from the run queue on the next
-	// preemption (issue #313)
+	// The task must return to the caller RUNNING, never WAITING; it would
+	// be dropped from the run queue on the next preemption (issue #313)
 	ASSERT_EQ(t->state, kernel::task::TASK_RUNNING);
 }
 
@@ -229,6 +257,6 @@ void register_task_tests()
 	test_register("wait_for_message_preserves_other_messages",
 				  test_wait_for_message_preserves_other_messages);
 	test_register("send_message_queue_cap", test_send_message_queue_cap);
-	test_register("ipc_recv_empty_keeps_task_runnable",
-				  test_ipc_recv_empty_keeps_task_runnable);
+	test_register("ipc_recv_returns_queued_message",
+				  test_ipc_recv_returns_queued_message);
 }
