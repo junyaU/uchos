@@ -16,8 +16,8 @@
 #include "fs/file_descriptor.hpp"
 #include "fs/file_info.hpp"
 #include "graphics/font.hpp"
-#include "graphics/log.hpp"
 #include "internal_common.hpp"
+#include "log/log.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
@@ -148,8 +148,7 @@ error_t process_file_read_request(const Message& m,
 	// An empty file has no cluster chain to read; reply immediately so the
 	// requester does not block forever waiting for data that never arrives.
 	if (entry->file_size == 0 || entry->first_cluster() == 0) {
-		send_file_data(m.data.fs.request_id, nullptr, 0, m.sender, m.type,
-					   for_user);
+		send_file_data(m.data.fs.request_id, nullptr, 0, m.sender, m.type, for_user);
 		return OK;
 	}
 
@@ -193,11 +192,11 @@ void handle_get_file_info(const Message& m)
 	sm.data.fs.buf = nullptr;
 
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
-		if (ROOT_DIR[i].name[0] == 0x00) {
+		if (ROOT_DIR[i].name[0] == DIR_ENTRY_END) {
 			break;
 		}
 
-		if (ROOT_DIR[i].name[0] == 0xE5) {
+		if (ROOT_DIR[i].name[0] == DIR_ENTRY_DELETED) {
 			continue;
 		}
 
@@ -377,8 +376,7 @@ void handle_fs_write(const Message& m)
 			return;
 		}
 
-		entry->first_cluster_low = new_cluster & 0xFFFF;
-		entry->first_cluster_high = (new_cluster >> 16) & 0xFFFF;
+		entry->set_first_cluster(new_cluster);
 		write_fat_table_to_disk();
 	}
 
@@ -493,9 +491,8 @@ void handle_fs_write(const Message& m)
 			if (new_clusters < current_clusters) {
 				if (new_clusters == 0) {
 					// File is now empty, free all clusters
-					free_cluster_chain(entry->first_cluster(), 0);
-					entry->first_cluster_low = 0;
-					entry->first_cluster_high = 0;
+					free_cluster_chain(entry->first_cluster());
+					entry->set_first_cluster(0);
 				} else {
 					// Find the cluster that should be the last one
 					cluster_t current = entry->first_cluster();
@@ -508,7 +505,7 @@ void handle_fs_write(const Message& m)
 						// Free clusters after this one
 						cluster_t next = next_cluster(current);
 						if (next != END_OF_CLUSTER_CHAIN) {
-							free_cluster_chain(next, 0);
+							free_cluster_chain(next);
 							FAT_TABLE[current] = END_OF_CLUSTER_CHAIN;
 						}
 					}
@@ -518,7 +515,7 @@ void handle_fs_write(const Message& m)
 		}
 
 		entry->file_size = new_size;
-		update_directory_entry_on_disk(entry, fd->name);
+		persist_directory_entry(entry, fd->name);
 	}
 
 	// The FS_WRITE reply is sent from process_write_completion() once the

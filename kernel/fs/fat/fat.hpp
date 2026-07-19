@@ -58,6 +58,20 @@ enum class entry_attribute : uint8_t {
 	LONG_NAME = 0x0F,
 };
 
+/// First byte of DirectoryEntry::name marking the end of a directory's used
+/// entries: this slot and all that follow it in the cluster are unused.
+constexpr unsigned char DIR_ENTRY_END = 0x00;
+
+/// First byte of DirectoryEntry::name marking a deleted entry: the slot is
+/// free for reuse, but later entries in the same cluster may still be valid.
+constexpr unsigned char DIR_ENTRY_DELETED = 0xE5;
+
+/// Mask for one 16-bit half (low or high) of a 32-bit cluster number.
+constexpr uint32_t CLUSTER_LOW_MASK = 0xFFFF;
+
+/// Bit shift to reach the high half of a 32-bit cluster number.
+constexpr unsigned int CLUSTER_HIGH_SHIFT = 16;
+
 struct DirectoryEntry {
 	unsigned char name[11];
 	entry_attribute attribute;
@@ -76,9 +90,28 @@ struct DirectoryEntry {
 	{
 		return first_cluster_low | (static_cast<uint32_t>(first_cluster_high) << 16);
 	}
+
+	/**
+	 * @brief Set the first cluster number, splitting it across the low/high fields
+	 * @param cluster Cluster number to store
+	 */
+	void set_first_cluster(uint32_t cluster)
+	{
+		first_cluster_low = cluster & CLUSTER_LOW_MASK;
+		first_cluster_high = (cluster >> CLUSTER_HIGH_SHIFT) & CLUSTER_LOW_MASK;
+	}
 } __attribute__((packed));
 
+/// This implementation always writes this exact value when it marks the end
+/// of a cluster chain in the FAT table.
 static const cluster_t END_OF_CLUSTER_CHAIN = 0x0FFFFFFFLU;
+
+/// FAT32 reserves every value from here through END_OF_CLUSTER_CHAIN
+/// (0x0FFFFFFF) as an end-of-chain/reserved marker; readers must treat any
+/// FAT entry in this range as "no next cluster", even though this
+/// implementation only ever writes END_OF_CLUSTER_CHAIN itself when
+/// terminating a chain.
+static const cluster_t FAT32_EOC_MIN = 0x0FFFFFF8UL;
 
 constexpr unsigned int BOOT_SECTOR = 0;
 

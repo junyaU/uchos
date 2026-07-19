@@ -29,6 +29,9 @@ extern std::queue<Message> pending_messages;
 // FAT table write optimization constants
 constexpr size_t FAT_WRITE_CHUNK_SIZE = 65536; // 64KB chunks for batch writes
 
+/// Space character used to right-pad the 8.3 short file name fields.
+constexpr char SFN_PAD = 0x20;
+
 // Change directory request tracking
 extern std::map<fs_id_t, ProcessId> change_dir_requests;
 extern std::map<fs_id_t, std::string> change_dir_names;
@@ -36,7 +39,6 @@ extern std::map<fs_id_t, std::string> parent_dir_names;
 extern fs_id_t next_change_dir_id;
 
 // Common utility functions
-std::vector<char*> parse_path(const char* path);
 void read_dir_entry_name_raw(const kernel::fs::DirectoryEntry& entry, char* dest);
 void read_dir_entry_name(const kernel::fs::DirectoryEntry& entry, char* dest);
 bool entry_name_is_equal(const kernel::fs::DirectoryEntry& entry, const char* name);
@@ -58,10 +60,8 @@ cluster_t allocate_cluster_chain(uint32_t* fat,
 								 size_t total_clusters,
 								 size_t num_clusters);
 cluster_t allocate_cluster_chain(size_t num_clusters);
-void free_cluster_chain(uint32_t* fat,
-						cluster_t start_cluster,
-						cluster_t keep_until_cluster = 0);
-void free_cluster_chain(cluster_t start_cluster, cluster_t keep_until_cluster = 0);
+void free_cluster_chain(uint32_t* fat, cluster_t start_cluster);
+void free_cluster_chain(cluster_t start_cluster);
 size_t count_free_clusters(const uint32_t* fat, size_t total_clusters);
 size_t count_free_clusters();
 size_t total_fat_clusters();
@@ -92,8 +92,7 @@ void send_file_data(fs_id_t id,
 					bool for_user);
 
 // Directory entry persistence
-void update_directory_entry_on_disk(kernel::fs::DirectoryEntry* entry,
-									const char* name);
+void persist_directory_entry(kernel::fs::DirectoryEntry* entry, const char* name);
 
 // Message handlers declarations
 void handle_initialize(const Message& m);

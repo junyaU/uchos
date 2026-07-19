@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <cstring>
 #include "asm_utils.h"
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"

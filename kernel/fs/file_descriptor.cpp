@@ -3,7 +3,7 @@
 #include <cstring>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 
 namespace kernel::fs
 {
@@ -78,7 +78,7 @@ FileDescriptor* get_process_fd(FileDescriptor* fd_table, size_t table_size, fd_t
 	}
 
 	if (fd_table[fd].is_unused()) {
-		LOG_ERROR("fd: %d", fd);
+		LOG_ERROR("fd %d is not in use", fd);
 		return nullptr;
 	}
 

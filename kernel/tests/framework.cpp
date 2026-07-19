@@ -1,6 +1,6 @@
 #include "tests/framework.hpp"
 #include <cstring>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #ifdef KERNEL_HEAP_DEBUG_ENABLED
 #include "memory/heap_debug.hpp"
 #endif
@@ -75,7 +75,7 @@ void test_run()
 
 void run_test_suite(void (*test_suite)(), bool check_leaks)
 {
-	kernel::graphics::change_log_level(kernel::graphics::LogLevel::TEST);
+	kernel::log::change_log_level(kernel::log::LogLevel::TEST);
 	test_init();
 	test_suite();
 
@@ -103,7 +103,7 @@ void run_test_suite(void (*test_suite)(), bool check_leaks)
 	(void)check_leaks;
 #endif
 
-	kernel::graphics::change_log_level(kernel::graphics::LogLevel::ERROR);
+	kernel::log::change_log_level(kernel::log::LogLevel::ERROR);
 }
 
 bool test_all_passed() { return total_stats.total > 0 && total_stats.failed == 0; }
@@ -112,11 +112,11 @@ void test_print_summary()
 {
 	// printk only emits messages whose level matches the current log level
 	// exactly, so the summary must be printed while the level is TEST.
-	kernel::graphics::change_log_level(kernel::graphics::LogLevel::TEST);
+	kernel::log::change_log_level(kernel::log::LogLevel::TEST);
 
 	LOG_TEST("TEST_SUMMARY: total=%d passed=%d failed=%d result=%s",
 			 total_stats.total, total_stats.passed, total_stats.failed,
 			 test_all_passed() ? "PASS" : "FAIL");
 
-	kernel::graphics::change_log_level(kernel::graphics::LogLevel::ERROR);
+	kernel::log::change_log_level(kernel::log::LogLevel::ERROR);
 }

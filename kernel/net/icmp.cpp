@@ -2,13 +2,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "net/checksum.hpp"
 #include "net/ipv4.hpp"
 
 namespace kernel::net
 {
-void handle_icmp_echo_request(kernel::net::ICMPEchoHeader* echo_header,
+void handle_icmp_echo_request(const kernel::net::ICMPEchoHeader* echo_header,
 							  uint32_t src_ip,
 							  size_t icmp_len)
 {
@@ -33,9 +33,8 @@ void process_icmp(const ICMPHeader& icmp_header, uint32_t src_ip, size_t icmp_le
 	switch (static_cast<ICMPType>(icmp_header.type)) {
 		case ICMPType::ECHO_REQUEST:
 			handle_icmp_echo_request(
-					const_cast<ICMPEchoHeader*>(
-							reinterpret_cast<const ICMPEchoHeader*>(&icmp_header)),
-					src_ip, icmp_len);
+					reinterpret_cast<const ICMPEchoHeader*>(&icmp_header), src_ip,
+					icmp_len);
 			break;
 		case ICMPType::ECHO_REPLY:
 			LOG_ERROR("ICMP Echo Reply received");

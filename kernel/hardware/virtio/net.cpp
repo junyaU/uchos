@@ -1,11 +1,12 @@
 #include "hardware/virtio/net.hpp"
 #include <cstddef>
 #include <libs/common/types.hpp>
-#include "graphics/log.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
 #include "libs/common/message.hpp"
+#include "log/log.hpp"
 #include "memory/slab.hpp"
+#include "net/host.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
 
@@ -13,7 +14,12 @@ namespace kernel::hw::virtio
 {
 
 VirtioPciDevice* net_dev = nullptr;
+// NIC hardware address; read from virtio config space and handed to the
+// protocol stack via kernel::net::set_host_mac()
+namespace
+{
 uint8_t mac_addr[6] = { 0 };
+} // namespace
 VirtioVirtqueue* rx_queue = nullptr;
 VirtioVirtqueue* tx_queue = nullptr;
 
@@ -211,6 +217,7 @@ void virtio_net_service()
 	init_virtio_net_device();
 
 	read_mac_address();
+	kernel::net::set_host_mac(mac_addr);
 
 	setup_rx_buffers();
 

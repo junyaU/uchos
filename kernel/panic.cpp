@@ -1,7 +1,7 @@
 #include "panic.hpp"
 #include <cstdarg>
 #include <cstdio>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 
 namespace kernel
 {

@@ -16,8 +16,8 @@
 #include "fat.hpp"
 #include "fs/path.hpp"
 #include "graphics/font.hpp"
-#include "graphics/log.hpp"
 #include "internal_common.hpp"
+#include "log/log.hpp"
 #include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
@@ -34,8 +34,9 @@ fs_id_t next_change_dir_id = 1000000;
 namespace
 {
 
-void update_directory_path_from_parent(kernel::task::Task* t,
-									   const std::string& parent_path)
+/// Set fs_path (full_path / current_dir_name) from an already-known parent
+/// path string; used for ".." when the parent's path was precomputed.
+void set_fs_path_to_parent(kernel::task::Task* t, const std::string& parent_path)
 {
 	strncpy(t->fs_path.full_path, parent_path.c_str(),
 			sizeof(t->fs_path.full_path) - 1);
@@ -55,7 +56,9 @@ void update_directory_path_from_parent(kernel::task::Task* t,
 	}
 }
 
-void update_directory_path_append(kernel::task::Task* t, const std::string& dir_name)
+/// Set fs_path (full_path / current_dir_name) by appending a child directory
+/// name; used when the current directory changes to a named subdirectory.
+void set_fs_path_to_child(kernel::task::Task* t, const std::string& dir_name)
 {
 	strncpy(t->fs_path.current_dir_name, dir_name.c_str(), 12);
 	t->fs_path.current_dir_name[12] = '\0';
@@ -70,7 +73,10 @@ void update_directory_path_append(kernel::task::Task* t, const std::string& dir_
 	}
 }
 
-void change_to_root_directory(kernel::task::Task* t)
+/// Reset fs_path (current_dir / current_dir_name / full_path) to the root
+/// directory. State only: unlike handle_change_to_root(), this does not send
+/// a reply message.
+void set_fs_path_to_root(kernel::task::Task* t)
 {
 	if (t->fs_path.current_dir != nullptr && t->fs_path.current_dir != ROOT_DIR) {
 		kernel::memory::free(t->fs_path.current_dir);
@@ -101,7 +107,9 @@ bool validate_change_dir_request(const Message& m, kernel::task::Task*& task)
 	return true;
 }
 
-void update_directory_entry(kernel::task::Task* t, DirectoryEntry* new_dir)
+/// Replace fs_path.current_dir with a newly loaded directory-cluster buffer,
+/// freeing the previous buffer (unless it is the shared ROOT_DIR).
+void set_fs_path_current_dir(kernel::task::Task* t, DirectoryEntry* new_dir)
 {
 	if (t->fs_path.current_dir != nullptr && t->fs_path.current_dir != ROOT_DIR) {
 		kernel::memory::free(t->fs_path.current_dir);
@@ -116,13 +124,13 @@ void finalize_directory_change(const Message& m, kernel::task::Task* t)
 		if (name_it->second == "..") {
 			auto parent_name_it = parent_dir_names.find(m.data.blk_io.request_id);
 			if (parent_name_it != parent_dir_names.end()) {
-				update_directory_path_from_parent(t, parent_name_it->second);
+				set_fs_path_to_parent(t, parent_name_it->second);
 				parent_dir_names.erase(parent_name_it);
 			} else if (t->fs_path.current_dir == ROOT_DIR) {
-				change_to_root_directory(t);
+				set_fs_path_to_root(t);
 			}
 		} else {
-			update_directory_path_append(t, name_it->second);
+			set_fs_path_to_child(t, name_it->second);
 		}
 		change_dir_names.erase(name_it);
 	}
@@ -147,14 +155,15 @@ void handle_virtio_response(const Message& m)
 		return;
 	}
 
-	update_directory_entry(task,
-						   reinterpret_cast<DirectoryEntry*>(m.data.blk_io.buf));
+	set_fs_path_current_dir(task,
+							reinterpret_cast<DirectoryEntry*>(m.data.blk_io.buf));
 	finalize_directory_change(m, task);
 }
 
-void change_to_root(const Message& m, kernel::task::Task* t)
+/// Reset to the root directory and reply to the FS_CHANGE_DIR request.
+void handle_change_to_root(const Message& m, kernel::task::Task* t)
 {
-	change_to_root_directory(t);
+	set_fs_path_to_root(t);
 
 	Message reply = { .type = MsgType::FS_CHANGE_DIR,
 					  .sender = process_ids::FS_FAT32 };
@@ -207,7 +216,7 @@ void request_parent_directory_load(const Message& m,
 void handle_parent_directory_change(const Message& m, kernel::task::Task* t)
 {
 	if (t->fs_path.current_dir == ROOT_DIR) {
-		change_to_root(m, t);
+		handle_change_to_root(m, t);
 		return;
 	}
 
@@ -218,7 +227,7 @@ void handle_parent_directory_change(const Message& m, kernel::task::Task* t)
 	}
 
 	if (parent_entry->first_cluster() == 0) {
-		change_to_root(m, t);
+		handle_change_to_root(m, t);
 		return;
 	}
 
@@ -283,7 +292,7 @@ void handle_fs_change_dir(const Message& m)
 	const char* path_name = reinterpret_cast<const char*>(m.data.fs.name);
 
 	if (strcmp(path_name, "/") == 0) {
-		change_to_root(m, task);
+		handle_change_to_root(m, task);
 		return;
 	}
 
@@ -326,11 +335,11 @@ void handle_get_directory_contents(const Message& m)
 	std::vector<char> entries(ENTRIES_PER_CLUSTER * sizeof(DirectoryEntry));
 	int entries_count = 0;
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
-		if (current_dir[i].name[0] == 0x00) {
+		if (current_dir[i].name[0] == DIR_ENTRY_END) {
 			break;
 		}
 
-		if (current_dir[i].name[0] == 0xE5) {
+		if (current_dir[i].name[0] == DIR_ENTRY_DELETED) {
 			continue;
 		}
 
@@ -405,7 +414,7 @@ void handle_fs_pwd(const Message& m)
 	kernel::task::send_message(m.sender, reply);
 }
 
-void update_directory_entry_on_disk(DirectoryEntry* entry, const char* name)
+void persist_directory_entry(DirectoryEntry* entry, const char* name)
 {
 	if (entry == nullptr || ROOT_DIR == nullptr) {
 		LOG_ERROR("Invalid directory entry or ROOT_DIR not initialized");
@@ -414,7 +423,7 @@ void update_directory_entry_on_disk(DirectoryEntry* entry, const char* name)
 
 	DirectoryEntry* disk_entry = nullptr;
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
-		if (ROOT_DIR[i].name[0] == 0x00) {
+		if (ROOT_DIR[i].name[0] == DIR_ENTRY_END) {
 			break;
 		}
 
@@ -442,8 +451,10 @@ void update_directory_entry_on_disk(DirectoryEntry* entry, const char* name)
 	send_write_req_to_blk_device(write_buffer, root_dir_sector, BYTES_PER_CLUSTER,
 								 MsgType::FS_WRITE, 0, 0);
 
-	// Note: The buffer will be freed when the write operation completes
-	// TODO: This should be handled in the write completion handler
+	// write_buffer is freed by the block device driver (kernel::hw::virtio::blk's
+	// IPC_WRITE_TO_BLK_DEVICE handler) once it has copied the data to disk;
+	// this request is not tracked in file.cpp's pending_writes map because no
+	// caller here is waiting on an FS_WRITE reply.
 }
 
 } // namespace kernel::fs::fat

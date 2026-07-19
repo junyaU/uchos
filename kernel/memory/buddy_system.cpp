@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "bit_utils.hpp"
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "memory/page.hpp"
 
 namespace kernel::memory

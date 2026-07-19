@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "../../mm_register.hpp"
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "memory/slab.hpp"
 #include "registers.hpp"
 #include "trb.hpp"

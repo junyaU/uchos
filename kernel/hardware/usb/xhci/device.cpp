@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include "../device.hpp"
 #include "context.hpp"
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "registers.hpp"
 #include "ring.hpp"
 #include "trb.hpp"

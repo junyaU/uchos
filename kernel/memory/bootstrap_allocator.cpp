@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "../../UchLoaderPkg/memory_map.hpp"
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "memory/page.hpp"
 
 #include <sys/types.h>

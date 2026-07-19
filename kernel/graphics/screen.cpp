@@ -4,6 +4,8 @@
 #include "../../UchLoaderPkg/frame_buffer_conf.hpp"
 #include "color.hpp"
 #include "font.hpp"
+#include "graphics/log_sink.hpp"
+#include "log/log.hpp"
 #include "point2d.hpp"
 
 namespace kernel::graphics
@@ -52,6 +54,10 @@ void initialize(const FrameBufferConf& frame_buffer_conf, Color bg_color)
 
 	kscreen->fill_rectangle(Point2D{ 0, 0 }, kscreen->size(),
 							kscreen->bg_color().GetCode());
+
+	// From here on log lines can be drawn; everything logged before this
+	// point exists on the serial console only.
+	kernel::log::register_screen_sink(screen_log_sink);
 }
 
 } // namespace kernel::graphics

@@ -6,7 +6,7 @@
 #include "net/packet_handler.hpp"
 #include <libs/common/endian.hpp>
 #include <libs/common/message.hpp>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "net/arp.hpp"
 #include "net/ethernet.hpp"
 #include "net/ipv4.hpp"

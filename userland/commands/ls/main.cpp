@@ -9,20 +9,16 @@
 
 int main(int argc, char** argv)
 {
-	pid_t pid = sys_getpid();
 	char* input = argv[1];
 
-	Message m = { .type = MsgType::GET_DIRECTORY_CONTENTS,
-				  .sender = ProcessId::from_raw(pid) };
+	Message m = make_request(MsgType::GET_DIRECTORY_CONTENTS);
 	if (input != nullptr) {
 		memcpy(m.data.fs.name, input, strlen(input));
 	} else {
 		memcpy(m.data.fs.name, "/", 1);
 	}
 
-	send_message(process_ids::FS_FAT32, &m);
-
-	Message msg = wait_for_message(MsgType::GET_DIRECTORY_CONTENTS);
+	Message msg = call(process_ids::FS_FAT32, &m);
 
 	char buf[256];
 	size_t buf_pos = 0;
@@ -57,8 +53,7 @@ int main(int argc, char** argv)
 	buf[buf_pos] = '\0'; // Ensure null termination
 	printu(buf);
 
-	deallocate_ool_memory(ProcessId::from_raw(pid), msg.tool_desc.addr,
-						  msg.tool_desc.size);
+	deallocate_ool_memory(m.sender, msg.tool_desc.addr, msg.tool_desc.size);
 
 	return 0;
 }
