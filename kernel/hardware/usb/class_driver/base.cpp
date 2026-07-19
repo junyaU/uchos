@@ -1,5 +1,5 @@
 #include "base.hpp"
-#include "../descriptor.hpp"
+#include "hardware/usb/descriptor.hpp"
 #include "keyboard.hpp"
 
 namespace kernel::hw::usb

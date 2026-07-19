@@ -2,8 +2,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include "../device.hpp"
 #include "context.hpp"
+#include "hardware/usb/device.hpp"
 #include "log/log.hpp"
 #include "registers.hpp"
 #include "ring.hpp"
@@ -196,14 +196,15 @@ void Device::on_transfer_event_received(const transfer_event_trb& event_trb)
 
 	// Advance the transfer ring's consumer position so that Ring::push can
 	// detect a full ring.
-	const DeviceContextIndex event_dc_index{ event_trb.EndpointId() };
+	const DeviceContextIndex event_dc_index{ event_trb.endpoint_id() };
 	if (event_dc_index.value >= 1 && event_dc_index.value <= 31 &&
 		transfer_rings_[event_dc_index.value - 1] != nullptr) {
 		transfer_rings_[event_dc_index.value - 1]->on_consumed(event_trb.pointer());
 	}
 
-	const bool is_success = event_trb.bits.completion_code == 1 ||
-							event_trb.bits.completion_code == 13;
+	const bool is_success =
+			event_trb.bits.completion_code == COMPLETION_CODE_SUCCESS ||
+			event_trb.bits.completion_code == COMPLETION_CODE_SHORT_PACKET;
 	if (!is_success) {
 		LOG_DEBUG("transfer failed: completion code: %d\n",
 				  event_trb.bits.completion_code);
@@ -216,7 +217,7 @@ void Device::on_transfer_event_received(const transfer_event_trb& event_trb)
 	if (auto* normal = trb_dynamic_cast<normal_trb>(issued_trb)) {
 		const auto transfer_length =
 				normal->bits.trb_transfer_length - residual_length;
-		this->on_interrupt_completed({ event_trb.EndpointId(), normal->pointer(),
+		this->on_interrupt_completed({ event_trb.endpoint_id(), normal->pointer(),
 									   static_cast<int>(transfer_length) });
 		return;
 	}
@@ -248,8 +249,8 @@ void Device::on_transfer_event_received(const transfer_event_trb& event_trb)
 		return;
 	}
 
-	this->on_control_completed(
-			{ event_trb.EndpointId(), setup_data, data_stage_buf, transfer_length });
+	this->on_control_completed({ event_trb.endpoint_id(), setup_data, data_stage_buf,
+								 transfer_length });
 }
 
 } // namespace kernel::hw::usb::xhci

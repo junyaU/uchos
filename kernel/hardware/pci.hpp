@@ -81,6 +81,31 @@ union capability_header {
 
 capability_header read_capability_header(const Device& dev, uint8_t addr);
 
+/**
+ * @brief Visit every capability in a PCI device's capability list
+ *
+ * Both the MSI/MSI-X lookup in configure_msi() and the VirtIO capability
+ * scan in find_virtio_pci_cap() need to walk this same singly linked list
+ * (via the device's capability pointer and each entry's next-pointer); this
+ * shares that traversal so each caller only implements what to do with a
+ * matching entry.
+ *
+ * @tparam Visitor Callable invoked as visit(header, addr) for each capability
+ * @param dev PCI device whose capability list is walked
+ * @param visit Callback receiving each capability's header and its
+ * configuration-space offset
+ */
+template<typename Visitor>
+void for_each_capability(const Device& dev, Visitor visit)
+{
+	uint8_t addr = get_capability_pointer(dev);
+	while (addr != 0) {
+		const auto header = read_capability_header(dev, addr);
+		visit(header, addr);
+		addr = header.bits.next_ptr;
+	}
+}
+
 struct MsiCapability {
 	union {
 		uint32_t data;

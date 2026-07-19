@@ -286,18 +286,14 @@ void configure_msi(const Device& dev,
 				   uint32_t msg_data,
 				   unsigned int num_vector_exponent)
 {
-	uint8_t capability_pointer = get_capability_pointer(dev);
 	uint8_t msi_capability_addr = 0, msix_capability_addr = 0;
-	while (capability_pointer != 0) {
-		auto header = read_capability_header(dev, capability_pointer);
+	for_each_capability(dev, [&](const capability_header& header, uint8_t addr) {
 		if (header.bits.cap_id == CAP_MSI) {
-			msi_capability_addr = capability_pointer;
+			msi_capability_addr = addr;
 		} else if (header.bits.cap_id == CAP_MSIX) {
-			msix_capability_addr = capability_pointer;
+			msix_capability_addr = addr;
 		}
-
-		capability_pointer = header.bits.next_ptr;
-	}
+	});
 
 	if (msix_capability_addr != 0) {
 		configure_msi_x_register(dev, msix_capability_addr, msg_addr, msg_data);

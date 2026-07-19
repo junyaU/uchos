@@ -14,15 +14,20 @@
 
 #pragma once
 
-#include "../endpoint.hpp"
-#include "../setup_stage_data.hpp"
 #include "context.hpp"
+#include "hardware/usb/endpoint.hpp"
+#include "hardware/usb/setup_stage_data.hpp"
 
 #include <array>
 #include <cstdint>
 
 namespace kernel::hw::usb::xhci
 {
+// xHCI TRB Completion Code values (xHCI spec 6.4.5, "TRB Completion Codes").
+// Only the codes this driver currently checks are named here.
+constexpr uint32_t COMPLETION_CODE_SUCCESS = 1;
+constexpr uint32_t COMPLETION_CODE_SHORT_PACKET = 13;
+
 union trb {
 	std::array<uint32_t, 4> data{};
 
@@ -199,15 +204,15 @@ union link_trb {
 	link_trb(const trb* ring_segment_pointer)
 	{
 		bits.trb_type = TYPE;
-		SetPointer(ring_segment_pointer);
+		set_pointer(ring_segment_pointer);
 	}
 
-	trb* Pointer() const
+	trb* pointer() const
 	{
 		return reinterpret_cast<trb*>(bits.ring_segment_pointer << 4);
 	}
 
-	void SetPointer(const trb* p)
+	void set_pointer(const trb* p)
 	{
 		bits.ring_segment_pointer = reinterpret_cast<uint64_t>(p) >> 4;
 	}
@@ -240,7 +245,7 @@ union address_device_command_trb {
 
 	struct {
 		uint64_t : 4;
-		uint64_t InputContext_pointer : 60;
+		uint64_t input_context_pointer : 60;
 
 		uint32_t : 32;
 
@@ -261,12 +266,12 @@ union address_device_command_trb {
 
 	InputContext* pointer() const
 	{
-		return reinterpret_cast<InputContext*>(bits.InputContext_pointer << 4);
+		return reinterpret_cast<InputContext*>(bits.input_context_pointer << 4);
 	}
 
 	void set_pointer(const InputContext* p)
 	{
-		bits.InputContext_pointer = reinterpret_cast<uint64_t>(p) >> 4;
+		bits.input_context_pointer = reinterpret_cast<uint64_t>(p) >> 4;
 	}
 };
 
@@ -276,7 +281,7 @@ union configure_endpoint_command_trb {
 
 	struct {
 		uint64_t : 4;
-		uint64_t InputContext_pointer : 60;
+		uint64_t input_context_pointer : 60;
 
 		uint32_t : 32;
 
@@ -297,12 +302,12 @@ union configure_endpoint_command_trb {
 
 	InputContext* pointer() const
 	{
-		return reinterpret_cast<InputContext*>(bits.InputContext_pointer << 4);
+		return reinterpret_cast<InputContext*>(bits.input_context_pointer << 4);
 	}
 
 	void set_pointer(const InputContext* p)
 	{
-		bits.InputContext_pointer = reinterpret_cast<uint64_t>(p) >> 4;
+		bits.input_context_pointer = reinterpret_cast<uint64_t>(p) >> 4;
 	}
 };
 
@@ -321,7 +326,7 @@ union transfer_event_trb {
 		uint32_t event_data : 1;
 		uint32_t : 7;
 		uint32_t trb_type : 6;
-		uint32_t EndpointId : 5;
+		uint32_t endpoint_id : 5;
 		uint32_t : 3;
 		uint32_t slot_id : 8;
 	} __attribute__((packed)) bits;
@@ -335,9 +340,9 @@ union transfer_event_trb {
 		bits.trb_pointer = reinterpret_cast<uint64_t>(p);
 	}
 
-	kernel::hw::usb::EndpointId EndpointId() const
+	kernel::hw::usb::EndpointId endpoint_id() const
 	{
-		return kernel::hw::usb::EndpointId{ bits.EndpointId };
+		return kernel::hw::usb::EndpointId{ bits.endpoint_id };
 	}
 };
 

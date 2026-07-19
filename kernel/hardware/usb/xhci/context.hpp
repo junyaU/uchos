@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "../endpoint.hpp"
+#include "hardware/usb/endpoint.hpp"
 
 #include <cstdint>
 

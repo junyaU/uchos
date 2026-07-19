@@ -48,8 +48,8 @@ public:
 	void start_initialize();
 	bool is_initialized() const { return is_initialized_; }
 
-	EndpointConfig* EndpointConfigs() { return EndpointConfigs_.data(); }
-	int num_EndpointConfigs() const { return num_EndpointConfigs_; }
+	EndpointConfig* endpoint_configs() { return EndpointConfigs_.data(); }
+	int num_endpoint_configs() const { return num_EndpointConfigs_; }
 	void on_endpoints_configured();
 
 	uint8_t* buffer() { return buffer_.data(); }

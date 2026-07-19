@@ -1,8 +1,8 @@
 #include "hid.hpp"
 #include <algorithm>
-#include "../device.hpp"
-#include "../endpoint.hpp"
-#include "../setup_stage_data.hpp"
+#include "hardware/usb/device.hpp"
+#include "hardware/usb/endpoint.hpp"
+#include "hardware/usb/setup_stage_data.hpp"
 
 namespace kernel::hw::usb
 {

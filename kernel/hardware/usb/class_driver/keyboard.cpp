@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <utility>
-#include "../device.hpp"
+#include "hardware/usb/device.hpp"
 #include "hid.hpp"
 #include "memory/slab.hpp"
 

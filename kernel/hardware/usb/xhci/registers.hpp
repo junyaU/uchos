@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "../../mm_register.hpp"
+#include "hardware/mm_register.hpp"
 
 #include <cstdint>
 
@@ -148,7 +148,7 @@ union usb_cmd_bitmap {
 		uint32_t interrupter_enable : 1;
 		uint32_t host_system_error_enable : 1;
 		uint32_t : 3;
-		uint32_t lignt_host_controller_reset : 1;
+		uint32_t light_host_controller_reset : 1;
 		uint32_t controller_save_state : 1;
 		uint32_t controller_restore_state : 1;
 		uint32_t enable_wrap_event : 1;
@@ -506,7 +506,5 @@ union usb_legacy_support_bitmap {
 		uint32_t : 7;
 	} __attribute__((packed)) bits;
 } __attribute__((packed));
-
-// void register_command_ring(ring* r, MemoryMappedRegister<crcr_bitmap>* crcr);
 
 } // namespace kernel::hw::usb::xhci

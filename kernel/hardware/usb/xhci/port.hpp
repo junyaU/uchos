@@ -16,19 +16,37 @@
 #include <array>
 #include <cstdint>
 
-#define CLEAR_STATUS_BIT(bitname)                                                   \
-	[this]() {                                                                      \
-		port_sc_bitmap portsc = regs_.port_sc.read();                               \
-		portsc.data[0] &= 0x0e01c3e0u;                                              \
-		portsc.bits.bitname = 1;                                                    \
-		regs_.port_sc.write(portsc);                                                \
-	}()
-
 namespace kernel::hw::usb::xhci
 {
 class Controller;
 struct PortRegisterSet;
 class Device;
+
+// PORTSC (Port Status and Control) is a mixed-access register (xHCI spec
+// Table 5-27): some fields are RWS state that must be preserved across a
+// write (PLS, PP, PIC, the wake-enable bits), others are RW1CS "*Change"
+// bits that must be written as 0 unless the caller wants to clear that
+// specific change, and the rest are RO/RsvdZ (safe to write as 0).
+//
+// The two preserve-masks below keep the same RWS fields but are used for two
+// different writes, and are intentionally kept distinct rather than unified:
+//   - PORTSC_RESET_PRESERVE_MASK additionally zeroes LWS (bit 16), because a
+//     plain port reset must not be interpreted as also requesting a
+//     PLS/PIC transition.
+//   - PORTSC_CLEAR_CHANGE_BIT_PRESERVE_MASK keeps LWS as last read, since
+//     clearing a single "*Change" bit is not a reset.
+inline constexpr uint32_t PORTSC_RESET_PRESERVE_MASK = 0x0e00c3e0U;
+inline constexpr uint32_t PORTSC_CLEAR_CHANGE_BIT_PRESERVE_MASK = 0x0e01c3e0U;
+
+inline constexpr uint32_t PORTSC_PORT_RESET_BIT = 1U << 4;			   ///< PR
+inline constexpr uint32_t PORTSC_CONNECT_STATUS_CHANGE_BIT = 1U << 17; ///< CSC
+inline constexpr uint32_t PORTSC_PORT_RESET_CHANGE_BIT = 1U << 21;	   ///< PRC
+
+// Bits ORed in with PORTSC_RESET_PRESERVE_MASK to start a port reset: PR
+// requests the reset, CSC clears any stale Connect Status Change picked up
+// before the reset was requested.
+inline constexpr uint32_t PORTSC_RESET_SET_BITS =
+		PORTSC_PORT_RESET_BIT | PORTSC_CONNECT_STATUS_CHANGE_BIT;
 
 class Port
 {
@@ -50,11 +68,30 @@ public:
 	 */
 	bool reset();
 
-	void clear_connect_status_changed() { CLEAR_STATUS_BIT(connect_status_change); }
+	void clear_connect_status_changed()
+	{
+		clear_status_change_bit(PORTSC_CONNECT_STATUS_CHANGE_BIT);
+	}
 
-	void clear_port_reset_changed() { CLEAR_STATUS_BIT(port_reset_change); }
+	void clear_port_reset_changed()
+	{
+		clear_status_change_bit(PORTSC_PORT_RESET_CHANGE_BIT);
+	}
 
 private:
+	/**
+	 * @brief Clear a single RW1CS "*Change" bit in PORTSC without disturbing
+	 * the other preserved fields
+	 * @param change_bit The bit to set, e.g. PORTSC_CONNECT_STATUS_CHANGE_BIT
+	 */
+	void clear_status_change_bit(uint32_t change_bit)
+	{
+		port_sc_bitmap portsc = regs_.port_sc.read();
+		portsc.data[0] &= PORTSC_CLEAR_CHANGE_BIT_PRESERVE_MASK;
+		portsc.data[0] |= change_bit;
+		regs_.port_sc.write(portsc);
+	}
+
 	const uint8_t port_num_;
 	PortRegisterSet& regs_;
 };

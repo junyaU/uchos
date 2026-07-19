@@ -2,11 +2,11 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
-#include "../../mm_register.hpp"
-#include "../../pci.hpp"
-#include "../endpoint.hpp"
 #include "asm_utils.h"
 #include "context.hpp"
+#include "hardware/mm_register.hpp"
+#include "hardware/pci.hpp"
+#include "hardware/usb/endpoint.hpp"
 #include "interrupt/vector.hpp"
 #include "log/log.hpp"
 #include "memory/slab.hpp"
@@ -19,9 +19,6 @@
 namespace
 {
 using namespace kernel::hw::usb::xhci;
-
-// xHCI completion code indicating a successful command (xHCI spec 6.4.5).
-constexpr uint32_t COMPLETION_CODE_SUCCESS = 1;
 
 // Upper bound for register polling loops so that broken hardware cannot
 // hang the kernel forever.
@@ -475,8 +472,8 @@ void configure_port(Controller& xhc, Port& p)
 
 void configure_endpoints(Controller& xhc, Device& dev)
 {
-	const auto* configs = dev.EndpointConfigs();
-	const auto len = dev.num_EndpointConfigs();
+	const auto* configs = dev.endpoint_configs();
+	const auto len = dev.num_endpoint_configs();
 
 	memset(&dev.input_context()->control, 0, sizeof(InputControlContext));
 	memcpy(&dev.input_context()->slot, &dev.context()->slot, sizeof(slot_context));
