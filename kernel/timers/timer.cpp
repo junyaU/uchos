@@ -116,10 +116,12 @@ bool KernelTimer::increment_tick()
 			continue;
 		}
 
-		Message m = { .type = MsgType::NOTIFY_TIMER_TIMEOUT,
-					  .sender = process_ids::KERNEL };
-		m.data.timer.action = e.action;
-		kernel::task::send_message(e.task_id, m);
+		// increment_tick runs in the timer interrupt, so the expiry is
+		// delivered as a doorbell bit: no allocation, and repeated
+		// expiries coalesce instead of overflowing the receiver's ring
+		// (issue #314 Stage A). The TimeoutAction payload is gone; the
+		// receiver knows what its own timer means (cursor blink).
+		kernel::task::notify(e.task_id, kernel::task::NotifyType::TIMER);
 
 		if (e.periodical == 1) {
 			e.timeout = calculate_timeout_ticks(e.period);

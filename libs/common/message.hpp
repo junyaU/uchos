@@ -47,6 +47,11 @@ enum class MsgType : int32_t {
 	FS_PWD,
 	FS_CHANGE_DIR,
 	FS_DUP2,
+	// Synthesized from NotifyType::VIRTIO_BLK when the doorbell bit is
+	// drained by a plain receive. Appended at the end so the values above
+	// keep matching userland binaries built before this entry existed; the
+	// MsgType reorganization happens in issue #314 Stage C.
+	NOTIFY_VIRTIO_BLK,
 	MAX_MESSAGE_TYPE, // must be the last
 };
 
@@ -131,7 +136,7 @@ struct Message {
 		} fs;
 
 		struct {
-			uint8_t packet_data[1514];  // Ethernet maximum frame size
+			uint8_t packet_data[1514]; // Ethernet maximum frame size
 			size_t packet_len;
 			int result;
 		} net;

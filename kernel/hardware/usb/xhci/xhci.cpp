@@ -7,6 +7,7 @@
 #include "hardware/mm_register.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/usb/endpoint.hpp"
+#include "interrupt/routing.hpp"
 #include "interrupt/vector.hpp"
 #include "log/log.hpp"
 #include "memory/slab.hpp"
@@ -14,6 +15,7 @@
 #include "registers.hpp"
 #include "ring.hpp"
 #include "speed.hpp"
+#include "task/task.hpp"
 #include "trb.hpp"
 
 namespace
@@ -592,6 +594,12 @@ void initialize()
 			*xhc_dev, bsp_lapic_id, kernel::hw::pci::MsiTriggerMode::LEVEL,
 			kernel::hw::pci::MsiDeliveryMode::FIXED,
 			kernel::interrupt::InterruptVector::XHCI, 0);
+
+	// Wire the xHC interrupt to this service's doorbell; the interrupt
+	// layer itself no longer knows any destination PID
+	kernel::interrupt::register_irq_notification(
+			kernel::interrupt::InterruptVector::XHCI, kernel::task::CURRENT_TASK->id,
+			kernel::task::NotifyType::XHCI);
 
 	const uint64_t bar = kernel::hw::pci::read_base_address_register(*xhc_dev, 0);
 	const uint64_t xhc_mmio_base = bar & ~static_cast<uint64_t>(0xf);

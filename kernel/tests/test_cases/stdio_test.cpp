@@ -5,6 +5,7 @@
 #include <libs/common/types.hpp>
 #include "fs/file_descriptor.hpp"
 #include "task/context.hpp"
+#include "task/ipc.hpp"
 #include "task/task.hpp"
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
@@ -62,7 +63,6 @@ void test_write_to_stdout()
 	// Should return number of bytes written
 	ASSERT_GT(result, 0);
 	ASSERT_EQ(result, strlen(test_msg));
-
 }
 
 void test_write_to_stderr()
@@ -81,7 +81,6 @@ void test_write_to_stderr()
 	// Should return number of bytes written
 	ASSERT_GT(result, 0);
 	ASSERT_EQ(result, strlen(test_msg));
-
 }
 
 void test_read_from_stdin()
@@ -99,7 +98,6 @@ void test_read_from_stdin()
 
 	// Currently stdin returns 0 (no data available)
 	ASSERT_EQ(result, 0);
-
 }
 
 void test_invalid_fd()
@@ -126,7 +124,6 @@ void test_invalid_fd()
 	const ssize_t result3 = kernel::syscall::sys_write(
 			10, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
 	ASSERT_EQ(result3, ERR_INVALID_FD);
-
 }
 
 void test_fd_inheritance()
@@ -158,7 +155,6 @@ void test_fd_inheritance()
 	ASSERT_TRUE(child->fd_table[fd].is_used());
 	ASSERT_EQ(strcmp(child->fd_table[fd].name, "test.txt"), 0);
 	ASSERT_EQ(child->fd_table[fd].size, 100);
-
 }
 
 void test_stdout_redirection()
@@ -178,8 +174,8 @@ void test_stdout_redirection()
 	// t->fd_table[STDOUT_FILENO].redirect_to = file_fd;
 
 	// Clear any existing messages
-	while (!t->messages.empty()) {
-		t->messages.pop_front();
+	Message drained;
+	while (kernel::task::try_receive(t, &drained)) {
 	}
 
 	// Test writing to redirected stdout
@@ -196,7 +192,6 @@ void test_stdout_redirection()
 
 	// Restore stdout
 	// t->fd_table[STDOUT_FILENO].redirect_to = NO_FD;
-
 }
 
 void test_stderr_redirection()
@@ -225,7 +220,6 @@ void test_stderr_redirection()
 
 	// Restore stderr
 	// t->fd_table[STDERR_FILENO].redirect_to = NO_FD;
-
 }
 
 void test_large_write_redirection()
@@ -256,7 +250,6 @@ void test_large_write_redirection()
 
 	// Restore stdout
 	// t->fd_table[STDOUT_FILENO].redirect_to = NO_FD;
-
 }
 
 void register_stdio_tests()

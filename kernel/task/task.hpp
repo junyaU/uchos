@@ -3,7 +3,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <deque>
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
@@ -13,6 +12,7 @@
 #include "memory/paging.hpp"
 #include "memory/slab.hpp"
 #include "task/context.hpp"
+#include "task/message_queue.hpp"
 
 namespace kernel::task
 {
@@ -32,6 +32,20 @@ void start_scheduling();
 
 enum TaskState : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING, TASK_EXITED };
 
+/**
+ * @brief Why a TASK_WAITING task is asleep; gates who may wake it
+ *
+ * send_message() wakes RECEIVE and NONE waiters; notify() additionally
+ * wakes a NOTIFY waiter only when the raised bit is in its mask. This
+ * keeps a device wait (e.g. virtio-blk kick-and-wait) from being resumed
+ * spuriously by an unrelated incoming message (issue #314 Stage A).
+ */
+enum class WaitReason : uint8_t {
+	NONE,	 ///< Bare sleep via switch_next_task(true); any sender wakes it
+	RECEIVE, ///< Blocked in a receive; messages and notifications wake it
+	NOTIFY,	 ///< Blocked in wait_notification(); only masked doorbells wake it
+};
+
 static constexpr int MAX_FDS_PER_PROCESS = 32;
 
 struct Task {
@@ -47,7 +61,10 @@ struct Task {
 	uint64_t kernel_stack_ptr;
 	alignas(16) Context ctx;
 	list_elem_t run_queue_elem;
-	std::deque<Message> messages;
+	MessageQueue messages;
+	uint32_t pending_notifications; ///< Sticky doorbell bits (see NotifyType)
+	WaitReason wait_reason;			///< Valid while state == TASK_WAITING
+	uint32_t wait_notify_mask;		///< Doorbells awaited (WaitReason::NOTIFY)
 	std::array<message_handler_t, TOTAL_MESSAGE_TYPES> message_handlers;
 	std::array<kernel::fs::FileDescriptor, MAX_FDS_PER_PROCESS> fd_table;
 
@@ -80,6 +97,15 @@ struct Task {
 	error_t copy_parent_page_table();
 
 	void add_msg_handler(MsgType type, message_handler_t handler);
+
+	/**
+	 * @brief Run the registered handler for a message
+	 *
+	 * The single dispatch point shared by process_messages() and the FS
+	 * init backlog replay, so no caller needs to touch the handler table
+	 * (or the queue) directly.
+	 */
+	void dispatch_message(const Message& m);
 
 	bool has_parent() const { return parent_id.raw() != -1; }
 

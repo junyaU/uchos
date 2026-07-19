@@ -1,12 +1,10 @@
 #include "handlers.hpp"
 #include <cstdint>
-#include <libs/common/message.hpp>
-#include <libs/common/process_id.hpp>
-#include <libs/common/types.hpp>
 #include "asm_utils.h"
+#include "interrupt/routing.hpp"
+#include "interrupt/vector.hpp"
 #include "log/log.hpp"
 #include "task/context.hpp"
-#include "task/ipc.hpp"
 #include "task/task.hpp"
 #include "timers/timer.hpp"
 
@@ -27,8 +25,7 @@ namespace kernel::interrupt
 
 __attribute__((interrupt)) void on_xhci_interrupt(InterruptFrame* frame)
 {
-	Message m = { MsgType::NOTIFY_XHCI, process_ids::INTERRUPT, {} };
-	kernel::task::send_message(process_ids::XHCI, m);
+	notify_irq(InterruptVector::XHCI);
 	notify_end_of_interrupt();
 }
 
@@ -40,7 +37,7 @@ __attribute__((interrupt)) void on_virtio_blk_interrupt(InterruptFrame* frame)
 
 __attribute__((interrupt)) void on_virtio_blk_queue_interrupt(InterruptFrame* frame)
 {
-	kernel::task::schedule_task(process_ids::VIRTIO_BLK);
+	notify_irq(InterruptVector::VIRTQUEUE_BLK);
 	notify_end_of_interrupt();
 }
 
@@ -53,17 +50,14 @@ __attribute__((interrupt)) void on_virtio_net_interrupt(InterruptFrame* frame)
 __attribute__((interrupt)) void on_virtio_net_rx_queue_interrupt(
 		InterruptFrame* frame)
 {
-	Message m = { MsgType::NOTIFY_VIRTIO_NET_RX, process_ids::INTERRUPT, {} };
-	kernel::task::send_message(process_ids::VIRTIO_NET, m);
-
+	notify_irq(InterruptVector::VIRTQUEUE_NET_RX);
 	notify_end_of_interrupt();
 }
 
 __attribute__((interrupt)) void on_virtio_net_tx_queue_interrupt(
 		InterruptFrame* frame)
 {
-	Message m = { MsgType::NOTIFY_VIRTIO_NET_TX, process_ids::INTERRUPT, {} };
-	kernel::task::send_message(process_ids::VIRTIO_NET, m);
+	notify_irq(InterruptVector::VIRTQUEUE_NET_TX);
 	notify_end_of_interrupt();
 }
 

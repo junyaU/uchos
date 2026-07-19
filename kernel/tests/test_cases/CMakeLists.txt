@@ -4,6 +4,7 @@ set(TESTCASES_SOURCE_FILES
         paging_test.cpp
         user_test.cpp
         task_test.cpp
+        ipc_test.cpp
         timer_test.cpp
         virtio_blk_test.cpp
         stdio_test.cpp
