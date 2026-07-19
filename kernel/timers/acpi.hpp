@@ -45,7 +45,7 @@ struct ExtendedSystemDescriptionTable {
 		return *reinterpret_cast<const SdtHeader*>(entry_addr[i]);
 	}
 
-	size_t Count() const
+	size_t count() const
 	{
 		return (header.length - sizeof(header)) / sizeof(uint64_t);
 	}

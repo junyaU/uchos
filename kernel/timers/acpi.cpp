@@ -6,6 +6,21 @@
 
 namespace kernel::timers::acpi
 {
+namespace
+{
+// Bit position in FixedAcpiDescriptionTable::flags that indicates whether the
+// ACPI PM timer counter is 32-bit wide (set) or 24-bit wide (clear).
+constexpr uint32_t PM_TIMER_32BIT_FLAG_BIT = 8;
+
+// Mask for the counter value when the PM timer is only 24 bits wide.
+constexpr uint32_t PM_TIMER_COUNTER_MASK_24BIT = 0x00ffffffU;
+
+bool is_pm_timer_32bit(uint32_t flags)
+{
+	return ((flags >> PM_TIMER_32BIT_FLAG_BIT) & 1) != 0;
+}
+} // namespace
+
 bool RootSystemDescriptionPointer::is_valid() const
 {
 	if (strncmp(signature, "RSD PTR ", 8) != 0) {
@@ -52,7 +67,7 @@ void initialize(const RootSystemDescriptionPointer& rsdp)
 	fadt = nullptr;
 	const auto* xsdt = reinterpret_cast<const ExtendedSystemDescriptionTable*>(
 			rsdp.xsdt_address);
-	for (int i = 0; i < xsdt->Count(); i++) {
+	for (int i = 0; i < xsdt->count(); i++) {
 		const auto& entry = (*xsdt)[i];
 		if (entry.is_valid("FACP")) {
 			fadt = reinterpret_cast<const FixedAcpiDescriptionTable*>(&entry);
@@ -77,9 +92,9 @@ void wait_by_pm_timer(unsigned long millisec)
 	const uint32_t initial_count = read_from_io_port(fadt->pm_tmr_blk);
 	uint32_t end_count = initial_count + (PM_TIMER_FREQUENCY * millisec) / 1000;
 
-	const bool enable32bit = ((fadt->flags >> 8) & 1) != 0;
+	const bool enable32bit = is_pm_timer_32bit(fadt->flags);
 	if (!enable32bit) {
-		end_count &= 0x00ffffffU;
+		end_count &= PM_TIMER_COUNTER_MASK_24BIT;
 	}
 
 	const bool wrapped = end_count < initial_count;
@@ -95,12 +110,12 @@ void wait_by_pm_timer(unsigned long millisec)
 uint32_t get_pm_timer_count()
 {
 	const uint32_t count = read_from_io_port(fadt->pm_tmr_blk);
-	const bool enable32bit = ((fadt->flags >> 8) & 1) != 0;
+	const bool enable32bit = is_pm_timer_32bit(fadt->flags);
 	if (enable32bit) {
 		return count;
 	}
 
-	return count & 0x00ffffffU;
+	return count & PM_TIMER_COUNTER_MASK_24BIT;
 }
 
 float pm_timer_count_to_millisec(uint32_t count)

@@ -1,15 +1,6 @@
+#include <cstring>
 #include <libs/user/console.hpp>
 #include <libs/user/file.hpp>
-
-// Simple strlen implementation
-static size_t my_strlen(const char* str)
-{
-	size_t len = 0;
-	while (str[len] != '\0') {
-		len++;
-	}
-	return len;
-}
 
 int main(int argc, char** argv)
 {
@@ -33,7 +24,7 @@ int main(int argc, char** argv)
 	}
 
 	// Write text to file
-	size_t text_len = my_strlen(text);
+	size_t text_len = strlen(text);
 	size_t written = fs_write(fd, text, text_len);
 
 	if (written == 0) {
