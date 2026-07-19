@@ -50,6 +50,9 @@ cd userland/commands/[コマンド名] && make clean && make
 | クラス・構造体・列挙型 | PascalCase | `PageTable`, `VirtioBlkReq` |
 | マクロ・定数 | ALL_CAPS | `KERNEL_VIRTUAL_BASE` |
 
+### ヒープ所有権(カーネル)
+新規・変更コードでは所有権を持つ生ポインタ + 手動 `free()` を禁止。`kernel::memory::unique_kbuf` / `make_kbuf()`(`kernel/memory/slab.hpp`)で RAII 管理し、IPC 等の所有権移転境界のみ `.release()` を明示する(詳細は `.claude/rules/kernel.md`)。
+
 ### エラーハンドリング
 カーネル内では panic よりログを優先する(`kernel/log/log.hpp`、printf 形式):
 
