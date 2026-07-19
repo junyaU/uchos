@@ -11,19 +11,16 @@ std::vector<Page> pages;
 
 void initialize_pages()
 {
-	const size_t memory_start_index = boot_allocator->start_index();
 	const size_t memory_end_index = boot_allocator->end_index();
 
-	pages.resize(memory_end_index - memory_start_index);
+	pages.resize(memory_end_index);
 
-	for (size_t i = memory_start_index; i < memory_end_index; ++i) {
-		const size_t page_index = i - memory_start_index;
-
-		pages[page_index].set_ptr(reinterpret_cast<void*>(i * PAGE_SIZE));
+	for (size_t i = 0; i < memory_end_index; ++i) {
+		pages[i].set_ptr(reinterpret_cast<void*>(i * PAGE_SIZE));
 		if (boot_allocator->is_bit_set(i)) {
-			pages[page_index].set_used();
+			pages[i].set_used();
 		} else {
-			pages[page_index].set_free();
+			pages[i].set_free();
 		}
 	}
 }

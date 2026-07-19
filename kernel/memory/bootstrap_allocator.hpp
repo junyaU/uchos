@@ -32,11 +32,6 @@ public:
 			   0U;
 	}
 
-	size_t start_index() const
-	{
-		return reinterpret_cast<uintptr_t>(memory_start_) / PAGE_SIZE;
-	}
-
 	size_t end_index() const
 	{
 		return reinterpret_cast<uintptr_t>(memory_end_) / PAGE_SIZE;
@@ -44,7 +39,7 @@ public:
 
 private:
 	std::array<unsigned long, TOTAL_PAGES / BITMAP_ENTRY_SIZE> bitmap_;
-	void *memory_start_, *memory_end_;
+	void* memory_end_;
 };
 
 extern BootstrapAllocator* boot_allocator;
