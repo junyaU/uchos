@@ -242,15 +242,39 @@ void schedule_task(ProcessId id)
 	list_push_back(&run_queue, &tasks[raw_id]->run_queue_elem);
 }
 
+namespace
+{
+// A task cannot tear itself down from switch_task: ~Task frees the kernel stack
+// we are still executing on and the page tables the CPU is still translating
+// through. Doing so is a use-after-free -- harmless by luck normally, but with
+// KERNEL_HEAP_DEBUG the freed stack is poisoned and the running code faults on
+// the next return. Instead we stash the exited task and delete it on the next
+// switch, once we are on another task's stack and address space.
+Task* task_pending_reap = nullptr;
+
+void reap_pending_task()
+{
+	// Clear the slot before deleting so a switch that re-enters mid-delete
+	// (e.g. a timer tick) cannot free the same task twice.
+	Task* t = task_pending_reap;
+	task_pending_reap = nullptr;
+	delete t; // delete nullptr is a no-op
+}
+} // namespace
+
 void switch_task(const Context& current_ctx)
 {
+	// Delete the task that exited on the previous switch. We are no longer on
+	// its stack or in its address space, so freeing them is safe now.
+	reap_pending_task();
+
 	if (CURRENT_TASK->state == TASK_EXITED) {
-		// ~Task frees the kernel stack we are still running on; keep
-		// interrupts off until restore_context switches to the next
-		// task's stack so nothing can reuse it in between.
+		// Defer teardown to the next switch (see reap_pending_task); keep
+		// interrupts off so nothing reuses the freed slot until we have
+		// switched onto the next task's stack.
 		asm volatile("cli");
 		const pid_t exited_id = CURRENT_TASK->id.raw();
-		delete tasks[exited_id];
+		task_pending_reap = tasks[exited_id];
 		tasks[exited_id] = nullptr;
 	} else {
 		memcpy(&CURRENT_TASK->ctx, &current_ctx, sizeof(Context));

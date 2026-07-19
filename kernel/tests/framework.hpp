@@ -89,7 +89,14 @@ bool test_all_passed();
  * provided test suite function (which should register tests), and then
  * executes all registered tests.
  *
+ * When the kernel is built with KERNEL_HEAP_DEBUG, the used heap is snapshotted
+ * around the suite and any net growth is reported as an extra failure. Suites
+ * that intentionally retain allocations past their own lifetime (e.g. ones that
+ * create tasks or populate a global cache) must opt out with check_leaks=false.
+ *
  * @param test_suite Function that registers all tests in the suite
+ * @param check_leaks Fail the suite on a net heap increase (heap-debug builds
+ * only; ignored otherwise). Defaults to true.
  *
  * @example
  * void register_memory_tests() {
@@ -98,4 +105,4 @@ bool test_all_passed();
  * }
  * run_test_suite(register_memory_tests);
  */
-void run_test_suite(void (*test_suite)());
+void run_test_suite(void (*test_suite)(), bool check_leaks = true);

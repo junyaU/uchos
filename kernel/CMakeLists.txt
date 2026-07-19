@@ -97,6 +97,18 @@ option(KERNEL_TESTS "Build kernel test suites and run them at boot" ON)
 # leave OFF for interactive use so the boot continues into kernel_service.
 option(KERNEL_TEST_EXIT "Exit QEMU with the test result after tests complete" OFF)
 
+# Instrument the slab allocator to catch heap corruption (use-after-free,
+# buffer overflow, double free) and leaks. Left ON by default so local dev and
+# interactive boots always run with the checks (same policy as KERNEL_TESTS);
+# pass -DKERNEL_HEAP_DEBUG=OFF for a zero-overhead build that leaves the
+# allocator and its callers byte-for-byte unchanged. The define must be set
+# before the memory and tests subdirectories are added so both slab.cpp and the
+# test runner see it.
+option(KERNEL_HEAP_DEBUG "Instrument the slab allocator to catch heap bugs" ON)
+if(KERNEL_HEAP_DEBUG)
+        add_compile_definitions(KERNEL_HEAP_DEBUG_ENABLED)
+endif()
+
 # Add subdirectories that contain their own CMakeLists.txt files.
 add_subdirectory(memory)
 add_subdirectory(graphics)

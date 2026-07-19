@@ -10,6 +10,7 @@ set(TESTCASES_SOURCE_FILES
         fs_test.cpp
         fd_test.cpp
         graphics_test.cpp
+        heap_debug_test.cpp
 )
 
 add_library(UchosTestCases ${TESTCASES_SOURCE_FILES})

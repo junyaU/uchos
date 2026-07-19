@@ -11,6 +11,7 @@
 #include "tests/test_cases/fd_test.hpp"
 #include "tests/test_cases/fs_test.hpp"
 #include "tests/test_cases/graphics_test.hpp"
+#include "tests/test_cases/heap_debug_test.hpp"
 #include "tests/test_cases/memory_test.hpp"
 #include "tests/test_cases/paging_test.hpp"
 #include "tests/test_cases/stdio_test.hpp"
@@ -37,7 +38,7 @@ constexpr uint8_t QEMU_EXIT_CODE_FAIL = 0x11; // QEMU exits with (0x11 << 1) | 1
 void exit_qemu(bool passed)
 {
 	write_to_io_port8(QEMU_ISA_DEBUG_EXIT_PORT,
-					   passed ? QEMU_EXIT_CODE_PASS : QEMU_EXIT_CODE_FAIL);
+					  passed ? QEMU_EXIT_CODE_PASS : QEMU_EXIT_CODE_FAIL);
 }
 #endif
 
@@ -74,25 +75,43 @@ void run_bootstrap_stage_tests()
 	run_test_suite(register_bootstrap_allocator_tests);
 }
 
-void run_timer_stage_tests() { run_test_suite(register_timer_tests); }
+// Timer events are added and removed within the suite; whether they touch the
+// slab is not yet audited, so leave the leak check off for now.
+void run_timer_stage_tests()
+{
+	run_test_suite(register_timer_tests, /*check_leaks=*/false);
+}
 
 void run_main_stage_tests()
 {
+	// Leak-checked: these suites free every slab allocation they make, so
+	// heap-debug builds fail them on any net growth.
 	run_test_suite(register_buddy_system_tests);
 	run_test_suite(register_slab_tests);
 	run_test_suite(register_alloc_macro_tests);
-	run_test_suite(register_paging_tests);
-	run_test_suite(register_user_copy_tests);
+
+	// Not leak-checked yet: paging retains page tables and user_copy sets up
+	// user mappings that outlive the suite. Re-enable once audited (#313).
+	run_test_suite(register_paging_tests, /*check_leaks=*/false);
+	run_test_suite(register_user_copy_tests, /*check_leaks=*/false);
+
 	run_test_suite(register_graphics_tests);
 
 	snapshot_task_slots();
-	run_test_suite(register_task_tests);
-	run_test_suite(register_stdio_tests);
+	// Tasks created here intentionally outlive the suite: their slots are
+	// cleared (not deleted) below, so a leak check would always fire (#313).
+	run_test_suite(register_task_tests, /*check_leaks=*/false);
+	run_test_suite(register_stdio_tests, /*check_leaks=*/false);
 	release_new_task_slots();
 
 	run_test_suite(register_virtio_blk_tests);
-	run_test_suite(register_fs_tests);
-	run_test_suite(register_fd_tests);
+	// FS and fd suites exercise subsystems with known leaks (#313).
+	run_test_suite(register_fs_tests, /*check_leaks=*/false);
+	run_test_suite(register_fd_tests, /*check_leaks=*/false);
+
+#ifdef KERNEL_HEAP_DEBUG_ENABLED
+	run_test_suite(register_heap_debug_tests);
+#endif
 
 	test_print_summary();
 
