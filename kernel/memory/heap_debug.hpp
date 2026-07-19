@@ -114,6 +114,34 @@ void report_leaks(int top_n);
 /// @brief Snapshot of the violation counters
 Stats stats();
 
+/**
+ * @brief Suppress violation LOG_ERROR output for deliberate test faults
+ *
+ * While at least one instance is alive, detected violations still update
+ * stats() but are not logged, so a green CI run's serial log stays free of
+ * heap-debug errors and any that do appear are real regressions (issue #350).
+ */
+class ExpectedViolation
+{
+public:
+	ExpectedViolation();
+	~ExpectedViolation();
+};
+
+} // namespace kernel::memory::heap_debug
+
+#else
+
+namespace kernel::memory::heap_debug
+{
+/// No-op stand-in so tests need no #ifdef around deliberate-fault scopes.
+/// User-provided ctor/dtor keep -Wunused-variable quiet at use sites.
+class ExpectedViolation
+{
+public:
+	ExpectedViolation() {}
+	~ExpectedViolation() {}
+};
 } // namespace kernel::memory::heap_debug
 
 #endif // KERNEL_HEAP_DEBUG_ENABLED

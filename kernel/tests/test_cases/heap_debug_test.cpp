@@ -44,7 +44,10 @@ void test_heap_debug_detects_double_free()
 	ASSERT_NOT_NULL(p);
 
 	kernel::memory::free(p);
-	kernel::memory::free(p); // double free
+	{
+		const hd::ExpectedViolation expected;
+		kernel::memory::free(p); // double free
+	}
 
 	ASSERT_EQ(hd::stats().double_free, before + 1);
 }
@@ -65,8 +68,12 @@ void test_heap_debug_detects_use_after_free()
 	static_cast<volatile uint8_t*>(p)[0] = 0x12;
 
 	// The same object comes back and its broken poison is detected.
-	void* q = kernel::memory::alloc(SINGLE_OBJECT_SIZE,
-									kernel::memory::ALLOC_UNINITIALIZED);
+	void* q;
+	{
+		const hd::ExpectedViolation expected;
+		q = kernel::memory::alloc(SINGLE_OBJECT_SIZE,
+								  kernel::memory::ALLOC_UNINITIALIZED);
+	}
 	ASSERT_EQ(q, p);
 	ASSERT_EQ(hd::stats().use_after_free, before + 1);
 
@@ -86,7 +93,10 @@ void test_heap_debug_detects_overflow()
 
 	p[size] = 0xAA; // one byte past the payload -> tail redzone
 
-	kernel::memory::free(const_cast<uint8_t*>(p));
+	{
+		const hd::ExpectedViolation expected;
+		kernel::memory::free(const_cast<uint8_t*>(p));
+	}
 	ASSERT_EQ(hd::stats().redzone, before + 1);
 }
 

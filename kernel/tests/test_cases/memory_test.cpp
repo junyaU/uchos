@@ -5,6 +5,7 @@
 #include <utility>
 #include "memory/bootstrap_allocator.hpp"
 #include "memory/buddy_system.hpp"
+#include "memory/heap_debug.hpp"
 #include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include "tests/framework.hpp"
@@ -256,7 +257,10 @@ void test_slab_double_free_detected()
 	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(ptr));
 
 	// A second free must be detected and ignored (issue #313)
-	kernel::memory::free(ptr);
+	{
+		const kernel::memory::heap_debug::ExpectedViolation expected;
+		kernel::memory::free(ptr);
+	}
 	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(ptr));
 
 	// The object is handed out exactly once afterwards
@@ -273,7 +277,10 @@ void test_slab_free_rejects_foreign_pointer()
 	void* raw = kernel::memory::memory_manager->allocate(kernel::memory::PAGE_SIZE);
 	ASSERT_NOT_NULL(raw);
 
-	kernel::memory::free(raw);
+	{
+		const kernel::memory::heap_debug::ExpectedViolation expected;
+		kernel::memory::free(raw);
+	}
 	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(raw));
 
 	// The page still belongs to the buddy system
