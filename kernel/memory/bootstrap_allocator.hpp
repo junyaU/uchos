@@ -54,6 +54,17 @@ void initialize(const MemoryMap& mem_map);
 void initialize_heap();
 
 /**
+ * @brief Bring up every post-bootstrap allocator in its required order
+ *
+ * Runs heap reservation, page metadata, the buddy system, bootstrap
+ * retirement and the slab allocator as one step, so the order dependency
+ * lives here instead of in the boot flow. Call once, after initialize()
+ * (and the bootstrap-stage tests, which exercise the bootstrap allocator
+ * before it is retired).
+ */
+void initialize_allocators();
+
+/**
  * @brief Retire the bootstrap allocator once the buddy system is up
  * @note Only drops the global pointer. The allocator's static BSS buffer
  * must never be freed into the buddy system.
