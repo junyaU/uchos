@@ -9,6 +9,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include "net/ethernet.hpp"
+
 namespace kernel::net
 {
 
@@ -68,6 +70,11 @@ enum class ARPOpcode : uint16_t {
 	REPLY = 2,
 };
 
+/// ARP hardware type field values (RFC 826)
+enum class ARPHardwareType : uint16_t {
+	ETHERNET = 1,
+};
+
 struct ARPPacket {
 	uint16_t hw_type;		///< Hardware Type
 	uint16_t protocol_type; ///< Protocol Type
@@ -79,8 +86,6 @@ struct ARPPacket {
 	uint8_t target_mac[6];	///< Target MAC Address
 	uint32_t target_ip;		///< Target IP Address
 } __attribute__((packed));
-
-constexpr size_t MAC_ADDR_SIZE = 6;
 
 extern ARPTable arp_table;
 

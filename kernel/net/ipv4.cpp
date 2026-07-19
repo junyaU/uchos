@@ -3,17 +3,17 @@
 #include <cstring>
 #include <libs/common/endian.hpp>
 #include "graphics/log.hpp"
-#include "hardware/virtio/net.hpp"
 #include "net/arp.hpp"
 #include "net/checksum.hpp"
 #include "net/ethernet.hpp"
+#include "net/host.hpp"
 #include "net/icmp.hpp"
 
 namespace kernel::net
 {
 void process_ipv4(const IPv4Header& ip_header)
 {
-	size_t header_len = (ip_header.version_ihl & 0x0F) * 4;
+	size_t header_len = ihl_bytes(ip_header.version_ihl);
 	size_t total_len = ntohs(ip_header.total_length);
 	size_t payload_len = total_len - header_len;
 
@@ -44,12 +44,12 @@ void transmit_ipv4_packet(uint32_t dst_ip,
 {
 	IPv4Header ip_header;
 	size_t total_len = sizeof(IPv4Header) + payload_len;
-	ip_header.version_ihl = 0x45;
+	ip_header.version_ihl = IPV4_VERSION_IHL;
 	ip_header.dscp_ecn = 0;
 	ip_header.total_length = htons(static_cast<uint16_t>(total_len));
 	ip_header.ttl = DEFAULT_TTL;
 	ip_header.protocol = static_cast<uint8_t>(protocol);
-	ip_header.src_ip = htonl(hw::virtio::MY_IP);
+	ip_header.src_ip = htonl(HOST_IP);
 	ip_header.dst_ip = htonl(dst_ip);
 	ip_header.header_checksum = 0;
 

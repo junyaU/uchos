@@ -26,6 +26,15 @@ constexpr uint32_t IPV4_ADDR_UNSPECIFIED = 0x00000000;
 
 constexpr size_t DEFAULT_TTL = 32;
 
+/// Length of an IPv4 address in bytes
+constexpr size_t IPV4_ADDR_SIZE = 4;
+
+/// Version 4, IHL 5 words: a 20-byte header without options
+constexpr uint8_t IPV4_VERSION_IHL = 0x45;
+
+/// Header length in bytes encoded in version_ihl (IHL counts 32-bit words)
+constexpr size_t ihl_bytes(uint8_t version_ihl) { return (version_ihl & 0x0F) * 4; }
+
 /**
  * @brief IPv4 Header Structure
  */
