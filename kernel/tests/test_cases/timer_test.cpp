@@ -23,6 +23,11 @@ void test_add_timer_event()
 	const uint64_t invalid_event_id = kernel::timers::ktimer->add_timer_event(
 			1000, TimeoutAction::SWITCH_TASK, ProcessId::from_raw(-1));
 	ASSERT_NE(invalid_event_id, 0);
+
+	// Leaving these queued would start task switching ~1s after the local
+	// APIC comes up, racing the boot flow and the main-stage suites.
+	kernel::timers::ktimer->remove_timer_event(event_id);
+	kernel::timers::ktimer->remove_timer_event(invalid_event_id);
 }
 
 void test_remove_timer_event()
@@ -54,6 +59,19 @@ void test_increment_tick()
 	kernel::timers::ktimer->remove_timer_event(id);
 }
 
+void test_removed_event_does_not_fire()
+{
+	auto id = kernel::timers::ktimer->add_switch_task_event(20); // 20ms
+	kernel::timers::ktimer->remove_timer_event(id);
+
+	bool need_switch = false;
+	for (int i = 0; i < 5; ++i) {
+		need_switch |= kernel::timers::ktimer->increment_tick();
+	}
+
+	ASSERT_FALSE(need_switch);
+}
+
 void test_tick_to_time()
 {
 	float time = kernel::timers::ktimer->tick_to_time(100);
@@ -69,5 +87,7 @@ void register_timer_tests()
 	test_register("timer_add_event", test_add_timer_event);
 	test_register("timer_remove_event", test_remove_timer_event);
 	test_register("timer_increment_tick", test_increment_tick);
+	test_register("timer_removed_event_does_not_fire",
+				  test_removed_event_does_not_fire);
 	test_register("timer_tick_to_time", test_tick_to_time);
 }
