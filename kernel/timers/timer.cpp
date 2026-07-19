@@ -99,6 +99,14 @@ bool KernelTimer::increment_tick()
 		auto e = events_.top();
 		events_.pop();
 
+		// Removal is lazy: remove_timer_event() only records the id, and the
+		// queued entry is discarded here when it expires. Checked before the
+		// SWITCH_TASK branch so a removed switch event neither switches nor
+		// re-arms itself.
+		if (ignore_events_.erase(e.id) > 0) {
+			continue;
+		}
+
 		if (e.action == TimeoutAction::SWITCH_TASK) {
 			need_switch_task = true;
 
