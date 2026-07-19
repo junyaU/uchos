@@ -12,20 +12,19 @@
 namespace kernel::memory
 {
 
-BootstrapAllocator::BootstrapAllocator()
-	: bitmap_{}, memory_start_{ 0x0 }, memory_end_{ 0x0 }
+BootstrapAllocator::BootstrapAllocator() : bitmap_{}, memory_end_{ 0x0 }
 {
 	bitmap_.fill(ULONG_MAX);
 }
 
 void* BootstrapAllocator::allocate(size_t size)
 {
-	const size_t num_pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
+	const size_t num_pages = pages_for_bytes(size);
 
 	size_t consecutive_start_index = 0;
 	size_t num_consecutive_pages = 0;
 
-	for (size_t i = start_index(); i < end_index(); i++) {
+	for (size_t i = 0; i < end_index(); i++) {
 		if (is_bit_set(i)) {
 			num_consecutive_pages = 0;
 			continue;
@@ -43,8 +42,7 @@ void* BootstrapAllocator::allocate(size_t size)
 				bitmap_[j / BITMAP_ENTRY_SIZE] |= 1UL << (j % BITMAP_ENTRY_SIZE);
 			}
 
-			return reinterpret_cast<void*>(consecutive_start_index *
-										   kernel::memory::PAGE_SIZE);
+			return reinterpret_cast<void*>(consecutive_start_index * PAGE_SIZE);
 		}
 	}
 
@@ -55,9 +53,8 @@ void* BootstrapAllocator::allocate(size_t size)
 
 void BootstrapAllocator::free(void* addr, size_t size)
 {
-	auto start = reinterpret_cast<uintptr_t>(addr) / kernel::memory::PAGE_SIZE;
-	auto end =
-			(reinterpret_cast<uintptr_t>(addr) + size) / kernel::memory::PAGE_SIZE;
+	auto start = reinterpret_cast<uintptr_t>(addr) / PAGE_SIZE;
+	auto end = (reinterpret_cast<uintptr_t>(addr) + size) / PAGE_SIZE;
 
 	for (auto i = start; i < end; i++) {
 		bitmap_[i / BITMAP_ENTRY_SIZE] &= ~(1UL << (i % BITMAP_ENTRY_SIZE));
@@ -66,32 +63,29 @@ void BootstrapAllocator::free(void* addr, size_t size)
 
 void BootstrapAllocator::mark_available(void* addr, size_t size)
 {
-	auto start = reinterpret_cast<uintptr_t>(addr) / kernel::memory::PAGE_SIZE;
-	auto end =
-			(reinterpret_cast<uintptr_t>(addr) + size) / kernel::memory::PAGE_SIZE;
+	auto start = reinterpret_cast<uintptr_t>(addr) / PAGE_SIZE;
+	auto end = (reinterpret_cast<uintptr_t>(addr) + size) / PAGE_SIZE;
 
 	for (auto i = start; i < end; i++) {
 		bitmap_[i / BITMAP_ENTRY_SIZE] &= ~(1UL << (i % BITMAP_ENTRY_SIZE));
 	}
 
-	memory_end_ = std::max(memory_end_,
-						   reinterpret_cast<void*>(end * kernel::memory::PAGE_SIZE));
+	memory_end_ = std::max(memory_end_, reinterpret_cast<void*>(end * PAGE_SIZE));
 }
 
 void BootstrapAllocator::show_available_memory() const
 {
 	size_t available_pages = 0;
 
-	for (size_t i = start_index(); i < end_index(); i++) {
+	for (size_t i = 0; i < end_index(); i++) {
 		if (!is_bit_set(i)) {
 			available_pages++;
 		}
 	}
 
-	LOG_INFO(
-			"available memory: %u MiB / %u MiB",
-			available_pages * kernel::memory::PAGE_SIZE / 1024 / 1024,
-			(end_index() - start_index()) * kernel::memory::PAGE_SIZE / 1024 / 1024);
+	LOG_INFO("available memory: %u MiB / %u MiB",
+			 available_pages * PAGE_SIZE / 1024 / 1024,
+			 end_index() * PAGE_SIZE / 1024 / 1024);
 }
 
 alignas(BootstrapAllocator) char bootstrap_allocator_buffer[sizeof(
@@ -101,8 +95,7 @@ BootstrapAllocator* boot_allocator;
 void initialize(const MemoryMap& mem_map)
 {
 	LOG_INFO("Initializing bootstrap allocator...");
-	kernel::memory::boot_allocator = new (kernel::memory::bootstrap_allocator_buffer)
-			kernel::memory::BootstrapAllocator();
+	boot_allocator = new (bootstrap_allocator_buffer) BootstrapAllocator();
 
 	const auto mem_map_base = reinterpret_cast<uintptr_t>(mem_map.buffer);
 	const auto mem_map_end = mem_map_base + mem_map.map_size;
@@ -119,12 +112,11 @@ void initialize(const MemoryMap& mem_map)
 			continue;
 		}
 
-		kernel::memory::boot_allocator->mark_available(
-				reinterpret_cast<void*>(desc->physical_start),
-				desc->number_of_pages * kernel::memory::PAGE_SIZE);
+		boot_allocator->mark_available(reinterpret_cast<void*>(desc->physical_start),
+									   desc->number_of_pages * PAGE_SIZE);
 	}
 
-	kernel::memory::boot_allocator->show_available_memory();
+	boot_allocator->show_available_memory();
 
 	LOG_INFO("Bootstrap allocator initialized successfully.");
 }
@@ -135,9 +127,9 @@ void initialize_heap()
 {
 	// 128 MiB
 	const size_t heap_pages = 64UL * 512;
-	const size_t heap_size = heap_pages * kernel::memory::PAGE_SIZE;
+	const size_t heap_size = heap_pages * PAGE_SIZE;
 
-	auto* heap = kernel::memory::boot_allocator->allocate(heap_size);
+	auto* heap = boot_allocator->allocate(heap_size);
 	if (heap == nullptr) {
 		LOG_ERROR("failed to allocate heap");
 		return;
@@ -151,7 +143,7 @@ void release_bootstrap()
 {
 	// The allocator lives in a static buffer inside the kernel BSS, so its
 	// pages must never be handed to the buddy system; just drop the pointer.
-	kernel::memory::boot_allocator = nullptr;
+	boot_allocator = nullptr;
 
 	LOG_INFO("Bootstrap allocator released.");
 }

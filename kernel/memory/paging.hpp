@@ -16,6 +16,9 @@ namespace kernel::memory
 constexpr size_t USER_SPACE_START_INDEX = 256;
 constexpr size_t PT_ENTRIES = 512;
 
+/// Mask for a single 9-bit page-table level index (PT_ENTRIES - 1)
+constexpr int PT_INDEX_MASK = static_cast<int>(PT_ENTRIES) - 1;
+
 union vaddr_t {
 	uint64_t data;
 
@@ -69,6 +72,18 @@ union vaddr_t {
 		}
 	}
 };
+
+/// Present bit (bit 0): entry maps to a valid frame/table
+constexpr uint64_t PTE_PRESENT = 1ULL << 0;
+/// Writable bit (bit 1): entry permits writes
+constexpr uint64_t PTE_WRITABLE = 1ULL << 1;
+/// Huge-page bit (bit 7): leaf maps a large page instead of a sub-table
+constexpr uint64_t PTE_HUGE = 1ULL << 7;
+
+/// Flags for a kernel identity-mapped entry (present + writable)
+constexpr uint64_t PTE_KERNEL_FLAGS = PTE_PRESENT | PTE_WRITABLE;
+/// Flags for a kernel identity-mapped huge-page entry
+constexpr uint64_t PTE_KERNEL_HUGE_FLAGS = PTE_KERNEL_FLAGS | PTE_HUGE;
 
 union page_table_entry {
 	uint64_t data;

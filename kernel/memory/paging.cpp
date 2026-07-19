@@ -25,13 +25,13 @@ alignas(PAGE_SIZE)
 
 void setup_identity_mapping()
 {
-	pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table) | 0x003;
+	pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table) | PTE_KERNEL_FLAGS;
 	for (size_t i_pdpt = 0; i_pdpt < PAGE_DIRECTORY_COUNT; i_pdpt++) {
-		pdp_table[i_pdpt] =
-				reinterpret_cast<uint64_t>(&page_directory[i_pdpt]) | 0x003;
+		pdp_table[i_pdpt] = reinterpret_cast<uint64_t>(&page_directory[i_pdpt]) |
+							PTE_KERNEL_FLAGS;
 		for (size_t i_pd = 0; i_pd < 512; i_pd++) {
 			page_directory[i_pdpt][i_pd] =
-					i_pdpt * PAGE_1GIB + i_pd * PAGE_2MIB | 0x083;
+					i_pdpt * PAGE_1GIB + i_pd * PAGE_2MIB | PTE_KERNEL_HUGE_FLAGS;
 		}
 	}
 }
@@ -65,7 +65,7 @@ paddr_t get_paddr(page_table_entry* table, vaddr_t addr)
 		return paddr_t{ 0 };
 	}
 
-	return paddr_t{ pte->bits.address << 12 };
+	return paddr_t{ pte->bits.address << PAGE_SHIFT };
 }
 
 void dump_page_table(page_table_entry* table, int page_table_level, vaddr_t addr)
@@ -177,7 +177,7 @@ void setup_page_tables(vaddr_t addr, size_t num_pages, bool writable)
 	}
 
 	for (size_t i = 0; i < num_pages; i++) {
-		flush_tlb(addr.data + i * kernel::memory::PAGE_SIZE);
+		flush_tlb(addr.data + i * PAGE_SIZE);
 	}
 }
 
@@ -206,7 +206,7 @@ void clean_page_table(page_table_entry* table, int page_table_level)
 			// Intermediate tables are exclusively owned by this address
 			// space (clones deep-copy them), so always free them.
 			clean_page_table(entry.get_next_level_table(), page_table_level - 1);
-			kernel::memory::free(entry.get_next_level_table());
+			free(entry.get_next_level_table());
 			table[i].data = 0;
 			continue;
 		}
@@ -222,7 +222,7 @@ void clean_page_table(page_table_entry* table, int page_table_level)
 		Page* page = get_page(data_page);
 		if (page == nullptr || page->dec_ref() == 0) {
 			// Last reference (or untracked page): release it
-			kernel::memory::free(data_page);
+			free(data_page);
 		}
 		table[i].data = 0;
 	}
@@ -237,11 +237,11 @@ void clean_page_tables(page_table_entry* table)
 		}
 
 		clean_page_table(entry.get_next_level_table(), 3);
-		kernel::memory::free(entry.get_next_level_table());
+		free(entry.get_next_level_table());
 		table[i].data = 0;
 	}
 
-	kernel::memory::free(table);
+	free(table);
 }
 
 void copy_page_tables(page_table_entry* dst,
@@ -302,8 +302,8 @@ error_t copy_target_page(uint64_t addr)
 		return ERR_NO_MEMORY;
 	}
 
-	const auto aligned_addr = addr & ~0xfff;
-	memcpy(page, reinterpret_cast<void*>(aligned_addr), kernel::memory::PAGE_SIZE);
+	const auto aligned_addr = addr & ~(PAGE_SIZE - 1);
+	memcpy(page, reinterpret_cast<void*>(aligned_addr), PAGE_SIZE);
 
 	// This address space stops referencing the shared CoW page
 	void* shared_page = nullptr;
@@ -322,7 +322,7 @@ error_t copy_target_page(uint64_t addr)
 	if (shared_page != nullptr) {
 		Page* old_page = get_page(shared_page);
 		if (old_page == nullptr || old_page->dec_ref() == 0) {
-			kernel::memory::free(shared_page);
+			free(shared_page);
 		}
 	}
 
@@ -331,7 +331,8 @@ error_t copy_target_page(uint64_t addr)
 
 void copy_kernel_space(page_table_entry* dst)
 {
-	memcpy(dst, get_active_page_table(), 256 * sizeof(page_table_entry));
+	memcpy(dst, get_active_page_table(),
+		   USER_SPACE_START_INDEX * sizeof(page_table_entry));
 }
 
 page_table_entry* clone_page_table(page_table_entry* src, bool writable)
@@ -369,10 +370,10 @@ vaddr_t create_vaddr_from_index(int pml4_i, int pdpt_i, int pd_i, int pt_i)
 	vaddr_t addr;
 	addr.data = 0;
 
-	addr.set_part(4, pml4_i & 0x1FF);
-	addr.set_part(3, pdpt_i & 0x1FF);
-	addr.set_part(2, pd_i & 0x1FF);
-	addr.set_part(1, pt_i & 0x1FF);
+	addr.set_part(4, pml4_i & PT_INDEX_MASK);
+	addr.set_part(3, pdpt_i & PT_INDEX_MASK);
+	addr.set_part(2, pd_i & PT_INDEX_MASK);
+	addr.set_part(1, pt_i & PT_INDEX_MASK);
 
 	if ((addr.bits.page_map_level_4_index & 0x100) != 0) {
 		addr.bits.canonical = 0xFFFF;
@@ -413,7 +414,7 @@ error_t map_frame_to_vaddr(page_table_entry* table,
 					table[i + j].bits.writable = 0;
 					table[i + j].bits.user_accessible = 1;
 					table[i + j].bits.address =
-							(frame + j * kernel::memory::PAGE_SIZE) >> 12;
+							(frame + j * PAGE_SIZE) >> PAGE_SHIFT;
 
 					indices[4 - level] = i;
 
@@ -446,7 +447,7 @@ error_t map_frame_to_vaddr(page_table_entry* table,
 error_t unmap_frame(page_table_entry* table, vaddr_t addr, size_t num_pages)
 {
 	for (size_t i = 0; i < num_pages; i++) {
-		const vaddr_t target_addr{ addr.data + i * kernel::memory::PAGE_SIZE };
+		const vaddr_t target_addr{ addr.data + i * PAGE_SIZE };
 		auto* pte = get_pte(table, target_addr, 1);
 		if (pte == nullptr) {
 			return ERR_INVALID_ARG;
@@ -463,8 +464,8 @@ size_t calc_required_pages(vaddr_t start, size_t size)
 {
 	const vaddr_t end{ start.data + size };
 	const vaddr_t start_page{ start.data - start.part(0) };
-	const vaddr_t end_page{ end.data - end.part(0) + kernel::memory::PAGE_SIZE };
-	return (end_page.data - start_page.data) / kernel::memory::PAGE_SIZE;
+	const vaddr_t end_page{ end.data - end.part(0) + PAGE_SIZE };
+	return (end_page.data - start_page.data) / PAGE_SIZE;
 }
 
 void initialize_paging()

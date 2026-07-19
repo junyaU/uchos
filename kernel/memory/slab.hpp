@@ -105,9 +105,6 @@ public:
 	char* name() { return name_; }
 	size_t object_size() const { return object_size_; }
 
-	void decrease_num_active_objects() { num_active_objects_--; }
-	void decrease_num_active_slabs() { num_active_slabs_--; }
-
 	bool grow();
 	void* alloc();
 
@@ -118,10 +115,6 @@ public:
 private:
 	char name_[20];
 	size_t object_size_;
-	size_t num_active_objects_;
-	size_t num_total_objects_;
-	size_t num_active_slabs_;
-	size_t num_total_slabs_;
 	size_t num_pages_per_slab_;
 };
 

@@ -23,6 +23,23 @@ class MSlab;
 constexpr size_t PAGE_SIZE = 4096;
 
 /**
+ * @brief Bit shift equivalent to dividing/multiplying by PAGE_SIZE
+ */
+constexpr size_t PAGE_SHIFT = 12;
+
+static_assert(PAGE_SIZE == (1UL << PAGE_SHIFT), "PAGE_SHIFT must match PAGE_SIZE");
+
+/**
+ * @brief Round a byte size up to the number of PAGE_SIZE pages it needs
+ * @param size Size in bytes
+ * @return Number of pages (ceiling division by PAGE_SIZE)
+ */
+constexpr size_t pages_for_bytes(size_t size)
+{
+	return (size + PAGE_SIZE - 1) / PAGE_SIZE;
+}
+
+/**
  * @brief Represents a single memory page in the system
  *
  * This class manages individual pages of memory, tracking their allocation
