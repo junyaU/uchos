@@ -11,6 +11,7 @@
 #include <libs/common/stat.hpp>
 #include <libs/common/types.hpp>
 #include <string>
+#include <utility>
 #include "fat.hpp"
 #include "fs/path.hpp"
 #include "graphics/font.hpp"
@@ -283,19 +284,9 @@ void handle_fs_list_dir(const Message& m)
 	Message sm = { .type = MsgType::FS_LIST_DIR, .sender = process_ids::FS_FAT32 };
 	sm.result = OK;
 
-	if (entries_count == 0) {
-		// An empty listing needs no payload (ool.size 0); the buffer is
-		// freed on return
-		kernel::task::reply(m, &sm);
-		return;
-	}
-
-	sm.ool.addr = reinterpret_cast<uint64_t>(stat_buf.get());
-	sm.ool.size = entries_count * sizeof(Stat);
-
-	if (!IS_ERR(kernel::task::reply(m, &sm))) {
-		stat_buf.release(); // delivered: the requester owns it now
-	}
+	// An empty listing replies without a payload (size 0 frees the buffer)
+	kernel::task::reply_with_ool(m, &sm, std::move(stat_buf),
+								 entries_count * sizeof(Stat));
 }
 
 void handle_fs_pwd(const Message& m)

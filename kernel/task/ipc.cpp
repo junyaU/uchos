@@ -62,6 +62,32 @@ kernel::memory::unique_kbuf<> make_ool_buffer(size_t size)
 									 kernel::memory::PAGE_SIZE);
 }
 
+error_t reply_with_ool(const Message& req,
+					   Message* resp,
+					   kernel::memory::unique_kbuf<> buf,
+					   uint32_t size)
+{
+	// A fire-and-forget request (correlation 0) makes reply() a no-op that
+	// still returns OK: never attach the payload there, or checking the
+	// return value would release a buffer nobody received (leak)
+	if (req.correlation == 0 || !buf || size == 0) {
+		return reply(req, resp);
+	}
+
+	resp->ool.addr = reinterpret_cast<uint64_t>(buf.get());
+	resp->ool.size = size;
+
+	const error_t err = reply(req, resp);
+	if (IS_ERR(err)) {
+		// Not delivered: the buffer is freed on return
+		resp->ool = {};
+		return err;
+	}
+
+	buf.release(); // delivered: the requester owns it now
+	return OK;
+}
+
 void free_message_ool(Message& m)
 {
 	if (m.ool.size == 0 || m.ool.addr == 0) {

@@ -3,6 +3,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include <utility>
 #include "error.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
@@ -53,12 +54,7 @@ void handle_read_request(const Message& m)
 	}
 
 	// The data moves to the caller as the reply's OOL payload
-	reply.ool.addr = reinterpret_cast<uint64_t>(buf.get());
-	reply.ool.size = len;
-
-	if (!IS_ERR(kernel::task::reply(m, &reply))) {
-		buf.release();
-	}
+	kernel::task::reply_with_ool(m, &reply, std::move(buf), len);
 }
 
 void handle_write_request(const Message& m)

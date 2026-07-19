@@ -11,9 +11,11 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include <utility>
 #include "interrupt/routing.hpp"
 #include "interrupt/vector.hpp"
 #include "list.hpp"
+#include "memory/heap_debug.hpp"
 #include "memory/page.hpp"
 #include "task/ipc.hpp"
 #include "task/message_queue.hpp"
@@ -545,6 +547,73 @@ void test_ipc_ool_release_all_frees_everything()
 	ASSERT_EQ(t->ool_regions[0].kaddr, 0UL);
 }
 
+void test_ipc_reply_with_ool_fire_and_forget_frees()
+{
+	Task* t = create_parked_task("ipc_ool_ff");
+	ASSERT_NOT_NULL(t);
+
+	// Fire-and-forget request: reply() no-ops with OK, so the helper must
+	// free the payload instead of releasing it into the void (open-coded
+	// release-on-OK leaked here)
+	Message req = { .type = MsgType::FS_READ, .sender = t->id };
+	req.correlation = 0;
+
+#ifdef KERNEL_HEAP_DEBUG_ENABLED
+	const size_t live_before = kernel::memory::heap_debug::live_bytes();
+#endif
+
+	auto buf = kernel::task::make_ool_buffer(16);
+	ASSERT_NOT_NULL(buf.get());
+
+	Message resp = { .type = MsgType::FS_READ,
+					 .sender = kernel::task::CURRENT_TASK->id };
+	ASSERT_EQ(kernel::task::reply_with_ool(req, &resp, std::move(buf), 16), OK);
+
+	// Never attached, never queued, and (with heap debug) actually freed
+	ASSERT_EQ(resp.ool.size, 0U);
+	ASSERT_FALSE(t->reply_pending);
+	ASSERT_TRUE(t->messages.empty());
+#ifdef KERNEL_HEAP_DEBUG_ENABLED
+	ASSERT_EQ(kernel::memory::heap_debug::live_bytes(), live_before);
+#endif
+}
+
+void test_ipc_reply_with_ool_delivers_to_slot()
+{
+	Task* caller = create_parked_task("ipc_ool_reply");
+	ASSERT_NOT_NULL(caller);
+
+	// Simulate a task blocked in call(): the reply must land in its slot
+	// with the payload attached, ownership moving to the caller
+	caller->call_correlation = 77;
+	caller->reply_pending = false;
+	caller->wait_reason = WaitReason::REPLY;
+	caller->state = kernel::task::TASK_WAITING;
+
+	Message req = { .type = MsgType::FS_READ, .sender = caller->id };
+	req.correlation = 77;
+
+	auto buf = kernel::task::make_ool_buffer(16);
+	ASSERT_NOT_NULL(buf.get());
+	void* sent = buf.get();
+
+	Message resp = { .type = MsgType::FS_READ,
+					 .sender = kernel::task::CURRENT_TASK->id };
+	ASSERT_EQ(kernel::task::reply_with_ool(req, &resp, std::move(buf), 16), OK);
+
+	ASSERT_TRUE(caller->reply_pending);
+	ASSERT_EQ(reinterpret_cast<void*>(caller->reply_slot.ool.addr), sent);
+	ASSERT_EQ(caller->reply_slot.ool.size, 16U);
+
+	// The caller owns the payload now; clean it up and restore the task
+	kernel::task::free_message_ool(caller->reply_slot);
+	remove_from_run_queue(caller);
+	caller->state = kernel::task::TASK_RUNNING;
+	caller->call_correlation = 0;
+	caller->reply_pending = false;
+	caller->wait_reason = WaitReason::NONE;
+}
+
 void test_ipc_ool_copy_in_rejects_oversize()
 {
 	// The limit gate must fire before any allocation or address check
@@ -598,6 +667,10 @@ void register_ipc_tests()
 				  test_ipc_ool_move_preserves_address);
 	test_register("ipc_ool_release_all_frees_everything",
 				  test_ipc_ool_release_all_frees_everything);
+	test_register("ipc_reply_with_ool_fire_and_forget_frees",
+				  test_ipc_reply_with_ool_fire_and_forget_frees);
+	test_register("ipc_reply_with_ool_delivers_to_slot",
+				  test_ipc_reply_with_ool_delivers_to_slot);
 	test_register("ipc_ool_copy_in_rejects_oversize",
 				  test_ipc_ool_copy_in_rejects_oversize);
 	test_register("ipc_make_ool_buffer_page_aligned",

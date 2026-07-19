@@ -81,12 +81,8 @@ void handle_pci(const Message& m)
 	}
 
 	resp.result = OK;
-	resp.ool.addr = reinterpret_cast<uint64_t>(buf.get());
-	resp.ool.size = count * sizeof(PciDeviceInfo);
-
-	if (!IS_ERR(kernel::task::reply(m, &resp))) {
-		buf.release(); // delivered: the requester owns it now
-	}
+	kernel::task::reply_with_ool(m, &resp, std::move(buf),
+								 count * sizeof(PciDeviceInfo));
 }
 
 } // namespace
@@ -122,14 +118,15 @@ void shell_service()
 	memcpy(m.data.fs.name, path, 6);
 
 	const error_t load_err = kernel::task::call(process_ids::FS_FAT32, &m);
-	if (IS_ERR(load_err) || IS_ERR(m.result) || m.ool.size == 0) {
+
+	// Take ownership before inspecting the result (mirrors sys_exec)
+	kernel::memory::unique_kbuf<> shell_elf{ reinterpret_cast<void*>(m.ool.addr) };
+	if (IS_ERR(load_err) || IS_ERR(m.result) || m.ool.size == 0 || !shell_elf) {
 		LOG_ERROR("failed to load shell binary");
 		while (true) {
 			__asm__("hlt");
 		}
 	}
-
-	kernel::memory::unique_kbuf<> shell_elf{ reinterpret_cast<void*>(m.ool.addr) };
 
 	CURRENT_TASK->is_initialized = true;
 	kernel::fs::fat::execute_file(std::move(shell_elf), "shell", nullptr);

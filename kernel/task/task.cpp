@@ -227,6 +227,19 @@ Task* copy_task(Task* parent, Context* parent_ctx)
 		return nullptr;
 	}
 
+	// The child inherits no OOL ownership (its region table starts empty),
+	// so drop the parent's mapped regions from the child's cloned table:
+	// left in place, the parent's ool_release/exit would free pages the
+	// child still maps (stale reads of reused kernel memory).
+	for (const auto& r : parent->ool_regions) {
+		if (r.kaddr != 0 && IS_ERR(kernel::memory::unmap_frame(
+									child->get_page_table(),
+									kernel::memory::vaddr_t{ r.uaddr }, r.pages))) {
+			LOG_ERROR("failed to unmap inherited ool region: child %d",
+					  child->id.raw());
+		}
+	}
+
 	return child;
 }
 

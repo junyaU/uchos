@@ -139,6 +139,16 @@ void handle_rx_interrupt(const Message& m)
 	VirtioEntry entry_chain[1];
 	while (pop_virtio_entry(rx_queue, entry_chain, 1) > 0) {
 		VirtioNetReq* req = reinterpret_cast<VirtioNetReq*>(entry_chain[0].addr);
+
+		// A descriptor shorter than the virtio-net header would underflow
+		// the length below; drop it and hand the buffer back to the device
+		if (entry_chain[0].len < sizeof(VirtioNetHdr)) {
+			LOG_ERROR("runt rx descriptor: %u bytes", entry_chain[0].len);
+			push_virtio_entry(rx_queue, entry_chain, 1);
+			notify_virtqueue(*net_dev, rx_queue->index);
+			continue;
+		}
+
 		const size_t packet_len = entry_chain[0].len - sizeof(VirtioNetHdr);
 
 		// Copy the DMA buffer into an OOL buffer whose ownership moves to

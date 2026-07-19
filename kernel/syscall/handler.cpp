@@ -368,11 +368,13 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	// reply's OOL buffer is a kernel-owned copy of the file, owned by this
 	// task from here on (issue #314 Stage C)
 	RETURN_IF_ERROR(kernel::task::call(process_ids::FS_FAT32, &msg));
-	if (IS_ERR(msg.result) || msg.ool.size == 0) {
+
+	// Take ownership before inspecting the result so an error reply that
+	// still carries a payload cannot leak it
+	kernel::memory::unique_kbuf<> elf_buf{ reinterpret_cast<void*>(msg.ool.addr) };
+	if (IS_ERR(msg.result) || msg.ool.size == 0 || !elf_buf) {
 		return ERR_NO_FILE;
 	}
-
-	kernel::memory::unique_kbuf<> elf_buf{ reinterpret_cast<void*>(msg.ool.addr) };
 
 	// Build the new address space and switch CR3 to it BEFORE releasing the
 	// old one: config_new_page_table() copies the kernel space out of the

@@ -9,6 +9,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include <utility>
 #include "fat.hpp"
 #include "internal_common.hpp"
 #include "log/log.hpp"
@@ -371,13 +372,7 @@ void reply_file_data(const Message& req, const void* buf, size_t size)
 	}
 
 	memcpy(ool_buf.get(), buf, size);
-	m.ool.addr = reinterpret_cast<uint64_t>(ool_buf.get());
-	m.ool.size = size;
-
-	if (!IS_ERR(kernel::task::reply(req, &m))) {
-		// Delivered: the requester owns the buffer now
-		ool_buf.release();
-	}
+	kernel::task::reply_with_ool(req, &m, std::move(ool_buf), size);
 }
 
 void reply_error(const Message& req, error_t result)

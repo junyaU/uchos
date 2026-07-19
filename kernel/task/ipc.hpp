@@ -165,10 +165,32 @@ void wait_notification(uint32_t mask);
 kernel::memory::unique_kbuf<> make_ool_buffer(size_t size);
 
 /**
+ * @brief Reply to a request with an OOL payload, handling ownership
+ *
+ * Attaches buf to *resp and replies. On delivery the receiver owns the
+ * buffer; on a fire-and-forget request (correlation 0) or a failed
+ * delivery nobody does, so it is freed on return. This is the only correct
+ * way to answer with a payload: open-coding release-on-OK leaks the buffer
+ * when reply() no-ops for correlation 0.
+ *
+ * @param req The request being answered
+ * @param resp Reply message (type/result set by the caller, ool set here)
+ * @param buf Payload buffer; ownership always ends here or with the receiver
+ * @param size Payload bytes (0 = reply without a payload)
+ * @return reply()'s result
+ */
+error_t reply_with_ool(const Message& req,
+					   Message* resp,
+					   kernel::memory::unique_kbuf<> buf,
+					   uint32_t size);
+
+/**
  * @brief Free the kernel-owned OOL buffer attached to m, if any
  *
  * Cleanup path for undelivered or drained messages (send failure, exit-time
  * ring drain); a normal receiver takes ownership instead.
+ *
+ * @param m Message whose ool descriptor is freed and cleared
  */
 void free_message_ool(Message& m);
 
@@ -178,6 +200,7 @@ void free_message_ool(Message& m);
  * Replaces m->ool.addr (user vaddr) with a fresh kernel buffer holding a
  * copy; the message then owns that buffer like any kernel-side OOL payload.
  *
+ * @param m Message whose ool descriptor names a user-space payload
  * @return OK (also when there is no payload), ERR_OOL_LIMIT above
  * OOL_MAX_SIZE, ERR_INVALID_ARG for a bad address, ERR_NO_MEMORY
  */
@@ -190,11 +213,16 @@ error_t copy_in_ool_from_user(Message* m);
  * t->ool_regions for ool_release()/exit cleanup. When the region table is
  * full or mapping fails, the payload is freed and the message is delivered
  * anyway with result rewritten (ERR_OOL_LIMIT / ERR_NO_MEMORY).
+ *
+ * @param t Receiving task (its CR3 must be the active one)
+ * @param m Received message about to be copied out to user space
  */
 void deliver_ool_to_user(Task* t, Message* m);
 
 /**
  * @brief IPC_OOL_RELEASE: unmap and free the region mapped at uaddr
+ * @param t Task whose region table is searched
+ * @param uaddr Mapped base address the region was delivered at
  * @return OK, or ERR_INVALID_ARG when uaddr names no live region
  */
 error_t release_ool_region(Task* t, uint64_t uaddr);
@@ -205,6 +233,8 @@ error_t release_ool_region(Task* t, uint64_t uaddr);
  * Covers the mapped-region table, undelivered ring messages and a pending
  * reply slot. The user-space mappings themselves die with the page table,
  * so this only releases the physical buffers.
+ *
+ * @param t Exiting task
  */
 void release_all_ool(Task* t);
 
@@ -213,6 +243,8 @@ void release_all_ool(Task* t);
  *
  * exec destroys the old user image (and with it every OOL mapping) but the
  * task lives on, so queued messages must survive.
+ *
+ * @param t Task whose user image is being replaced
  */
 void release_ool_regions(Task* t);
 
