@@ -2,7 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "net/checksum.hpp"
 #include "net/ipv4.hpp"
 

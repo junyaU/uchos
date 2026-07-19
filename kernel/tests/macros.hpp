@@ -14,7 +14,7 @@
 #pragma once
 
 #include <cstddef>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "tests/framework.hpp"
 
 /**

@@ -2,8 +2,8 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include "graphics/log.hpp"
 #include "interrupt/idt.hpp"
+#include "log/log.hpp"
 #include "page.hpp"
 #include "segment_utils.h"
 #include "slab.hpp"

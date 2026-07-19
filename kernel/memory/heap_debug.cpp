@@ -19,7 +19,7 @@
 #include <cstdint>
 #include <cstring>
 #include <unordered_map>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 
 namespace kernel::memory::heap_debug
 {

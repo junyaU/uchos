@@ -9,8 +9,8 @@
 #include <libs/common/types.hpp>
 #include "fs/fat/fat.hpp"
 #include "graphics/font.hpp"
-#include "graphics/log.hpp"
 #include "graphics/screen.hpp"
+#include "log/log.hpp"
 #include "memory/paging.hpp"
 #include "memory/slab.hpp"
 #include "memory/user.hpp"
@@ -312,8 +312,7 @@ ProcessId sys_wait(uint64_t arg1)
 
 	task::send_message(process_ids::SHELL, m);
 
-	if (copy_to_user(status, &m.data.exit_task.status, sizeof(int)) !=
-		sizeof(int)) {
+	if (copy_to_user(status, &m.data.exit_task.status, sizeof(int)) != sizeof(int)) {
 		return ProcessId::from_raw(-1);
 	}
 

@@ -2,7 +2,7 @@
 #include <cctype>
 #include <cstdint>
 #include <vector>
-#include "log.hpp"
+#include "log/log.hpp"
 #include "point2d.hpp"
 #include "screen.hpp"
 

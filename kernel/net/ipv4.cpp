@@ -2,7 +2,7 @@
 #include <cstddef>
 #include <cstring>
 #include <libs/common/endian.hpp>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "net/arp.hpp"
 #include "net/checksum.hpp"
 #include "net/ethernet.hpp"

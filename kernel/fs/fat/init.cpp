@@ -11,9 +11,9 @@
 #include <queue>
 #include "fat.hpp"
 #include "fs/path.hpp"
-#include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
 #include "internal_common.hpp"
+#include "log/log.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"

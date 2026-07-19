@@ -11,8 +11,8 @@
 #include <libs/common/types.hpp>
 #include <vector>
 #include "fat.hpp"
-#include "graphics/log.hpp"
 #include "internal_common.hpp"
+#include "log/log.hpp"
 #include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
