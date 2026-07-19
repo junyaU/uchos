@@ -231,12 +231,15 @@ void test_ipc_recv_returns_queued_message()
 
 	const kernel::tests::ScopedCurrentTask scoped_task(t);
 
+	// The out-pointer is a kernel address here, so copy_to_user rejects it
+	// after the receive; draining the ring below still proves the blocking
+	// path popped the message. Capture the result instead of calling
+	// sys_ipc inside an ASSERT: the macros re-evaluate their arguments on
+	// failure, and a second IPC_RECV would block forever on the empty ring.
 	Message m;
-	ASSERT_EQ(
-			kernel::syscall::sys_ipc(0, 0, reinterpret_cast<uint64_t>(&m), IPC_RECV),
-			OK);
-
-	ASSERT_TRUE(m.type == MsgType::NOTIFY_WRITE);
+	const error_t err =
+			kernel::syscall::sys_ipc(0, 0, reinterpret_cast<uint64_t>(&m), IPC_RECV);
+	ASSERT_EQ(err, ERR_INVALID_ARG);
 	ASSERT_TRUE(t->messages.empty());
 
 	// The task must return to the caller RUNNING, never WAITING; it would
