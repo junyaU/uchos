@@ -84,26 +84,24 @@ void process_write_completion(const Message& m)
 
 error_t process_read_data_response(const Message& m, bool for_user)
 {
+	// Take ownership of the block device buffer once; it is freed
+	// automatically on every return path below.
+	kernel::memory::unique_kbuf<> buf{ m.data.blk_io.buf };
+
 	auto it = file_caches.find(m.data.blk_io.request_id);
 	if (it == file_caches.end()) {
 		LOG_ERROR("request id not found: %lu", m.data.blk_io.request_id);
-		if (m.data.blk_io.buf != nullptr) {
-			kernel::memory::free(m.data.blk_io.buf);
-		}
 		return ERR_INVALID_ARG;
 	}
 
 	auto& ctx = it->second;
 
-	if (IS_ERR(m.data.blk_io.result) || m.data.blk_io.buf == nullptr) {
+	if (IS_ERR(m.data.blk_io.result) || buf == nullptr) {
 		// Device read failed: release the requester with an error reply and
 		// drop the partially filled cache so it never serves stale data.
 		LOG_ERROR("block read failed: result=%d sector=%u", m.data.blk_io.result,
 				  m.data.blk_io.sector);
 		send_empty_reply(m.type, ctx.requester);
-		if (m.data.blk_io.buf != nullptr) {
-			kernel::memory::free(m.data.blk_io.buf);
-		}
 		file_caches.erase(it);
 		return ERR_FAILED_READ_FROM_DEVICE;
 	}
@@ -112,21 +110,18 @@ error_t process_read_data_response(const Message& m, bool for_user)
 
 	// オフセットがファイルサイズを超えている場合は無視
 	if (offset >= ctx.total_size) {
-		kernel::memory::free(m.data.blk_io.buf);
 		return OK;
 	}
 
 	const size_t copy_len = std::min(BYTES_PER_CLUSTER, ctx.total_size - offset);
 
-	memcpy(ctx.buffer.data() + offset, m.data.blk_io.buf, copy_len);
+	memcpy(ctx.buffer.data() + offset, buf.get(), copy_len);
 	ctx.read_size += copy_len;
 
 	if (ctx.is_read_complete()) {
 		send_file_data(m.data.blk_io.request_id, ctx.buffer.data(), ctx.total_size,
 					   ctx.requester, m.type, for_user);
 	}
-
-	kernel::memory::free(m.data.blk_io.buf);
 
 	return OK;
 }
@@ -428,9 +423,9 @@ void handle_fs_write(const Message& m)
 		return;
 	}
 
-	void* cluster_buffer =
-			kernel::memory::alloc(BYTES_PER_CLUSTER, kernel::memory::ALLOC_ZEROED);
-	if (cluster_buffer == nullptr) {
+	auto cluster_buffer = kernel::memory::make_kbuf(BYTES_PER_CLUSTER,
+													kernel::memory::ALLOC_ZEROED);
+	if (!cluster_buffer) {
 		LOG_ERROR("failed to allocate cluster buffer");
 		reply.data.fs.len = 0;
 		kernel::task::send_message(m.sender, reply);
@@ -446,13 +441,12 @@ void handle_fs_write(const Message& m)
 			void* write_data = m.tool_desc.present
 									   ? m.tool_desc.addr
 									   : const_cast<char*>(m.data.fs.temp_buf);
-			memcpy(static_cast<char*>(cluster_buffer) + offset_in_cluster,
+			memcpy(static_cast<char*>(cluster_buffer.get()) + offset_in_cluster,
 				   write_data, write_len);
 		} else {
 			// TODO: For existing data, need to read first
 			LOG_ERROR(
 					"partial cluster writes with existing data not yet implemented");
-			kernel::memory::free(cluster_buffer);
 			reply.data.fs.len = 0;
 			kernel::task::send_message(m.sender, reply);
 			return;
@@ -462,7 +456,7 @@ void handle_fs_write(const Message& m)
 		void* write_data = m.tool_desc.present
 								   ? m.tool_desc.addr
 								   : const_cast<char*>(m.data.fs.temp_buf);
-		memcpy(cluster_buffer, write_data, write_len);
+		memcpy(cluster_buffer.get(), write_data, write_len);
 	}
 
 	// Invalidate the cached file contents so a read after this write does not
@@ -476,9 +470,11 @@ void handle_fs_write(const Message& m)
 	const fs_id_t write_request_id = generate_fs_id();
 	pending_writes[write_request_id] = PendingWrite{ m.sender, write_len };
 
-	send_write_req_to_blk_device(cluster_buffer, calc_start_sector(target_cluster),
-								 BYTES_PER_CLUSTER, MsgType::FS_WRITE,
-								 write_request_id);
+	// Ownership moves to the blk device task, which frees the buffer once
+	// the write completes (see kernel/hardware/virtio/blk.cpp:79).
+	send_write_req_to_blk_device(
+			cluster_buffer.release(), calc_start_sector(target_cluster),
+			BYTES_PER_CLUSTER, MsgType::FS_WRITE, write_request_id);
 
 	fd->offset += write_len;
 

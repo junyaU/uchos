@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <utility>
 #include "memory/bootstrap_allocator.hpp"
 #include "memory/buddy_system.hpp"
 #include "memory/page.hpp"
@@ -297,6 +298,85 @@ void test_slab_cache_name_truncation()
 	ASSERT_EQ(strlen(cache->name()), 19UL);
 }
 
+void test_unique_kbuf_frees_on_scope_exit()
+{
+	void* raw = nullptr;
+	{
+		kernel::memory::unique_kbuf<> buf =
+				kernel::memory::make_kbuf(64, kernel::memory::ALLOC_UNINITIALIZED);
+		ASSERT_NOT_NULL(buf.get());
+		ASSERT_TRUE(kernel::memory::is_slab_object_in_use(buf.get()));
+		raw = buf.get();
+	}
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(raw));
+}
+
+void test_unique_kbuf_release_transfers_ownership()
+{
+	kernel::memory::unique_kbuf<> buf =
+			kernel::memory::make_kbuf(64, kernel::memory::ALLOC_UNINITIALIZED);
+	ASSERT_NOT_NULL(buf.get());
+	void* raw = buf.release();
+
+	// RAII must not have freed the object; ownership now belongs to the caller
+	ASSERT_TRUE(kernel::memory::is_slab_object_in_use(raw));
+
+	kernel::memory::free(raw);
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(raw));
+}
+
+void test_unique_kbuf_reset_frees()
+{
+	kernel::memory::unique_kbuf<> buf =
+			kernel::memory::make_kbuf(64, kernel::memory::ALLOC_UNINITIALIZED);
+	ASSERT_NOT_NULL(buf.get());
+	void* raw = buf.get();
+
+	buf.reset();
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(raw));
+	ASSERT_FALSE(static_cast<bool>(buf));
+}
+
+void test_unique_kbuf_move_transfers_ownership()
+{
+	kernel::memory::unique_kbuf<> a =
+			kernel::memory::make_kbuf(64, kernel::memory::ALLOC_UNINITIALIZED);
+	ASSERT_NOT_NULL(a.get());
+	void* raw = a.get();
+
+	kernel::memory::unique_kbuf<> b = std::move(a);
+	ASSERT_FALSE(static_cast<bool>(a));
+	ASSERT_EQ(b.get(), raw);
+	ASSERT_TRUE(kernel::memory::is_slab_object_in_use(raw));
+
+	// Guards against double-free by construction: only b owns the object
+	b.reset();
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(raw));
+}
+
+void test_make_kbuf_zeroed()
+{
+	constexpr size_t size = 128;
+	kernel::memory::unique_kbuf<> buf =
+			kernel::memory::make_kbuf(size, kernel::memory::ALLOC_ZEROED);
+	ASSERT_NOT_NULL(buf.get());
+
+	uint8_t* bytes = static_cast<uint8_t*>(buf.get());
+	for (size_t i = 0; i < size; ++i) {
+		ASSERT_EQ(bytes[i], 0);
+	}
+}
+
+void test_unique_kbuf_null_is_safe()
+{
+	kernel::memory::unique_kbuf<> empty{};
+	ASSERT_FALSE(static_cast<bool>(empty));
+
+	// free(nullptr) inside the deleter must be a no-op
+	empty.reset();
+	ASSERT_FALSE(static_cast<bool>(empty));
+}
+
 void register_slab_tests()
 {
 	test_register("slab_basic", test_slab_basic);
@@ -308,6 +388,15 @@ void register_slab_tests()
 	test_register("slab_free_rejects_foreign_pointer",
 				  test_slab_free_rejects_foreign_pointer);
 	test_register("slab_cache_name_truncation", test_slab_cache_name_truncation);
+	test_register("unique_kbuf_frees_on_scope_exit",
+				  test_unique_kbuf_frees_on_scope_exit);
+	test_register("unique_kbuf_release_transfers_ownership",
+				  test_unique_kbuf_release_transfers_ownership);
+	test_register("unique_kbuf_reset_frees", test_unique_kbuf_reset_frees);
+	test_register("unique_kbuf_move_transfers_ownership",
+				  test_unique_kbuf_move_transfers_ownership);
+	test_register("make_kbuf_zeroed", test_make_kbuf_zeroed);
+	test_register("unique_kbuf_null_is_safe", test_unique_kbuf_null_is_safe);
 }
 
 static void helper_alloc_or_return_void()

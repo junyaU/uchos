@@ -12,6 +12,13 @@ paths:
 - **カーネルヒープ**: slab allocator の `alloc(size, flags)` / `free(addr)`(`kernel/memory/slab.hpp`)
 - 確保結果は必ず nullptr チェックすること
 
+## ヒープ所有権(RAII 必須)
+- **新規・変更コードでは、所有権を持つ生ポインタ + 手動 `free()` を禁止**。所有権は `kernel::memory::unique_kbuf<T>` / `make_kbuf()`(または `std::unique_ptr`)で表現する(`kernel/memory/slab.hpp`)
+- IPC などで所有権を手放す境界では `.release()` を明示的に呼ぶ。借用(見るだけ)は `.get()` を渡す
+- `unique_kbuf` はデストラクタを呼ばず `free()` するだけ。生バッファか trivially destructible な型にのみ使う
+- `enter_user_mode` / `exec_elf` など**戻らない呼び出しの前**ではスコープ終端に到達しないため、事前に `.reset()` か `.release()` で決着させる
+- 既存コードの一括書き換えはしない。ファイルを触るタイミングで段階的に移行する(issue #322)
+
 ## エラーハンドリング
 - panic は最終手段。リソース枯渇などは `LOG_ERROR` でログを出しエラーを返す
 - ログは `kernel/log/log.hpp` の `LOG_DEBUG` / `LOG_INFO` / `LOG_ERROR`(printf 形式)

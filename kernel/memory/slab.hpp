@@ -161,8 +161,33 @@ void free(void* addr);
 bool is_slab_object_in_use(void* addr);
 
 struct FreeDeleter {
-	void operator()(void* p) { free(p); }
+	void operator()(void* p) const { free(p); }
 };
+
+/**
+ * @brief Owning smart pointer for kernel heap memory allocated with alloc()
+ *
+ * Frees the buffer with kernel::memory::free() on scope exit, so early
+ * returns on error paths cannot leak. Use .release() at ownership-transfer
+ * boundaries (e.g. handing a buffer over via IPC).
+ *
+ * @note The deleter only calls free(); no destructor runs. Use only for
+ * raw buffers and trivially destructible types.
+ */
+template<typename T = void>
+using unique_kbuf = std::unique_ptr<T, FreeDeleter>;
+
+/**
+ * @brief Allocate kernel memory owned by a unique_kbuf
+ * @param size Size to allocate
+ * @param flags Allocation flags (e.g., ALLOC_ZEROED)
+ * @param align Alignment requirement (default: 1)
+ * @return Owning pointer to the allocation; empty on failure
+ */
+inline unique_kbuf<> make_kbuf(size_t size, unsigned flags, int align = 1)
+{
+	return unique_kbuf<>(alloc(size, flags, align));
+}
 
 /**
  * @brief Initialize the slab allocator
