@@ -9,8 +9,8 @@
 #include <utility>
 #include "bit_utils.hpp"
 #include "buddy_system.hpp"
-#include "graphics/log.hpp"
 #include "heap_debug.hpp"
+#include "log/log.hpp"
 #include "page.hpp"
 
 namespace kernel::memory

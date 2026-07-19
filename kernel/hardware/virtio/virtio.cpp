@@ -2,11 +2,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <libs/common/types.hpp>
-#include "graphics/log.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/virtio/blk.hpp"
 #include "hardware/virtio/device_descriptor.hpp"
 #include "hardware/virtio/pci.hpp"
+#include "log/log.hpp"
 
 namespace kernel::hw::virtio
 {

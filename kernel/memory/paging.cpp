@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include <libs/common/types.hpp>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include "paging_utils.h"

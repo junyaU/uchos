@@ -1,10 +1,10 @@
 #include "hardware/virtio/net.hpp"
 #include <cstddef>
 #include <libs/common/types.hpp>
-#include "graphics/log.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
 #include "libs/common/message.hpp"
+#include "log/log.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"

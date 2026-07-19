@@ -6,11 +6,11 @@
 #include <libs/common/types.hpp>
 #include "fs/fat/fat.hpp"
 #include "fs/path.hpp"
-#include "graphics/log.hpp"
 #include "hardware/keyboard.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/usb/xhci/xhci.hpp"
 #include "hardware/virtio/pci.hpp"
+#include "log/log.hpp"
 #include "memory/page.hpp"
 #include "memory/slab.hpp"
 #include "task/ipc.hpp"

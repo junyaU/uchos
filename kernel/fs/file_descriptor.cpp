@@ -3,7 +3,7 @@
 #include <cstring>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 
 namespace kernel::fs
 {
