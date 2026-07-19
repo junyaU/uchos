@@ -232,61 +232,40 @@ void free_cluster_chain(cluster_t start_cluster)
 	free_cluster_chain(FAT_TABLE, start_cluster);
 }
 
-void send_read_req_to_blk_device(unsigned int sector,
-								 size_t len,
-								 MsgType dst_type,
-								 fs_id_t request_id,
-								 size_t sequence)
+kernel::memory::unique_kbuf<> read_from_blk(unsigned int sector, size_t len)
 {
 	Message m = { .type = MsgType::IPC_READ_FROM_BLK_DEVICE,
 				  .sender = process_ids::FS_FAT32 };
 	m.data.blk_io.sector = sector;
 	m.data.blk_io.len = len;
-	m.data.blk_io.dst_type = dst_type;
-	m.data.blk_io.request_id = request_id;
-	m.data.blk_io.sequence = sequence;
 
-	kernel::task::send_message(process_ids::VIRTIO_BLK, m);
+	const error_t err = kernel::task::call(process_ids::VIRTIO_BLK, &m);
+	if (IS_ERR(err) || IS_ERR(m.result) || m.data.blk_io.buf == nullptr) {
+		LOG_ERROR("block read failed: sector=%u len=%lu err=%d result=%d", sector,
+				  len, err, m.result);
+		return kernel::memory::unique_kbuf<>{};
+	}
+
+	return kernel::memory::unique_kbuf<>{ m.data.blk_io.buf };
 }
 
-void send_write_req_to_blk_device(void* buffer,
-								  unsigned int sector,
-								  size_t len,
-								  MsgType dst_type,
-								  fs_id_t request_id,
-								  size_t sequence)
+error_t write_to_blk(void* buffer, unsigned int sector, size_t len)
 {
 	Message m = { .type = MsgType::IPC_WRITE_TO_BLK_DEVICE,
 				  .sender = process_ids::FS_FAT32 };
 	m.data.blk_io.buf = buffer;
 	m.data.blk_io.sector = sector;
 	m.data.blk_io.len = len;
-	m.data.blk_io.dst_type = dst_type;
-	m.data.blk_io.request_id = request_id;
-	m.data.blk_io.sequence = sequence;
 
-	kernel::task::send_message(process_ids::VIRTIO_BLK, m);
-}
-
-void write_fat_sectors_fallback(unsigned int base_sector,
-								size_t start_sector,
-								size_t end_sector)
-{
-	const size_t bytes_per_sector = VOLUME_BPB->bytes_per_sector;
-
-	for (size_t i = start_sector; i < end_sector; i++) {
-		void* sector_buffer = kernel::memory::alloc(bytes_per_sector,
-													kernel::memory::ALLOC_ZEROED);
-		if (sector_buffer == nullptr) {
-			LOG_ERROR("Failed to allocate sector buffer for FAT write");
-			continue;
-		}
-		void* fat_sector =
-				reinterpret_cast<uint8_t*>(FAT_TABLE) + (i * bytes_per_sector);
-		memcpy(sector_buffer, fat_sector, bytes_per_sector);
-		send_write_req_to_blk_device(sector_buffer, base_sector + i,
-									 bytes_per_sector, MsgType::FS_WRITE, 0, i);
+	// Ownership of buffer moves to the blk task, which frees it after the
+	// device write; delivery failure means it was never handed over.
+	const error_t err = kernel::task::call(process_ids::VIRTIO_BLK, &m);
+	if (IS_ERR(err)) {
+		kernel::memory::free(buffer);
+		return err;
 	}
+
+	return m.result;
 }
 
 void write_fat_sectors_chunked(unsigned int base_sector, size_t sectors_per_fat)
@@ -305,8 +284,30 @@ void write_fat_sectors_chunked(unsigned int base_sector, size_t sectors_per_fat)
 		void* chunk_buffer =
 				kernel::memory::alloc(chunk_size, kernel::memory::ALLOC_ZEROED);
 		if (chunk_buffer == nullptr) {
-			write_fat_sectors_fallback(base_sector, sector_offset,
-									   sector_offset + current_chunk_sectors);
+			// Fall back to sector-sized writes: a 512B buffer can still
+			// succeed when the 64KB chunk cannot
+			for (size_t i = 0; i < current_chunk_sectors; ++i) {
+				void* sector_buffer = kernel::memory::alloc(
+						bytes_per_sector, kernel::memory::ALLOC_ZEROED);
+				if (sector_buffer == nullptr) {
+					LOG_ERROR("Failed to allocate sector buffer for FAT write");
+					continue;
+				}
+				memcpy(sector_buffer,
+					   reinterpret_cast<uint8_t*>(FAT_TABLE) +
+							   ((sector_offset + i) * bytes_per_sector),
+					   bytes_per_sector);
+				const error_t err = write_to_blk(
+						sector_buffer,
+						base_sector + static_cast<unsigned int>(sector_offset + i),
+						bytes_per_sector);
+				if (IS_ERR(err)) {
+					LOG_ERROR("FAT write failed: sector=%u err=%d",
+							  base_sector +
+									  static_cast<unsigned int>(sector_offset + i),
+							  err);
+				}
+			}
 			sector_offset += current_chunk_sectors;
 			continue;
 		}
@@ -315,9 +316,12 @@ void write_fat_sectors_chunked(unsigned int base_sector, size_t sectors_per_fat)
 						  (sector_offset * bytes_per_sector);
 		memcpy(chunk_buffer, fat_chunk, chunk_size);
 
-		send_write_req_to_blk_device(chunk_buffer, base_sector + sector_offset,
-									 chunk_size, MsgType::FS_WRITE, 0,
-									 sector_offset);
+		const error_t err =
+				write_to_blk(chunk_buffer, base_sector + sector_offset, chunk_size);
+		if (IS_ERR(err)) {
+			LOG_ERROR("FAT write failed: sector=%u err=%d",
+					  base_sector + static_cast<unsigned int>(sector_offset), err);
+		}
 
 		sector_offset += current_chunk_sectors;
 	}
@@ -340,22 +344,17 @@ void write_fat_table_to_disk()
 	}
 }
 
-void send_file_data(fs_id_t id,
-					void* buf,
-					size_t size,
-					ProcessId requester,
-					MsgType type,
-					bool for_user)
+void reply_file_data(const Message& req, void* buf, size_t size, bool for_user)
 {
-	Message m = { .type = type, .sender = process_ids::FS_FAT32 };
-	m.data.fs.request_id = id;
+	Message m = { .type = req.type, .sender = process_ids::FS_FAT32 };
+	m.result = OK;
 
 	if (for_user) {
 		if (size == 0) {
 			// Nothing to transfer (e.g. empty file): reply without an OOL
 			// buffer so the requester is not left blocking forever.
 			m.data.fs.len = 0;
-			kernel::task::send_message(requester, m);
+			kernel::task::reply(req, &m);
 			return;
 		}
 
@@ -364,7 +363,8 @@ void send_file_data(fs_id_t id,
 		if (user_buf == nullptr) {
 			LOG_ERROR("failed to allocate memory");
 			m.data.fs.len = 0;
-			kernel::task::send_message(requester, m);
+			m.result = ERR_NO_MEMORY;
+			kernel::task::reply(req, &m);
 			return;
 		}
 
@@ -377,7 +377,14 @@ void send_file_data(fs_id_t id,
 		m.data.fs.len = size;
 	}
 
-	kernel::task::send_message(requester, m);
+	kernel::task::reply(req, &m);
+}
+
+void reply_error(const Message& req, error_t result)
+{
+	Message m = { .type = req.type, .sender = process_ids::FS_FAT32 };
+	m.result = result;
+	kernel::task::reply(req, &m);
 }
 
 } // namespace kernel::fs::fat

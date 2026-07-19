@@ -36,14 +36,29 @@ enum TaskState : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING, TASK_EXITED }
  * @brief Why a TASK_WAITING task is asleep; gates who may wake it
  *
  * send_message() wakes RECEIVE and NONE waiters; notify() additionally
- * wakes a NOTIFY waiter only when the raised bit is in its mask. This
- * keeps a device wait (e.g. virtio-blk kick-and-wait) from being resumed
- * spuriously by an unrelated incoming message (issue #314 Stage A).
+ * wakes a NOTIFY waiter only when the raised bit is in its mask; a reply
+ * wakes only the REPLY waiter it correlates with; a child's exit wakes
+ * only a CHILD waiter. The gating keeps device waits and RPC waits from
+ * being resumed spuriously by unrelated traffic (issue #314).
  */
 enum class WaitReason : uint8_t {
 	NONE,	 ///< Bare sleep via switch_next_task(true); any sender wakes it
 	RECEIVE, ///< Blocked in a receive; messages and notifications wake it
 	NOTIFY,	 ///< Blocked in wait_notification(); only masked doorbells wake it
+	REPLY,	 ///< Blocked in call(); only the matching reply wakes it
+	CHILD,	 ///< Blocked in sys_wait; only a child's exit wakes it
+};
+
+/**
+ * @brief One child's exit, parked on the parent until sys_wait collects it
+ *
+ * Replaces the IPC_EXIT_TASK message: child termination is parent/child
+ * bookkeeping, not IPC, so it no longer competes with real messages for
+ * ring slots (issue #314 Stage B).
+ */
+struct ChildExitRecord {
+	pid_t pid;
+	int status;
 };
 
 static constexpr int MAX_FDS_PER_PROCESS = 32;
@@ -65,6 +80,13 @@ struct Task {
 	uint32_t pending_notifications; ///< Sticky doorbell bits (see NotifyType)
 	WaitReason wait_reason;			///< Valid while state == TASK_WAITING
 	uint32_t wait_notify_mask;		///< Doorbells awaited (WaitReason::NOTIFY)
+	uint32_t next_correlation;		///< call() id counter (0 is never issued)
+	uint32_t call_correlation;		///< Outstanding call's id, 0 = no call
+	bool reply_pending;				///< reply_slot holds an undelivered reply
+	Message reply_slot;				///< Reply delivery slot, bypasses the ring
+	static constexpr int MAX_CHILD_EXIT_RECORDS = 8;
+	std::array<ChildExitRecord, MAX_CHILD_EXIT_RECORDS> exit_records;
+	int num_exit_records; ///< Occupied prefix of exit_records (FIFO)
 	std::array<message_handler_t, TOTAL_MESSAGE_TYPES> message_handlers;
 	std::array<kernel::fs::FileDescriptor, MAX_FDS_PER_PROCESS> fd_table;
 
@@ -161,9 +183,15 @@ void switch_next_task(bool sleep_current_task);
 
 void exit_task(int status);
 
-[[noreturn]] void process_messages(Task* t);
+/**
+ * @brief Park a child's exit on the parent and wake a waiting sys_wait
+ *
+ * Appends to the parent's exit_records (FIFO; overflow is dropped with a
+ * log) and wakes the parent when it is blocked in WAITING(CHILD).
+ */
+void record_child_exit(Task* parent, ProcessId child, int status);
 
-Message wait_for_message(MsgType type);
+[[noreturn]] void process_messages(Task* t);
 
 } // namespace kernel::task
 

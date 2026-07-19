@@ -9,10 +9,8 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
-#include <map>
-#include <queue>
-#include <string>
 #include "fat.hpp"
+#include "memory/slab.hpp"
 
 namespace kernel::fs::fat
 {
@@ -24,19 +22,12 @@ extern unsigned long ENTRIES_PER_CLUSTER;
 extern uint32_t* FAT_TABLE;
 extern unsigned int FAT_TABLE_SECTOR;
 extern kernel::fs::DirectoryEntry* ROOT_DIR;
-extern std::queue<Message> pending_messages;
 
 // FAT table write optimization constants
 constexpr size_t FAT_WRITE_CHUNK_SIZE = 65536; // 64KB chunks for batch writes
 
 /// Space character used to right-pad the 8.3 short file name fields.
 constexpr char SFN_PAD = 0x20;
-
-// Change directory request tracking
-extern std::map<fs_id_t, ProcessId> change_dir_requests;
-extern std::map<fs_id_t, std::string> change_dir_names;
-extern std::map<fs_id_t, std::string> parent_dir_names;
-extern fs_id_t next_change_dir_id;
 
 // Common utility functions
 void read_dir_entry_name_raw(const kernel::fs::DirectoryEntry& entry, char* dest);
@@ -66,36 +57,45 @@ size_t count_free_clusters(const uint32_t* fat, size_t total_clusters);
 size_t count_free_clusters();
 size_t total_fat_clusters();
 
-// Communication with block device
-void send_read_req_to_blk_device(unsigned int sector,
-								 size_t len,
-								 MsgType dst_type,
-								 fs_id_t request_id = 0,
-								 size_t sequence = 0);
+/**
+ * @brief Synchronously read len bytes starting at sector from the block
+ * device (call/reply RPC, issue #314 Stage B)
+ * @return Owning buffer, or empty on delivery/device failure (logged)
+ */
+kernel::memory::unique_kbuf<> read_from_blk(unsigned int sector, size_t len);
 
-void send_write_req_to_blk_device(void* buffer,
-								  unsigned int sector,
-								  size_t len,
-								  MsgType dst_type,
-								  fs_id_t request_id = 0,
-								  size_t sequence = 0);
+/**
+ * @brief Synchronously write len bytes to the block device
+ * @param buffer Data to write; ownership moves to the blk task, which
+ * frees it once the device write completes (success or failure)
+ * @return OK, or the delivery/device error
+ */
+error_t write_to_blk(void* buffer, unsigned int sector, size_t len);
+
+// Synchronous FAT32 initialization: BPB -> FAT -> root directory
+error_t initialize_fat32();
 
 // FAT table persistence
 void write_fat_table_to_disk();
 
-// Send file data to requester
-void send_file_data(fs_id_t id,
-					void* buf,
-					size_t size,
-					ProcessId requester,
-					MsgType type,
-					bool for_user);
+/**
+ * @brief Reply to a read-style request with file data
+ *
+ * for_user = true copies into a page-aligned OOL buffer (mapped into the
+ * requester's space at delivery); false hands the kernel address itself
+ * (borrowed from the file cache) to a kernel-side requester.
+ */
+void reply_file_data(const Message& req, void* buf, size_t size, bool for_user);
+
+/**
+ * @brief Reply with an error result and no payload
+ */
+void reply_error(const Message& req, error_t result);
 
 // Directory entry persistence
 void persist_directory_entry(kernel::fs::DirectoryEntry* entry, const char* name);
 
 // Message handlers declarations
-void handle_initialize(const Message& m);
 void handle_get_file_info(const Message& m);
 void handle_read_file_data(const Message& m);
 void handle_get_directory_contents(const Message& m);

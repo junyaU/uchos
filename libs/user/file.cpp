@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
@@ -13,7 +14,7 @@ fd_t fs_open(const char* path, int flags)
 
 	Message res = call(process_ids::FS_FAT32, &m);
 
-	return res.data.fs.fd;
+	return IS_ERR(res.result) ? -1 : res.data.fs.fd;
 }
 
 size_t fs_read(fd_t fd, void* buf, size_t count)
@@ -23,12 +24,16 @@ size_t fs_read(fd_t fd, void* buf, size_t count)
 	m.data.fs.len = count;
 
 	Message res = call(process_ids::FS_FAT32, &m);
+	if (IS_ERR(res.result) || !res.tool_desc.present) {
+		return 0;
+	}
 
-	memcpy(buf, res.tool_desc.addr, res.tool_desc.size);
+	const size_t copy_len = std::min(count, res.tool_desc.size);
+	memcpy(buf, res.tool_desc.addr, copy_len);
 
 	deallocate_ool_memory(m.sender, res.tool_desc.addr, res.tool_desc.size);
 
-	return res.tool_desc.size;
+	return copy_len;
 }
 
 void fs_close(fd_t fd)
@@ -46,7 +51,7 @@ fd_t fs_create(const char* path)
 
 	Message res = call(process_ids::FS_FAT32, &m);
 
-	return res.data.fs.fd;
+	return IS_ERR(res.result) ? -1 : res.data.fs.fd;
 }
 
 void fs_pwd(char* buf, size_t size)
@@ -54,6 +59,10 @@ void fs_pwd(char* buf, size_t size)
 	Message m = make_request(MsgType::FS_PWD);
 
 	Message res = call(process_ids::FS_FAT32, &m);
+	if (IS_ERR(res.result)) {
+		buf[0] = '\0';
+		return;
+	}
 
 	memcpy(buf, res.data.fs.name, size);
 }
@@ -64,16 +73,19 @@ size_t fs_write(fd_t fd, const void* buf, size_t count)
 	m.data.fs.fd = fd;
 	m.data.fs.len = count;
 
-	// For small writes, use inline buffer
-	if (count <= sizeof(m.data.fs.buf)) {
-		memcpy(m.data.fs.buf, buf, count);
-	} else {
-		// For larger writes, use OOL (out-of-line) memory
-		// This would require allocating OOL memory - not implemented in Phase 1
+	// Small writes ride the inline buffer; anything larger moves to OOL
+	// transfer with issue #314 Stage C. (This used to memcpy through the
+	// uninitialized fs.buf pointer with an 8-byte threshold.)
+	if (count > sizeof(m.data.fs.temp_buf) - 1) {
 		return 0;
 	}
+	memcpy(m.data.fs.temp_buf, buf, count);
+	m.data.fs.temp_buf[count] = '\0';
 
 	Message res = call(process_ids::FS_FAT32, &m);
+	if (IS_ERR(res.result)) {
+		return 0;
+	}
 
 	return res.data.fs.len;
 }
@@ -85,15 +97,13 @@ void fs_change_dir(char* buf, const char* path)
 	m.data.fs.name[strlen(path)] = '\0';
 
 	Message res = call(process_ids::FS_FAT32, &m);
-	if (IS_ERR(res.data.fs.result)) {
+	if (IS_ERR(res.result)) {
 		buf[0] = '\0';
 		return;
 	}
 
 	memcpy(buf, res.data.fs.name, strlen(res.data.fs.name));
 	buf[strlen(res.data.fs.name)] = '\0';
-
-	send_message(process_ids::SHELL, &res);
 }
 
 int fs_dup2(fd_t oldfd, fd_t newfd)
@@ -104,5 +114,5 @@ int fs_dup2(fd_t oldfd, fd_t newfd)
 
 	Message res = call(process_ids::FS_FAT32, &m);
 
-	return res.data.fs.result;
+	return IS_ERR(res.result) ? -1 : res.data.fs.fd;
 }

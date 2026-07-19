@@ -1,6 +1,9 @@
 #include "shell.hpp"
 #include <cstring>
+#include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
 #include <libs/user/file.hpp>
+#include <libs/user/ipc.hpp>
 #include <libs/user/syscall.hpp>
 #include "libs/common/types.hpp"
 #include "terminal.hpp"
@@ -82,9 +85,16 @@ void Shell::process_input(char* input, Terminal& term)
 
 	if (child_status != 0) {
 		term.printf("%s : command not found\n", command_name);
-		term.enable_input = false;
-		return;
 	}
 
+	// Everything the child printed (NOTIFY_WRITE) was queued before it
+	// exited, so FIFO delivery keeps this self-marker behind that output:
+	// the main loop restores the prompt only after the output is drawn —
+	// the ordering the old IPC_EXIT_TASK round-trip used to provide.
+	Message done = make_request(MsgType::SHELL_COMMAND_DONE);
+	send_message(process_ids::SHELL, &done);
+
+	// Input stays disabled until the marker is handled; input_char's
+	// trailing print_user() is a no-op while disabled
 	term.enable_input = false;
 }

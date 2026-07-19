@@ -318,6 +318,25 @@ void switch_next_task(bool sleep_current_task)
 	asm("int %0" : : "i"(kernel::interrupt::InterruptVector::SWITCH_TASK));
 }
 
+void record_child_exit(Task* parent, ProcessId child, int status)
+{
+	const kernel::interrupt::IrqGuard guard;
+
+	if (parent->num_exit_records >= Task::MAX_CHILD_EXIT_RECORDS) {
+		LOG_ERROR("exit records full: parent = %d, child = %d dropped",
+				  parent->id.raw(), child.raw());
+		return;
+	}
+
+	parent->exit_records[parent->num_exit_records] =
+			ChildExitRecord{ child.raw(), status };
+	++parent->num_exit_records;
+
+	if (parent->state == TASK_WAITING && parent->wait_reason == WaitReason::CHILD) {
+		schedule_task(parent->id);
+	}
+}
+
 void exit_task(int status)
 {
 	Task* t = CURRENT_TASK;
@@ -325,10 +344,13 @@ void exit_task(int status)
 	// Release all file descriptors before exiting
 	kernel::fs::release_all_process_fds(t->fd_table.data(), MAX_FDS_PER_PROCESS);
 
+	// Child termination is parent/child bookkeeping, not IPC (issue #314
+	// Stage B): park the status on the parent for sys_wait to collect
 	if (t->has_parent()) {
-		Message m = { .type = MsgType::IPC_EXIT_TASK, .sender = t->id };
-		m.data.exit_task.status = status;
-		send_message(t->parent_id, m);
+		Task* parent = get_task(t->parent_id);
+		if (parent != nullptr) {
+			record_child_exit(parent, t->id, status);
+		}
 	}
 
 	t->state = TASK_EXITED;
@@ -398,6 +420,12 @@ Task::Task(int raw_id,
 	  pending_notifications{ 0 },
 	  wait_reason{ WaitReason::NONE },
 	  wait_notify_mask{ 0 },
+	  next_correlation{ 0 },
+	  call_correlation{ 0 },
+	  reply_pending{ false },
+	  reply_slot{},
+	  exit_records{},
+	  num_exit_records{ 0 },
 	  message_handlers({ std::array<message_handler_t, TOTAL_MESSAGE_TYPES>() }),
 	  fd_table()
 {
@@ -435,33 +463,6 @@ Task::Task(int raw_id,
 	ctx.cs = kernel::memory::KERNEL_CS;
 	ctx.ss = kernel::memory::KERNEL_SS;
 	*reinterpret_cast<uint32_t*>(&ctx.fxsave_area[24]) = MXCSR_DEFAULT;
-}
-
-Message wait_for_message(MsgType type)
-{
-	Task* t = CURRENT_TASK;
-	Message m;
-
-	while (true) {
-		__asm__("cli");
-		if (t->messages.pop_first_of_type(type, &m)) {
-			t->state = TASK_RUNNING;
-			t->wait_reason = WaitReason::NONE;
-			__asm__("sti");
-			return m;
-		}
-
-		// No matching message yet: sleep instead of spinning, and leave
-		// the other queued messages untouched (issue #313 livelock).
-		// WAITING is declared while interrupts are off so a sender cannot
-		// slip in between the scan and the sleep. RECEIVE so any new
-		// message triggers a rescan; pending notification bits are left
-		// alone here (they are drained by receive_blocking only).
-		t->wait_reason = WaitReason::RECEIVE;
-		t->state = TASK_WAITING;
-		__asm__("sti");
-		switch_next_task(false);
-	}
 }
 
 } // namespace kernel::task

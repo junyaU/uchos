@@ -6,9 +6,9 @@
 #include "fat.hpp"
 #include <libs/common/message.hpp>
 #include <libs/common/types.hpp>
-#include <queue>
 #include "fs/file_info.hpp"
 #include "internal_common.hpp"
+#include "log/log.hpp"
 #include "task/task.hpp"
 
 namespace kernel::fs::fat
@@ -18,15 +18,21 @@ void fat32_service()
 {
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 	t->is_initialized = false;
-	pending_messages = std::queue<Message>();
 
 	init_read_contexts();
 
-	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE,
-								MsgType::INITIALIZE_TASK);
+	if (IS_ERR(initialize_fat32())) {
+		// Without the volume metadata every request would corrupt state;
+		// park the service instead of serving garbage.
+		LOG_ERROR("FAT32 initialization failed; file system unavailable");
+		while (true) {
+			__asm__("hlt");
+		}
+	}
+
+	t->is_initialized = true;
 
 	// Register message handlers
-	t->add_msg_handler(MsgType::INITIALIZE_TASK, handle_initialize);
 	t->add_msg_handler(MsgType::IPC_GET_FILE_INFO, handle_get_file_info);
 	t->add_msg_handler(MsgType::IPC_READ_FILE_DATA, handle_read_file_data);
 	t->add_msg_handler(MsgType::GET_DIRECTORY_CONTENTS,
