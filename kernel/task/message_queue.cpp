@@ -53,25 +53,4 @@ bool MessageQueue::pop(Message* out)
 	return true;
 }
 
-bool MessageQueue::pop_first_of_type(MsgType type, Message* out)
-{
-	for (size_t i = 0; i < count_; ++i) {
-		if (ring_[(head_ + i) % CAPACITY].type != type) {
-			continue;
-		}
-
-		*out = ring_[(head_ + i) % CAPACITY];
-
-		// Close the gap so the remaining messages keep their FIFO order
-		for (size_t j = i; j + 1 < count_; ++j) {
-			ring_[(head_ + j) % CAPACITY] = ring_[(head_ + j + 1) % CAPACITY];
-		}
-		--count_;
-
-		return true;
-	}
-
-	return false;
-}
-
 } // namespace kernel::task

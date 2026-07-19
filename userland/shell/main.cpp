@@ -16,10 +16,8 @@ int main(void)
 
 	Message msg;
 	while (true) {
+		// Blocks until a message arrives (issue #314); no NO_TASK polling
 		receive_message(&msg);
-		if (msg.type == MsgType::NO_TASK) {
-			continue;
-		}
 
 		switch (msg.type) {
 			case MsgType::NOTIFY_KEY_INPUT:
@@ -37,15 +35,11 @@ int main(void)
 						break;
 				};
 				break;
-			case MsgType::FS_CHANGE_DIR:
-				term->register_current_dir(msg.data.fs.name);
-				break;
 			case MsgType::INITIALIZE_TASK:
 				set_cursor_timer(500);
 				break;
-			case MsgType::IPC_EXIT_TASK:
-				term->enable_input = true;
-				term->print_user();
+			// Child exits are collected by sys_wait in Shell::process_input
+			// now; the IPC_EXIT_TASK round-trip is gone (issue #314 Stage B)
 			default:
 				break;
 		}

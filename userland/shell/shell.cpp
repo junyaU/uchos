@@ -82,9 +82,21 @@ void Shell::process_input(char* input, Terminal& term)
 
 	if (child_status != 0) {
 		term.printf("%s : command not found\n", command_name);
-		term.enable_input = false;
-		return;
 	}
 
-	term.enable_input = false;
+	// A cd child updates this task's working directory on the FS side, so
+	// refresh the prompt's directory before showing it (this replaces the
+	// old FS_CHANGE_DIR forward through the message loop)
+	char current_dir[13];
+	fs_pwd(current_dir, sizeof(current_dir) - 1);
+	current_dir[sizeof(current_dir) - 1] = '\0';
+	if (current_dir[0] != '\0') {
+		term.register_current_dir(current_dir);
+	}
+
+	// sys_wait already collected the child's exit (issue #314 Stage B), so
+	// re-enable input and show the prompt right here; the old flow parked
+	// input disabled until an IPC_EXIT_TASK message looped back
+	term.enable_input = true;
+	term.print_user();
 }

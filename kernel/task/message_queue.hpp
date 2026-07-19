@@ -25,7 +25,6 @@ struct Task;
 error_t send_message(ProcessId dst, Message& m);
 bool try_receive(Task* t, Message* out);
 Message receive_blocking();
-Message wait_for_message(MsgType type);
 
 /**
  * @brief Bounded FIFO message ring owned by a Task
@@ -69,15 +68,6 @@ private:
 	 */
 	bool pop(Message* out);
 
-	/**
-	 * @brief Extract the oldest message of the given type, keeping the
-	 * relative order of everything else
-	 *
-	 * Transitional: only wait_for_message() needs the type scan, and both
-	 * disappear with correlation-id call/reply (issue #314 Stage B).
-	 */
-	bool pop_first_of_type(MsgType type, Message* out);
-
 	Message* ring_; ///< CAPACITY slots, allocated once at construction
 	size_t head_;	///< Index of the oldest message
 	size_t count_;	///< Number of queued messages
@@ -85,7 +75,6 @@ private:
 	friend error_t send_message(ProcessId, Message&);
 	friend bool try_receive(Task*, Message*);
 	friend Message receive_blocking();
-	friend Message wait_for_message(MsgType);
 };
 
 } // namespace kernel::task

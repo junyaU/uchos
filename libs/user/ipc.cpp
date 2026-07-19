@@ -14,16 +14,6 @@ void send_message(ProcessId dst, const Message* msg)
 	sys_ipc(dst.raw(), msg->sender.raw(), msg, IPC_SEND);
 }
 
-Message wait_for_message(MsgType type)
-{
-	Message m;
-	do {
-		receive_message(&m);
-	} while (m.type != type);
-
-	return m;
-}
-
 Message make_request(MsgType type)
 {
 	return Message{ .type = type, .sender = ProcessId::from_raw(sys_getpid()) };
@@ -31,8 +21,11 @@ Message make_request(MsgType type)
 
 Message call(ProcessId dst, Message* msg)
 {
-	send_message(dst, msg);
-	return wait_for_message(msg->type);
+	// One correlation-matched RPC in a single syscall (issue #314 Stage B):
+	// the kernel pairs the reply by id and overwrites *msg with it, so a
+	// same-typed message can never be mistaken for the answer.
+	sys_ipc(dst.raw(), msg->sender.raw(), msg, IPC_CALL);
+	return *msg;
 }
 
 void initialize_task()

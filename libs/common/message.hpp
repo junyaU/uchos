@@ -10,6 +10,12 @@
 // flags for sys_ipc
 constexpr int IPC_RECV = 0;
 constexpr int IPC_SEND = 1;
+constexpr int IPC_CALL = 2;	 ///< send + block until the matching reply
+constexpr int IPC_REPLY = 3; ///< reply to a received request (server side)
+
+/// Message::flags bit marking a reply; correlation then names the request
+/// it answers. Set by the kernel reply path, never by hand.
+constexpr uint32_t MSG_FLAG_REPLY = 1U << 0;
 
 // Sector size of the block-device IPC contract: blk_io.sector is expressed in
 // this unit and blk_io.len is expected to be a multiple of it.
@@ -72,6 +78,14 @@ struct MsgOolDescT {
 struct Message {
 	MsgType type;
 	ProcessId sender;
+	/// Request/reply pairing id, assigned by the kernel in call(): a reply
+	/// is delivered only to the caller whose outstanding call carries the
+	/// same value. 0 = fire-and-forget (reply() becomes a no-op).
+	uint32_t correlation;
+	uint32_t flags; ///< MSG_FLAG_* bits
+	/// Reply: OK or a negative error_t describing the server-side outcome;
+	/// payload fields are only valid when this is OK. Requests carry OK.
+	int32_t result;
 	MsgOolDescT tool_desc;
 
 	union {
@@ -114,25 +128,22 @@ struct Message {
 			char bus_address[8];
 		} pci;
 
+		// The request_id/sequence/dst_type correlation fields are gone:
+		// request/reply pairing is Message::correlation, and the outcome is
+		// Message::result (issue #314 Stage B).
 		struct {
-			fs_id_t request_id;
 			void* buf;
 			unsigned int sector;
 			size_t len;
-			size_t sequence;
-			MsgType dst_type;
-			int result; ///< OK on success, negative error code on failure
 		} blk_io;
 
 		struct {
-			fs_id_t request_id;
 			fd_t fd;
 			void* buf;
 			char temp_buf[256];
 			char name[30];
 			size_t len;
 			int operation;
-			int result;
 		} fs;
 
 		struct {

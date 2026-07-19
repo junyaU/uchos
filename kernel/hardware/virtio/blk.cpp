@@ -15,19 +15,16 @@
 
 namespace
 {
-// Pre-fill a reply so error responses always carry the request id and the
-// error kind: an all-zero reply used to collide with cached request id 0 and
-// made the FS side memcpy from a null buffer (issue #313).
+// Pre-fill a reply that echoes the request geometry; the request/reply
+// pairing itself is Message::correlation now (issue #314 Stage B), so the
+// old dst_type/request_id/sequence bookkeeping is gone.
 Message make_blk_reply(const Message& m)
 {
-	Message reply = { .type = m.data.blk_io.dst_type,
-					  .sender = process_ids::VIRTIO_BLK };
+	Message reply = { .type = m.type, .sender = process_ids::VIRTIO_BLK };
 	reply.data.blk_io.buf = nullptr;
 	reply.data.blk_io.sector = m.data.blk_io.sector;
 	reply.data.blk_io.len = m.data.blk_io.len;
-	reply.data.blk_io.sequence = m.data.blk_io.sequence;
-	reply.data.blk_io.request_id = m.data.blk_io.request_id;
-	reply.data.blk_io.result = OK;
+	reply.result = OK;
 
 	return reply;
 }
@@ -42,8 +39,8 @@ void handle_read_request(const Message& m)
 	void* buf_ptr = kernel::memory::alloc(len, kernel::memory::ALLOC_ZEROED);
 	if (buf_ptr == nullptr) {
 		LOG_ERROR("failed to allocate read buffer: len=%d", len);
-		reply.data.blk_io.result = ERR_NO_MEMORY;
-		kernel::task::send_message(m.sender, reply);
+		reply.result = ERR_NO_MEMORY;
+		kernel::task::reply(m, &reply);
 		return;
 	}
 
@@ -53,14 +50,15 @@ void handle_read_request(const Message& m)
 	if (IS_ERR(err)) {
 		LOG_ERROR("failed to read from blk device: %d", err);
 		kernel::memory::free(buf);
-		reply.data.blk_io.result = err;
-		kernel::task::send_message(m.sender, reply);
+		reply.result = err;
+		kernel::task::reply(m, &reply);
 		return;
 	}
 
+	// Ownership of buf moves to the caller with the reply
 	reply.data.blk_io.buf = buf;
 
-	kernel::task::send_message(m.sender, reply);
+	kernel::task::reply(m, &reply);
 }
 
 void handle_write_request(const Message& m)
@@ -75,14 +73,14 @@ void handle_write_request(const Message& m)
 			static_cast<const char*>(m.data.blk_io.buf), sector, len);
 	if (IS_ERR(err)) {
 		LOG_ERROR("failed to write to blk device: %d", err);
-		reply.data.blk_io.result = err;
+		reply.result = err;
 	}
 
 	kernel::memory::free(m.data.blk_io.buf);
 
 	// Always report completion so the FS side can acknowledge the requester
 	// instead of claiming success before the device write finished.
-	kernel::task::send_message(m.sender, reply);
+	kernel::task::reply(m, &reply);
 }
 } // namespace
 

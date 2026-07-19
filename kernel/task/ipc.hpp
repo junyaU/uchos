@@ -82,6 +82,40 @@ error_t send_message(ProcessId dst, Message& m);
 [[gnu::no_caller_saved_registers]] void notify(ProcessId dst, NotifyType type);
 
 /**
+ * @brief Synchronous RPC: send a request and block until its reply
+ *
+ * The kernel assigns a per-task correlation id to the request and parks the
+ * caller in WAITING (WaitReason::REPLY). The reply bypasses the message
+ * ring and lands in the caller's dedicated reply slot, so it can never be
+ * confused with other traffic and never disturbs queued messages.
+ *
+ * The call graph must stay acyclic (user → {KERNEL, FS}, FS → BLK);
+ * a service must never call() one of its clients.
+ *
+ * @param dst Destination (server) task
+ * @param inout Request on entry; overwritten with the reply on success
+ * @return OK when a reply was delivered (check inout->result for the
+ * server-side outcome), or the send_message() delivery error
+ */
+error_t call(ProcessId dst, Message* inout);
+
+/**
+ * @brief Reply to a received request (server side)
+ *
+ * Inherits the request's correlation and stamps MSG_FLAG_REPLY, then
+ * delivers to the requester's reply slot. A request with correlation 0
+ * expects no reply and makes this a no-op. Every request with a nonzero
+ * correlation must be answered exactly once — success or error — with the
+ * outcome in resp->result.
+ *
+ * @param req The request being answered
+ * @param resp Reply message (type/payload set by the caller)
+ * @return OK on delivery (or no-op), error code otherwise; a reply nobody
+ * is waiting for is dropped with a log (protocol bug made visible)
+ */
+error_t reply(const Message& req, Message* resp);
+
+/**
  * @brief Non-blocking receive: pending notifications first, then the ring
  *
  * Notification bits are converted into synthesized NOTIFY_* messages with

@@ -7,6 +7,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include "error.hpp"
 #include "fs/fat/fat.hpp"
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
@@ -80,27 +81,31 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 			return copy_size;
 		}
 		// File output - fd contains actual file info after dup2
-		Message m = { .type = MsgType::FS_WRITE, .sender = t->id };
-		m.data.fs.fd = fd;
-		m.data.fs.len = count;
+		Message req = { .type = MsgType::FS_WRITE, .sender = t->id };
+		req.data.fs.fd = fd;
+		req.data.fs.len = count;
 
 		// For small writes, use inline buffer temporarily
-		if (count <= sizeof(m.data.fs.temp_buf) - 1) {
-			copy_from_user(m.data.fs.temp_buf, buf, count);
-			m.data.fs.temp_buf[count] = '\0';
+		if (count <= sizeof(req.data.fs.temp_buf) - 1) {
+			copy_from_user(req.data.fs.temp_buf, buf, count);
+			req.data.fs.temp_buf[count] = '\0';
 		} else {
-			// Large writes not supported currently
+			// Large writes land with OOL transfer in issue #314 Stage C
 			LOG_ERROR("Large write not supported: %d bytes", count);
 			return ERR_INVALID_ARG;
 		}
 
-		kernel::task::send_message(process_ids::FS_FAT32, m);
+		// Correlation-matched RPC: the reply cannot be confused with any
+		// other FS_WRITE traffic (issue #314 Stage B)
+		const error_t err = kernel::task::call(process_ids::FS_FAT32, &req);
+		if (IS_ERR(err)) {
+			return err;
+		}
+		if (IS_ERR(req.result)) {
+			return req.result;
+		}
 
-		// Wait for response from file system
-		Message reply = kernel::task::wait_for_message(MsgType::FS_WRITE);
-
-		// The FS process will deallocate the OOL memory
-		return reply.data.fs.len;
+		return req.data.fs.len;
 	}
 
 	// For file descriptors, the user process should use fs_write() through IPC
@@ -198,10 +203,53 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 			copy_m.sender = t->id;
 		}
 
-		kernel::task::send_message(ProcessId::from_raw(dest), copy_m);
+		// One-way sends never carry the reply flag; IPC_REPLY is the only
+		// door to the reply-slot delivery path
+		copy_m.flags &= ~MSG_FLAG_REPLY;
+
+		return kernel::task::send_message(ProcessId::from_raw(dest), copy_m);
 	}
 
-	return OK;
+	if (flags == IPC_CALL) {
+		Message copy_m;
+		if (copy_from_user(&copy_m, m, sizeof(copy_m)) != sizeof(copy_m)) {
+			return ERR_INVALID_ARG;
+		}
+
+		// call() forces the sender and manages the correlation id; the
+		// caller never sees either. The reply overwrites the user message.
+		const error_t err = kernel::task::call(ProcessId::from_raw(dest), &copy_m);
+		if (IS_ERR(err)) {
+			return err;
+		}
+
+		if (copy_to_user(m, &copy_m, sizeof(copy_m)) != sizeof(copy_m)) {
+			return ERR_INVALID_ARG;
+		}
+
+		return OK;
+	}
+
+	if (flags == IPC_REPLY) {
+		Message copy_m;
+		if (copy_from_user(&copy_m, m, sizeof(copy_m)) != sizeof(copy_m)) {
+			return ERR_INVALID_ARG;
+		}
+
+		if (copy_m.correlation == 0) {
+			// The request was fire-and-forget: nothing to answer
+			return OK;
+		}
+
+		// The server runtime echoes the request's correlation into the
+		// reply; the kernel stamps the flag and the true sender
+		copy_m.sender = t->id;
+		copy_m.flags |= MSG_FLAG_REPLY;
+
+		return kernel::task::send_message(ProcessId::from_raw(dest), copy_m);
+	}
+
+	return ERR_INVALID_ARG;
 }
 
 ProcessId sys_fork(void)
@@ -248,26 +296,21 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 		return ERR_INVALID_ARG;
 	}
 
-	kernel::task::send_message(process_ids::FS_FAT32, msg);
+	RETURN_IF_ERROR(kernel::task::call(process_ids::FS_FAT32, &msg));
 
-	const Message info_m =
-			kernel::task::wait_for_message(MsgType::IPC_GET_FILE_INFO);
-
-	auto* entry = reinterpret_cast<kernel::fs::DirectoryEntry*>(info_m.data.fs.buf);
-	if (entry == nullptr) {
+	auto* entry = reinterpret_cast<kernel::fs::DirectoryEntry*>(msg.data.fs.buf);
+	if (IS_ERR(msg.result) || entry == nullptr) {
 		return ERR_NO_FILE;
 	}
 
 	Message read_msg{ .type = MsgType::IPC_READ_FILE_DATA,
 					  .sender = kernel::task::CURRENT_TASK->id };
 	read_msg.data.fs.buf = entry;
-	kernel::task::send_message(process_ids::FS_FAT32, read_msg);
-
-	const Message data_m =
-			kernel::task::wait_for_message(MsgType::IPC_READ_FILE_DATA);
+	const error_t read_err = kernel::task::call(process_ids::FS_FAT32, &read_msg);
 	kernel::memory::free(entry);
+	RETURN_IF_ERROR(read_err);
 
-	if (data_m.data.fs.buf == nullptr) {
+	if (IS_ERR(read_msg.result) || read_msg.data.fs.buf == nullptr) {
 		LOG_ERROR("failed to read file data for exec");
 		return ERR_FAILED_READ_FROM_DEVICE;
 	}
@@ -290,7 +333,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::memory::clean_page_tables(old_page_table);
 
 	// TODO: fix this
-	kernel::fs::fat::execute_file(data_m.data.fs.buf, "", copy_args);
+	kernel::fs::fat::execute_file(read_msg.data.fs.buf, "", copy_args);
 
 	return OK;
 }
@@ -300,17 +343,40 @@ void sys_exit(uint64_t arg1) { kernel::task::exit_task(arg1); }
 ProcessId sys_wait(uint64_t arg1)
 {
 	auto __user* status = reinterpret_cast<int*>(arg1);
+	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
-	// Sleep until the child exits instead of busy-waiting (issue #313)
-	Message m = kernel::task::wait_for_message(MsgType::IPC_EXIT_TASK);
+	// Child exits are parent-side records now, not IPC messages (issue
+	// #314 Stage B): pop the oldest one, sleeping until a child exits.
+	// The old "forward the exit message to SHELL" hack is gone; the shell
+	// acts on sys_wait's return instead.
+	kernel::task::ChildExitRecord record{};
+	while (true) {
+		__asm__("cli");
+		if (t->num_exit_records > 0) {
+			record = t->exit_records[0];
+			for (int i = 1; i < t->num_exit_records; ++i) {
+				t->exit_records[i - 1] = t->exit_records[i];
+			}
+			--t->num_exit_records;
+			t->state = kernel::task::TASK_RUNNING;
+			t->wait_reason = kernel::task::WaitReason::NONE;
+			__asm__("sti");
+			break;
+		}
 
-	task::send_message(process_ids::SHELL, m);
+		// Declare WAITING while interrupts are off (lost-wakeup
+		// discipline); record_child_exit wakes CHILD waiters
+		t->wait_reason = kernel::task::WaitReason::CHILD;
+		t->state = kernel::task::TASK_WAITING;
+		__asm__("sti");
+		kernel::task::switch_next_task(false);
+	}
 
-	if (copy_to_user(status, &m.data.exit_task.status, sizeof(int)) != sizeof(int)) {
+	if (copy_to_user(status, &record.status, sizeof(int)) != sizeof(int)) {
 		return ProcessId::from_raw(-1);
 	}
 
-	return m.sender;
+	return ProcessId::from_raw(record.pid);
 }
 
 ProcessId sys_getpid(void) { return kernel::task::CURRENT_TASK->id; }

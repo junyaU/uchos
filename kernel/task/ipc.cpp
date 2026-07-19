@@ -114,9 +114,32 @@ error_t send_message(ProcessId dst_id, Message& m)
 		RETURN_IF_ERROR(handle_ool_memory_alloc(m, dst));
 	}
 
-	// Keep the push and the wakeup check atomic so a receiver going to
+	// Keep the delivery and the wakeup check atomic so a receiver going to
 	// sleep cannot miss the message (lost wakeup)
 	const kernel::interrupt::IrqGuard guard;
+
+	// Replies bypass the ring: they are delivered to the caller's reply
+	// slot if and only if the correlation matches its outstanding call.
+	// Anything else is a protocol bug surfaced here instead of sitting in
+	// a queue confusing later receives (issue #314 Stage B).
+	if ((m.flags & MSG_FLAG_REPLY) != 0) {
+		if (dst->call_correlation == 0 || dst->call_correlation != m.correlation ||
+			dst->reply_pending) {
+			LOG_ERROR_CODE(ERR_INVALID_ARG,
+						   "stale reply dropped: dest = %d, type = %d, corr = %u",
+						   dst_raw, static_cast<int>(m.type), m.correlation);
+			return ERR_INVALID_ARG;
+		}
+
+		dst->reply_slot = m;
+		dst->reply_pending = true;
+
+		if (dst->state == TASK_WAITING && dst->wait_reason == WaitReason::REPLY) {
+			schedule_task(dst_id);
+		}
+
+		return OK;
+	}
 
 	if (!dst->messages.push(m)) {
 		LOG_ERROR_CODE(ERR_QUEUE_FULL, "message queue full: dest = %d, type = %d",
@@ -124,14 +147,81 @@ error_t send_message(ProcessId dst_id, Message& m)
 		return ERR_QUEUE_FULL;
 	}
 
-	// A NOTIFY waiter is parked until its doorbell fires; waking it here
-	// would resume a device wait before the device finished (the queued
-	// message is handled once the waiter returns to its receive loop)
-	if (dst->state == TASK_WAITING && dst->wait_reason != WaitReason::NOTIFY) {
+	// Wake only receive-style waits: a NOTIFY waiter is parked until its
+	// doorbell fires (waking it would resume a device wait early), and a
+	// REPLY waiter only cares about its reply slot — for both, the queued
+	// message is handled once the waiter returns to its receive loop
+	if (dst->state == TASK_WAITING && (dst->wait_reason == WaitReason::RECEIVE ||
+									   dst->wait_reason == WaitReason::NONE)) {
 		schedule_task(dst_id);
 	}
 
 	return OK;
+}
+
+error_t call(ProcessId dst, Message* inout)
+{
+	Task* t = CURRENT_TASK;
+
+	// Correlation 0 is reserved for fire-and-forget, so skip it on wrap
+	uint32_t correlation = ++t->next_correlation;
+	if (correlation == 0) {
+		correlation = ++t->next_correlation;
+	}
+
+	// The reply is routed by (sender, correlation); force the sender so a
+	// forged value cannot direct someone else's reply slot
+	inout->sender = t->id;
+	inout->correlation = correlation;
+	inout->flags &= ~MSG_FLAG_REPLY;
+	inout->result = OK;
+
+	{
+		const kernel::interrupt::IrqGuard guard;
+		t->call_correlation = correlation;
+		t->reply_pending = false;
+	}
+
+	const error_t err = send_message(dst, *inout);
+	if (IS_ERR(err)) {
+		t->call_correlation = 0;
+		return err;
+	}
+
+	while (true) {
+		__asm__("cli");
+		if (t->reply_pending) {
+			*inout = t->reply_slot;
+			t->reply_pending = false;
+			t->call_correlation = 0;
+			t->state = TASK_RUNNING;
+			t->wait_reason = WaitReason::NONE;
+			__asm__("sti");
+			return OK;
+		}
+
+		// Same lost-wakeup discipline as receive_blocking; new requests
+		// arriving meanwhile queue in the ring without waking us, which
+		// serializes a server's request handling naturally
+		t->wait_reason = WaitReason::REPLY;
+		t->state = TASK_WAITING;
+		__asm__("sti");
+		switch_next_task(false);
+	}
+}
+
+error_t reply(const Message& req, Message* resp)
+{
+	if (req.correlation == 0) {
+		// Fire-and-forget request: nobody is waiting
+		return OK;
+	}
+
+	resp->sender = CURRENT_TASK->id;
+	resp->correlation = req.correlation;
+	resp->flags |= MSG_FLAG_REPLY;
+
+	return send_message(req.sender, *resp);
 }
 
 [[gnu::no_caller_saved_registers]] void notify(ProcessId dst_id, NotifyType type)

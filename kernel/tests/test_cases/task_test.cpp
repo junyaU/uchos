@@ -160,35 +160,6 @@ void test_task_memory_management()
 	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(stack));
 }
 
-void test_wait_for_message_preserves_other_messages()
-{
-	Task* t = create_task("wait_msg_test", 0, true, true);
-	ASSERT_NOT_NULL(t);
-
-	t->state = kernel::task::TASK_RUNNING;
-
-	Message other = { .type = MsgType::NOTIFY_WRITE,
-					  .sender = ProcessId::from_raw(1) };
-	Message target = { .type = MsgType::IPC_EXIT_TASK,
-					   .sender = ProcessId::from_raw(2) };
-	ASSERT_EQ(kernel::task::send_message(t->id, other), OK);
-	ASSERT_EQ(kernel::task::send_message(t->id, target), OK);
-
-	const kernel::tests::ScopedCurrentTask scoped_task(t);
-
-	// The matching message is extracted even when it is not at the front
-	const Message m = kernel::task::wait_for_message(MsgType::IPC_EXIT_TASK);
-	ASSERT_TRUE(m.type == MsgType::IPC_EXIT_TASK);
-	ASSERT_EQ(m.sender.raw(), 2);
-
-	// The unrelated message is still queued (issue #313: the old
-	// implementation spun on and reordered non-matching messages)
-	ASSERT_EQ(t->messages.size(), 1UL);
-	Message remaining;
-	ASSERT_TRUE(kernel::task::try_receive(t, &remaining));
-	ASSERT_TRUE(remaining.type == MsgType::NOTIFY_WRITE);
-}
-
 void test_send_message_queue_cap()
 {
 	Task* t = create_task("queue_cap_test", 0, true, true);
@@ -254,8 +225,6 @@ void register_task_tests()
 	test_register("task_message_handling", test_task_message_handling);
 	test_register("task_copy", test_task_copy);
 	test_register("task_memory_management", test_task_memory_management);
-	test_register("wait_for_message_preserves_other_messages",
-				  test_wait_for_message_preserves_other_messages);
 	test_register("send_message_queue_cap", test_send_message_queue_cap);
 	test_register("ipc_recv_returns_queued_message",
 				  test_ipc_recv_returns_queued_message);
