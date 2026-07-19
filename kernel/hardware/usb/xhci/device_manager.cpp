@@ -3,7 +3,7 @@
 #include <cstdint>
 #include "context.hpp"
 #include "device.hpp"
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "memory/slab.hpp"
 #include "registers.hpp"
 

@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include "context.hpp"
-#include "graphics/log.hpp"
 #include "hardware/usb/device.hpp"
+#include "log/log.hpp"
 #include "registers.hpp"
 #include "ring.hpp"
 #include "trb.hpp"

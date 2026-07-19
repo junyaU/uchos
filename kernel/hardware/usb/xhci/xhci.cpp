@@ -4,11 +4,11 @@
 #include <cstring>
 #include "asm_utils.h"
 #include "context.hpp"
-#include "graphics/log.hpp"
 #include "hardware/mm_register.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/usb/endpoint.hpp"
 #include "interrupt/vector.hpp"
+#include "log/log.hpp"
 #include "memory/slab.hpp"
 #include "port.hpp"
 #include "registers.hpp"

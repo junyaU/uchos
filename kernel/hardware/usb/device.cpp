@@ -3,7 +3,7 @@
 #include "class_driver/base.hpp"
 #include "descriptor.hpp"
 #include "endpoint.hpp"
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "setup_stage_data.hpp"
 
 namespace kernel::hw::usb

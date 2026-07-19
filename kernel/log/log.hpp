@@ -1,20 +1,27 @@
 /**
  * @file log.hpp
- * @brief Kernel logging system with level-based filtering
+ * @brief Kernel logging system
+ *
+ * The serial console always receives every message at every level: it is the
+ * only output visible in headless runs and serves as the full boot trace.
+ * The screen shows only messages whose level exactly matches the selected
+ * level, and only after a screen sink has been registered (the graphics
+ * module registers one when it initializes).
  */
 
 #pragma once
 
 #include <libs/common/types.hpp>
 
-namespace kernel::graphics
+namespace kernel::log
 {
 
 /**
  * @brief Log levels for kernel messages
  *
- * Different log levels allow filtering messages based on severity
- * and purpose. Higher levels indicate more critical messages.
+ * Levels are independent categories, not severities: selecting a level
+ * chooses which category appears on screen. The serial log is unaffected
+ * and always records every level.
  */
 enum class LogLevel : uint8_t {
 	DEBUG, ///< Debug messages for development
@@ -24,16 +31,31 @@ enum class LogLevel : uint8_t {
 };
 
 /**
- * @brief Change the minimum log level for output
+ * @brief Select the log level shown on screen
  *
- * Sets the minimum log level that will be displayed. Messages with
- * a level below this threshold will be suppressed.
+ * Only messages whose level exactly matches the selected level are drawn on
+ * screen. Serial output is unaffected.
  *
- * @param level New minimum log level
+ * @param level Level to show on screen
  */
 void change_log_level(LogLevel level);
 
-} // namespace kernel::graphics
+/// Screen sink: receives one null-terminated log line to display
+using ScreenSink = void (*)(const char* line);
+
+/**
+ * @brief Register the on-screen output callback
+ *
+ * Called by the graphics module once the screen is ready. Until a sink is
+ * registered, log output goes to the serial console only, which keeps
+ * logging safe during early boot. The log module itself has no compile-time
+ * dependency on graphics.
+ *
+ * @param sink Callback that renders one log line, or nullptr to detach
+ */
+void register_screen_sink(ScreenSink sink);
+
+} // namespace kernel::log
 
 /**
  * @brief Kernel print function with log level support
@@ -48,8 +70,9 @@ void change_log_level(LogLevel level);
  *
  * @note This function preserves all caller-saved registers
  */
-__attribute__((no_caller_saved_registers)) void
-printk(kernel::graphics::LogLevel level, const char* format, ...);
+__attribute__((no_caller_saved_registers)) void printk(kernel::log::LogLevel level,
+													   const char* format,
+													   ...);
 
 /**
  * @brief Base logging macro with file location information
@@ -71,8 +94,7 @@ printk(kernel::graphics::LogLevel level, const char* format, ...);
  * @param fmt Format string
  * @param ... Format arguments
  */
-#define LOG_DEBUG(fmt, ...)                                                         \
-	LOG(kernel::graphics::LogLevel::DEBUG, fmt, ##__VA_ARGS__)
+#define LOG_DEBUG(fmt, ...) LOG(kernel::log::LogLevel::DEBUG, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Info log macro
@@ -82,7 +104,7 @@ printk(kernel::graphics::LogLevel level, const char* format, ...);
  * @param fmt Format string
  * @param ... Format arguments
  */
-#define LOG_INFO(fmt, ...) LOG(kernel::graphics::LogLevel::INFO, fmt, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...) LOG(kernel::log::LogLevel::INFO, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Error log macro
@@ -92,8 +114,7 @@ printk(kernel::graphics::LogLevel level, const char* format, ...);
  * @param fmt Format string
  * @param ... Format arguments
  */
-#define LOG_ERROR(fmt, ...)                                                         \
-	LOG(kernel::graphics::LogLevel::ERROR, fmt, ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) LOG(kernel::log::LogLevel::ERROR, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Test log macro
@@ -103,4 +124,4 @@ printk(kernel::graphics::LogLevel level, const char* format, ...);
  * @param fmt Format string
  * @param ... Format arguments
  */
-#define LOG_TEST(fmt, ...) LOG(kernel::graphics::LogLevel::TEST, fmt, ##__VA_ARGS__)
+#define LOG_TEST(fmt, ...) LOG(kernel::log::LogLevel::TEST, fmt, ##__VA_ARGS__)

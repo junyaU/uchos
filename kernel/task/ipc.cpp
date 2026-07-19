@@ -5,8 +5,8 @@
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 #include "error.hpp"
-#include "graphics/log.hpp"
 #include "interrupt/irq_guard.hpp"
+#include "log/log.hpp"
 #include "memory/paging.hpp"
 #include "memory/user.hpp"
 #include "task.hpp"

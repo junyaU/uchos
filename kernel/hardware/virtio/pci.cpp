@@ -3,10 +3,10 @@
 #include <cstdint>
 #include <libs/common/types.hpp>
 #include "bit_utils.hpp"
-#include "graphics/log.hpp"
 #include "hardware/pci.hpp"
 #include "hardware/virtio/net.hpp"
 #include "hardware/virtio/virtio.hpp"
+#include "log/log.hpp"
 #include "memory/slab.hpp"
 
 namespace kernel::hw::virtio

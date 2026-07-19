@@ -1,8 +1,8 @@
 #pragma once
 
-#include "graphics/log.hpp"
 #include "handlers.hpp"
 #include "libs/common/types.hpp"
+#include "log/log.hpp"
 #include "memory/paging.hpp"
 #include "memory/paging_utils.h"
 #include "panic.hpp"

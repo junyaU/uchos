@@ -1,8 +1,8 @@
 #include "net/arp.hpp"
 #include <cstring>
-#include "graphics/log.hpp"
 #include "hardware/virtio/net.hpp"
 #include "libs/common/endian.hpp"
+#include "log/log.hpp"
 #include "memory/slab.hpp"
 #include "net/ethernet.hpp"
 

@@ -4,7 +4,7 @@
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 #include "asm_utils.h"
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "task/context.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"

@@ -2,8 +2,8 @@
 #include <cstddef>
 #include <cstdint>
 #include "asm_utils.h"
-#include "graphics/log.hpp"
 #include "hardware/mm_register.hpp"
+#include "log/log.hpp"
 
 namespace kernel::hw::pci
 {

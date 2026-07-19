@@ -13,7 +13,7 @@
 
 #include <functional>
 #include <libs/common/types.hpp>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 
 namespace kernel
 {
