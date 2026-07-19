@@ -78,7 +78,7 @@ FileDescriptor* get_process_fd(FileDescriptor* fd_table, size_t table_size, fd_t
 	}
 
 	if (fd_table[fd].is_unused()) {
-		LOG_ERROR("fd: %d", fd);
+		LOG_ERROR("fd %d is not in use", fd);
 		return nullptr;
 	}
 

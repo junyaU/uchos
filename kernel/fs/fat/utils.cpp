@@ -9,7 +9,6 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
-#include <vector>
 #include "fat.hpp"
 #include "graphics/log.hpp"
 #include "internal_common.hpp"
@@ -20,39 +19,6 @@
 namespace kernel::fs::fat
 {
 
-std::vector<char*> parse_path(const char* path)
-{
-	std::vector<char*> result;
-	if (path == nullptr) {
-		return result;
-	}
-
-	while (*path != '\0') {
-		while (*path == '/') {
-			++path;
-		}
-
-		if (*path == 0) {
-			break;
-		}
-
-		result.push_back(const_cast<char*>(path));
-
-		while (*path != '/' && *path != 0) {
-			++path;
-		}
-
-		if (*path == 0) {
-			break;
-		}
-
-		*const_cast<char*>(path) = 0;
-		++path;
-	}
-
-	return result;
-}
-
 void read_dir_entry_name_raw(const DirectoryEntry& entry, char* dest)
 {
 	char extension[5] = ".";
@@ -60,13 +26,13 @@ void read_dir_entry_name_raw(const DirectoryEntry& entry, char* dest)
 	memcpy(dest, &entry.name[0], 8);
 	dest[8] = 0;
 
-	for (int i = 7; i >= 0 && dest[i] == 0x20; i--) {
+	for (int i = 7; i >= 0 && dest[i] == SFN_PAD; i--) {
 		dest[i] = 0;
 	}
 
 	memcpy(extension + 1, &entry.name[8], 3);
 	extension[4] = 0;
-	for (int i = 2; i >= 0 && extension[i + 1] == 0x20; i--) {
+	for (int i = 2; i >= 0 && extension[i + 1] == SFN_PAD; i--) {
 		extension[i + 1] = 0;
 	}
 
@@ -111,7 +77,7 @@ unsigned int calc_start_sector(cluster_t cluster_id)
 cluster_t next_cluster(cluster_t cluster_id)
 {
 	const uint32_t next = FAT_TABLE[cluster_id];
-	if (next >= 0x0FFFFFF8UL) {
+	if (next >= FAT32_EOC_MIN) {
 		return END_OF_CLUSTER_CHAIN;
 	}
 
@@ -121,7 +87,7 @@ cluster_t next_cluster(cluster_t cluster_id)
 DirectoryEntry* find_dir_entry(DirectoryEntry* parent_dir, const char* name)
 {
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
-		if (parent_dir[i].name[0] == 0) {
+		if (parent_dir[i].name[0] == DIR_ENTRY_END) {
 			break;
 		}
 
@@ -140,7 +106,7 @@ DirectoryEntry* find_empty_dir_entry()
 	}
 
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
-		if (ROOT_DIR[i].name[0] == 0) {
+		if (ROOT_DIR[i].name[0] == DIR_ENTRY_END) {
 			return &ROOT_DIR[i];
 		}
 	}
@@ -159,7 +125,7 @@ size_t total_fat_clusters()
 			VOLUME_BPB->total_sectors_32 / VOLUME_BPB->sectors_per_cluster;
 
 	// Cluster numbers above 0x0FFFFFF7 are reserved in FAT32
-	return total_clusters < 0x0FFFFFF8UL ? total_clusters : 0x0FFFFFF8UL;
+	return total_clusters < FAT32_EOC_MIN ? total_clusters : FAT32_EOC_MIN;
 }
 
 cluster_t extend_cluster_chain(uint32_t* fat,
@@ -216,7 +182,7 @@ cluster_t allocate_cluster_chain(uint32_t* fat,
 		if (extend_cluster_chain(fat, total_clusters, first_cluster,
 								 num_clusters - 1) == 0) {
 			// Roll back the partially allocated chain
-			free_cluster_chain(fat, first_cluster, 0);
+			free_cluster_chain(fat, first_cluster);
 			return 0;
 		}
 	}
@@ -247,50 +213,23 @@ size_t count_free_clusters()
 	return count_free_clusters(FAT_TABLE, total_fat_clusters());
 }
 
-void free_cluster_chain(uint32_t* fat,
-						cluster_t start_cluster,
-						cluster_t keep_until_cluster)
+void free_cluster_chain(uint32_t* fat, cluster_t start_cluster)
 {
-	if (start_cluster == 0 || start_cluster >= 0x0FFFFFF8UL) {
+	if (start_cluster == 0 || start_cluster >= FAT32_EOC_MIN) {
 		return;
 	}
 
 	cluster_t current = start_cluster;
-	bool found_keep_until = (keep_until_cluster == 0);
-
-	while (current != END_OF_CLUSTER_CHAIN && current < 0x0FFFFFF8UL) {
+	while (current != END_OF_CLUSTER_CHAIN && current < FAT32_EOC_MIN) {
 		cluster_t next = fat[current];
-
-		if (current == keep_until_cluster) {
-			fat[current] = END_OF_CLUSTER_CHAIN;
-			found_keep_until = true;
-			break;
-		}
-
-		if (found_keep_until) {
-			fat[current] = 0;
-		}
-
+		fat[current] = 0;
 		current = next;
-	}
-
-	// If keep_until_cluster was not found, free entire chain
-	if (!found_keep_until && keep_until_cluster != 0) {
-		LOG_INFO("keep_until_cluster {} not found in chain starting at {}",
-				 keep_until_cluster, start_cluster);
-		// Free entire chain
-		current = start_cluster;
-		while (current != END_OF_CLUSTER_CHAIN && current < 0x0FFFFFF8UL) {
-			cluster_t next = fat[current];
-			fat[current] = 0;
-			current = next;
-		}
 	}
 }
 
-void free_cluster_chain(cluster_t start_cluster, cluster_t keep_until_cluster)
+void free_cluster_chain(cluster_t start_cluster)
 {
-	free_cluster_chain(FAT_TABLE, start_cluster, keep_until_cluster);
+	free_cluster_chain(FAT_TABLE, start_cluster);
 }
 
 void send_read_req_to_blk_device(unsigned int sector,
