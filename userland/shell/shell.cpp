@@ -1,6 +1,9 @@
 #include "shell.hpp"
 #include <cstring>
+#include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
 #include <libs/user/file.hpp>
+#include <libs/user/ipc.hpp>
 #include <libs/user/syscall.hpp>
 #include "libs/common/types.hpp"
 #include "terminal.hpp"
@@ -84,19 +87,14 @@ void Shell::process_input(char* input, Terminal& term)
 		term.printf("%s : command not found\n", command_name);
 	}
 
-	// A cd child updates this task's working directory on the FS side, so
-	// refresh the prompt's directory before showing it (this replaces the
-	// old FS_CHANGE_DIR forward through the message loop)
-	char current_dir[13];
-	fs_pwd(current_dir, sizeof(current_dir) - 1);
-	current_dir[sizeof(current_dir) - 1] = '\0';
-	if (current_dir[0] != '\0') {
-		term.register_current_dir(current_dir);
-	}
+	// Everything the child printed (NOTIFY_WRITE) was queued before it
+	// exited, so FIFO delivery keeps this self-marker behind that output:
+	// the main loop restores the prompt only after the output is drawn —
+	// the ordering the old IPC_EXIT_TASK round-trip used to provide.
+	Message done = make_request(MsgType::SHELL_COMMAND_DONE);
+	send_message(process_ids::SHELL, &done);
 
-	// sys_wait already collected the child's exit (issue #314 Stage B), so
-	// re-enable input and show the prompt right here; the old flow parked
-	// input disabled until an IPC_EXIT_TASK message looped back
-	term.enable_input = true;
-	term.print_user();
+	// Input stays disabled until the marker is handled; input_char's
+	// trailing print_user() is a no-op while disabled
+	term.enable_input = false;
 }

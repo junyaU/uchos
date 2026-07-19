@@ -295,6 +295,24 @@ void test_ipc_irq_routing_delivers_registered_doorbell()
 	ASSERT_FALSE(kernel::task::try_receive(t, &out));
 }
 
+void test_ipc_self_send_queues()
+{
+	Task* t = create_parked_task("ipc_self_send");
+	ASSERT_NOT_NULL(t);
+
+	const kernel::tests::ScopedCurrentTask scoped_task(t);
+
+	// Posting to your own queue is a legitimate event-loop pattern (the
+	// shell orders its prompt restore this way); only call-to-self is
+	// rejected (it would deadlock)
+	Message m = make_test_message(11);
+	ASSERT_EQ(kernel::task::send_message(t->id, m), OK);
+
+	Message out;
+	ASSERT_TRUE(kernel::task::try_receive(t, &out));
+	ASSERT_EQ(out.data.init.task_id, 11);
+}
+
 void test_ipc_reply_delivered_to_slot()
 {
 	Task* caller = create_parked_task("ipc_reply_slot");
@@ -477,6 +495,7 @@ void register_ipc_tests()
 				  test_ipc_wait_notification_consumes_pending_bit);
 	test_register("ipc_irq_routing_delivers_registered_doorbell",
 				  test_ipc_irq_routing_delivers_registered_doorbell);
+	test_register("ipc_self_send_queues", test_ipc_self_send_queues);
 	test_register("ipc_reply_delivered_to_slot", test_ipc_reply_delivered_to_slot);
 	test_register("ipc_reply_noop_for_fire_and_forget",
 				  test_ipc_reply_noop_for_fire_and_forget);

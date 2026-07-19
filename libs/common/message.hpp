@@ -58,6 +58,10 @@ enum class MsgType : int32_t {
 	// keep matching userland binaries built before this entry existed; the
 	// MsgType reorganization happens in issue #314 Stage C.
 	NOTIFY_VIRTIO_BLK,
+	// Shell-internal marker the shell sends to itself after sys_wait: FIFO
+	// delivery queues it behind everything the finished command printed,
+	// so the prompt is restored only after that output is drawn.
+	SHELL_COMMAND_DONE,
 	MAX_MESSAGE_TYPE, // must be the last
 };
 

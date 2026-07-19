@@ -92,7 +92,7 @@ error_t handle_ool_memory_alloc(Message& m, Task* dst)
 error_t send_message(ProcessId dst_id, Message& m)
 {
 	const pid_t dst_raw = dst_id.raw();
-	if (dst_raw == -1 || m.sender.raw() == dst_raw) {
+	if (dst_raw == -1) {
 		LOG_ERROR_CODE(ERR_INVALID_ARG,
 					   "invalid destination task id : dest = %d, sender = %d",
 					   dst_raw, m.sender.raw());
@@ -162,6 +162,15 @@ error_t send_message(ProcessId dst_id, Message& m)
 error_t call(ProcessId dst, Message* inout)
 {
 	Task* t = CURRENT_TASK;
+
+	// A one-way send to yourself is a legitimate event-loop pattern (the
+	// shell orders its prompt restore behind queued output this way), but
+	// calling yourself can only deadlock: nobody is left to reply.
+	if (dst.raw() == t->id.raw()) {
+		LOG_ERROR_CODE(ERR_INVALID_ARG, "call to self would deadlock: task %d",
+					   t->id.raw());
+		return ERR_INVALID_ARG;
+	}
 
 	// Correlation 0 is reserved for fire-and-forget, so skip it on wrap
 	uint32_t correlation = ++t->next_correlation;

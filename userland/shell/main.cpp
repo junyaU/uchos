@@ -1,4 +1,5 @@
 #include <libs/common/message.hpp>
+#include <libs/user/file.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/print.hpp>
 #include <libs/user/syscall.hpp>
@@ -38,8 +39,22 @@ int main(void)
 			case MsgType::INITIALIZE_TASK:
 				set_cursor_timer(500);
 				break;
-			// Child exits are collected by sys_wait in Shell::process_input
-			// now; the IPC_EXIT_TASK round-trip is gone (issue #314 Stage B)
+			case MsgType::SHELL_COMMAND_DONE: {
+				// Sent by Shell::process_input after sys_wait; queued behind
+				// the finished command's output, so the prompt reappears
+				// only after that output was drawn. A cd child updated this
+				// task's working directory on the FS side, so refresh it
+				// before showing the prompt.
+				char current_dir[13];
+				fs_pwd(current_dir, sizeof(current_dir) - 1);
+				current_dir[sizeof(current_dir) - 1] = '\0';
+				if (current_dir[0] != '\0') {
+					term->register_current_dir(current_dir);
+				}
+				term->enable_input = true;
+				term->print_user();
+				break;
+			}
 			default:
 				break;
 		}
