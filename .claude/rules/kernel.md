@@ -14,7 +14,7 @@ paths:
 
 ## エラーハンドリング
 - panic は最終手段。リソース枯渇などは `LOG_ERROR` でログを出しエラーを返す
-- ログは `kernel/graphics/log.hpp` の `LOG_DEBUG` / `LOG_INFO` / `LOG_ERROR`(printf 形式)
+- ログは `kernel/log/log.hpp` の `LOG_DEBUG` / `LOG_INFO` / `LOG_ERROR`(printf 形式)
 - 例外・RTTI は使用不可(`-fno-exceptions -fno-rtti`)
 
 ## 設計

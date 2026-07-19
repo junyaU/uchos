@@ -7,12 +7,12 @@
 #include <libs/common/types.hpp>
 #include "fs/fat/fat.hpp"
 #include "fs/path.hpp"
-#include "graphics/log.hpp"
 #include "hardware/virtio/blk.hpp"
 #include "hardware/virtio/net.hpp"
 #include "interrupt/irq_guard.hpp"
 #include "interrupt/vector.hpp"
 #include "list.hpp"
+#include "log/log.hpp"
 #include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/paging_utils.h"

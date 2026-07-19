@@ -3,9 +3,9 @@
 #include <cstddef>
 #include <cstdint>
 #include "fault.hpp"
-#include "graphics/log.hpp"
 #include "handler.h"
 #include "handlers.hpp"
+#include "log/log.hpp"
 #include "memory/segment.hpp"
 #include "vector.hpp"
 

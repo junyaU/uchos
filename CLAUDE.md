@@ -51,7 +51,7 @@ cd userland/commands/[コマンド名] && make clean && make
 | マクロ・定数 | ALL_CAPS | `KERNEL_VIRTUAL_BASE` |
 
 ### エラーハンドリング
-カーネル内では panic よりログを優先する(`kernel/graphics/log.hpp`、printf 形式):
+カーネル内では panic よりログを優先する(`kernel/log/log.hpp`、printf 形式):
 
 ```cpp
 LOG_ERROR("out of memory: size %lu", size);

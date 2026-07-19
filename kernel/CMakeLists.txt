@@ -110,6 +110,7 @@ if(KERNEL_HEAP_DEBUG)
 endif()
 
 # Add subdirectories that contain their own CMakeLists.txt files.
+add_subdirectory(log)
 add_subdirectory(memory)
 add_subdirectory(graphics)
 add_subdirectory(interrupt)
@@ -145,6 +146,7 @@ target_link_libraries(
         c++abi
         freetype
         m
+        UchosLog
         UchosGraphics
         UchosMemory
         UchosInterrupt

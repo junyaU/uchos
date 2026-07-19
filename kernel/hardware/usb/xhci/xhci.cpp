@@ -7,8 +7,8 @@
 #include "../endpoint.hpp"
 #include "asm_utils.h"
 #include "context.hpp"
-#include "graphics/log.hpp"
 #include "interrupt/vector.hpp"
+#include "log/log.hpp"
 #include "memory/slab.hpp"
 #include "port.hpp"
 #include "registers.hpp"
@@ -222,8 +222,9 @@ void on_event(Controller& xhc, command_completion_event_trb& trb)
 			}
 
 			if (completion_code != COMPLETION_CODE_SUCCESS) {
-				LOG_ERROR("enable slot command failed on port %d: completion code %u",
-						  addressing_port, completion_code);
+				LOG_ERROR(
+						"enable slot command failed on port %d: completion code %u",
+						addressing_port, completion_code);
 				abort_port_initialization(xhc, addressing_port);
 				break;
 			}
@@ -253,7 +254,8 @@ void on_event(Controller& xhc, command_completion_event_trb& trb)
 
 			if (completion_code != COMPLETION_CODE_SUCCESS) {
 				LOG_ERROR(
-						"address device command failed on port %d: completion code %u",
+						"address device command failed on port %d: completion code "
+						"%u",
 						port_id, completion_code);
 				abort_port_initialization(xhc, port_id);
 				break;
@@ -280,9 +282,10 @@ void on_event(Controller& xhc, command_completion_event_trb& trb)
 			}
 
 			if (completion_code != COMPLETION_CODE_SUCCESS) {
-				LOG_ERROR("configure endpoint command failed on port %d: completion "
-						  "code %u",
-						  port_id, completion_code);
+				LOG_ERROR(
+						"configure endpoint command failed on port %d: completion "
+						"code %u",
+						port_id, completion_code);
 				abort_port_initialization(xhc, port_id);
 				break;
 			}
@@ -392,9 +395,9 @@ bool Controller::initialize()
 			(hcs_params2.bits.max_scratchpad_buffers_high << 5);
 
 	if (max_scratchpad_buffers > 0) {
-		void* scratchpad_buf_arr_ptr = kernel::memory::alloc(
-				sizeof(void*) * max_scratchpad_buffers,
-				kernel::memory::ALLOC_UNINITIALIZED);
+		void* scratchpad_buf_arr_ptr =
+				kernel::memory::alloc(sizeof(void*) * max_scratchpad_buffers,
+									  kernel::memory::ALLOC_UNINITIALIZED);
 		if (scratchpad_buf_arr_ptr == nullptr) {
 			LOG_ERROR("Memory allocation failed: scratchpad_buf_arr_ptr (size=%zu)",
 					  sizeof(void*) * max_scratchpad_buffers);

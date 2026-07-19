@@ -1,6 +1,6 @@
 #include "port.hpp"
 #include <cstdint>
-#include "graphics/log.hpp"
+#include "log/log.hpp"
 #include "registers.hpp"
 
 namespace kernel::hw::usb::xhci
