@@ -24,15 +24,21 @@ Message wait_for_message(MsgType type)
 	return m;
 }
 
+Message make_request(MsgType type)
+{
+	return Message{ .type = type, .sender = ProcessId::from_raw(sys_getpid()) };
+}
+
+Message call(ProcessId dst, Message* msg)
+{
+	send_message(dst, msg);
+	return wait_for_message(msg->type);
+}
+
 void initialize_task()
 {
-	ProcessId pid = ProcessId::from_raw(sys_getpid());
-	Message m = { .sender = pid };
-
-	m.type = MsgType::FS_REGISTER_PATH;
-	send_message(process_ids::FS_FAT32, &m);
-
-	wait_for_message(MsgType::FS_REGISTER_PATH);
+	Message m = make_request(MsgType::FS_REGISTER_PATH);
+	call(process_ids::FS_FAT32, &m);
 
 	m.type = MsgType::INITIALIZE_TASK;
 	send_message(process_ids::KERNEL, &m);
