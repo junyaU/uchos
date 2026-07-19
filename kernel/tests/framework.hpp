@@ -44,9 +44,12 @@ void test_register(const char* name, test_func_t func);
 /**
  * @brief Run all registered tests
  *
- * Executes all tests that have been registered with test_register().
- * Prints results to the kernel log, including pass/fail status and
- * any error messages.
+ * Executes all tests that have been registered with test_register(). Each
+ * failing test is logged individually as it runs (`FAIL: <name>`); the
+ * screen console cannot scroll yet, so nothing is printed for a suite that
+ * passes entirely except the per-suite `total=/passed=/failed=` line, which
+ * is only emitted when at least one test failed. The cumulative result
+ * across all suites is reported separately by test_print_summary().
  *
  * @note Tests are run in the order they were registered
  */

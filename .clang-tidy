@@ -15,14 +15,11 @@ Checks: '
   # Clang Static Analyzer
   clang-analyzer-*,
   -clang-analyzer-valist.Uninitialized,
-  clang-analyzer-security.insecureAPI.strcpy,
   -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
 
   # ===== バグ検出 =====
   # 一般的なバグパターンの検出
   bugprone-*,
-  bugprone-macro-parentheses,
-  bugprone-too-small-loop-variable,
   -bugprone-narrowing-conversions,
   -bugprone-easily-swappable-parameters,
   -bugprone-reserved-identifier,
@@ -53,10 +50,6 @@ Checks: '
   # ===== 可読性 =====
   # コードの読みやすさ向上
   readability-*,
-  readability-duplicate-include,
-  readability-else-after-return,
-  readability-uppercase-literal-suffix,
-  readability-identifier-naming,
   -readability-function-cognitive-complexity,
   -readability-identifier-length,
   -readability-isolate-declaration,
