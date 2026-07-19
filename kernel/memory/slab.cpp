@@ -10,6 +10,7 @@
 #include "bit_utils.hpp"
 #include "buddy_system.hpp"
 #include "graphics/log.hpp"
+#include "heap_debug.hpp"
 #include "page.hpp"
 
 namespace kernel::memory
@@ -68,8 +69,7 @@ MCache& m_cache_create(const char* name, size_t obj_size)
 		name = temp_name;
 	}
 
-	cache_chain.push_back(
-			std::make_unique<kernel::memory::MCache>(name, obj_size));
+	cache_chain.push_back(std::make_unique<kernel::memory::MCache>(name, obj_size));
 
 	return *cache_chain.back();
 }
@@ -271,7 +271,20 @@ void* alloc(size_t size, unsigned flags, int align)
 		return nullptr;
 	}
 
+#ifdef KERNEL_HEAP_DEBUG_ENABLED
+	// Reserve room for the head and tail redzones around the payload before
+	// rounding up to a cache size class.
+	const size_t user_size = size;
+	size = 1UL << bit_width_ceil(size + align - 1 + heap_debug::redzone_reserve());
+	if (size > MAX_ALLOC_SIZE) {
+		LOG_ERROR("alloc: size %lu too large once heap-debug redzones are added",
+				  user_size);
+		return nullptr;
+	}
+#else
 	size = 1UL << bit_width_ceil(size + align - 1);
+#endif
+
 	char name[20];
 	sprintf(name, "cache-%d", static_cast<int>(size));
 
@@ -286,6 +299,19 @@ void* alloc(size_t size, unsigned flags, int align)
 		return nullptr;
 	}
 
+#ifdef KERNEL_HEAP_DEBUG_ENABLED
+	// on_alloc lays the tail redzone, checks the freed-poison, records
+	// provenance, and hands back the object boundary (natural alignment kept).
+	// The +align-1 in the size above still guarantees object_size >= align.
+	addr = heap_debug::on_alloc(addr, user_size, cache->object_size(),
+								__builtin_return_address(0));
+
+	if ((flags & ALLOC_ZEROED) != 0) {
+		memset(addr, 0, user_size);
+	}
+
+	return addr;
+#else
 	if (align != 1) {
 		auto* aligned_addr = reinterpret_cast<void*>(
 				align_up(reinterpret_cast<uintptr_t>(addr), align));
@@ -302,6 +328,7 @@ void* alloc(size_t size, unsigned flags, int align)
 	}
 
 	return addr;
+#endif
 }
 
 void free(void* addr)
@@ -310,11 +337,21 @@ void free(void* addr)
 		return;
 	}
 
+#ifdef KERNEL_HEAP_DEBUG_ENABLED
+	// Validate the payload pointer, check its redzones, poison the object, and
+	// translate back to the raw slab object. A double/invalid free returns
+	// nullptr after reporting the violation.
+	addr = heap_debug::on_free(addr, __builtin_return_address(0));
+	if (addr == nullptr) {
+		return;
+	}
+#else
 	auto it = aligned_to_raw_addr_map.find(addr);
 	if (it != aligned_to_raw_addr_map.end()) {
 		addr = it->second;
 		aligned_to_raw_addr_map.erase(it);
 	}
+#endif
 
 	Page* p = get_page(addr);
 	if (p == nullptr) {
@@ -351,10 +388,19 @@ bool is_slab_object_in_use(void* addr)
 		return false;
 	}
 
+#ifdef KERNEL_HEAP_DEBUG_ENABLED
+	// A live payload pointer maps to its raw object; anything else falls
+	// through unchanged and is reported as not in use.
+	void* raw = heap_debug::raw_from_user(addr);
+	if (raw != nullptr) {
+		addr = raw;
+	}
+#else
 	auto it = aligned_to_raw_addr_map.find(addr);
 	if (it != aligned_to_raw_addr_map.end()) {
 		addr = it->second;
 	}
+#endif
 
 	Page* p = get_page(addr);
 	if (p == nullptr || p->cache() == nullptr || p->slab() == nullptr) {
@@ -373,6 +419,10 @@ void initialize_slab_allocator()
 	aligned_to_raw_addr_map = std::unordered_map<void*, void*>();
 
 	cache_chain.clear();
+
+#ifdef KERNEL_HEAP_DEBUG_ENABLED
+	heap_debug::initialize();
+#endif
 
 	LOG_INFO("Initializing slab allocator successfully.");
 }

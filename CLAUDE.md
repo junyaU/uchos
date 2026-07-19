@@ -110,6 +110,27 @@ gdb build/UchosKernel
 target remote :12345
 ```
 
+### 🩺 ヒープデバッグ(KERNEL_HEAP_DEBUG)
+
+slab アロケータに poison / redzone / 確保元トラッキングを仕込み、use-after-free・バッファオーバーフロー・二重 free・リークを **違反地点で** 検出する(実装: `kernel/memory/heap_debug.{hpp,cpp}`)。**既定 ON**(`KERNEL_TESTS` と同方針でローカル開発・対話ブートに常時稼働)。性能計測などで無効化する場合のみ `-DKERNEL_HEAP_DEBUG=OFF` を渡す(OFF ビルドはコード・性能とも従来と同一)。
+
+```bash
+# 通常ビルドで既にヒープデバッグ有効(テストランナーのリークチェックも稼働)
+cmake -B build kernel && cmake --build build
+
+# ゼロオーバーヘッドで無効化したいとき
+cmake -B build kernel -DKERNEL_HEAP_DEBUG=OFF && cmake --build build
+```
+
+- 検出時は `LOG_ERROR("heap-debug: ...")` を出力する。ログはシリアルに全レベル出るため、ヘッドレス実行(CI の serial.log)でも必ず確認できる
+- リークやオーバーフローの報告に出る **呼び出し元アドレス** は次で行番号化できる:
+
+```bash
+llvm-addr2line -e build/UchosKernel <addr>
+```
+
+- テストランナー(`run_test_suite`)は各スイート前後で確保量を比較し、増加をリーク failure として計上する。意図的に確保を残すスイートは `run_test_suite(register_xxx_tests, /*check_leaks=*/false)` で除外する(`kernel/tests/runner.cpp` 参照)
+
 ## 📌 重要な開発指針
 
 - **既存ファイル優先**: 新規ファイル作成より既存ファイル編集を優先

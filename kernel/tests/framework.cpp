@@ -1,6 +1,9 @@
 #include "tests/framework.hpp"
 #include <cstring>
 #include "graphics/log.hpp"
+#ifdef KERNEL_HEAP_DEBUG_ENABLED
+#include "memory/heap_debug.hpp"
+#endif
 
 struct TestCaseT {
 	const char* name;
@@ -70,19 +73,40 @@ void test_run()
 	}
 }
 
-void run_test_suite(void (*test_suite)())
+void run_test_suite(void (*test_suite)(), bool check_leaks)
 {
 	kernel::graphics::change_log_level(kernel::graphics::LogLevel::TEST);
 	test_init();
 	test_suite();
+
+#ifdef KERNEL_HEAP_DEBUG_ENABLED
+	const size_t live_before = kernel::memory::heap_debug::live_bytes();
+#endif
+
 	test_run();
+
+#ifdef KERNEL_HEAP_DEBUG_ENABLED
+	// Any allocation the suite made but never freed shows up as net growth in
+	// the tracked heap. Count it as an extra failed check so the cumulative
+	// summary (and CI) flags it, and point at the worst offenders.
+	if (check_leaks) {
+		const size_t live_after = kernel::memory::heap_debug::live_bytes();
+		if (live_after > live_before) {
+			total_stats.total++;
+			total_stats.failed++;
+			LOG_TEST("LEAK: suite leaked %lu bytes",
+					 static_cast<unsigned long>(live_after - live_before));
+			kernel::memory::heap_debug::report_leaks(5);
+		}
+	}
+#else
+	(void)check_leaks;
+#endif
+
 	kernel::graphics::change_log_level(kernel::graphics::LogLevel::ERROR);
 }
 
-bool test_all_passed()
-{
-	return total_stats.total > 0 && total_stats.failed == 0;
-}
+bool test_all_passed() { return total_stats.total > 0 && total_stats.failed == 0; }
 
 void test_print_summary()
 {

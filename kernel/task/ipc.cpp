@@ -36,10 +36,13 @@ error_t handle_ool_memory_alloc(Message& m, Task* dst)
 			kernel::memory::get_active_page_table(), src_vaddr);
 	int data_offset = src_vaddr.part(0);
 
-	// kernel → userspace
+	// kernel → userspace: the kernel is identity-mapped, so the buffer's
+	// physical address is its address. map_frame_to_vaddr maps whole frames and
+	// hands back a page-aligned vaddr, so the buffer's in-page offset still has
+	// to be re-applied below. Zeroing it only worked while kernel OOL buffers
+	// happened to be page-aligned; slab objects generally are not.
 	if (!is_user_address(m.tool_desc.addr, m.tool_desc.size)) {
 		src_paddr = reinterpret_cast<uint64_t>(m.tool_desc.addr);
-		data_offset = 0;
 	}
 
 	kernel::memory::vaddr_t dst_vaddr;

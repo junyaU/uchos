@@ -4,6 +4,7 @@ set(MEMORY_SOURCE_FILES
     paging_utils.asm
     segment_utils.asm
     slab.cpp
+    heap_debug.cpp
     bootstrap_allocator.cpp
     segment.cpp
     buddy_system.cpp

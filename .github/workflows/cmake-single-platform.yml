@@ -58,7 +58,8 @@ jobs:
               -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
               -DKERNEL_TESTS=ON \
-              -DKERNEL_TEST_EXIT=ON
+              -DKERNEL_TEST_EXIT=ON \
+              -DKERNEL_HEAP_DEBUG=ON
 
     - name: Build
       run: cmake --build build --config ${{env.BUILD_TYPE}}
