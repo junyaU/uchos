@@ -5,6 +5,9 @@
 
 #include "tests/runner.hpp"
 #include <array>
+#include <libs/common/message.hpp>
+#include <libs/common/process_id.hpp>
+#include "task/ipc.hpp"
 #include "task/task.hpp"
 #include "tests/framework.hpp"
 #include "tests/test_cases/bit_utils_test.hpp"
@@ -114,6 +117,18 @@ void run_main_stage_tests()
 #ifdef KERNEL_HEAP_DEBUG_ENABLED
 	run_test_suite(register_heap_debug_tests);
 #endif
+
+	// The stdio suites exercise sys_write(stdout/stderr), which queues
+	// NOTIFY_WRITE on the real SHELL task. Drain it so boot-time tests
+	// never leak output into the interactive shell: the leak used to be
+	// masked by userland's discard-on-mismatch receive loop, which is gone
+	// with the correlation-matched call of issue #314 Stage B.
+	kernel::task::Task* shell = kernel::task::get_task(process_ids::SHELL);
+	if (shell != nullptr) {
+		Message leftover;
+		while (kernel::task::try_receive(shell, &leftover)) {
+		}
+	}
 
 	test_print_summary();
 
