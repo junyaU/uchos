@@ -1,31 +1,27 @@
 ---
+# Checks はカンマ区切りの「1 つの文字列」。文字列の中に # を書いてもコメントには
+# ならず、直後のエントリと結合した不正なグロブになってそのチェックが黙って死ぬ
+# (issue #360 で全チェック無効化の実績あり)。注釈は必ずこの位置(文字列の外)に
+# YAML コメントとして書くこと。
+#
+# 有効グループ: clang-diagnostic(コンパイラ診断)/ clang-analyzer(静的解析)/
+# bugprone(バグ検出)/ cert(CERT セキュリティ標準)/ misc / performance /
+# readability(可読性)。各グループ直後の -エントリが個別除外。
 Checks: '
   -*,
-
-  # ===== 診断関連 =====
-  # コンパイラの診断メッセージ
   clang-diagnostic-*,
   -clang-diagnostic-format,
   -clang-diagnostic-format-security,
   -clang-diagnostic-implicit-function-declaration,
   -clang-diagnostic-interrupt-service-routine,
   -clang-diagnostic-excessive-regsave,
-
-  # ===== 静的解析 =====
-  # Clang Static Analyzer
   clang-analyzer-*,
   -clang-analyzer-valist.Uninitialized,
   -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
-
-  # ===== バグ検出 =====
-  # 一般的なバグパターンの検出
   bugprone-*,
   -bugprone-narrowing-conversions,
   -bugprone-easily-swappable-parameters,
   -bugprone-reserved-identifier,
-
-  # ===== セキュリティ基準 =====
-  # CERT C/C++ コーディング標準
   cert-*,
   -cert-dcl03-c,
   -cert-dcl16-c,
@@ -33,22 +29,13 @@ Checks: '
   -cert-dcl51-cpp,
   -cert-err33-c,
   -cert-dcl50-cpp,
-
-  # ===== その他のチェック =====
-  # 雑多なチェック項目
   misc-*,
   -misc-unused-parameters,
   -misc-unused-include,
   -misc-no-recursion,
   -misc-non-private-member-variables-in-classes,
-
-  # ===== パフォーマンス =====
-  # パフォーマンス関連のチェック
   performance-*,
   -performance-no-int-to-ptr,
-
-  # ===== 可読性 =====
-  # コードの読みやすさ向上
   readability-*,
   -readability-function-cognitive-complexity,
   -readability-identifier-length,
