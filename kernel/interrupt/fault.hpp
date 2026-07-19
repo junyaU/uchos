@@ -12,7 +12,7 @@
 namespace kernel::interrupt
 {
 
-enum exception_code {
+enum ExceptionCode {
 	DIVIDE_ERROR = 0,
 	DEBUG = 1,
 	NMI = 2,
@@ -43,25 +43,37 @@ __attribute__((no_caller_saved_registers)) void log_fault_info(
 		const char* fault_type,
 		InterruptFrame* frame);
 
+/**
+ * @brief Look up the fault name and log the frame in one call
+ *
+ * Combines get_fault_name() and log_fault_info(), which every FaultHandler
+ * specialization below needs before it panics.
+ *
+ * @param code Exception code (see ExceptionCode)
+ * @param frame Interrupt frame at the time of the fault
+ * @return Human-readable fault name (valid until the next call)
+ */
+__attribute__((no_caller_saved_registers)) const char* report_fault(
+		uint64_t code,
+		InterruptFrame* frame);
+
 template<uint64_t error_code, bool has_error_code>
-struct fault_handler;
+struct FaultHandler;
 
 // no error code
 template<uint64_t error_code>
-struct fault_handler<error_code, false> {
+struct FaultHandler<error_code, false> {
 	static inline __attribute__((interrupt)) void handler(InterruptFrame* frame)
 	{
-		char buf[30];
-		get_fault_name(error_code, buf);
-		log_fault_info(buf, frame);
+		const char* name = report_fault(error_code, frame);
 
-		PANIC("Fatal exception: %s", buf);
+		PANIC("Fatal exception: %s", name);
 	}
 };
 
 // exisiting error code
 template<uint64_t error_code>
-struct fault_handler<error_code, true> {
+struct FaultHandler<error_code, true> {
 	static inline __attribute__((interrupt)) void handler(InterruptFrame* frame,
 														  uint64_t code)
 	{
@@ -75,13 +87,11 @@ struct fault_handler<error_code, true> {
 			LOG_ERROR("Page fault at %016lx", fault_addr);
 		}
 
-		char buf[30];
-		get_fault_name(error_code, buf);
-		log_fault_info(buf, frame);
+		const char* name = report_fault(error_code, frame);
 
 		kill_userland(frame);
 
-		PANIC("Fatal exception with error code: %s (code: 0x%lx)", buf, code);
+		PANIC("Fatal exception with error code: %s (code: 0x%lx)", name, code);
 	}
 };
 

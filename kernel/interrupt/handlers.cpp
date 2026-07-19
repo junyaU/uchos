@@ -12,9 +12,12 @@
 
 namespace
 {
+// Local APIC End-Of-Interrupt register (base 0xfee00000 + offset 0xb0).
+constexpr uint32_t LAPIC_EOI_ADDR = 0xfee000b0;
+
 [[gnu::no_caller_saved_registers]] void notify_end_of_interrupt()
 {
-	auto* volatile eoi = reinterpret_cast<uint32_t*>(0xfee000b0);
+	auto* volatile eoi = reinterpret_cast<uint32_t*>(LAPIC_EOI_ADDR);
 	*eoi = 0;
 }
 } // namespace

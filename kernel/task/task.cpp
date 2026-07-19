@@ -207,7 +207,7 @@ Task* copy_task(Task* parent, Context* parent_ctx)
 	return child;
 }
 
-Task* get_scheduled_task()
+Task* pick_next_task()
 {
 	if (list_is_empty(&run_queue)) {
 		CURRENT_TASK = IDLE_TASK;
@@ -283,7 +283,7 @@ void switch_task(const Context& current_ctx)
 		}
 	}
 
-	restore_context(&get_scheduled_task()->ctx);
+	restore_context(&pick_next_task()->ctx);
 }
 
 void switch_next_task(bool sleep_current_task)
@@ -347,7 +347,7 @@ void initialize()
 
 	for (const auto& t_info : INITIAL_TASKS) {
 		Task* new_task = create_task(t_info.name, t_info.addr, t_info.setup_context,
-									 t_info.is_initilized);
+									 t_info.is_initialized);
 		if (new_task != nullptr) {
 			schedule_task(new_task->id);
 		}
@@ -361,16 +361,30 @@ void initialize()
 
 void start_scheduling() { kernel::timers::ktimer->add_switch_task_event(200); }
 
+namespace
+{
+// Number of PAGE_SIZE pages allocated for a task's stack.
+constexpr size_t KERNEL_STACK_PAGES = 8;
+
+// Initial RFLAGS for a new task: bit 1 is Intel-reserved and must always
+// read as 1; bit 9 (IF) enables interrupts.
+constexpr uint64_t RFLAGS_RESERVED1 = 1U << 1;
+constexpr uint64_t RFLAGS_IF = 1U << 9;
+
+// Default MXCSR value (all SSE floating-point exceptions masked).
+constexpr uint32_t MXCSR_DEFAULT = 0x1f80;
+} // namespace
+
 Task::Task(int raw_id,
 		   const char* task_name,
 		   uint64_t task_addr,
 		   TaskState state,
 		   bool setup_context,
-		   bool is_initilized)
+		   bool is_initialized)
 	: id{ ProcessId::from_raw(raw_id) },
 	  parent_id{ ProcessId::from_raw(-1) },
 	  priority{ 2 }, // TODO: Implement priority scheduling
-	  is_initilized{ is_initilized },
+	  is_initialized{ is_initialized },
 	  state{ state },
 	  fs_path({ nullptr, nullptr, nullptr }),
 	  stack{ nullptr },
@@ -394,7 +408,7 @@ Task::Task(int raw_id,
 		return;
 	}
 
-	stack_size = kernel::memory::PAGE_SIZE * 8;
+	stack_size = kernel::memory::PAGE_SIZE * KERNEL_STACK_PAGES;
 	void* stack_ptr;
 	ALLOC_OR_RETURN(stack_ptr, stack_size, kernel::memory::ALLOC_ZEROED);
 	stack = static_cast<uint64_t*>(stack_ptr);
@@ -407,11 +421,11 @@ Task::Task(int raw_id,
 	ctx = {};
 	ctx.cr3 = reinterpret_cast<uint64_t>(page_table);
 	ctx.rsp = (stack_end & ~0xfLU) - 8;
-	ctx.rflags = 0x202;
+	ctx.rflags = RFLAGS_RESERVED1 | RFLAGS_IF;
 	ctx.rip = task_addr;
 	ctx.cs = kernel::memory::KERNEL_CS;
 	ctx.ss = kernel::memory::KERNEL_SS;
-	*reinterpret_cast<uint32_t*>(&ctx.fxsave_area[24]) = 0x1f80;
+	*reinterpret_cast<uint32_t*>(&ctx.fxsave_area[24]) = MXCSR_DEFAULT;
 }
 
 Message wait_for_message(MsgType type)

@@ -35,7 +35,7 @@ void test_task_creation_basic()
 	// Verify task properties
 	ASSERT_EQ(strcmp(t->name, task_name), 0);
 	ASSERT_EQ(t->state, TASK_WAITING);
-	ASSERT_TRUE(t->is_initilized);
+	ASSERT_TRUE(t->is_initialized);
 	ASSERT_EQ(t->parent_id.raw(), -1);
 	ASSERT_NOT_NULL(t->stack);
 	ASSERT_TRUE(t->stack_size > 0);
@@ -140,7 +140,7 @@ void test_task_memory_management()
 	ASSERT_EQ(t->id.raw(), 0);
 	ASSERT_EQ(strcmp(t->name, "memory_test"), 0);
 	ASSERT_EQ(t->state, TASK_WAITING);
-	ASSERT_TRUE(t->is_initilized);
+	ASSERT_TRUE(t->is_initialized);
 
 	void* stack = t->stack;
 	ASSERT_NOT_NULL(stack);

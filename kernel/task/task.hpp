@@ -39,7 +39,7 @@ struct Task {
 	ProcessId parent_id;
 	char name[32];
 	int priority;
-	bool is_initilized;
+	bool is_initialized;
 	TaskState state;
 	Path fs_path;
 	uint64_t* stack;
@@ -56,7 +56,7 @@ struct Task {
 		 uint64_t task_addr,
 		 TaskState state,
 		 bool setup_context,
-		 bool is_initilized);
+		 bool is_initialized);
 
 	~Task()
 	{
@@ -93,7 +93,7 @@ struct InitialTaskInfo {
 	const char* name;
 	uint64_t addr;
 	bool setup_context;
-	bool is_initilized;
+	bool is_initialized;
 };
 
 extern Task* CURRENT_TASK;
@@ -106,11 +106,19 @@ extern list_t run_queue;
 Task* create_task(const char* name,
 				  uint64_t task_addr,
 				  bool setup_context,
-				  bool is_initilized);
+				  bool is_initialized);
 
 Task* copy_task(Task* parent, Context* parent_ctx);
 
-Task* get_scheduled_task();
+/**
+ * @brief Pop the next task to run from the run queue
+ *
+ * Falls back to the idle task when the run queue is empty. Updates
+ * CURRENT_TASK and marks the popped task TASK_RUNNING as a side effect.
+ *
+ * @return The task that should run next
+ */
+Task* pick_next_task();
 
 Task* get_task(ProcessId id);
 

@@ -142,7 +142,7 @@ void shell_service()
 		}
 	}
 
-	CURRENT_TASK->is_initilized = true;
+	CURRENT_TASK->is_initialized = true;
 	kernel::fs::fat::execute_file(data_m.data.fs.buf, "shell", nullptr);
 }
 

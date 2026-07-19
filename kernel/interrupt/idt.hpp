@@ -6,10 +6,10 @@
 namespace kernel::interrupt
 {
 
-enum gate_type {
-	kTaskGate = 0x5,
-	kInterruptGate = 0xE,
-	kTrapGate = 0xF,
+enum GateType {
+	TASK_GATE = 0x5,
+	INTERRUPT_GATE = 0xE,
+	TRAP_GATE = 0xF,
 };
 
 struct TypeAttr {

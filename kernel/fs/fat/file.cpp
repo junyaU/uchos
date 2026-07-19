@@ -179,7 +179,7 @@ void execute_file(void* data, const char* name, const char* args)
 
 void handle_get_file_info(const Message& m)
 {
-	if (!kernel::task::CURRENT_TASK->is_initilized) {
+	if (!kernel::task::CURRENT_TASK->is_initialized) {
 		pending_messages.push(m);
 		return;
 	}
@@ -224,7 +224,7 @@ void handle_get_file_info(const Message& m)
 
 void handle_read_file_data(const Message& m)
 {
-	if (!kernel::task::CURRENT_TASK->is_initilized) {
+	if (!kernel::task::CURRENT_TASK->is_initialized) {
 		pending_messages.push(m);
 		return;
 	}
