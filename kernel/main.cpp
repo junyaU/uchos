@@ -3,11 +3,8 @@
 #include "hardware/serial.hpp"
 #include "interrupt/idt.hpp"
 #include "memory/bootstrap_allocator.hpp"
-#include "memory/buddy_system.hpp"
-#include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"
-#include "memory/slab.hpp"
 #include "syscall/syscall.hpp"
 #include "task/builtin.hpp"
 #include "task/task.hpp"
@@ -44,15 +41,7 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	kernel::tests::run_bootstrap_stage_tests();
 
-	kernel::memory::initialize_heap();
-
-	kernel::memory::initialize_pages();
-
-	kernel::memory::initialize_memory_manager();
-
-	kernel::memory::release_bootstrap();
-
-	kernel::memory::initialize_slab_allocator();
+	kernel::memory::initialize_allocators();
 
 	kernel::memory::initialize_tss();
 

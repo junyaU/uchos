@@ -5,7 +5,9 @@
 #include <cstdint>
 #include "../../UchLoaderPkg/memory_map.hpp"
 #include "log/log.hpp"
+#include "memory/buddy_system.hpp"
 #include "memory/page.hpp"
+#include "memory/slab.hpp"
 
 #include <sys/types.h>
 
@@ -146,6 +148,19 @@ void release_bootstrap()
 	boot_allocator = nullptr;
 
 	LOG_INFO("Bootstrap allocator released.");
+}
+
+void initialize_allocators()
+{
+	// Order matters: the heap is carved out while the bootstrap allocator is
+	// still alive, page metadata must exist before the buddy system indexes
+	// it, and the bootstrap allocator is retired only once the buddy system
+	// can serve allocations. The slab allocator sits on top of buddy pages.
+	initialize_heap();
+	initialize_pages();
+	initialize_memory_manager();
+	release_bootstrap();
+	initialize_slab_allocator();
 }
 
 } // namespace kernel::memory
