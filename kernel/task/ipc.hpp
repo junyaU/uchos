@@ -22,6 +22,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include "memory/slab.hpp"
 
 namespace kernel::task
 {
@@ -149,5 +150,70 @@ Message receive_blocking();
  * @param mask OR of notify_bit() values to wait for
  */
 void wait_notification(uint32_t mask);
+
+/**
+ * @brief Allocate an OOL payload buffer destined for a user task
+ *
+ * Page-aligned and backed by dedicated pages (never a shared slab page), so
+ * mapping it into a user address space can leak nothing but the payload.
+ * Kernel-to-kernel OOL payloads that are never mapped may use plain
+ * alloc()/make_kbuf() instead.
+ *
+ * @param size Payload bytes (> 0)
+ * @return Owning buffer, empty on allocation failure
+ */
+kernel::memory::unique_kbuf<> make_ool_buffer(size_t size);
+
+/**
+ * @brief Free the kernel-owned OOL buffer attached to m, if any
+ *
+ * Cleanup path for undelivered or drained messages (send failure, exit-time
+ * ring drain); a normal receiver takes ownership instead.
+ */
+void free_message_ool(Message& m);
+
+/**
+ * @brief Copy a user-space OOL payload into a kernel buffer (send boundary)
+ *
+ * Replaces m->ool.addr (user vaddr) with a fresh kernel buffer holding a
+ * copy; the message then owns that buffer like any kernel-side OOL payload.
+ *
+ * @return OK (also when there is no payload), ERR_OOL_LIMIT above
+ * OOL_MAX_SIZE, ERR_INVALID_ARG for a bad address, ERR_NO_MEMORY
+ */
+error_t copy_in_ool_from_user(Message* m);
+
+/**
+ * @brief Map m's kernel OOL buffer into t's space (receive boundary)
+ *
+ * Rewrites m->ool.addr to the user vaddr and records the region in
+ * t->ool_regions for ool_release()/exit cleanup. When the region table is
+ * full or mapping fails, the payload is freed and the message is delivered
+ * anyway with result rewritten (ERR_OOL_LIMIT / ERR_NO_MEMORY).
+ */
+void deliver_ool_to_user(Task* t, Message* m);
+
+/**
+ * @brief IPC_OOL_RELEASE: unmap and free the region mapped at uaddr
+ * @return OK, or ERR_INVALID_ARG when uaddr names no live region
+ */
+error_t release_ool_region(Task* t, uint64_t uaddr);
+
+/**
+ * @brief Free every OOL buffer a task still owns (exit path)
+ *
+ * Covers the mapped-region table, undelivered ring messages and a pending
+ * reply slot. The user-space mappings themselves die with the page table,
+ * so this only releases the physical buffers.
+ */
+void release_all_ool(Task* t);
+
+/**
+ * @brief Free the mapped-region buffers only (exec path)
+ *
+ * exec destroys the old user image (and with it every OOL mapping) but the
+ * task lives on, so queued messages must survive.
+ */
+void release_ool_regions(Task* t);
 
 } // namespace kernel::task

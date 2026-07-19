@@ -11,7 +11,7 @@ int main(int argc, char** argv)
 {
 	char* input = argv[1];
 
-	Message m = make_request(MsgType::GET_DIRECTORY_CONTENTS);
+	Message m = make_request(MsgType::FS_LIST_DIR);
 	if (input != nullptr) {
 		memcpy(m.data.fs.name, input, strlen(input));
 	} else {
@@ -19,13 +19,25 @@ int main(int argc, char** argv)
 	}
 
 	Message msg = call(process_ids::FS_FAT32, &m);
+	if (IS_ERR(msg.result)) {
+		printu("ls: failed to read directory");
+		return 0;
+	}
+
+	// An empty directory has no OOL payload; there is nothing to release
+	if (msg.ool.size == 0) {
+		printu("");
+		return 0;
+	}
+
+	const Stat* stats = reinterpret_cast<const Stat*>(msg.ool.addr);
+	const size_t num_entries = msg.ool.size / sizeof(Stat);
 
 	char buf[256];
 	size_t buf_pos = 0;
-	size_t buf_size = msg.tool_desc.size;
 
-	for (int i = 0; i < msg.tool_desc.size / sizeof(Stat); i++) {
-		Stat* s = reinterpret_cast<Stat*>(msg.tool_desc.addr) + i;
+	for (size_t i = 0; i < num_entries; i++) {
+		const Stat* s = &stats[i];
 
 		// Skip . and .. entries
 		if (strcmp(s->name, ".") == 0 || strcmp(s->name, "..") == 0) {
@@ -35,7 +47,7 @@ int main(int argc, char** argv)
 		size_t name_len = strlen(s->name);
 		size_t space_needed = name_len + 5; // name + optional '/' + 4 spaces
 
-		if (buf_pos + space_needed >= buf_size) {
+		if (buf_pos + space_needed >= sizeof(buf)) {
 			break;
 		}
 
@@ -53,7 +65,7 @@ int main(int argc, char** argv)
 	buf[buf_pos] = '\0'; // Ensure null termination
 	printu(buf);
 
-	deallocate_ool_memory(m.sender, msg.tool_desc.addr, msg.tool_desc.size);
+	ool_release(stats);
 
 	return 0;
 }

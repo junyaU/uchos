@@ -139,17 +139,29 @@ void handle_rx_interrupt(const Message& m)
 	VirtioEntry entry_chain[1];
 	while (pop_virtio_entry(rx_queue, entry_chain, 1) > 0) {
 		VirtioNetReq* req = reinterpret_cast<VirtioNetReq*>(entry_chain[0].addr);
-		Message msg = {
-			.type = MsgType::IPC_NET_RECV_PACKET,
-			.sender = kernel::task::CURRENT_TASK->id,
-		};
+		const size_t packet_len = entry_chain[0].len - sizeof(VirtioNetHdr);
 
-		size_t packet_len = entry_chain[0].len - sizeof(VirtioNetHdr);
+		// Copy the DMA buffer into an OOL buffer whose ownership moves to
+		// the NET service (which frees it); the persistent RX buffer goes
+		// straight back to the device below
+		auto packet_buf =
+				kernel::memory::make_kbuf(packet_len, kernel::memory::ALLOC_ZEROED);
+		if (packet_buf) {
+			memcpy(packet_buf.get(), req->packet_data, packet_len);
 
-		memcpy(msg.data.net.packet_data, req->packet_data, packet_len);
-		msg.data.net.packet_len = packet_len;
+			Message msg = {
+				.type = MsgType::NET_RX,
+				.sender = kernel::task::CURRENT_TASK->id,
+			};
+			msg.ool.addr = reinterpret_cast<uint64_t>(packet_buf.get());
+			msg.ool.size = packet_len;
 
-		kernel::task::send_message(process_ids::NET, msg);
+			if (!IS_ERR(kernel::task::send_message(process_ids::NET, msg))) {
+				packet_buf.release();
+			}
+		} else {
+			LOG_ERROR("rx packet dropped: no memory for %lu bytes", packet_len);
+		}
 
 		push_virtio_entry(rx_queue, entry_chain, 1);
 		notify_virtqueue(*net_dev, rx_queue->index);
@@ -190,6 +202,16 @@ void disable_rx_interrupt()
 
 void handle_transmit_request(const Message& m)
 {
+	// The frame arrives as an OOL buffer we own; freed on return once it
+	// has been copied into the DMA request
+	const kernel::memory::unique_kbuf<> frame_buf{ reinterpret_cast<void*>(
+			m.ool.addr) };
+	if (!frame_buf || m.ool.size == 0 ||
+		m.ool.size > sizeof(VirtioNetReq{}.packet_data)) {
+		LOG_ERROR("invalid tx frame: %u bytes", m.ool.size);
+		return;
+	}
+
 	void* tx_buf;
 	ALLOC_OR_RETURN(tx_buf, sizeof(VirtioNetReq), kernel::memory::ALLOC_ZEROED);
 	VirtioNetReq* req = reinterpret_cast<VirtioNetReq*>(tx_buf);
@@ -201,11 +223,11 @@ void handle_transmit_request(const Message& m)
 	req->net_hdr.csum_start = 0;
 	req->net_hdr.num_buffers = 0;
 
-	memcpy(req->packet_data, m.data.net.packet_data, m.data.net.packet_len);
+	memcpy(req->packet_data, frame_buf.get(), m.ool.size);
 
 	VirtioEntry chain[1];
 	chain[0].addr = (uint64_t)tx_buf;
-	chain[0].len = sizeof(VirtioNetHdr) + m.data.net.packet_len;
+	chain[0].len = sizeof(VirtioNetHdr) + m.ool.size;
 	chain[0].write = false;
 
 	push_virtio_entry(tx_queue, chain, 1);
@@ -235,7 +257,7 @@ void virtio_net_service()
 
 	t->add_msg_handler(MsgType::NOTIFY_VIRTIO_NET_RX, handle_rx_interrupt);
 	t->add_msg_handler(MsgType::NOTIFY_VIRTIO_NET_TX, handle_tx_interrupt);
-	t->add_msg_handler(MsgType::IPC_TRANSMIT_TO_NIC, handle_transmit_request);
+	t->add_msg_handler(MsgType::NET_TX, handle_transmit_request);
 
 	kernel::task::process_messages(t);
 }

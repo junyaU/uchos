@@ -7,7 +7,7 @@
 
 extern "C" int main(int argc, char** argv)
 {
-	Message m = make_request(MsgType::IPC_MEMORY_USAGE);
+	Message m = make_request(MsgType::KERNEL_MEMORY_USAGE);
 
 	Message msg = call(process_ids::KERNEL, &m);
 

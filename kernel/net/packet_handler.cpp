@@ -7,6 +7,7 @@
 #include <libs/common/endian.hpp>
 #include <libs/common/message.hpp>
 #include "log/log.hpp"
+#include "memory/slab.hpp"
 #include "net/arp.hpp"
 #include "net/ethernet.hpp"
 #include "net/ipv4.hpp"
@@ -17,8 +18,16 @@ namespace kernel::net
 
 void handle_recv_packet(const Message& m)
 {
+	// The frame arrives as an OOL buffer we own; freed on return
+	const kernel::memory::unique_kbuf<> frame_buf{ reinterpret_cast<void*>(
+			m.ool.addr) };
+	if (!frame_buf || m.ool.size < sizeof(EthernetFrame)) {
+		LOG_ERROR("runt or missing rx frame: %u bytes", m.ool.size);
+		return;
+	}
+
 	const EthernetFrame* frame =
-			reinterpret_cast<const EthernetFrame*>(m.data.net.packet_data);
+			reinterpret_cast<const EthernetFrame*>(frame_buf.get());
 
 	switch (static_cast<EthernetFrameType>(ntohs(frame->ethertype))) {
 		case EthernetFrameType::ARP:
@@ -48,8 +57,8 @@ void packet_handler_service()
 
 	arp_table.clear();
 
-	t->add_msg_handler(MsgType::IPC_NET_RECV_PACKET, handle_recv_packet);
-	t->add_msg_handler(MsgType::IPC_NET_SEND_PACKET, handle_send_packet);
+	t->add_msg_handler(MsgType::NET_RX, handle_recv_packet);
+	t->add_msg_handler(MsgType::NET_SEND, handle_send_packet);
 
 	kernel::task::process_messages(t);
 }

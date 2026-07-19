@@ -66,8 +66,9 @@ void initialize_keyboard()
 		const char ascii =
 				shift ? KEYCODE_MAP_SHIFTED[keycode] : KEYCODE_MAP[keycode];
 
-		Message m{ .type = MsgType::NOTIFY_KEY_INPUT,
-				   .sender = process_ids::INTERRUPT };
+		// This observer runs in the USB handler task, not in interrupt
+		// context; name the real sender (issue #314 Stage C)
+		Message m{ .type = MsgType::NOTIFY_KEY_INPUT, .sender = process_ids::XHCI };
 		m.data.key_input.key_code = keycode;
 		m.data.key_input.modifier = modifier;
 		m.data.key_input.ascii = static_cast<uint8_t>(ascii);

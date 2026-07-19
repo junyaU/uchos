@@ -24,14 +24,14 @@ size_t fs_read(fd_t fd, void* buf, size_t count)
 	m.data.fs.len = count;
 
 	Message res = call(process_ids::FS_FAT32, &m);
-	if (IS_ERR(res.result) || !res.tool_desc.present) {
+	if (IS_ERR(res.result) || res.ool.size == 0) {
 		return 0;
 	}
 
-	const size_t copy_len = std::min(count, res.tool_desc.size);
-	memcpy(buf, res.tool_desc.addr, copy_len);
+	const size_t copy_len = std::min(count, static_cast<size_t>(res.ool.size));
+	memcpy(buf, reinterpret_cast<const void*>(res.ool.addr), copy_len);
 
-	deallocate_ool_memory(m.sender, res.tool_desc.addr, res.tool_desc.size);
+	ool_release(reinterpret_cast<const void*>(res.ool.addr));
 
 	return copy_len;
 }
@@ -69,18 +69,19 @@ void fs_pwd(char* buf, size_t size)
 
 size_t fs_write(fd_t fd, const void* buf, size_t count)
 {
+	if (count == 0 || count > OOL_MAX_SIZE) {
+		return 0;
+	}
+
 	Message m = make_request(MsgType::FS_WRITE);
 	m.data.fs.fd = fd;
 	m.data.fs.len = count;
 
-	// Small writes ride the inline buffer; anything larger moves to OOL
-	// transfer with issue #314 Stage C. (This used to memcpy through the
-	// uninitialized fs.buf pointer with an 8-byte threshold.)
-	if (count > sizeof(m.data.fs.temp_buf) - 1) {
-		return 0;
-	}
-	memcpy(m.data.fs.temp_buf, buf, count);
-	m.data.fs.temp_buf[count] = '\0';
+	// The payload rides OOL at any size: the kernel copies it in at the
+	// syscall boundary, so the old 256B inline ceiling is gone (issue #314
+	// Stage C)
+	m.ool.addr = reinterpret_cast<uint64_t>(buf);
+	m.ool.size = count;
 
 	Message res = call(process_ids::FS_FAT32, &m);
 	if (IS_ERR(res.result)) {

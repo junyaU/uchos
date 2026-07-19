@@ -2,7 +2,6 @@
 #include <cstring>
 #include "libs/common/endian.hpp"
 #include "log/log.hpp"
-#include "memory/slab.hpp"
 #include "net/ethernet.hpp"
 #include "net/host.hpp"
 #include "net/ipv4.hpp"
@@ -79,10 +78,9 @@ void handle_arp_request(const ARPPacket& arp_packet)
 	uint32_t sender_ip = ntohl(arp_packet.sender_ip);
 	arp_table.add(sender_ip, arp_packet.sender_mac);
 
-	void* buf;
-	ALLOC_OR_RETURN(buf, sizeof(ARPPacket), kernel::memory::ALLOC_ZEROED);
-
-	ARPPacket& reply = *reinterpret_cast<ARPPacket*>(buf);
+	// Stack buffer like the ICMP path: transmit_ethernet_frame copies it
+	// into its own OOL frame, so the old heap allocation only leaked
+	ARPPacket reply{};
 	reply.hw_type = htons(static_cast<uint16_t>(ARPHardwareType::ETHERNET));
 	reply.protocol_type = htons(static_cast<uint16_t>(EthernetFrameType::IPV4));
 	reply.hw_size = MAC_ADDR_SIZE;

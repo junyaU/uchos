@@ -11,7 +11,6 @@
 #include <libs/common/stat.hpp>
 #include <libs/common/types.hpp>
 #include <string>
-#include <vector>
 #include "fat.hpp"
 #include "fs/path.hpp"
 #include "graphics/font.hpp"
@@ -225,7 +224,7 @@ void handle_fs_change_dir(const Message& m)
 	handle_normal_directory_change(m, task, path_name);
 }
 
-void handle_get_directory_contents(const Message& m)
+void handle_fs_list_dir(const Message& m)
 {
 	auto* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
@@ -247,7 +246,17 @@ void handle_get_directory_contents(const Message& m)
 		reply_error(m, ERR_NO_FILE);
 		return;
 	}
-	std::vector<char> entries(ENTRIES_PER_CLUSTER * sizeof(DirectoryEntry));
+
+	// User-destined OOL: sized for the worst case up front, the real entry
+	// count only shrinks the payload (ool.size) below
+	auto stat_buf =
+			kernel::task::make_ool_buffer(ENTRIES_PER_CLUSTER * sizeof(Stat));
+	if (!stat_buf) {
+		LOG_ERROR("failed to allocate stat buffer");
+		reply_error(m, ERR_NO_MEMORY);
+		return;
+	}
+
 	int entries_count = 0;
 	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
 		if (current_dir[i].name[0] == DIR_ENTRY_END) {
@@ -262,42 +271,31 @@ void handle_get_directory_contents(const Message& m)
 			continue;
 		}
 
-		memcpy(&entries[entries_count * sizeof(DirectoryEntry)], &current_dir[i],
-			   sizeof(DirectoryEntry));
+		Stat* s = reinterpret_cast<Stat*>(stat_buf.get()) + entries_count;
+		read_dir_entry_name(current_dir[i], s->name);
+		s->size = current_dir[i].file_size;
+		s->type = current_dir[i].attribute == entry_attribute::DIRECTORY
+						  ? StatType::DIRECTORY
+						  : StatType::REGULAR_FILE;
 		++entries_count;
 	}
 
-	void* buf = nullptr;
-	if (entries_count > 0) {
-		buf = kernel::memory::alloc(entries_count * sizeof(Stat),
-									kernel::memory::ALLOC_ZEROED);
-		if (buf == nullptr) {
-			// Reply with an empty listing so the requester is not left
-			// blocking forever.
-			LOG_ERROR("failed to allocate stat buffer");
-			entries_count = 0;
-		}
-	}
-
-	for (int i = 0; i < entries_count; ++i) {
-		Stat* s = reinterpret_cast<Stat*>(buf) + i;
-		const DirectoryEntry* e = reinterpret_cast<const DirectoryEntry*>(
-				&entries[i * sizeof(DirectoryEntry)]);
-		read_dir_entry_name(*e, s->name);
-		s->size = e->file_size;
-		s->type = e->attribute == entry_attribute::DIRECTORY
-						  ? StatType::DIRECTORY
-						  : StatType::REGULAR_FILE;
-	}
-
-	Message sm = { .type = MsgType::GET_DIRECTORY_CONTENTS,
-				   .sender = process_ids::FS_FAT32 };
+	Message sm = { .type = MsgType::FS_LIST_DIR, .sender = process_ids::FS_FAT32 };
 	sm.result = OK;
-	sm.tool_desc.addr = buf;
-	sm.tool_desc.size = entries_count * sizeof(Stat);
-	sm.tool_desc.present = buf != nullptr;
 
-	kernel::task::reply(m, &sm);
+	if (entries_count == 0) {
+		// An empty listing needs no payload (ool.size 0); the buffer is
+		// freed on return
+		kernel::task::reply(m, &sm);
+		return;
+	}
+
+	sm.ool.addr = reinterpret_cast<uint64_t>(stat_buf.get());
+	sm.ool.size = entries_count * sizeof(Stat);
+
+	if (!IS_ERR(kernel::task::reply(m, &sm))) {
+		stat_buf.release(); // delivered: the requester owns it now
+	}
 }
 
 void handle_fs_pwd(const Message& m)

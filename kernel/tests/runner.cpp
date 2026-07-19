@@ -127,6 +127,9 @@ void run_main_stage_tests()
 	if (shell != nullptr) {
 		Message leftover;
 		while (kernel::task::try_receive(shell, &leftover)) {
+			// A drained message may carry an OOL payload (large sys_write);
+			// undelivered means this drain owns and must free it
+			kernel::task::free_message_ool(leftover);
 		}
 	}
 

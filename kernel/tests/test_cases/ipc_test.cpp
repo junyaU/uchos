@@ -7,12 +7,14 @@
 
 #include "tests/test_cases/ipc_test.hpp"
 #include <cstdint>
+#include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 #include "interrupt/routing.hpp"
 #include "interrupt/vector.hpp"
 #include "list.hpp"
+#include "memory/page.hpp"
 #include "task/ipc.hpp"
 #include "task/message_queue.hpp"
 #include "task/task.hpp"
@@ -324,10 +326,10 @@ void test_ipc_reply_delivered_to_slot()
 	caller->wait_reason = WaitReason::REPLY;
 	caller->state = kernel::task::TASK_WAITING;
 
-	Message req = { .type = MsgType::IPC_MEMORY_USAGE, .sender = caller->id };
+	Message req = { .type = MsgType::KERNEL_MEMORY_USAGE, .sender = caller->id };
 	req.correlation = 42;
 
-	Message resp = { .type = MsgType::IPC_MEMORY_USAGE,
+	Message resp = { .type = MsgType::KERNEL_MEMORY_USAGE,
 					 .sender = kernel::task::CURRENT_TASK->id };
 	resp.result = OK;
 	ASSERT_EQ(kernel::task::reply(req, &resp), OK);
@@ -474,6 +476,94 @@ void test_ipc_sys_wait_pops_record()
 	ASSERT_EQ(parent->state, kernel::task::TASK_RUNNING);
 }
 
+void test_ipc_ool_move_preserves_address()
+{
+	Task* t = create_parked_task("ipc_ool_move");
+	ASSERT_NOT_NULL(t);
+
+	// Kernel-to-kernel OOL is a pure ownership move: the delivery path must
+	// not translate, remap or copy the buffer (issue #314 Stage C)
+	auto buf = kernel::task::make_ool_buffer(64);
+	ASSERT_NOT_NULL(buf.get());
+	memset(buf.get(), 0xa5, 64);
+
+	Message m = { .type = MsgType::NET_RX,
+				  .sender = kernel::task::CURRENT_TASK->id };
+	m.ool.addr = reinterpret_cast<uint64_t>(buf.get());
+	m.ool.size = 64;
+	ASSERT_EQ(kernel::task::send_message(t->id, m), OK);
+	void* sent = buf.release(); // delivered: the receiver owns it
+
+	Message out;
+	ASSERT_TRUE(kernel::task::try_receive(t, &out));
+	ASSERT_EQ(reinterpret_cast<void*>(out.ool.addr), sent);
+	ASSERT_EQ(out.ool.size, 64U);
+	ASSERT_EQ(static_cast<uint8_t*>(sent)[63], 0xa5);
+
+	kernel::task::free_message_ool(out);
+	ASSERT_EQ(out.ool.size, 0U);
+}
+
+void test_ipc_ool_release_all_frees_everything()
+{
+	Task* t = create_parked_task("ipc_ool_exit");
+	ASSERT_NOT_NULL(t);
+
+	// Two undelivered ring messages, a pending reply and a mapped-region
+	// entry: exactly what an exiting task can still own
+	for (int i = 0; i < 2; ++i) {
+		auto buf = kernel::task::make_ool_buffer(32);
+		ASSERT_NOT_NULL(buf.get());
+		Message m = { .type = MsgType::NET_RX,
+					  .sender = kernel::task::CURRENT_TASK->id };
+		m.ool.addr = reinterpret_cast<uint64_t>(buf.get());
+		m.ool.size = 32;
+		ASSERT_EQ(kernel::task::send_message(t->id, m), OK);
+		buf.release();
+	}
+
+	auto reply_buf = kernel::task::make_ool_buffer(32);
+	ASSERT_NOT_NULL(reply_buf.get());
+	t->reply_slot = Message{ .type = MsgType::FS_READ,
+							 .sender = kernel::task::CURRENT_TASK->id };
+	t->reply_slot.ool.addr = reinterpret_cast<uint64_t>(reply_buf.release());
+	t->reply_slot.ool.size = 32;
+	t->reply_pending = true;
+
+	auto region_buf = kernel::task::make_ool_buffer(32);
+	ASSERT_NOT_NULL(region_buf.get());
+	t->ool_regions[0] = kernel::task::OolRegion{
+		reinterpret_cast<uint64_t>(region_buf.release()), 0, 1
+	};
+
+	// Heap debug (default ON) turns any miss here into a reported leak and
+	// any double free into a violation at the call site
+	kernel::task::release_all_ool(t);
+
+	ASSERT_TRUE(t->messages.empty());
+	ASSERT_FALSE(t->reply_pending);
+	ASSERT_EQ(t->ool_regions[0].kaddr, 0UL);
+}
+
+void test_ipc_ool_copy_in_rejects_oversize()
+{
+	// The limit gate must fire before any allocation or address check
+	Message m = {};
+	m.ool.addr = 0xffff'8000'0000'0000;
+	m.ool.size = OOL_MAX_SIZE + 1;
+	ASSERT_EQ(kernel::task::copy_in_ool_from_user(&m), ERR_OOL_LIMIT);
+}
+
+void test_ipc_make_ool_buffer_page_aligned()
+{
+	// User-destined buffers must start on their own page: mapping them may
+	// expose the whole page, so nothing else can live there
+	auto buf = kernel::task::make_ool_buffer(1);
+	ASSERT_NOT_NULL(buf.get());
+	ASSERT_EQ(reinterpret_cast<uintptr_t>(buf.get()) % kernel::memory::PAGE_SIZE,
+			  0UL);
+}
+
 void register_ipc_tests()
 {
 	test_register("ipc_ring_fifo_order", test_ipc_ring_fifo_order);
@@ -504,4 +594,12 @@ void register_ipc_tests()
 				  test_ipc_send_does_not_wake_reply_waiter);
 	test_register("ipc_child_exit_records", test_ipc_child_exit_records);
 	test_register("ipc_sys_wait_pops_record", test_ipc_sys_wait_pops_record);
+	test_register("ipc_ool_move_preserves_address",
+				  test_ipc_ool_move_preserves_address);
+	test_register("ipc_ool_release_all_frees_everything",
+				  test_ipc_ool_release_all_frees_everything);
+	test_register("ipc_ool_copy_in_rejects_oversize",
+				  test_ipc_ool_copy_in_rejects_oversize);
+	test_register("ipc_make_ool_buffer_page_aligned",
+				  test_ipc_make_ool_buffer_page_aligned);
 }

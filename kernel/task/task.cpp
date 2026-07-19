@@ -183,18 +183,20 @@ error_t Task::copy_parent_page_table()
 
 void Task::add_msg_handler(MsgType type, message_handler_t handler)
 {
-	if (type == MsgType::NO_TASK || type >= MsgType::MAX_MESSAGE_TYPE) {
+	const int32_t index = static_cast<int32_t>(type);
+	if (index < 0 || index >= TOTAL_MESSAGE_TYPES) {
 		return;
 	}
-	message_handlers[static_cast<int32_t>(type)] = handler;
+	message_handlers[index] = handler;
 }
 
 void Task::dispatch_message(const Message& m)
 {
-	if (m.type == MsgType::NO_TASK || m.type >= MsgType::MAX_MESSAGE_TYPE) {
+	const int32_t index = static_cast<int32_t>(m.type);
+	if (index < 0 || index >= TOTAL_MESSAGE_TYPES) {
 		return;
 	}
-	message_handlers[static_cast<int32_t>(m.type)](m);
+	message_handlers[index](m);
 }
 
 Task* copy_task(Task* parent, Context* parent_ctx)
@@ -344,6 +346,10 @@ void exit_task(int status)
 	// Release all file descriptors before exiting
 	kernel::fs::release_all_process_fds(t->fd_table.data(), MAX_FDS_PER_PROCESS);
 
+	// Free every OOL buffer this task still owns: mapped regions, queued
+	// messages, an uncollected reply. The mappings die with the page table.
+	release_all_ool(t);
+
 	// Child termination is parent/child bookkeeping, not IPC (issue #314
 	// Stage B): park the status on the parent for sys_wait to collect
 	if (t->has_parent()) {
@@ -426,6 +432,7 @@ Task::Task(int raw_id,
 	  reply_slot{},
 	  exit_records{},
 	  num_exit_records{ 0 },
+	  ool_regions{},
 	  message_handlers({ std::array<message_handler_t, TOTAL_MESSAGE_TYPES>() }),
 	  fd_table()
 {

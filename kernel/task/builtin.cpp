@@ -4,6 +4,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include <utility>
 #include "fs/fat/fat.hpp"
 #include "fs/path.hpp"
 #include "hardware/keyboard.hpp"
@@ -23,9 +24,9 @@ void notify_xhci_handler(const Message& m)
 	kernel::hw::usb::xhci::process_events();
 }
 
-void handle_initialize_task(const Message& m)
+void handle_task_ready(const Message& m)
 {
-	Message send_m = { .type = MsgType::INITIALIZE_TASK,
+	Message send_m = { .type = MsgType::KERNEL_TASK_READY,
 					   .sender = process_ids::KERNEL };
 	send_m.data.init.task_id = m.sender.raw();
 	kernel::task::send_message(m.sender, send_m);
@@ -33,7 +34,7 @@ void handle_initialize_task(const Message& m)
 
 void handle_memory_usage(const Message& m)
 {
-	Message resp = { .type = MsgType::IPC_MEMORY_USAGE,
+	Message resp = { .type = MsgType::KERNEL_MEMORY_USAGE,
 					 .sender = process_ids::KERNEL };
 
 	size_t used_mem = 0;
@@ -50,21 +51,41 @@ void handle_memory_usage(const Message& m)
 
 void handle_pci(const Message& m)
 {
-	Message send_m = {
-		.type = MsgType::IPC_PCI,
+	Message resp = {
+		.type = MsgType::KERNEL_PCI_LIST,
 		.sender = process_ids::KERNEL,
 	};
 
-	for (size_t i = 0; i < kernel::hw::pci::num_devices; ++i) {
+	// One reply with the whole device table as an OOL array replaces the
+	// old one-request-N-responses stream (issue #314 Stage C)
+	const size_t count = kernel::hw::pci::num_devices;
+	if (count == 0) {
+		resp.result = OK;
+		kernel::task::reply(m, &resp);
+		return;
+	}
+
+	auto buf = kernel::task::make_ool_buffer(count * sizeof(PciDeviceInfo));
+	if (!buf) {
+		resp.result = ERR_NO_MEMORY;
+		kernel::task::reply(m, &resp);
+		return;
+	}
+
+	auto* infos = static_cast<PciDeviceInfo*>(buf.get());
+	for (size_t i = 0; i < count; ++i) {
 		auto& device = kernel::hw::pci::devices[i];
-		send_m.data.pci.vendor_id = device.vendor_id;
-		send_m.data.pci.device_id = device.device_id;
-		device.address(send_m.data.pci.bus_address, 8);
+		infos[i].vendor_id = device.vendor_id;
+		infos[i].device_id = device.device_id;
+		device.address(infos[i].bus_address, sizeof(infos[i].bus_address));
+	}
 
-		// if (i == kernel::hw::pci::num_devices - 1) {
-		// }
+	resp.result = OK;
+	resp.ool.addr = reinterpret_cast<uint64_t>(buf.get());
+	resp.ool.size = count * sizeof(PciDeviceInfo);
 
-		kernel::task::send_message(m.sender, send_m);
+	if (!IS_ERR(kernel::task::reply(m, &resp))) {
+		buf.release(); // delivered: the requester owns it now
 	}
 }
 
@@ -84,42 +105,34 @@ void kernel_service()
 {
 	Task* t = kernel::task::CURRENT_TASK;
 
-	t->add_msg_handler(MsgType::INITIALIZE_TASK, handle_initialize_task);
-	t->add_msg_handler(MsgType::IPC_MEMORY_USAGE, handle_memory_usage);
-	t->add_msg_handler(MsgType::IPC_PCI, handle_pci);
+	t->add_msg_handler(MsgType::KERNEL_TASK_READY, handle_task_ready);
+	t->add_msg_handler(MsgType::KERNEL_MEMORY_USAGE, handle_memory_usage);
+	t->add_msg_handler(MsgType::KERNEL_PCI_LIST, handle_pci);
 
 	kernel::task::process_messages(t);
 }
 
 void shell_service()
 {
-	Message m = { .type = MsgType::IPC_GET_FILE_INFO, .sender = process_ids::SHELL };
+	// One synchronous FS_LOAD returns a kernel-owned copy of the binary as
+	// an OOL move; execute_file takes ownership and frees it once the
+	// segments are loaded (issue #314 Stage C)
+	Message m = { .type = MsgType::FS_LOAD, .sender = process_ids::SHELL };
 	char path[6] = "shell";
 	memcpy(m.data.fs.name, path, 6);
 
-	const error_t info_err = kernel::task::call(process_ids::FS_FAT32, &m);
-	auto* entry = reinterpret_cast<kernel::fs::DirectoryEntry*>(m.data.fs.buf);
-	if (IS_ERR(info_err) || IS_ERR(m.result) || entry == nullptr) {
-		LOG_ERROR("failed to find shell");
+	const error_t load_err = kernel::task::call(process_ids::FS_FAT32, &m);
+	if (IS_ERR(load_err) || IS_ERR(m.result) || m.ool.size == 0) {
+		LOG_ERROR("failed to load shell binary");
 		while (true) {
 			__asm__("hlt");
 		}
 	}
 
-	Message read_m = { .type = MsgType::IPC_READ_FILE_DATA,
-					   .sender = process_ids::SHELL };
-	read_m.data.fs.buf = entry;
-	const error_t read_err = kernel::task::call(process_ids::FS_FAT32, &read_m);
-	kernel::memory::free(entry);
-	if (IS_ERR(read_err) || IS_ERR(read_m.result) || read_m.data.fs.buf == nullptr) {
-		LOG_ERROR("failed to read shell binary");
-		while (true) {
-			__asm__("hlt");
-		}
-	}
+	kernel::memory::unique_kbuf<> shell_elf{ reinterpret_cast<void*>(m.ool.addr) };
 
 	CURRENT_TASK->is_initialized = true;
-	kernel::fs::fat::execute_file(read_m.data.fs.buf, "shell", nullptr);
+	kernel::fs::fat::execute_file(std::move(shell_elf), "shell", nullptr);
 }
 
 void usb_handler_service()

@@ -234,28 +234,28 @@ void free_cluster_chain(cluster_t start_cluster)
 
 kernel::memory::unique_kbuf<> read_from_blk(unsigned int sector, size_t len)
 {
-	Message m = { .type = MsgType::IPC_READ_FROM_BLK_DEVICE,
-				  .sender = process_ids::FS_FAT32 };
-	m.data.blk_io.sector = sector;
-	m.data.blk_io.len = len;
+	Message m = { .type = MsgType::BLK_READ, .sender = process_ids::FS_FAT32 };
+	m.data.blk.sector = sector;
+	m.data.blk.len = len;
 
 	const error_t err = kernel::task::call(process_ids::VIRTIO_BLK, &m);
-	if (IS_ERR(err) || IS_ERR(m.result) || m.data.blk_io.buf == nullptr) {
+	if (IS_ERR(err) || IS_ERR(m.result) || m.ool.size == 0) {
 		LOG_ERROR("block read failed: sector=%u len=%lu err=%d result=%d", sector,
 				  len, err, m.result);
 		return kernel::memory::unique_kbuf<>{};
 	}
 
-	return kernel::memory::unique_kbuf<>{ m.data.blk_io.buf };
+	// The reply's OOL buffer moves to us (kernel-to-kernel: same address)
+	return kernel::memory::unique_kbuf<>{ reinterpret_cast<void*>(m.ool.addr) };
 }
 
 error_t write_to_blk(void* buffer, unsigned int sector, size_t len)
 {
-	Message m = { .type = MsgType::IPC_WRITE_TO_BLK_DEVICE,
-				  .sender = process_ids::FS_FAT32 };
-	m.data.blk_io.buf = buffer;
-	m.data.blk_io.sector = sector;
-	m.data.blk_io.len = len;
+	Message m = { .type = MsgType::BLK_WRITE, .sender = process_ids::FS_FAT32 };
+	m.data.blk.sector = sector;
+	m.data.blk.len = len;
+	m.ool.addr = reinterpret_cast<uint64_t>(buffer);
+	m.ool.size = len;
 
 	// Ownership of buffer moves to the blk task, which frees it after the
 	// device write; delivery failure means it was never handed over.
@@ -344,40 +344,40 @@ void write_fat_table_to_disk()
 	}
 }
 
-void reply_file_data(const Message& req, void* buf, size_t size, bool for_user)
+void reply_file_data(const Message& req, const void* buf, size_t size)
 {
 	Message m = { .type = req.type, .sender = process_ids::FS_FAT32 };
 	m.result = OK;
+	m.data.fs.len = size;
 
-	if (for_user) {
-		if (size == 0) {
-			// Nothing to transfer (e.g. empty file): reply without an OOL
-			// buffer so the requester is not left blocking forever.
-			m.data.fs.len = 0;
-			kernel::task::reply(req, &m);
-			return;
-		}
-
-		void* user_buf = kernel::memory::alloc(size, kernel::memory::ALLOC_ZEROED,
-											   memory::PAGE_SIZE);
-		if (user_buf == nullptr) {
-			LOG_ERROR("failed to allocate memory");
-			m.data.fs.len = 0;
-			m.result = ERR_NO_MEMORY;
-			kernel::task::reply(req, &m);
-			return;
-		}
-
-		memcpy(user_buf, buf, size);
-		m.tool_desc.addr = user_buf;
-		m.tool_desc.size = size;
-		m.tool_desc.present = true;
-	} else {
-		m.data.fs.buf = buf;
-		m.data.fs.len = size;
+	if (size == 0) {
+		// Nothing to transfer (e.g. empty file): reply without an OOL
+		// buffer so the requester is not left blocking forever.
+		kernel::task::reply(req, &m);
+		return;
 	}
 
-	kernel::task::reply(req, &m);
+	// Always a fresh copy in an OOL buffer, whether the requester is a user
+	// task (mapped at the syscall boundary, released via ool_release) or
+	// kernel code like sys_exec (frees it directly). The old cache-borrowed
+	// pointer handoff is gone (issue #314 Stage C).
+	auto ool_buf = kernel::task::make_ool_buffer(size);
+	if (!ool_buf) {
+		LOG_ERROR("failed to allocate memory");
+		m.data.fs.len = 0;
+		m.result = ERR_NO_MEMORY;
+		kernel::task::reply(req, &m);
+		return;
+	}
+
+	memcpy(ool_buf.get(), buf, size);
+	m.ool.addr = reinterpret_cast<uint64_t>(ool_buf.get());
+	m.ool.size = size;
+
+	if (!IS_ERR(kernel::task::reply(req, &m))) {
+		// Delivered: the requester owns the buffer now
+		ool_buf.release();
+	}
 }
 
 void reply_error(const Message& req, error_t result)

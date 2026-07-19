@@ -61,6 +61,19 @@ struct ChildExitRecord {
 	int status;
 };
 
+/**
+ * @brief One OOL buffer mapped into this task's user space
+ *
+ * Recorded when a received message's OOL payload is mapped at the syscall
+ * boundary (issue #314 Stage C). The kernel vaddr is the buffer's identity
+ * for the physical free; the user vaddr is what ool_release() names.
+ */
+struct OolRegion {
+	uint64_t kaddr; ///< Kernel vaddr of the buffer (0 = slot free)
+	uint64_t uaddr; ///< User vaddr it is mapped at
+	uint32_t pages; ///< Mapped page count
+};
+
 static constexpr int MAX_FDS_PER_PROCESS = 32;
 
 struct Task {
@@ -87,6 +100,11 @@ struct Task {
 	static constexpr int MAX_CHILD_EXIT_RECORDS = 8;
 	std::array<ChildExitRecord, MAX_CHILD_EXIT_RECORDS> exit_records;
 	int num_exit_records; ///< Occupied prefix of exit_records (FIFO)
+	static constexpr int MAX_OOL_REGIONS = 16;
+	/// OOL buffers currently mapped into this task's user space. Not
+	/// inherited by fork: the child's copied mappings are unowned and just
+	/// vanish with its page table, while the parent keeps the buffers.
+	std::array<OolRegion, MAX_OOL_REGIONS> ool_regions;
 	std::array<message_handler_t, TOTAL_MESSAGE_TYPES> message_handlers;
 	std::array<kernel::fs::FileDescriptor, MAX_FDS_PER_PROCESS> fd_table;
 

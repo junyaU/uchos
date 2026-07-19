@@ -7,6 +7,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include <utility>
 #include "error.hpp"
 #include "fs/fat/fat.hpp"
 #include "graphics/font.hpp"
@@ -63,44 +64,73 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 		return ERR_INVALID_FD;
 	}
 
+	if (count == 0) {
+		return 0;
+	}
+
+	if (count > OOL_MAX_SIZE) {
+		return ERR_OOL_LIMIT;
+	}
+
 	if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
 		if (t->fd_table[fd].has_name("stdout") ||
 			t->fd_table[fd].has_name("stderr")) {
 			// Standard output - send to terminal
 			Message m = { .type = MsgType::NOTIFY_WRITE, .sender = t->id };
 
-			// Copy data from user space
-			const size_t copy_size = count > sizeof(m.data.write_shell.buf) - 1
-											 ? sizeof(m.data.write_shell.buf) - 1
-											 : count;
-			copy_from_user(m.data.write_shell.buf, buf, copy_size);
-			m.data.write_shell.buf[copy_size] = '\0';
+			if (count < sizeof(m.data.write.buf)) {
+				// Best-effort copy on purpose: boot-time tests call this
+				// with kernel buffers, which copy_from_user rejects (the
+				// message then carries an empty string)
+				copy_from_user(m.data.write.buf, buf, count);
+				m.data.write.buf[count] = '\0';
+				kernel::task::send_message(process_ids::SHELL, m);
+				return count;
+			}
 
-			kernel::task::send_message(process_ids::SHELL, m);
+			// The 256B ceiling is gone (issue #314 Stage C): large stdout
+			// payloads travel OOL and are released by the shell
+			auto kbuf = kernel::task::make_ool_buffer(count + 1);
+			if (!kbuf) {
+				return ERR_NO_MEMORY;
+			}
+			copy_from_user(kbuf.get(), buf, count);
+			static_cast<char*>(kbuf.get())[count] = '\0';
+			m.ool.addr = reinterpret_cast<uint64_t>(kbuf.get());
+			m.ool.size = count + 1;
 
-			return copy_size;
+			const error_t err = kernel::task::send_message(process_ids::SHELL, m);
+			if (IS_ERR(err)) {
+				return err;
+			}
+			kbuf.release(); // delivered: the shell owns it now
+
+			return count;
 		}
-		// File output - fd contains actual file info after dup2
+		// File output - fd contains actual file info after dup2. Any size
+		// goes through one OOL path (issue #314 Stage C).
 		Message req = { .type = MsgType::FS_WRITE, .sender = t->id };
 		req.data.fs.fd = fd;
 		req.data.fs.len = count;
 
-		// For small writes, use inline buffer temporarily
-		if (count <= sizeof(req.data.fs.temp_buf) - 1) {
-			copy_from_user(req.data.fs.temp_buf, buf, count);
-			req.data.fs.temp_buf[count] = '\0';
-		} else {
-			// Large writes land with OOL transfer in issue #314 Stage C
-			LOG_ERROR("Large write not supported: %d bytes", count);
+		auto kbuf = kernel::task::make_ool_buffer(count);
+		if (!kbuf) {
+			return ERR_NO_MEMORY;
+		}
+		if (copy_from_user(kbuf.get(), buf, count) != count) {
 			return ERR_INVALID_ARG;
 		}
+		req.ool.addr = reinterpret_cast<uint64_t>(kbuf.get());
+		req.ool.size = count;
 
 		// Correlation-matched RPC: the reply cannot be confused with any
 		// other FS_WRITE traffic (issue #314 Stage B)
 		const error_t err = kernel::task::call(process_ids::FS_FAT32, &req);
 		if (IS_ERR(err)) {
+			// Never delivered; kbuf frees the payload on return
 			return err;
 		}
+		kbuf.release(); // consumed (and freed) by the FS task
 		if (IS_ERR(req.result)) {
 			return req.result;
 		}
@@ -182,9 +212,13 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 		// Blocking receive (issue #314 Stage A): the sleep happens here on
 		// the task's kernel stack, so the task never returns to user space
 		// in the WAITING state (which would drop it from the run queue on
-		// the next preemption, issue #313). Polling NO_TASK is gone; the
-		// receiver consumes no CPU until a sender or doorbell wakes it.
-		const Message received = kernel::task::receive_blocking();
+		// the next preemption, issue #313). The receiver consumes no CPU
+		// until a sender or doorbell wakes it.
+		Message received = kernel::task::receive_blocking();
+
+		// Map an attached OOL payload into this task before the message
+		// reaches user space (the only kernel->user translation point)
+		kernel::task::deliver_ool_to_user(t, &received);
 
 		if (copy_to_user(m, &received, sizeof(*m)) != sizeof(*m)) {
 			return ERR_INVALID_ARG;
@@ -199,7 +233,7 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 			return ERR_INVALID_ARG;
 		}
 
-		if (copy_m.type == MsgType::INITIALIZE_TASK) {
+		if (copy_m.type == MsgType::KERNEL_TASK_READY) {
 			copy_m.sender = t->id;
 		}
 
@@ -207,7 +241,17 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 		// door to the reply-slot delivery path
 		copy_m.flags &= ~MSG_FLAG_REPLY;
 
-		return kernel::task::send_message(ProcessId::from_raw(dest), copy_m);
+		// A user-space OOL payload becomes a kernel-owned copy here (the
+		// only user->kernel translation point)
+		RETURN_IF_ERROR(kernel::task::copy_in_ool_from_user(&copy_m));
+
+		const error_t err =
+				kernel::task::send_message(ProcessId::from_raw(dest), copy_m);
+		if (IS_ERR(err)) {
+			kernel::task::free_message_ool(copy_m);
+		}
+
+		return err;
 	}
 
 	if (flags == IPC_CALL) {
@@ -216,12 +260,19 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 			return ERR_INVALID_ARG;
 		}
 
+		RETURN_IF_ERROR(kernel::task::copy_in_ool_from_user(&copy_m));
+
 		// call() forces the sender and manages the correlation id; the
 		// caller never sees either. The reply overwrites the user message.
 		const error_t err = kernel::task::call(ProcessId::from_raw(dest), &copy_m);
 		if (IS_ERR(err)) {
+			// Send failed, so the request payload was never handed over
+			kernel::task::free_message_ool(copy_m);
 			return err;
 		}
+
+		// copy_m now holds the reply; map its OOL payload if it has one
+		kernel::task::deliver_ool_to_user(t, &copy_m);
 
 		if (copy_to_user(m, &copy_m, sizeof(copy_m)) != sizeof(copy_m)) {
 			return ERR_INVALID_ARG;
@@ -246,7 +297,24 @@ error_t sys_ipc(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
 		copy_m.sender = t->id;
 		copy_m.flags |= MSG_FLAG_REPLY;
 
-		return kernel::task::send_message(ProcessId::from_raw(dest), copy_m);
+		RETURN_IF_ERROR(kernel::task::copy_in_ool_from_user(&copy_m));
+
+		const error_t err =
+				kernel::task::send_message(ProcessId::from_raw(dest), copy_m);
+		if (IS_ERR(err)) {
+			kernel::task::free_message_ool(copy_m);
+		}
+
+		return err;
+	}
+
+	if (flags == IPC_OOL_RELEASE) {
+		Message copy_m;
+		if (copy_from_user(&copy_m, m, sizeof(copy_m)) != sizeof(copy_m)) {
+			return ERR_INVALID_ARG;
+		}
+
+		return kernel::task::release_ool_region(t, copy_m.ool.addr);
 	}
 
 	return ERR_INVALID_ARG;
@@ -279,7 +347,7 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	const char __user* path = reinterpret_cast<const char*>(arg1);
 	const char __user* args = reinterpret_cast<const char*>(arg2);
 
-	Message msg{ .type = MsgType::IPC_GET_FILE_INFO,
+	Message msg{ .type = MsgType::FS_LOAD,
 				 .sender = kernel::task::CURRENT_TASK->id };
 
 	// Copy the strings out of user space with bounds checks before using
@@ -296,24 +364,15 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 		return ERR_INVALID_ARG;
 	}
 
+	// One synchronous FS_LOAD replaces the old stat-then-read pair; the
+	// reply's OOL buffer is a kernel-owned copy of the file, owned by this
+	// task from here on (issue #314 Stage C)
 	RETURN_IF_ERROR(kernel::task::call(process_ids::FS_FAT32, &msg));
-
-	auto* entry = reinterpret_cast<kernel::fs::DirectoryEntry*>(msg.data.fs.buf);
-	if (IS_ERR(msg.result) || entry == nullptr) {
+	if (IS_ERR(msg.result) || msg.ool.size == 0) {
 		return ERR_NO_FILE;
 	}
 
-	Message read_msg{ .type = MsgType::IPC_READ_FILE_DATA,
-					  .sender = kernel::task::CURRENT_TASK->id };
-	read_msg.data.fs.buf = entry;
-	const error_t read_err = kernel::task::call(process_ids::FS_FAT32, &read_msg);
-	kernel::memory::free(entry);
-	RETURN_IF_ERROR(read_err);
-
-	if (IS_ERR(read_msg.result) || read_msg.data.fs.buf == nullptr) {
-		LOG_ERROR("failed to read file data for exec");
-		return ERR_FAILED_READ_FROM_DEVICE;
-	}
+	kernel::memory::unique_kbuf<> elf_buf{ reinterpret_cast<void*>(msg.ool.addr) };
 
 	// Build the new address space and switch CR3 to it BEFORE releasing the
 	// old one: config_new_page_table() copies the kernel space out of the
@@ -330,10 +389,13 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	kernel::task::CURRENT_TASK->ctx.cr3 = reinterpret_cast<uint64_t>(new_page_table);
 
+	// The old image's OOL mappings die with the old table; their buffers
+	// must not outlive it
+	kernel::task::release_ool_regions(kernel::task::CURRENT_TASK);
+
 	kernel::memory::clean_page_tables(old_page_table);
 
-	// TODO: fix this
-	kernel::fs::fat::execute_file(read_msg.data.fs.buf, "", copy_args);
+	kernel::fs::fat::execute_file(std::move(elf_buf), "", copy_args);
 
 	return OK;
 }
