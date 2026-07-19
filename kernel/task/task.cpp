@@ -357,9 +357,9 @@ void initialize()
 	IDLE_TASK = tasks[1];
 
 	CURRENT_TASK->state = TASK_RUNNING;
-
-	kernel::timers::ktimer->add_switch_task_event(200);
 }
+
+void start_scheduling() { kernel::timers::ktimer->add_switch_task_event(200); }
 
 namespace
 {

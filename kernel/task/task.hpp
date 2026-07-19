@@ -19,6 +19,17 @@ namespace kernel::task
 
 void initialize();
 
+/**
+ * @brief Start preemptive scheduling by arming the switch-task timer
+ *
+ * Kept separate from initialize() so the boot flow controls exactly when
+ * task switching begins. The main-stage test suites run between the two:
+ * they must not be preempted, because a service task running mid-suite
+ * corrupts the per-suite leak accounting and can hit half-initialized
+ * state (this was a real CI flake, three failure modes from one race).
+ */
+void start_scheduling();
+
 enum TaskState : uint8_t { TASK_RUNNING, TASK_READY, TASK_WAITING, TASK_EXITED };
 
 static constexpr int MAX_FDS_PER_PROCESS = 32;
