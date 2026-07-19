@@ -87,7 +87,7 @@ uchos/
 │   ├── task/           # タスク管理・IPC(メッセージパッシング、ラウンドロビン)
 │   ├── fs/             # FAT32(カスタム実装)、ファイル記述子
 │   ├── net/            # ネットワークスタック(Ethernet / ARP / IPv4 / ICMP)
-│   ├── hardware/       # PCI, XHCI キーボード, virtio(blk / net)
+│   ├── hardware/       # PCI, XHCI キーボード, virtio(blk / net)(namespace kernel::hw)
 │   ├── interrupt/      # IDT・割り込み処理
 │   ├── syscall/        # システムコール
 │   ├── timers/         # ACPI, LAPIC
