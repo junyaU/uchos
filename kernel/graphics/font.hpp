@@ -7,9 +7,6 @@
 
 #include <cstdint>
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
-
 #include "../point2d.hpp"
 
 namespace kernel::graphics
@@ -98,17 +95,6 @@ int utf8_size(uint8_t c);
 char32_t utf8_to_unicode(const char* utf8);
 
 /**
- * @brief Decode Unicode code point to displayable character
- *
- * Maps Unicode code points to characters that can be displayed
- * with the available font.
- *
- * @param c Unicode code point
- * @return char Displayable character or replacement character
- */
-char decode_utf8(char32_t c);
-
-/**
  * @brief Write a single ASCII character to the screen
  *
  * @param scr Screen to write to
@@ -169,27 +155,10 @@ void to_upper(char* s);
 extern BitmapFont* kfont;
 
 /**
- * @brief Create a new FreeType font face
- *
- * Loads a font face from the embedded font data using FreeType.
- *
- * @return FT_Face Newly created font face
- */
-FT_Face new_face();
-
-/**
  * @brief Initialize the font subsystem
  *
  * Sets up the bitmap font for kernel text rendering.
  */
 void initialize_font();
-
-/**
- * @brief Initialize the FreeType library
- *
- * Initializes FreeType for advanced font rendering capabilities.
- * Must be called before using any FreeType functions.
- */
-void initialize_freetype();
 
 } // namespace kernel::graphics

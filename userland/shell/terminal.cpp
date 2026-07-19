@@ -33,7 +33,7 @@ void Terminal::blink_cursor()
 	}
 
 	if (cursor_visible) {
-		print_text(adjusted_x(cursor_x), adjusted_y(cursor_y), "_", 0xffffff);
+		print_text(adjusted_x(cursor_x), adjusted_y(cursor_y), "_", COLOR_WHITE);
 	} else {
 		delete_char(adjusted_x(cursor_x), adjusted_y(cursor_y));
 	}
@@ -54,28 +54,28 @@ size_t Terminal::print_user()
 		return 0;
 	}
 
-	print(user_name, 0x00ff00);
+	print(user_name, COLOR_GREEN);
 	size_t user_len = strlen(user_name);
 	memcpy(input, user_name, user_len);
 	input_index = user_len;
 
-	print(":", 0xffffff);
+	print(":", COLOR_WHITE);
 	memcpy(&input[input_index], ":", 1);
 	input_index += 1;
 
 	// Display current directory
 	if (current_dir[0] != '\0') {
-		print(current_dir, 0x00ffff);
+		print(current_dir, COLOR_CYAN);
 		size_t dir_len = strlen(current_dir);
 		memcpy(&input[input_index], current_dir, dir_len);
 		input_index += dir_len;
 	} else {
-		print("/", 0x00ffff);
+		print("/", COLOR_CYAN);
 		memcpy(&input[input_index], "/", 1);
 		input_index += 1;
 	}
 
-	print("$ ", 0xffffff);
+	print("$ ", COLOR_WHITE);
 	memcpy(&input[input_index], "$ ", 2);
 	input_index += 2;
 

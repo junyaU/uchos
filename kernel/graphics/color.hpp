@@ -16,7 +16,7 @@ namespace kernel::graphics
  * This constant defines the pixel format used by the graphics system.
  * A value of 4 typically indicates 32-bit color depth (RGBA or XRGB).
  */
-constexpr int kBytesPerPixel = 4;
+constexpr int BYTES_PER_PIXEL = 4;
 
 /**
  * @brief Represents a color in RGB format
