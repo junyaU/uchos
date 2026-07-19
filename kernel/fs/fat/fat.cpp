@@ -8,7 +8,6 @@
 #include <libs/common/types.hpp>
 #include <queue>
 #include "fs/file_info.hpp"
-#include "hardware/virtio/blk.hpp"
 #include "internal_common.hpp"
 #include "task/task.hpp"
 
@@ -23,7 +22,7 @@ void fat32_service()
 
 	init_read_contexts();
 
-	send_read_req_to_blk_device(BOOT_SECTOR, kernel::hw::virtio::SECTOR_SIZE,
+	send_read_req_to_blk_device(BOOT_SECTOR, SECTOR_SIZE,
 								MsgType::INITIALIZE_TASK);
 
 	// Register message handlers

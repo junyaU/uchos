@@ -11,7 +11,6 @@
 #include <queue>
 #include "fat.hpp"
 #include "fs/path.hpp"
-#include "hardware/virtio/blk.hpp"
 #include "internal_common.hpp"
 #include "log/log.hpp"
 #include "memory/slab.hpp"
@@ -48,7 +47,7 @@ void handle_initialize(const Message& m)
 
 		const size_t table_size =
 				static_cast<size_t>(VOLUME_BPB->fat_size_32) *
-				static_cast<size_t>(kernel::hw::virtio::SECTOR_SIZE);
+				static_cast<size_t>(SECTOR_SIZE);
 
 		send_read_req_to_blk_device(FAT_TABLE_SECTOR, table_size,
 									MsgType::INITIALIZE_TASK);

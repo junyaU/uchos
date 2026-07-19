@@ -90,8 +90,9 @@ struct Task {
 };
 
 struct InitialTaskInfo {
+	SystemProcessId id; ///< tasks[] slot this entry must land in (asserted)
 	const char* name;
-	uint64_t addr;
+	void (*entry)(); ///< Service entry point, nullptr for the boot task
 	bool setup_context;
 	bool is_initialized;
 };

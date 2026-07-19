@@ -78,11 +78,6 @@ constexpr int VIRTIO_BLK_S_UNSUPP = 2; ///< Request not supported
 /** @} */
 
 /**
- * @brief Standard sector size in bytes
- */
-constexpr size_t SECTOR_SIZE = 512;
-
-/**
  * @struct VirtioBlkReq
  * @brief VirtIO Block Request Structure
  *
