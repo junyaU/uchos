@@ -13,7 +13,7 @@ int main(int argc, char** argv)
 	}
 
 	fd_t fd = fs_open(input, 0);
-	if (fd == -1) {
+	if (fd < 0) {
 		printu("cat: No such file or directory");
 		return 0;
 	}

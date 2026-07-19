@@ -1,6 +1,7 @@
 #include "hardware/virtio/net.hpp"
 #include <cstddef>
 #include <libs/common/types.hpp>
+#include "error.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
 #include "libs/common/message.hpp"
@@ -67,7 +68,7 @@ error_t init_virtio_net_device()
 	}
 
 	net_dev = new (buffer) VirtioPciDevice();
-	ASSERT_OK(init_virtio_pci_device(net_dev, VIRTIO_NET));
+	RETURN_IF_ERROR(init_virtio_pci_device(net_dev, VIRTIO_NET));
 
 	rx_queue = &net_dev->queues[0];
 	tx_queue = &net_dev->queues[1];

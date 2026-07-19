@@ -85,7 +85,7 @@ void fs_change_dir(char* buf, const char* path)
 	m.data.fs.name[strlen(path)] = '\0';
 
 	Message res = call(process_ids::FS_FAT32, &m);
-	if (res.data.fs.result == -1) {
+	if (IS_ERR(res.data.fs.result)) {
 		buf[0] = '\0';
 		return;
 	}

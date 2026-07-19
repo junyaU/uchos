@@ -13,6 +13,7 @@
 #pragma once
 
 #include <cstdint>
+#include <libs/common/types.hpp>
 
 /**
  * @brief ELF64 data type definitions
@@ -148,10 +149,11 @@ typedef struct {
  * segments into their specified memory locations.
  *
  * @param elf_header Pointer to the ELF header in memory
+ * @return OK on success, or an error code if validation or page mapping failed
  *
  * @note This function assumes the ELF file is already loaded into memory
  */
-void load_elf(elf64_ehdr_t* elf_header);
+error_t load_elf(elf64_ehdr_t* elf_header);
 
 /**
  * @brief Execute an ELF file as a new process

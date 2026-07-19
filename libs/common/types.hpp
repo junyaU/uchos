@@ -17,32 +17,35 @@ using message_handler_t = void (*)(const Message&);
 // error codes
 #define IS_OK(err) (!IS_ERR(err))
 #define IS_ERR(err) (((long)(err)) < 0)
-constexpr int OK = 0;
-constexpr int ERR_FORK_FAILED = -1;
-constexpr int ERR_NO_MEMORY = -2;
-constexpr int ERR_INVALID_ARG = -3;
-constexpr int ERR_INVALID_TASK = -4;
-constexpr int ERR_INVALID_FD = -5;
-constexpr int ERR_PAGE_NOT_PRESENT = -6;
-constexpr int ERR_NO_TASK = -7;
-constexpr int ERR_NO_FILE = -8;
-constexpr int ERR_NO_DEVICE = -9;
-constexpr int ERR_FAILED_INIT_DEVICE = -10;
-constexpr int ERR_FAILED_WRITE_TO_DEVICE = -11;
-constexpr int ERR_QUEUE_FULL = -12;
-constexpr int ERR_FAILED_READ_FROM_DEVICE = -13;
-constexpr int ERR_NO_SPACE = -14;
+
+/**
+ * @brief Kernel-wide error codes
+ *
+ * Unscoped enum with a fixed underlying type: values keep their implicit
+ * conversion to int (so existing callers need no changes), while giving
+ * error_to_string() an exhaustive switch (no default) so -Wswitch catches a
+ * missing case at compile time.
+ */
+enum ErrorCode : error_t {
+	OK = 0,
+	ERR_FORK_FAILED = -1,
+	ERR_NO_MEMORY = -2,
+	ERR_INVALID_ARG = -3,
+	ERR_INVALID_TASK = -4,
+	ERR_INVALID_FD = -5,
+	ERR_PAGE_NOT_PRESENT = -6,
+	ERR_NO_TASK = -7,
+	ERR_NO_FILE = -8,
+	ERR_NO_DEVICE = -9,
+	ERR_FAILED_INIT_DEVICE = -10,
+	ERR_FAILED_WRITE_TO_DEVICE = -11,
+	ERR_QUEUE_FULL = -12,
+	ERR_FAILED_READ_FROM_DEVICE = -13,
+	ERR_NO_SPACE = -14,
+};
 
 // file descriptor
 constexpr int NO_FD = -1;
 constexpr int STDIN_FILENO = 0;
 constexpr int STDOUT_FILENO = 1;
 constexpr int STDERR_FILENO = 2;
-
-#define ASSERT_OK(expression)                                                       \
-	do {                                                                            \
-		const error_t __err = (expression);                                         \
-		if (IS_ERR(__err)) {                                                        \
-			return __err;                                                           \
-		}                                                                           \
-	} while (0)
