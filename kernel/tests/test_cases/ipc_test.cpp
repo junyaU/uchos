@@ -267,11 +267,13 @@ void test_ipc_irq_routing_delivers_registered_doorbell()
 	Task* t = create_parked_task("ipc_route");
 	ASSERT_NOT_NULL(t);
 
-	// Vectors nothing registers in this kernel (0x50/0x51 are unassigned)
-	const auto test_vector =
-			static_cast<kernel::interrupt::InterruptVector::Number>(0x50);
-	const auto unrouted_vector =
-			static_cast<kernel::interrupt::InterruptVector::Number>(0x51);
+	// Vectors nothing registers in this kernel (0x50/0x51 are unassigned).
+	// Deliberately casts out-of-range values to probe unregistered vectors.
+	using Number = kernel::interrupt::InterruptVector::Number;
+	// NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
+	const auto test_vector = static_cast<Number>(0x50);
+	// NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
+	const auto unrouted_vector = static_cast<Number>(0x51);
 
 	ASSERT_EQ(kernel::interrupt::register_irq_notification(test_vector, t->id,
 														   NotifyType::XHCI),

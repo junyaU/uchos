@@ -7,6 +7,10 @@
 # 有効グループ: clang-diagnostic(コンパイラ診断)/ clang-analyzer(静的解析)/
 # bugprone(バグ検出)/ cert(CERT セキュリティ標準)/ misc / performance /
 # readability(可読性)。各グループ直後の -エントリが個別除外。
+#
+# misc-include-cleaner / misc-const-correctness はスタイルノイズとして除外
+# (issue #360: include-cleaner 58 件、const-correctness 43 件が未採用の
+# ローカル const 強制で、本コードベースの方針に合わないため)。
 Checks: '
   -*,
   clang-diagnostic-*,
@@ -31,7 +35,8 @@ Checks: '
   -cert-dcl50-cpp,
   misc-*,
   -misc-unused-parameters,
-  -misc-unused-include,
+  -misc-include-cleaner,
+  -misc-const-correctness,
   -misc-no-recursion,
   -misc-non-private-member-variables-in-classes,
   performance-*,

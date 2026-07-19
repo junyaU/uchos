@@ -156,8 +156,11 @@ void test_task_memory_management()
 	// Test task deallocation with operator delete
 	delete t;
 
-	// ~Task must free the kernel stack along with the page tables (issue #313)
-	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(stack));
+	// ~Task must free the kernel stack along with the page tables (issue #313).
+	// Deliberately probes a freed pointer; see ExpectedViolation-style tests
+	// in memory_test.cpp for the same pattern.
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(
+			stack)); // NOLINT(clang-analyzer-unix.Malloc)
 }
 
 void test_wait_for_message_preserves_other_messages()

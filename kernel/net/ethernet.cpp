@@ -3,6 +3,7 @@
 #include <libs/common/types.hpp>
 #include "libs/common/endian.hpp"
 #include "libs/common/message.hpp"
+#include "log/log.hpp"
 #include "net/host.hpp"
 #include "task/ipc.hpp"
 #include "task/task.hpp"
@@ -14,7 +15,12 @@ error_t transmit_ethernet_frame(const uint8_t* dst_mac,
 								const void* payload,
 								size_t payload_len)
 {
-	uint8_t frame_buffer[sizeof(EthernetFrame) + payload_len];
+	if (payload_len > ETHERNET_MTU) {
+		LOG_ERROR("transmit_ethernet_frame: payload too large: %zu", payload_len);
+		return ERR_INVALID_ARG;
+	}
+
+	uint8_t frame_buffer[sizeof(EthernetFrame) + ETHERNET_MTU];
 	EthernetFrame* frame = reinterpret_cast<EthernetFrame*>(frame_buffer);
 
 	memcpy(frame->dst_mac, dst_mac, MAC_ADDR_SIZE);

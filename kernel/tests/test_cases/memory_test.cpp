@@ -254,7 +254,10 @@ void test_slab_double_free_detected()
 	ASSERT_TRUE(kernel::memory::is_slab_object_in_use(ptr));
 
 	kernel::memory::free(ptr);
-	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(ptr));
+	// Deliberately probes a freed pointer to confirm the slab bookkeeping was
+	// updated; the analyzer cannot know this read is safe by construction.
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(
+			ptr)); // NOLINT(clang-analyzer-unix.Malloc)
 
 	// A second free must be detected and ignored (issue #313)
 	{
@@ -281,7 +284,8 @@ void test_slab_free_rejects_foreign_pointer()
 		const kernel::memory::heap_debug::ExpectedViolation expected;
 		kernel::memory::free(raw);
 	}
-	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(raw));
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(
+			raw)); // NOLINT(clang-analyzer-unix.Malloc)
 
 	// The page still belongs to the buddy system
 	kernel::memory::Page* page = kernel::memory::get_page(raw);
@@ -315,7 +319,10 @@ void test_unique_kbuf_frees_on_scope_exit()
 		ASSERT_TRUE(kernel::memory::is_slab_object_in_use(buf.get()));
 		raw = buf.get();
 	}
-	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(raw));
+	// raw was captured before scope exit; the object itself is already freed
+	// by the destructor, so this deliberately reads freed-object state.
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(
+			raw)); // NOLINT(clang-analyzer-unix.Malloc)
 }
 
 void test_unique_kbuf_release_transfers_ownership()
@@ -329,7 +336,8 @@ void test_unique_kbuf_release_transfers_ownership()
 	ASSERT_TRUE(kernel::memory::is_slab_object_in_use(raw));
 
 	kernel::memory::free(raw);
-	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(raw));
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(
+			raw)); // NOLINT(clang-analyzer-unix.Malloc)
 }
 
 void test_unique_kbuf_reset_frees()
@@ -340,7 +348,8 @@ void test_unique_kbuf_reset_frees()
 	void* raw = buf.get();
 
 	buf.reset();
-	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(raw));
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(
+			raw)); // NOLINT(clang-analyzer-unix.Malloc)
 	ASSERT_FALSE(static_cast<bool>(buf));
 }
 
@@ -358,7 +367,8 @@ void test_unique_kbuf_move_transfers_ownership()
 
 	// Guards against double-free by construction: only b owns the object
 	b.reset();
-	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(raw));
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(
+			raw)); // NOLINT(clang-analyzer-unix.Malloc)
 }
 
 void test_make_kbuf_zeroed()
@@ -406,17 +416,22 @@ void register_slab_tests()
 	test_register("unique_kbuf_null_is_safe", test_unique_kbuf_null_is_safe);
 }
 
-static void helper_alloc_or_return_void()
+namespace
+{
+void helper_alloc_or_return_void()
 {
 	void* ptr;
 	ALLOC_OR_RETURN(ptr, 64, kernel::memory::ALLOC_UNINITIALIZED);
 	ASSERT_NOT_NULL(ptr);
 	kernel::memory::free(ptr);
 }
+} // namespace
 
 void test_alloc_or_return_void() { helper_alloc_or_return_void(); }
 
-static int helper_alloc_or_return_error()
+namespace
+{
+int helper_alloc_or_return_error()
 {
 	void* ptr;
 	ALLOC_OR_RETURN_ERROR(ptr, 64, kernel::memory::ALLOC_UNINITIALIZED);
@@ -426,6 +441,7 @@ static int helper_alloc_or_return_error()
 	kernel::memory::free(ptr);
 	return 0;
 }
+} // namespace
 
 void test_alloc_or_return_error()
 {
@@ -433,12 +449,15 @@ void test_alloc_or_return_error()
 	ASSERT_EQ(result, 0);
 }
 
-static void* helper_alloc_or_return_null()
+namespace
+{
+void* helper_alloc_or_return_null()
 {
 	void* ptr;
 	ALLOC_OR_RETURN_NULL(ptr, 64, kernel::memory::ALLOC_UNINITIALIZED);
 	return ptr;
 }
+} // namespace
 
 void test_alloc_or_return_null()
 {

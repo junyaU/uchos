@@ -12,7 +12,6 @@
 #include "tests/test_utils.hpp"
 
 using kernel::task::create_task;
-using kernel::task::CURRENT_TASK;
 using kernel::task::MAX_FDS_PER_PROCESS;
 using kernel::task::Task;
 

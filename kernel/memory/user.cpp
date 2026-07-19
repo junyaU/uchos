@@ -55,7 +55,7 @@ ssize_t copy_string_from_user(char* to, const char __user* from, size_t max_len)
 		return -1;
 	}
 
-	const char* src = static_cast<const char*>(from);
+	const char* src = from;
 	for (size_t i = 0; i < max_len; ++i) {
 		if (!is_user_address(&src[i], 1)) {
 			LOG_ERROR("invalid address for copy_string_from_user: %p", &src[i]);

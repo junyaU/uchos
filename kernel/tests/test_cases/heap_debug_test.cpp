@@ -32,7 +32,10 @@ void test_heap_debug_tracks_live()
 
 	kernel::memory::free(p);
 	ASSERT_EQ(hd::live_count(), before);
-	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(p));
+	// Deliberately probes a freed pointer; the analyzer cannot know this read
+	// is safe by construction (see ExpectedViolation usages below).
+	ASSERT_FALSE(kernel::memory::is_slab_object_in_use(
+			p)); // NOLINT(clang-analyzer-unix.Malloc)
 }
 
 // Freeing the same pointer twice must be caught at the second free.
@@ -46,7 +49,7 @@ void test_heap_debug_detects_double_free()
 	kernel::memory::free(p);
 	{
 		const hd::ExpectedViolation expected;
-		kernel::memory::free(p); // double free
+		kernel::memory::free(p); // double free NOLINT(clang-analyzer-unix.Malloc)
 	}
 
 	ASSERT_EQ(hd::stats().double_free, before + 1);
@@ -65,7 +68,8 @@ void test_heap_debug_detects_use_after_free()
 
 	// Use-after-free: scribble on the freed payload (volatile so the store is
 	// not optimised away).
-	static_cast<volatile uint8_t*>(p)[0] = 0x12;
+	static_cast<volatile uint8_t*>(p)[0] =
+			0x12; // NOLINT(clang-analyzer-unix.Malloc)
 
 	// The same object comes back and its broken poison is detected.
 	void* q;
