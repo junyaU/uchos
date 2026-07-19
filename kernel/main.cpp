@@ -70,5 +70,10 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	kernel::tests::run_main_stage_tests();
 
+	// Scheduling starts only after the test suites have finished: a timer
+	// interrupt switching to a service task mid-suite would pollute the
+	// leak accounting and race against half-initialized boot state.
+	kernel::task::start_scheduling();
+
 	kernel::task::kernel_service();
 }
