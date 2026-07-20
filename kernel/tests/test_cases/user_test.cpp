@@ -1,5 +1,5 @@
 #include "tests/test_cases/user_test.hpp"
-#include <string.h> // NOLINT(misc-include-cleaner) - for strlcpy
+#include <string.h> // for strlcpy
 #include <cstdint>
 #include <cstring>
 #include "memory/paging.hpp"
@@ -30,7 +30,7 @@ void test_copy_string_from_user_roundtrip()
 	ASSERT_EQ(kernel::memory::setup_page_tables(addr, 1, true), OK);
 
 	char* user_buf = reinterpret_cast<char*>(addr.data);
-	strlcpy(user_buf, "hello", 6); // NOLINT(misc-include-cleaner)
+	strlcpy(user_buf, "hello", 6);
 
 	char buf[16];
 	ASSERT_EQ(copy_string_from_user(buf, user_buf, sizeof(buf)), 5);

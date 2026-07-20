@@ -55,7 +55,12 @@ void transmit_ipv4_packet(uint32_t dst_ip,
 
 	ip_header.header_checksum = calculate_checksum(&ip_header, sizeof(IPv4Header));
 
-	uint8_t packet_buffer[sizeof(IPv4Header) + payload_len];
+	if (payload_len > ETHERNET_MTU - sizeof(IPv4Header)) {
+		LOG_ERROR("transmit_ipv4_packet: payload too large: %zu", payload_len);
+		return;
+	}
+
+	uint8_t packet_buffer[ETHERNET_MTU];
 	memcpy(packet_buffer, &ip_header, sizeof(IPv4Header));
 	memcpy(packet_buffer + sizeof(IPv4Header), payload, payload_len);
 

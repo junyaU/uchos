@@ -5,6 +5,7 @@
 #include "error.hpp"
 #include "libs/common/endian.hpp"
 #include "libs/common/message.hpp"
+#include "log/log.hpp"
 #include "memory/slab.hpp"
 #include "net/host.hpp"
 #include "task/ipc.hpp"
@@ -17,6 +18,11 @@ error_t transmit_ethernet_frame(const uint8_t* dst_mac,
 								const void* payload,
 								size_t payload_len)
 {
+	if (payload_len > ETHERNET_MTU) {
+		LOG_ERROR("transmit_ethernet_frame: payload too large: %zu", payload_len);
+		return ERR_INVALID_ARG;
+	}
+
 	// The frame travels as an OOL buffer whose ownership moves with the
 	// message; the NIC service frees it after the DMA copy (issue #314
 	// Stage C, Message no longer carries a 1514B inline array)

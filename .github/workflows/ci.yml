@@ -1,7 +1,7 @@
 # Build the kernel, run the kernel test suites headlessly in QEMU, and lint.
 # The UEFI loader is built from UchLoaderPkg with EDK2 and cached; the cache
 # is only invalidated when UchLoaderPkg/ or the pinned EDK2 tag changes.
-name: CMake on a single platform
+name: CI
 
 on:
   push:
@@ -15,7 +15,8 @@ env:
   EDK2_TAG: edk2-stable202405
 
 jobs:
-  build:
+  build-test-lint:
+    name: Build / QEMU tests / clang-tidy
     runs-on: ubuntu-latest
 
     steps:

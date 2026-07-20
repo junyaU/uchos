@@ -406,17 +406,22 @@ void register_slab_tests()
 	test_register("unique_kbuf_null_is_safe", test_unique_kbuf_null_is_safe);
 }
 
-static void helper_alloc_or_return_void()
+namespace
+{
+void helper_alloc_or_return_void()
 {
 	void* ptr;
 	ALLOC_OR_RETURN(ptr, 64, kernel::memory::ALLOC_UNINITIALIZED);
 	ASSERT_NOT_NULL(ptr);
 	kernel::memory::free(ptr);
 }
+} // namespace
 
 void test_alloc_or_return_void() { helper_alloc_or_return_void(); }
 
-static int helper_alloc_or_return_error()
+namespace
+{
+int helper_alloc_or_return_error()
 {
 	void* ptr;
 	ALLOC_OR_RETURN_ERROR(ptr, 64, kernel::memory::ALLOC_UNINITIALIZED);
@@ -426,6 +431,7 @@ static int helper_alloc_or_return_error()
 	kernel::memory::free(ptr);
 	return 0;
 }
+} // namespace
 
 void test_alloc_or_return_error()
 {
@@ -433,12 +439,15 @@ void test_alloc_or_return_error()
 	ASSERT_EQ(result, 0);
 }
 
-static void* helper_alloc_or_return_null()
+namespace
+{
+void* helper_alloc_or_return_null()
 {
 	void* ptr;
 	ALLOC_OR_RETURN_NULL(ptr, 64, kernel::memory::ALLOC_UNINITIALIZED);
 	return ptr;
 }
+} // namespace
 
 void test_alloc_or_return_null()
 {
