@@ -220,7 +220,7 @@ void free_cluster_chain(uint32_t* fat, cluster_t start_cluster)
 	}
 
 	cluster_t current = start_cluster;
-	while (current != END_OF_CLUSTER_CHAIN && current < FAT32_EOC_MIN) {
+	while (current < FAT32_EOC_MIN) {
 		cluster_t next = fat[current];
 		fat[current] = 0;
 		current = next;

@@ -294,7 +294,7 @@ void handle_fs_write(const Message& m)
 		}
 
 		cluster_t last_cluster = entry->first_cluster();
-		cluster_t next = last_cluster;
+		cluster_t next;
 		while ((next = next_cluster(last_cluster)) != END_OF_CLUSTER_CHAIN) {
 			last_cluster = next;
 		}

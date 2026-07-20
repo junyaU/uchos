@@ -4,6 +4,7 @@
 #include <cstring>
 #include "log/log.hpp"
 #include "net/checksum.hpp"
+#include "net/ethernet.hpp"
 #include "net/ipv4.hpp"
 
 namespace kernel::net
@@ -12,9 +13,19 @@ void handle_icmp_echo_request(const kernel::net::ICMPEchoHeader* echo_header,
 							  uint32_t src_ip,
 							  size_t icmp_len)
 {
+	if (icmp_len < sizeof(ICMPEchoHeader)) {
+		LOG_ERROR("handle_icmp_echo_request: icmp_len too small: %zu", icmp_len);
+		return;
+	}
+
 	size_t payload_len = icmp_len - sizeof(ICMPEchoHeader);
 
-	uint8_t reply_buf[sizeof(ICMPEchoHeader) + payload_len];
+	if (sizeof(ICMPEchoHeader) + payload_len > ETHERNET_MTU) {
+		LOG_ERROR("handle_icmp_echo_request: reply too large: %zu", icmp_len);
+		return;
+	}
+
+	uint8_t reply_buf[ETHERNET_MTU];
 
 	ICMPEchoHeader* reply = reinterpret_cast<ICMPEchoHeader*>(reply_buf);
 	memcpy(reply, echo_header, icmp_len);

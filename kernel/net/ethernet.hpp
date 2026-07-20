@@ -22,6 +22,9 @@ enum class EthernetFrameType : uint16_t {
 /// Length of a MAC address in bytes
 constexpr size_t MAC_ADDR_SIZE = 6;
 
+/// Maximum transmission unit: largest Ethernet payload size in bytes
+constexpr size_t ETHERNET_MTU = 1500;
+
 /**
  * @brief Ethernet Frame Header
  */

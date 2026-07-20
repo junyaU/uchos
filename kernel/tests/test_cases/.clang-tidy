@@ -1,0 +1,11 @@
+---
+# テストは二重 free・use-after-free・範囲外 enum キャストを意図的に実行して
+# 検出器(heap_debug 等)を検証するため、これらの analyzer チェックは
+# ここでは必ず誤検知になる。個々の行に NOLINT を散布する代わりに
+# ディレクトリ単位で無効化する(issue #360)。
+# ルート設定と同じく、Checks 文字列の中に # コメントを書かないこと。
+InheritParentConfig: true
+Checks: '
+  -clang-analyzer-unix.Malloc,
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
+'
