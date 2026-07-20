@@ -84,7 +84,7 @@ error_t reply_with_ool(const Message& req,
 		return err;
 	}
 
-	buf.release(); // delivered: the requester owns it now
+	static_cast<void>(buf.release()); // delivered: the requester owns it now
 	return OK;
 }
 

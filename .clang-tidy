@@ -97,6 +97,12 @@ CheckOptions:
   - key: bugprone-sizeof-expression.WarnOnSizeOfCompareToConstant
     value: false
 
+  # IPC 等の所有権移転境界では unique_kbuf::release() の戻り値を意図的に
+  # 破棄する(ポインタは送達前に Message へ格納済み)。static_cast<void> で
+  # 明示破棄した箇所を許容する
+  - key: bugprone-unused-return-value.AllowCastToVoid
+    value: true
+
 # 除外するファイル/ディレクトリ
 HeaderFilterRegex: '.*'
 WarningsAsErrors: ''

@@ -521,7 +521,7 @@ void test_ipc_ool_release_all_frees_everything()
 		m.ool.addr = reinterpret_cast<uint64_t>(buf.get());
 		m.ool.size = 32;
 		ASSERT_EQ(kernel::task::send_message(t->id, m), OK);
-		buf.release();
+		static_cast<void>(buf.release());
 	}
 
 	auto reply_buf = kernel::task::make_ool_buffer(32);
@@ -567,7 +567,11 @@ void test_ipc_reply_with_ool_fire_and_forget_frees()
 
 	Message resp = { .type = MsgType::FS_READ,
 					 .sender = kernel::task::CURRENT_TASK->id };
-	ASSERT_EQ(kernel::task::reply_with_ool(req, &resp, std::move(buf), 16), OK);
+	// Hoisted out of ASSERT_EQ: the macro re-evaluates its argument on
+	// failure, which would call reply_with_ool again with a moved-from buf
+	const error_t reply_err =
+			kernel::task::reply_with_ool(req, &resp, std::move(buf), 16);
+	ASSERT_EQ(reply_err, OK);
 
 	// Never attached, never queued, and (with heap debug) actually freed
 	ASSERT_EQ(resp.ool.size, 0U);
@@ -599,7 +603,11 @@ void test_ipc_reply_with_ool_delivers_to_slot()
 
 	Message resp = { .type = MsgType::FS_READ,
 					 .sender = kernel::task::CURRENT_TASK->id };
-	ASSERT_EQ(kernel::task::reply_with_ool(req, &resp, std::move(buf), 16), OK);
+	// Hoisted out of ASSERT_EQ: the macro re-evaluates its argument on
+	// failure, which would call reply_with_ool again with a moved-from buf
+	const error_t reply_err =
+			kernel::task::reply_with_ool(req, &resp, std::move(buf), 16);
+	ASSERT_EQ(reply_err, OK);
 
 	ASSERT_TRUE(caller->reply_pending);
 	ASSERT_EQ(reinterpret_cast<void*>(caller->reply_slot.ool.addr), sent);

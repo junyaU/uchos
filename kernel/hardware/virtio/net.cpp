@@ -167,7 +167,7 @@ void handle_rx_interrupt(const Message& m)
 			msg.ool.size = packet_len;
 
 			if (!IS_ERR(kernel::task::send_message(process_ids::NET, msg))) {
-				packet_buf.release();
+				static_cast<void>(packet_buf.release());
 			}
 		} else {
 			LOG_ERROR("rx packet dropped: no memory for %lu bytes", packet_len);

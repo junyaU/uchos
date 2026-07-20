@@ -44,7 +44,7 @@ error_t transmit_ethernet_frame(const uint8_t* dst_mac,
 	m.ool.size = frame_len;
 
 	RETURN_IF_ERROR(task::send_message(process_ids::VIRTIO_NET, m));
-	frame_buf.release(); // delivered: the NIC service owns it now
+	static_cast<void>(frame_buf.release()); // delivered: the NIC service owns it
 
 	return OK;
 }

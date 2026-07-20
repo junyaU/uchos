@@ -103,7 +103,7 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 			if (IS_ERR(err)) {
 				return err;
 			}
-			kbuf.release(); // delivered: the shell owns it now
+			static_cast<void>(kbuf.release()); // delivered: the shell owns it now
 
 			return count;
 		}
@@ -130,7 +130,7 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 			// Never delivered; kbuf frees the payload on return
 			return err;
 		}
-		kbuf.release(); // consumed (and freed) by the FS task
+		static_cast<void>(kbuf.release()); // consumed (and freed) by the FS task
 		if (IS_ERR(req.result)) {
 			return req.result;
 		}
