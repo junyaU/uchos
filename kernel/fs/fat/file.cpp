@@ -146,6 +146,173 @@ OpenFile resolve_open_file(const Message& m)
 	return { fd, entry };
 }
 
+/**
+ * @brief Ensure the entry's cluster chain can hold new_size bytes
+ *
+ * Allocates the first cluster for empty files and extends the chain when
+ * the file grows across a cluster boundary; every FAT mutation is written
+ * through to disk immediately.
+ *
+ * @return OK, or ERR_NO_MEMORY when no free clusters remain
+ */
+error_t grow_file_if_needed(DirectoryEntry* entry, size_t new_size)
+{
+	if (entry->first_cluster() == 0) {
+		cluster_t new_cluster = allocate_cluster_chain(1);
+		if (new_cluster == 0) {
+			LOG_ERROR("disk full: no free clusters available");
+			return ERR_NO_MEMORY;
+		}
+
+		entry->set_first_cluster(new_cluster);
+		write_fat_table_to_disk();
+	}
+
+	const size_t current_clusters =
+			(entry->file_size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
+	const size_t needed_clusters =
+			(new_size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
+	if (needed_clusters <= current_clusters) {
+		return OK;
+	}
+
+	const size_t clusters_to_add = needed_clusters - current_clusters;
+	if (count_free_clusters() < clusters_to_add) {
+		LOG_ERROR("disk full: need %lu clusters but only %lu free", clusters_to_add,
+				  count_free_clusters());
+		return ERR_NO_MEMORY;
+	}
+
+	cluster_t last_cluster = entry->first_cluster();
+	cluster_t next;
+	while ((next = next_cluster(last_cluster)) != END_OF_CLUSTER_CHAIN) {
+		last_cluster = next;
+	}
+
+	if (extend_cluster_chain(last_cluster, clusters_to_add) == 0) {
+		LOG_ERROR("failed to extend cluster chain");
+		return ERR_NO_MEMORY;
+	}
+	write_fat_table_to_disk();
+
+	return OK;
+}
+
+/**
+ * @brief Stage and write one cluster's worth of data at offset into the file
+ *
+ * Walks the chain to the cluster containing offset, stages the data in a
+ * fresh cluster-sized buffer, invalidates the file cache, then writes the
+ * cluster through to the block device (buffer ownership moves to the blk
+ * task). Writes are bounded to a single cluster per request.
+ *
+ * @param write_len Out: bytes staged = min(count, space left in the cluster)
+ * @return OK, or the staging/device error
+ */
+error_t write_file_cluster(DirectoryEntry* entry,
+						   size_t offset,
+						   const void* data,
+						   size_t count,
+						   size_t* write_len)
+{
+	const size_t cluster_offset = offset / BYTES_PER_CLUSTER;
+	const size_t offset_in_cluster = offset % BYTES_PER_CLUSTER;
+	*write_len = std::min(count, BYTES_PER_CLUSTER - offset_in_cluster);
+
+	cluster_t target_cluster = entry->first_cluster();
+	for (size_t i = 0; i < cluster_offset && target_cluster != END_OF_CLUSTER_CHAIN;
+		 i++) {
+		target_cluster = next_cluster(target_cluster);
+	}
+
+	if (target_cluster == END_OF_CLUSTER_CHAIN) {
+		LOG_ERROR("invalid cluster chain");
+		return ERR_INVALID_ARG;
+	}
+
+	auto cluster_buffer = kernel::memory::make_kbuf(BYTES_PER_CLUSTER,
+													kernel::memory::ALLOC_ZEROED);
+	if (!cluster_buffer) {
+		LOG_ERROR("failed to allocate cluster buffer");
+		return ERR_NO_MEMORY;
+	}
+
+	if (offset_in_cluster != 0 || *write_len < BYTES_PER_CLUSTER) {
+		// Partial cluster write: only safe onto zero-filled contents (new
+		// or empty file); merging into existing data would need a
+		// read-modify-write, which is not implemented yet
+		if (entry->file_size == 0 || offset == 0) {
+			memcpy(static_cast<char*>(cluster_buffer.get()) + offset_in_cluster,
+				   data, *write_len);
+		} else {
+			LOG_ERROR(
+					"partial cluster writes with existing data not yet implemented");
+			return ERR_INVALID_ARG;
+		}
+	} else {
+		memcpy(cluster_buffer.get(), data, *write_len);
+	}
+
+	// Invalidate the cached file contents so a read after this write does
+	// not return stale data (issue #313).
+	char cache_key[12];
+	entry_cache_key(entry, cache_key);
+	remove_file_cache_by_path(cache_key);
+
+	// Synchronous device write (issue #314 Stage B): the reply carries the
+	// real outcome instead of claiming success before the write happened.
+	const error_t err =
+			write_to_blk(cluster_buffer.release(), calc_start_sector(target_cluster),
+						 BYTES_PER_CLUSTER);
+	if (IS_ERR(err)) {
+		LOG_ERROR("block write failed: result=%d", err);
+	}
+
+	return err;
+}
+
+/**
+ * @brief Free the clusters no longer needed when the file shrinks to new_size
+ *
+ * Cuts the chain after the last cluster still in use (frees the whole chain
+ * when new_size is 0) and persists the FAT. The caller updates and persists
+ * entry->file_size itself.
+ */
+void truncate_file(DirectoryEntry* entry, size_t new_size)
+{
+	const size_t current_clusters =
+			(entry->file_size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
+	const size_t new_clusters =
+			(new_size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
+	if (new_clusters >= current_clusters) {
+		return;
+	}
+
+	if (new_clusters == 0) {
+		// File is now empty, free all clusters
+		free_cluster_chain(entry->first_cluster());
+		entry->set_first_cluster(0);
+	} else {
+		// Find the cluster that should be the last one
+		cluster_t current = entry->first_cluster();
+		for (size_t i = 1; i < new_clusters && current != END_OF_CLUSTER_CHAIN;
+			 i++) {
+			current = next_cluster(current);
+		}
+
+		if (current != END_OF_CLUSTER_CHAIN) {
+			// Free clusters after this one
+			cluster_t next = next_cluster(current);
+			if (next != END_OF_CLUSTER_CHAIN) {
+				free_cluster_chain(next);
+				FAT_TABLE[current] = END_OF_CLUSTER_CHAIN;
+			}
+		}
+	}
+
+	write_fat_table_to_disk();
+}
+
 } // namespace
 
 void execute_file(kernel::memory::unique_kbuf<> data,
@@ -272,104 +439,16 @@ void handle_fs_write(const Message& m)
 
 	const size_t new_size = fd->offset + count;
 
-	if (entry->first_cluster() == 0) {
-		cluster_t new_cluster = allocate_cluster_chain(1);
-		if (new_cluster == 0) {
-			LOG_ERROR("disk full: no free clusters available");
-			reply_error(m, ERR_NO_MEMORY);
-			return;
-		}
-
-		entry->set_first_cluster(new_cluster);
-		write_fat_table_to_disk();
-	}
-
-	const size_t current_clusters =
-			(entry->file_size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
-	const size_t needed_clusters =
-			(new_size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
-
-	if (needed_clusters > current_clusters) {
-		const size_t clusters_to_add = needed_clusters - current_clusters;
-		if (count_free_clusters() < clusters_to_add) {
-			LOG_ERROR("disk full: need %lu clusters but only %lu free",
-					  clusters_to_add, count_free_clusters());
-			reply_error(m, ERR_NO_MEMORY);
-			return;
-		}
-
-		cluster_t last_cluster = entry->first_cluster();
-		cluster_t next;
-		while ((next = next_cluster(last_cluster)) != END_OF_CLUSTER_CHAIN) {
-			last_cluster = next;
-		}
-
-		if (extend_cluster_chain(last_cluster, clusters_to_add) == 0) {
-			LOG_ERROR("failed to extend cluster chain");
-			reply_error(m, ERR_NO_MEMORY);
-			return;
-		}
-		write_fat_table_to_disk();
-	}
-
-	const size_t cluster_offset = fd->offset / BYTES_PER_CLUSTER;
-	const size_t offset_in_cluster = fd->offset % BYTES_PER_CLUSTER;
-	const size_t write_len = std::min(count, BYTES_PER_CLUSTER - offset_in_cluster);
-
-	cluster_t target_cluster = entry->first_cluster();
-	for (size_t i = 0; i < cluster_offset && target_cluster != END_OF_CLUSTER_CHAIN;
-		 i++) {
-		target_cluster = next_cluster(target_cluster);
-	}
-
-	if (target_cluster == END_OF_CLUSTER_CHAIN) {
-		LOG_ERROR("invalid cluster chain");
-		reply_error(m, ERR_INVALID_ARG);
+	const error_t grow_err = grow_file_if_needed(entry, new_size);
+	if (IS_ERR(grow_err)) {
+		reply_error(m, grow_err);
 		return;
 	}
 
-	auto cluster_buffer = kernel::memory::make_kbuf(BYTES_PER_CLUSTER,
-													kernel::memory::ALLOC_ZEROED);
-	if (!cluster_buffer) {
-		LOG_ERROR("failed to allocate cluster buffer");
-		reply_error(m, ERR_NO_MEMORY);
-		return;
-	}
-
-	// Handle partial cluster writes
-	if (offset_in_cluster != 0 || write_len < BYTES_PER_CLUSTER) {
-		// For new files or empty files, we can write partial data to zero-filled
-		// buffer
-		if (entry->file_size == 0 || fd->offset == 0) {
-			// Buffer is already zero-filled, just copy the data at the right offset
-			memcpy(static_cast<char*>(cluster_buffer.get()) + offset_in_cluster,
-				   write_buf.get(), write_len);
-		} else {
-			// TODO: For existing data, need to read first
-			LOG_ERROR(
-					"partial cluster writes with existing data not yet implemented");
-			reply_error(m, ERR_INVALID_ARG);
-			return;
-		}
-	} else {
-		// Full cluster write - copy write data to cluster buffer
-		memcpy(cluster_buffer.get(), write_buf.get(), write_len);
-	}
-
-	// Invalidate the cached file contents so a read after this write does not
-	// return stale data (issue #313).
-	char cache_key[12];
-	entry_cache_key(entry, cache_key);
-	remove_file_cache_by_path(cache_key);
-
-	// Synchronous device write (issue #314 Stage B): the reply carries the
-	// real outcome instead of claiming success before the write happened.
-	// Ownership of the buffer moves to the blk task, which frees it.
-	const error_t write_err =
-			write_to_blk(cluster_buffer.release(), calc_start_sector(target_cluster),
-						 BYTES_PER_CLUSTER);
+	size_t write_len = 0;
+	const error_t write_err = write_file_cluster(entry, fd->offset, write_buf.get(),
+												 count, &write_len);
 	if (IS_ERR(write_err)) {
-		LOG_ERROR("block write failed: result=%d", write_err);
 		reply_error(m, write_err);
 		return;
 	}
@@ -378,34 +457,7 @@ void handle_fs_write(const Message& m)
 
 	if (new_size != entry->file_size) {
 		if (new_size < entry->file_size) {
-			// File is being truncated, free unused clusters
-			const size_t new_clusters =
-					(new_size + BYTES_PER_CLUSTER - 1) / BYTES_PER_CLUSTER;
-
-			if (new_clusters < current_clusters) {
-				if (new_clusters == 0) {
-					// File is now empty, free all clusters
-					free_cluster_chain(entry->first_cluster());
-					entry->set_first_cluster(0);
-				} else {
-					// Find the cluster that should be the last one
-					cluster_t current = entry->first_cluster();
-					for (size_t i = 1;
-						 i < new_clusters && current != END_OF_CLUSTER_CHAIN; i++) {
-						current = next_cluster(current);
-					}
-
-					if (current != END_OF_CLUSTER_CHAIN) {
-						// Free clusters after this one
-						cluster_t next = next_cluster(current);
-						if (next != END_OF_CLUSTER_CHAIN) {
-							free_cluster_chain(next);
-							FAT_TABLE[current] = END_OF_CLUSTER_CHAIN;
-						}
-					}
-				}
-				write_fat_table_to_disk();
-			}
+			truncate_file(entry, new_size);
 		}
 
 		entry->file_size = new_size;
