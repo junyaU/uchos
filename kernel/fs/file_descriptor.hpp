@@ -115,6 +115,24 @@ FileDescriptor* get_process_fd(FileDescriptor* fd_table, size_t table_size, fd_t
 error_t release_process_fd(FileDescriptor* fd_table, size_t table_size, fd_t fd);
 
 /**
+ * @brief Duplicate oldfd's entry onto newfd (dup2 semantics)
+ *
+ * Overwrites newfd's entry with a copy of oldfd's; any previous state of
+ * newfd is discarded without being released (entries hold no resources).
+ *
+ * @param fd_table Process's file descriptor table
+ * @param table_size Size of the file descriptor table
+ * @param oldfd Descriptor to duplicate (must be in use)
+ * @param newfd Descriptor slot to overwrite
+ * @return error_t OK on success, ERR_INVALID_FD when oldfd is not in use or
+ * newfd is out of range
+ */
+error_t dup_process_fd(FileDescriptor* fd_table,
+					   size_t table_size,
+					   fd_t oldfd,
+					   fd_t newfd);
+
+/**
  * @brief Copy file descriptor table for process forking
  *
  * Creates a deep copy of the parent's file descriptor table for the child process.
