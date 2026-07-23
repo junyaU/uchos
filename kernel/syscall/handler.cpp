@@ -10,6 +10,7 @@
 #include <utility>
 #include "error.hpp"
 #include "fs/fat/fat.hpp"
+#include "fs/file_descriptor.hpp"
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
 #include "log/log.hpp"
@@ -35,8 +36,9 @@ ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
 	// Validate file descriptor
-	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS ||
-		t->fd_table[fd].is_unused()) {
+	if (kernel::fs::get_process_fd(t->fd_table.data(),
+								   kernel::task::MAX_FDS_PER_PROCESS,
+								   fd) == nullptr) {
 		return ERR_INVALID_FD;
 	}
 
@@ -59,8 +61,9 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
-	if (fd < 0 || fd >= kernel::task::MAX_FDS_PER_PROCESS ||
-		t->fd_table[fd].is_unused()) {
+	kernel::fs::FileDescriptor* fd_entry = kernel::fs::get_process_fd(
+			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, fd);
+	if (fd_entry == nullptr) {
 		return ERR_INVALID_FD;
 	}
 
@@ -73,8 +76,7 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 	}
 
 	if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
-		if (t->fd_table[fd].has_name("stdout") ||
-			t->fd_table[fd].has_name("stderr")) {
+		if (fd_entry->has_name("stdout") || fd_entry->has_name("stderr")) {
 			// Standard output - send to terminal
 			Message m = { .type = MsgType::NOTIFY_WRITE, .sender = t->id };
 

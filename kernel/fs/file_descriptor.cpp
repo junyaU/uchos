@@ -106,6 +106,25 @@ error_t release_process_fd(FileDescriptor* fd_table, size_t table_size, fd_t fd)
 	return OK;
 }
 
+error_t dup_process_fd(FileDescriptor* fd_table,
+					   size_t table_size,
+					   fd_t oldfd,
+					   fd_t newfd)
+{
+	FileDescriptor* old_entry = get_process_fd(fd_table, table_size, oldfd);
+	if (old_entry == nullptr) {
+		return ERR_INVALID_FD;
+	}
+
+	if (newfd < 0 || newfd >= table_size) {
+		return ERR_INVALID_FD;
+	}
+
+	fd_table[newfd] = *old_entry;
+
+	return OK;
+}
+
 error_t copy_fd_table(FileDescriptor* dest,
 					  const FileDescriptor* src,
 					  size_t table_size,

@@ -528,21 +528,17 @@ void handle_fs_dup2(const Message& m)
 		return;
 	}
 
-	kernel::fs::FileDescriptor* old_entry = kernel::fs::get_process_fd(
-			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, oldfd);
-	if (old_entry == nullptr) {
-		reply_error(m, ERR_INVALID_FD);
-		return;
-	}
-
 	// TODO: Support for other file descriptors
 	if (newfd != STDOUT_FILENO && newfd != STDERR_FILENO) {
 		reply_error(m, ERR_INVALID_FD);
 		return;
 	}
 
-	if (newfd >= 0 && newfd < kernel::task::MAX_FDS_PER_PROCESS) {
-		t->fd_table[newfd] = *old_entry;
+	const error_t dup_err = kernel::fs::dup_process_fd(
+			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, oldfd, newfd);
+	if (IS_ERR(dup_err)) {
+		reply_error(m, dup_err);
+		return;
 	}
 
 	reply.result = OK;

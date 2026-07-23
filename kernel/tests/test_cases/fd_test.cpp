@@ -128,6 +128,40 @@ void test_fd_dup2()
 	ASSERT_EQ(redirected->size, src->size);
 }
 
+void test_dup_process_fd()
+{
+	// Create test FD table
+	fs::FileDescriptor fd_table[32];
+	fs::init_process_fd_table(fd_table, 32);
+
+	// Allocate a file descriptor
+	fd_t file_fd = fs::allocate_process_fd(fd_table, 32, "output.txt", 42,
+										   ProcessId::from_raw(1));
+	ASSERT_GT(file_fd, -1);
+
+	// Normal case: dup the file fd onto STDOUT_FILENO
+	error_t result = fs::dup_process_fd(fd_table, 32, file_fd, STDOUT_FILENO);
+	ASSERT_EQ(result, OK);
+
+	fs::FileDescriptor* src = fs::get_process_fd(fd_table, 32, file_fd);
+	fs::FileDescriptor* dup = fs::get_process_fd(fd_table, 32, STDOUT_FILENO);
+	ASSERT_NOT_NULL(src);
+	ASSERT_NOT_NULL(dup);
+	ASSERT_EQ(strcmp(dup->name, src->name), 0);
+	ASSERT_EQ(dup->size, src->size);
+
+	// Error case: oldfd is unused
+	result = fs::dup_process_fd(fd_table, 32, 20, STDOUT_FILENO);
+	ASSERT_EQ(result, ERR_INVALID_FD);
+
+	// Error case: newfd is out of range
+	result = fs::dup_process_fd(fd_table, 32, file_fd, -1);
+	ASSERT_EQ(result, ERR_INVALID_FD);
+
+	result = fs::dup_process_fd(fd_table, 32, file_fd, 32);
+	ASSERT_EQ(result, ERR_INVALID_FD);
+}
+
 void test_fd_limits()
 {
 	// Create small FD table
@@ -196,6 +230,7 @@ void register_fd_tests()
 	test_register("test_fd_release", test_fd_release);
 	test_register("test_fd_fork_copy", test_fd_fork_copy);
 	test_register("test_fd_dup2", test_fd_dup2);
+	test_register("test_dup_process_fd", test_dup_process_fd);
 	test_register("test_fd_limits", test_fd_limits);
 	test_register("test_release_all_fds", test_release_all_fds);
 }
