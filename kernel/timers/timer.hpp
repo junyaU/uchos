@@ -6,7 +6,6 @@
 #pragma once
 
 #include <cstdint>
-#include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 #include <queue>
@@ -27,7 +26,10 @@ struct TimerEvent {
 	uint64_t timeout;	 ///< Absolute tick count when timer expires
 	unsigned int period; ///< Period in milliseconds for periodic timers
 	int periodical; ///< Flag indicating if timer is periodic (1) or one-shot (0)
-	TimeoutAction action; ///< Action to perform when timer expires
+	/// Kernel-internal scheduler tick (issue #315): expiry triggers a task
+	/// switch instead of notifying task_id. Never exposed to user space; a
+	/// user timer only means "your timer fired" and the owner decides why.
+	bool switch_task;
 };
 
 /**
@@ -96,25 +98,20 @@ public:
 	 * @brief Add a one-shot timer event
 	 *
 	 * @param millisec Delay in milliseconds until timer expires
-	 * @param action Action to perform when timer expires
 	 * @param task_id Task to notify when timer expires
 	 * @return uint64_t Timer event ID for later removal
 	 */
-	uint64_t add_timer_event(unsigned long millisec,
-							 TimeoutAction action,
-							 ProcessId task_id);
+	uint64_t add_timer_event(unsigned long millisec, ProcessId task_id);
 
 	/**
 	 * @brief Add a periodic timer event
 	 *
 	 * @param millisec Period in milliseconds between timer events
-	 * @param action Action to perform on each timer expiration
 	 * @param task_id Task to notify on each timer expiration
 	 * @param id Optional timer ID (0 to auto-generate)
 	 * @return uint64_t Timer event ID for later removal
 	 */
 	uint64_t add_periodic_timer_event(unsigned long millisec,
-									  TimeoutAction action,
 									  ProcessId task_id,
 									  uint64_t id = 0);
 

@@ -184,17 +184,20 @@ error_t sys_fill_rect(uint64_t arg1,
 	return OK;
 }
 
-error_t sys_time(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4)
+error_t sys_time(uint64_t arg1, uint64_t arg2)
 {
 	const uint64_t ms = arg1;
 	const int is_periodic = arg2;
-	const TimeoutAction action = static_cast<TimeoutAction>(arg3);
-	const ProcessId task_id = ProcessId::from_raw(arg4);
+
+	// A timer can only ever target its own creator (issue #315): the expiry
+	// is a bare doorbell with no meaning attached, so letting a task arm
+	// timers on arbitrary victims would be an unauthenticated wakeup channel.
+	const ProcessId task_id = kernel::task::CURRENT_TASK->id;
 
 	if (is_periodic == 1) {
-		kernel::timers::ktimer->add_periodic_timer_event(ms, action, task_id);
+		kernel::timers::ktimer->add_periodic_timer_event(ms, task_id);
 	} else {
-		kernel::timers::ktimer->add_timer_event(ms, action, task_id);
+		kernel::timers::ktimer->add_timer_event(ms, task_id);
 	}
 
 	return OK;
@@ -475,7 +478,7 @@ extern "C" uint64_t handle_syscall(uint64_t arg1,
 			result = kernel::syscall::sys_fill_rect(arg1, arg2, arg3, arg4, arg5);
 			break;
 		case kernel::syscall::SYS_TIME:
-			result = kernel::syscall::sys_time(arg1, arg2, arg3, arg4);
+			result = kernel::syscall::sys_time(arg1, arg2);
 			break;
 		case kernel::syscall::SYS_IPC:
 			result = kernel::syscall::sys_ipc(arg1, arg2, arg3, arg4);
