@@ -32,3 +32,8 @@ cd userland/commands/<名前> && make clean && make
 - カーネルとのやり取りはシステムコール(`libs/user/syscall.o`)と IPC のみ
 - 複雑なロジックはユーザーランドに置くのが UCHos の方針。カーネルに寄せない
 - 新コマンドの追加手順は `/add-userland-command` スキルを参照
+
+## エラー規約(issue #356)
+- syscall・IPC のエラーは負の `error_t`(`libs/common/types.hpp` の `ErrorCode`、カーネルと単一体系)。判定は `IS_ERR` / `IS_OK` を使い、特定の負値(`-1` 等)と比較しない
+- 新規コードでエラーを `-1` や `0` に潰して返さない。`error_t` のまま伝搬する(既存の `libs/user/file.cpp` の -1/0 潰しは issue #315-3a で解消予定)
+- 応答 `Message` の payload は `result == OK` のときのみ読む
