@@ -209,8 +209,4 @@ void Terminal::register_current_dir(const char* name)
 	}
 }
 
-void set_cursor_timer(int ms)
-{
-	set_timer(ms, true, TimeoutAction::TERMINAL_CURSOR_BLINK,
-			  process_ids::SHELL.raw());
-}
+void set_cursor_timer(int ms) { set_timer(ms, true); }

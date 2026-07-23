@@ -38,13 +38,10 @@ int main(void)
 				}
 				break;
 			case MsgType::NOTIFY_TIMER_TIMEOUT:
-				switch (msg.data.timer.action) {
-					case TimeoutAction::TERMINAL_CURSOR_BLINK:
-						term->blink_cursor();
-						break;
-					default:
-						break;
-				};
+				// The only timer this task arms is the cursor-blink one
+				// (set_cursor_timer); the kernel no longer attaches a
+				// meaning to the expiry (issue #315)
+				term->blink_cursor();
 				break;
 			case MsgType::KERNEL_TASK_READY:
 				set_cursor_timer(500);

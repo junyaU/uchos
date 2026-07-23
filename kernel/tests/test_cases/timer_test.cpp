@@ -1,6 +1,5 @@
 #include "tests/test_cases/timer_test.hpp"
 #include <cstdint>
-#include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 #include "tests/framework.hpp"
@@ -16,12 +15,12 @@ void test_add_timer_event()
 {
 	constexpr ProcessId test_task_id = ProcessId::from_raw(1);
 
-	const uint64_t event_id = kernel::timers::ktimer->add_timer_event(
-			1000, TimeoutAction::SWITCH_TASK, test_task_id);
+	const uint64_t event_id =
+			kernel::timers::ktimer->add_timer_event(1000, test_task_id);
 	ASSERT_NE(event_id, 0);
 
-	const uint64_t invalid_event_id = kernel::timers::ktimer->add_timer_event(
-			1000, TimeoutAction::SWITCH_TASK, ProcessId::from_raw(-1));
+	const uint64_t invalid_event_id =
+			kernel::timers::ktimer->add_timer_event(1000, ProcessId::from_raw(-1));
 	ASSERT_NE(invalid_event_id, 0);
 
 	// Leaving these queued would start task switching ~1s after the local
@@ -34,8 +33,8 @@ void test_remove_timer_event()
 {
 	constexpr ProcessId test_task_id = ProcessId::from_raw(1);
 
-	const uint64_t event_id = kernel::timers::ktimer->add_timer_event(
-			1000, TimeoutAction::SWITCH_TASK, test_task_id);
+	const uint64_t event_id =
+			kernel::timers::ktimer->add_timer_event(1000, test_task_id);
 	auto err = kernel::timers::ktimer->remove_timer_event(event_id);
 	ASSERT_EQ(err, OK);
 

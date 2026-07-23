@@ -1,6 +1,5 @@
 #include "timers/timer.hpp"
 #include <cstdint>
-#include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 #include "log/log.hpp"
@@ -20,16 +19,13 @@ uint64_t KernelTimer::calculate_timeout_ticks(unsigned long millisec) const
 	return tick_ + (millisec * TIMER_FREQUENCY) / 1000;
 }
 
-uint64_t KernelTimer::add_timer_event(unsigned long millisec,
-									  TimeoutAction action,
-									  ProcessId task_id)
+uint64_t KernelTimer::add_timer_event(unsigned long millisec, ProcessId task_id)
 {
 	auto e = TimerEvent{
 		.id = last_id_++,
 		.task_id = task_id,
 		.timeout = calculate_timeout_ticks(millisec),
 		.period = static_cast<unsigned int>(millisec),
-		.action = action,
 	};
 
 	events_.push(e);
@@ -38,7 +34,6 @@ uint64_t KernelTimer::add_timer_event(unsigned long millisec,
 }
 
 uint64_t KernelTimer::add_periodic_timer_event(unsigned long millisec,
-											   TimeoutAction action,
 											   ProcessId task_id,
 											   uint64_t id)
 {
@@ -55,7 +50,6 @@ uint64_t KernelTimer::add_periodic_timer_event(unsigned long millisec,
 		.timeout = calculate_timeout_ticks(millisec),
 		.period = static_cast<unsigned int>(millisec),
 		.periodical = 1,
-		.action = action,
 	};
 
 	events_.push(e);
@@ -71,7 +65,7 @@ uint64_t KernelTimer::add_switch_task_event(unsigned long millisec)
 		.timeout = calculate_timeout_ticks(millisec),
 		.period = 0,
 		.periodical = 0,
-		.action = TimeoutAction::SWITCH_TASK,
+		.switch_task = true,
 	};
 	events_.push(e);
 
@@ -107,7 +101,7 @@ bool KernelTimer::increment_tick()
 			continue;
 		}
 
-		if (e.action == TimeoutAction::SWITCH_TASK) {
+		if (e.switch_task) {
 			need_switch_task = true;
 
 			e.timeout = calculate_timeout_ticks(SWITCH_TASK_MILLISEC);
@@ -119,8 +113,8 @@ bool KernelTimer::increment_tick()
 		// increment_tick runs in the timer interrupt, so the expiry is
 		// delivered as a doorbell bit: no allocation, and repeated
 		// expiries coalesce instead of overflowing the receiver's ring
-		// (issue #314 Stage A). The TimeoutAction payload is gone; the
-		// receiver knows what its own timer means (cursor blink).
+		// (issue #314 Stage A). The expiry carries no payload; the
+		// receiver knows what its own timer means (issue #315).
 		kernel::task::notify(e.task_id, kernel::task::NotifyType::TIMER);
 
 		if (e.periodical == 1) {

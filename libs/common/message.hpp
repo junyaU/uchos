@@ -76,11 +76,6 @@ enum class MsgType : int32_t {
 constexpr int32_t TOTAL_MESSAGE_TYPES =
 		static_cast<int32_t>(MsgType::MAX_MESSAGE_TYPE);
 
-enum class TimeoutAction : uint8_t {
-	TERMINAL_CURSOR_BLINK,
-	SWITCH_TASK,
-};
-
 /**
  * @brief Descriptor of an out-of-line payload attached to a Message
  *
@@ -126,10 +121,6 @@ struct Message {
 			uint8_t ascii;
 			int press;
 		} key_input;
-
-		struct {
-			TimeoutAction action;
-		} timer;
 
 		/// Inline stdout payload (NOTIFY_WRITE); larger writes travel OOL
 		struct {
