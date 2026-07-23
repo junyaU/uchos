@@ -80,11 +80,17 @@ void Shell::process_input(char* input, Terminal& term)
 		exit(status);
 	}
 
-	int child_status;
-	sys_wait(&child_status);
+	if (IS_ERR(pid)) {
+		// fork fails loudly now (issue #315); without this guard the
+		// parent would sys_wait forever for a child that never existed
+		term.printf("%s : fork failed (%d)\n", command_name, pid);
+	} else {
+		int child_status;
+		sys_wait(&child_status);
 
-	if (child_status != 0) {
-		term.printf("%s : command not found\n", command_name);
+		if (child_status != 0) {
+			term.printf("%s : command not found\n", command_name);
+		}
 	}
 
 	// Everything the child printed (NOTIFY_WRITE) was queued before it

@@ -8,8 +8,8 @@
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 #include <utility>
+#include "elf.hpp"
 #include "error.hpp"
-#include "fs/fat/fat.hpp"
 #include "fs/file_descriptor.hpp"
 #include "graphics/font.hpp"
 #include "graphics/screen.hpp"
@@ -334,7 +334,11 @@ ProcessId sys_fork(void)
 
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 	if (t->parent_id.raw() != -1) {
-		return ProcessId::from_raw(0);
+		// Nested fork (a forked child forking again) is unsupported. Fail
+		// loudly (issue #315): the old silent 0 made the caller believe it
+		// was the child and run the child's code path in the parent.
+		LOG_ERROR("fork depth > 1 is not supported (task %d)", t->id.raw());
+		return ProcessId::from_raw(ERR_FORK_FAILED);
 	}
 
 	kernel::task::Task* child = kernel::task::copy_task(t, &current_ctx);
@@ -402,7 +406,10 @@ error_t sys_exec(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 
 	kernel::memory::clean_page_tables(old_page_table);
 
-	kernel::fs::fat::execute_file(std::move(elf_buf), "", copy_args);
+	// The kernel's only remaining exec duty: map the segments and jump to
+	// ring 3. Everything filesystem-shaped already happened in the FS task
+	// (issue #315: sys_exec must not know how files are stored).
+	exec_elf(std::move(elf_buf), "", copy_args);
 
 	return OK;
 }

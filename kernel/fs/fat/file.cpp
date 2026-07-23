@@ -9,8 +9,6 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
-#include <utility>
-#include "elf.hpp"
 #include "fat.hpp"
 #include "fs/file_descriptor.hpp"
 #include "fs/file_info.hpp"
@@ -314,13 +312,6 @@ void truncate_file(DirectoryEntry* entry, size_t new_size)
 }
 
 } // namespace
-
-void execute_file(kernel::memory::unique_kbuf<> data,
-				  const char* name,
-				  const char* args)
-{
-	exec_elf(std::move(data), name, args);
-}
 
 void handle_fs_stat(const Message& m)
 {
