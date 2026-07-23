@@ -1,6 +1,7 @@
 #include <libs/common/message.hpp>
 #include <libs/user/file.hpp>
 #include <libs/user/ipc.hpp>
+#include <libs/user/keymap.hpp>
 #include <libs/user/print.hpp>
 #include <libs/user/syscall.hpp>
 #include "shell.hpp"
@@ -15,15 +16,30 @@ int main(void)
 	auto* term = new (buffer) Terminal(s);
 	term->print_user();
 
+	// Claim the keyboard focus: the kernel no longer hardwires the shell as
+	// the key-event destination (issue #315)
+	Message focus = make_request(MsgType::INPUT_SET_FOCUS);
+	send_message(process_ids::XHCI, &focus);
+
 	Message msg;
 	while (true) {
 		// Blocks until a message arrives (issue #314)
 		receive_message(&msg);
 
 		switch (msg.type) {
-			case MsgType::NOTIFY_KEY_INPUT:
-				term->input_char(msg.data.key_input.ascii);
+			case MsgType::NOTIFY_KEY_INPUT: {
+				// Raw keycode + modifier arrive now; the keymap is shell-side
+				// policy (issue #315). Releases are delivered too — ignore.
+				if (msg.data.key_input.press == 0) {
+					break;
+				}
+				const char c = keycode_to_ascii(msg.data.key_input.key_code,
+												msg.data.key_input.modifier);
+				if (c != 0) {
+					term->input_char(c);
+				}
 				break;
+			}
 			case MsgType::NOTIFY_WRITE:
 				if (msg.ool.size != 0) {
 					// Large output arrives as a mapped OOL buffer; print()
