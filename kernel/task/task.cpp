@@ -207,6 +207,10 @@ Task* copy_task(Task* parent, Context* parent_ctx)
 	}
 	child->parent_id = parent->id;
 
+	// The child will wake up inside sys_fork on the copied stack below;
+	// this flag is what tells that resume apart from a real fork request
+	child->just_forked = true;
+
 	memcpy(&child->ctx, parent_ctx, sizeof(Context));
 
 	// Copy parent's file descriptor table
@@ -432,6 +436,7 @@ Task::Task(int raw_id,
 	  parent_id{ ProcessId::from_raw(-1) },
 	  priority{ 2 }, // TODO: Implement priority scheduling
 	  is_initialized{ is_initialized },
+	  just_forked{ false },
 	  state{ state },
 	  fs_path({ nullptr, nullptr, nullptr }),
 	  stack{ nullptr },

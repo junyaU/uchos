@@ -131,6 +131,9 @@ void test_task_copy()
 	// Verify child task properties
 	ASSERT_TRUE(child->parent_id == parent->id);
 	ASSERT_TRUE(child->has_parent());
+	// The child's fork-returns-0 path depends on this flag being set here
+	// (regression guard: issue #315 once turned every fork into an error)
+	ASSERT_TRUE(child->just_forked);
 	ASSERT_NOT_NULL(child->stack);
 	ASSERT_EQ(child->stack_size, parent->stack_size);
 	ASSERT_NOT_NULL(child->get_page_table());
