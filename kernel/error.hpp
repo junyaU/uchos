@@ -58,6 +58,8 @@ inline const char* error_to_string(error_t err)
 			return "Failed to read from device";
 		case ERR_NO_SPACE:
 			return "No space";
+		case ERR_OOL_LIMIT:
+			return "OOL limit exceeded";
 	}
 
 	return "Unknown error";

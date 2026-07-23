@@ -92,13 +92,13 @@ void test_task_message_handling()
 
 	// Test message handler registration
 	g_handler_called = false;
-	t->add_msg_handler(MsgType::IPC_EXIT_TASK, test_message_handler);
+	t->add_msg_handler(MsgType::NOTIFY_WRITE, test_message_handler);
 	ASSERT_FALSE(g_handler_called);
 
 	// The ring is sealed against direct pushes; messages enter through
 	// send_message only (issue #314)
 	ASSERT_TRUE(t->messages.empty());
-	Message test_msg = { .type = MsgType::IPC_EXIT_TASK,
+	Message test_msg = { .type = MsgType::NOTIFY_WRITE,
 						 .sender = ProcessId::from_raw(0) };
 	ASSERT_EQ(kernel::task::send_message(t->id, test_msg), OK);
 	ASSERT_FALSE(t->messages.empty());

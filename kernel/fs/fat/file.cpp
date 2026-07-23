@@ -9,6 +9,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include <utility>
 #include "elf.hpp"
 #include "fat.hpp"
 #include "fs/file_descriptor.hpp"
@@ -84,14 +85,12 @@ FileCache* load_file(const DirectoryEntry* entry, ProcessId requester)
 /**
  * @brief Read a file and reply to the requester with its contents
  */
-void reply_read_result(const Message& req,
-					   const DirectoryEntry* entry,
-					   bool for_user)
+void reply_read_result(const Message& req, const DirectoryEntry* entry)
 {
 	// An empty file has no cluster chain to read; reply immediately so
 	// the requester is not left blocking forever.
 	if (entry->file_size == 0 || entry->first_cluster() == 0) {
-		reply_file_data(req, nullptr, 0, for_user);
+		reply_file_data(req, nullptr, 0);
 		return;
 	}
 
@@ -101,68 +100,51 @@ void reply_read_result(const Message& req,
 		return;
 	}
 
-	reply_file_data(req, cache->buffer.data(), cache->total_size, for_user);
+	reply_file_data(req, cache->buffer.data(), cache->total_size);
 }
 
 } // namespace
 
-void execute_file(void* data, const char* name, const char* args)
+void execute_file(kernel::memory::unique_kbuf<> data,
+				  const char* name,
+				  const char* args)
 {
-	exec_elf(data, name, args);
+	exec_elf(std::move(data), name, args);
 }
 
-void handle_get_file_info(const Message& m)
+void handle_fs_stat(const Message& m)
 {
 	const auto* name = m.data.fs.name;
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	Message sm = { .type = MsgType::IPC_GET_FILE_INFO,
-				   .sender = process_ids::FS_FAT32 };
-	sm.result = ERR_NO_FILE;
-	sm.data.fs.buf = nullptr;
+	Message sm = { .type = MsgType::FS_STAT, .sender = process_ids::FS_FAT32 };
 
-	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
-		if (ROOT_DIR[i].name[0] == DIR_ENTRY_END) {
-			break;
-		}
-
-		if (ROOT_DIR[i].name[0] == DIR_ENTRY_DELETED) {
-			continue;
-		}
-
-		if (ROOT_DIR[i].attribute == entry_attribute::LONG_NAME) {
-			continue;
-		}
-
-		if (entry_name_is_equal(ROOT_DIR[i], name)) {
-			void* buf = kernel::memory::alloc(sizeof(DirectoryEntry),
-											  kernel::memory::ALLOC_ZEROED);
-			if (buf == nullptr) {
-				LOG_ERROR("failed to allocate directory entry buffer");
-				sm.result = ERR_NO_MEMORY;
-				break;
-			}
-			memcpy(buf, &ROOT_DIR[i], sizeof(DirectoryEntry));
-			sm.data.fs.buf = buf;
-			sm.result = OK;
-			break;
-		}
+	const DirectoryEntry* entry = find_dir_entry(ROOT_DIR, name);
+	if (entry == nullptr) {
+		sm.result = ERR_NO_FILE;
+	} else {
+		sm.result = OK;
+		sm.data.fs.len = entry->file_size;
 	}
 
 	kernel::task::reply(m, &sm);
 }
 
-void handle_read_file_data(const Message& m)
+void handle_fs_load(const Message& m)
 {
-	const DirectoryEntry* entry =
-			reinterpret_cast<const DirectoryEntry*>(m.data.fs.buf);
+	const auto* name = m.data.fs.name;
+	kernel::graphics::to_upper(const_cast<char*>(name));
+
+	const DirectoryEntry* entry = find_dir_entry(ROOT_DIR, name);
 	if (entry == nullptr) {
-		LOG_ERROR("entry is null");
-		reply_error(m, ERR_INVALID_ARG);
+		reply_error(m, ERR_NO_FILE);
 		return;
 	}
 
-	reply_read_result(m, entry, false);
+	// The reply carries a kernel-owned copy of the file (OOL move); the
+	// requester frees it. The old cache-borrowed raw pointer is gone
+	// (issue #314 Stage C).
+	reply_read_result(m, entry);
 }
 
 void handle_fs_open(const Message& m)
@@ -222,7 +204,7 @@ void handle_fs_read(const Message& m)
 		return;
 	}
 
-	reply_read_result(m, entry, true);
+	reply_read_result(m, entry);
 }
 
 void handle_fs_close(const Message& m)
@@ -244,6 +226,17 @@ void handle_fs_close(const Message& m)
 
 void handle_fs_write(const Message& m)
 {
+	// The write payload always arrives OOL (issue #314 Stage C); take
+	// ownership immediately so every return path frees it
+	kernel::memory::unique_kbuf<> write_buf{ reinterpret_cast<void*>(m.ool.addr) };
+	if (!write_buf || m.ool.size == 0) {
+		reply_error(m, ERR_INVALID_ARG);
+		return;
+	}
+
+	// Never trust the inline length beyond the payload actually delivered
+	const size_t count = std::min(m.data.fs.len, static_cast<size_t>(m.ool.size));
+
 	kernel::task::Task* t = kernel::task::get_task(m.sender);
 	if (t == nullptr) {
 		LOG_ERROR("Task %d not found - likely already exited", m.sender.raw());
@@ -265,7 +258,7 @@ void handle_fs_write(const Message& m)
 		return;
 	}
 
-	const size_t new_size = fd->offset + m.data.fs.len;
+	const size_t new_size = fd->offset + count;
 
 	if (entry->first_cluster() == 0) {
 		cluster_t new_cluster = allocate_cluster_chain(1);
@@ -309,8 +302,7 @@ void handle_fs_write(const Message& m)
 
 	const size_t cluster_offset = fd->offset / BYTES_PER_CLUSTER;
 	const size_t offset_in_cluster = fd->offset % BYTES_PER_CLUSTER;
-	const size_t write_len =
-			std::min(m.data.fs.len, BYTES_PER_CLUSTER - offset_in_cluster);
+	const size_t write_len = std::min(count, BYTES_PER_CLUSTER - offset_in_cluster);
 
 	cluster_t target_cluster = entry->first_cluster();
 	for (size_t i = 0; i < cluster_offset && target_cluster != END_OF_CLUSTER_CHAIN;
@@ -338,12 +330,8 @@ void handle_fs_write(const Message& m)
 		// buffer
 		if (entry->file_size == 0 || fd->offset == 0) {
 			// Buffer is already zero-filled, just copy the data at the right offset
-			const void* write_data =
-					m.tool_desc.present
-							? m.tool_desc.addr
-							: static_cast<const void*>(m.data.fs.temp_buf);
 			memcpy(static_cast<char*>(cluster_buffer.get()) + offset_in_cluster,
-				   write_data, write_len);
+				   write_buf.get(), write_len);
 		} else {
 			// TODO: For existing data, need to read first
 			LOG_ERROR(
@@ -353,10 +341,7 @@ void handle_fs_write(const Message& m)
 		}
 	} else {
 		// Full cluster write - copy write data to cluster buffer
-		const void* write_data =
-				m.tool_desc.present ? m.tool_desc.addr
-									: static_cast<const void*>(m.data.fs.temp_buf);
-		memcpy(cluster_buffer.get(), write_data, write_len);
+		memcpy(cluster_buffer.get(), write_buf.get(), write_len);
 	}
 
 	// Invalidate the cached file contents so a read after this write does not
@@ -374,9 +359,6 @@ void handle_fs_write(const Message& m)
 	if (IS_ERR(write_err)) {
 		LOG_ERROR("block write failed: result=%d", write_err);
 		reply_error(m, write_err);
-		if (m.tool_desc.present) {
-			kernel::memory::free(m.tool_desc.addr);
-		}
 		return;
 	}
 
@@ -422,10 +404,6 @@ void handle_fs_write(const Message& m)
 	reply.result = OK;
 	reply.data.fs.len = write_len;
 	kernel::task::reply(m, &reply);
-
-	if (m.tool_desc.present) {
-		kernel::memory::free(m.tool_desc.addr);
-	}
 }
 
 void handle_fs_mkfile(const Message& m)

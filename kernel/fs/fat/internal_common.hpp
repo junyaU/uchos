@@ -81,11 +81,11 @@ void write_fat_table_to_disk();
 /**
  * @brief Reply to a read-style request with file data
  *
- * for_user = true copies into a page-aligned OOL buffer (mapped into the
- * requester's space at delivery); false hands the kernel address itself
- * (borrowed from the file cache) to a kernel-side requester.
+ * Copies the data into a fresh OOL buffer whose ownership moves with the
+ * reply: a user requester gets it mapped at the syscall boundary (released
+ * via ool_release), a kernel requester frees it directly.
  */
-void reply_file_data(const Message& req, void* buf, size_t size, bool for_user);
+void reply_file_data(const Message& req, const void* buf, size_t size);
 
 /**
  * @brief Reply with an error result and no payload
@@ -96,9 +96,9 @@ void reply_error(const Message& req, error_t result);
 void persist_directory_entry(kernel::fs::DirectoryEntry* entry, const char* name);
 
 // Message handlers declarations
-void handle_get_file_info(const Message& m);
-void handle_read_file_data(const Message& m);
-void handle_get_directory_contents(const Message& m);
+void handle_fs_stat(const Message& m);
+void handle_fs_load(const Message& m);
+void handle_fs_list_dir(const Message& m);
 void handle_fs_open(const Message& m);
 void handle_fs_read(const Message& m);
 void handle_fs_write(const Message& m);

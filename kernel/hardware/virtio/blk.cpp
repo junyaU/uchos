@@ -3,6 +3,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include <utility>
 #include "error.hpp"
 #include "hardware/virtio/pci.hpp"
 #include "hardware/virtio/virtio.hpp"
@@ -21,9 +22,8 @@ namespace
 Message make_blk_reply(const Message& m)
 {
 	Message reply = { .type = m.type, .sender = process_ids::VIRTIO_BLK };
-	reply.data.blk_io.buf = nullptr;
-	reply.data.blk_io.sector = m.data.blk_io.sector;
-	reply.data.blk_io.len = m.data.blk_io.len;
+	reply.data.blk.sector = m.data.blk.sector;
+	reply.data.blk.len = m.data.blk.len;
 	reply.result = OK;
 
 	return reply;
@@ -33,50 +33,51 @@ void handle_read_request(const Message& m)
 {
 	Message reply = make_blk_reply(m);
 
-	const int sector = m.data.blk_io.sector;
-	const int len = m.data.blk_io.len;
+	const int sector = m.data.blk.sector;
+	const int len = m.data.blk.len;
 
-	void* buf_ptr = kernel::memory::alloc(len, kernel::memory::ALLOC_ZEROED);
-	if (buf_ptr == nullptr) {
+	auto buf = kernel::memory::make_kbuf(len, kernel::memory::ALLOC_ZEROED);
+	if (!buf) {
 		LOG_ERROR("failed to allocate read buffer: len=%d", len);
 		reply.result = ERR_NO_MEMORY;
 		kernel::task::reply(m, &reply);
 		return;
 	}
 
-	char* buf = static_cast<char*>(buf_ptr);
-
-	const error_t err = kernel::hw::virtio::read_from_blk_device(buf, sector, len);
+	const error_t err = kernel::hw::virtio::read_from_blk_device(
+			static_cast<char*>(buf.get()), sector, len);
 	if (IS_ERR(err)) {
 		LOG_ERROR("failed to read from blk device: %d", err);
-		kernel::memory::free(buf);
 		reply.result = err;
 		kernel::task::reply(m, &reply);
 		return;
 	}
 
-	// Ownership of buf moves to the caller with the reply
-	reply.data.blk_io.buf = buf;
-
-	kernel::task::reply(m, &reply);
+	// The data moves to the caller as the reply's OOL payload
+	kernel::task::reply_with_ool(m, &reply, std::move(buf), len);
 }
 
 void handle_write_request(const Message& m)
 {
 	Message reply = make_blk_reply(m);
 
-	const int sector = m.data.blk_io.sector;
-	const int len =
-			m.data.blk_io.len < SECTOR_SIZE ? SECTOR_SIZE : m.data.blk_io.len;
+	// The request's OOL payload is ours to free once the write is done
+	kernel::memory::unique_kbuf<> buf{ reinterpret_cast<void*>(m.ool.addr) };
+	if (!buf || m.ool.size == 0) {
+		reply.result = ERR_INVALID_ARG;
+		kernel::task::reply(m, &reply);
+		return;
+	}
+
+	const int sector = m.data.blk.sector;
+	const int len = m.data.blk.len < SECTOR_SIZE ? SECTOR_SIZE : m.data.blk.len;
 
 	const error_t err = kernel::hw::virtio::write_to_blk_device(
-			static_cast<const char*>(m.data.blk_io.buf), sector, len);
+			static_cast<const char*>(buf.get()), sector, len);
 	if (IS_ERR(err)) {
 		LOG_ERROR("failed to write to blk device: %d", err);
 		reply.result = err;
 	}
-
-	kernel::memory::free(m.data.blk_io.buf);
 
 	// Always report completion so the FS side can acknowledge the requester
 	// instead of claiming success before the device write finished.
@@ -223,8 +224,8 @@ void virtio_blk_service()
 
 	init_blk_device();
 
-	t->add_msg_handler(MsgType::IPC_READ_FROM_BLK_DEVICE, handle_read_request);
-	t->add_msg_handler(MsgType::IPC_WRITE_TO_BLK_DEVICE, handle_write_request);
+	t->add_msg_handler(MsgType::BLK_READ, handle_read_request);
+	t->add_msg_handler(MsgType::BLK_WRITE, handle_write_request);
 
 	t->is_initialized = true;
 

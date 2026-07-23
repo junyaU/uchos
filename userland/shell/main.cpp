@@ -17,7 +17,7 @@ int main(void)
 
 	Message msg;
 	while (true) {
-		// Blocks until a message arrives (issue #314); no NO_TASK polling
+		// Blocks until a message arrives (issue #314)
 		receive_message(&msg);
 
 		switch (msg.type) {
@@ -25,7 +25,17 @@ int main(void)
 				term->input_char(msg.data.key_input.ascii);
 				break;
 			case MsgType::NOTIFY_WRITE:
-				term->printf("%s\n", msg.data.write_shell.buf);
+				if (msg.ool.size != 0) {
+					// Large output arrives as a mapped OOL buffer; print()
+					// takes any length (printf's buffer is only 512B) and
+					// the region must be released afterwards
+					const char* text = reinterpret_cast<const char*>(msg.ool.addr);
+					term->print(text);
+					term->print("\n");
+					ool_release(text);
+				} else {
+					term->printf("%s\n", msg.data.write.buf);
+				}
 				break;
 			case MsgType::NOTIFY_TIMER_TIMEOUT:
 				switch (msg.data.timer.action) {
@@ -36,7 +46,7 @@ int main(void)
 						break;
 				};
 				break;
-			case MsgType::INITIALIZE_TASK:
+			case MsgType::KERNEL_TASK_READY:
 				set_cursor_timer(500);
 				break;
 			case MsgType::SHELL_COMMAND_DONE: {

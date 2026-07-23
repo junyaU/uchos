@@ -49,11 +49,10 @@ public:
 	/**
 	 * @brief Message slots per task
 	 *
-	 * Transitional value: Message is still ~1.6KB (net.packet_data), so 32
-	 * slots cost ~50KB per task. Raised to 64 once Stage C shrinks Message
-	 * to <=192B.
+	 * Message is <=192B (static_assert in libs/common/message.hpp), so 64
+	 * slots cost ~12KB per task (issue #314 Stage C).
 	 */
-	static constexpr size_t CAPACITY = 32;
+	static constexpr size_t CAPACITY = 64;
 
 private:
 	/**

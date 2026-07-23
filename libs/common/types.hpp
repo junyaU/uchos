@@ -42,6 +42,7 @@ enum ErrorCode : error_t {
 	ERR_QUEUE_FULL = -12,
 	ERR_FAILED_READ_FROM_DEVICE = -13,
 	ERR_NO_SPACE = -14,
+	ERR_OOL_LIMIT = -15,
 };
 
 // file descriptor

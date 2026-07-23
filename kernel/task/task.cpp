@@ -183,18 +183,20 @@ error_t Task::copy_parent_page_table()
 
 void Task::add_msg_handler(MsgType type, message_handler_t handler)
 {
-	if (type == MsgType::NO_TASK || type >= MsgType::MAX_MESSAGE_TYPE) {
+	const int32_t index = static_cast<int32_t>(type);
+	if (index < 0 || index >= TOTAL_MESSAGE_TYPES) {
 		return;
 	}
-	message_handlers[static_cast<int32_t>(type)] = handler;
+	message_handlers[index] = handler;
 }
 
 void Task::dispatch_message(const Message& m)
 {
-	if (m.type == MsgType::NO_TASK || m.type >= MsgType::MAX_MESSAGE_TYPE) {
+	const int32_t index = static_cast<int32_t>(m.type);
+	if (index < 0 || index >= TOTAL_MESSAGE_TYPES) {
 		return;
 	}
-	message_handlers[static_cast<int32_t>(m.type)](m);
+	message_handlers[index](m);
 }
 
 Task* copy_task(Task* parent, Context* parent_ctx)
@@ -223,6 +225,19 @@ Task* copy_task(Task* parent, Context* parent_ctx)
 	if (IS_ERR(child->copy_parent_page_table())) {
 		LOG_ERROR("Failed to copy parent page table : %s", parent->name);
 		return nullptr;
+	}
+
+	// The child inherits no OOL ownership (its region table starts empty),
+	// so drop the parent's mapped regions from the child's cloned table:
+	// left in place, the parent's ool_release/exit would free pages the
+	// child still maps (stale reads of reused kernel memory).
+	for (const auto& r : parent->ool_regions) {
+		if (r.kaddr != 0 && IS_ERR(kernel::memory::unmap_frame(
+									child->get_page_table(),
+									kernel::memory::vaddr_t{ r.uaddr }, r.pages))) {
+			LOG_ERROR("failed to unmap inherited ool region: child %d",
+					  child->id.raw());
+		}
 	}
 
 	return child;
@@ -344,6 +359,10 @@ void exit_task(int status)
 	// Release all file descriptors before exiting
 	kernel::fs::release_all_process_fds(t->fd_table.data(), MAX_FDS_PER_PROCESS);
 
+	// Free every OOL buffer this task still owns: mapped regions, queued
+	// messages, an uncollected reply. The mappings die with the page table.
+	release_all_ool(t);
+
 	// Child termination is parent/child bookkeeping, not IPC (issue #314
 	// Stage B): park the status on the parent for sys_wait to collect
 	if (t->has_parent()) {
@@ -425,6 +444,7 @@ Task::Task(int raw_id,
 	  reply_slot{},
 	  exit_records{},
 	  num_exit_records{ 0 },
+	  ool_regions{},
 	  message_handlers({ std::array<message_handler_t, TOTAL_MESSAGE_TYPES>() }),
 	  fd_table()
 {

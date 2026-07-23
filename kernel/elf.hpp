@@ -14,6 +14,7 @@
 
 #include <cstdint>
 #include <libs/common/types.hpp>
+#include "memory/slab.hpp"
 
 /**
  * @brief ELF64 data type definitions
@@ -161,13 +162,16 @@ error_t load_elf(elf64_ehdr_t* elf_header);
  * Creates a new process from the ELF file in the buffer and begins
  * execution at the entry point specified in the ELF header.
  *
- * @param buffer Pointer to the ELF file data in memory
+ * @param buffer ELF file data; ownership moves in and the buffer is freed
+ * once the segments are copied (or on any failure path)
  * @param name Name to assign to the new process
  * @param args Command line arguments to pass to the process
  *
  * @note This function does not return if successful
  */
-void exec_elf(void* buffer, const char* name, const char* args);
+void exec_elf(kernel::memory::unique_kbuf<> buffer,
+			  const char* name,
+			  const char* args);
 
 /**
  * @brief Get the virtual address of the first PT_LOAD segment

@@ -137,9 +137,11 @@ error_t load_elf(elf64_ehdr_t* elf_header)
 	return copy_load_segment(elf_header);
 }
 
-void exec_elf(void* buffer, const char* name, const char* args)
+void exec_elf(kernel::memory::unique_kbuf<> buffer,
+			  const char* name,
+			  const char* args)
 {
-	auto* elf_header = reinterpret_cast<elf64_ehdr_t*>(buffer);
+	auto* elf_header = reinterpret_cast<elf64_ehdr_t*>(buffer.get());
 	if (!is_elf(elf_header)) {
 		LOG_ERROR("not an ELF file: %s", name);
 		return;
@@ -150,6 +152,12 @@ void exec_elf(void* buffer, const char* name, const char* args)
 		LOG_ERROR("failed to load ELF file: %s", name);
 		return;
 	}
+
+	// The segments are copied into the new image now; free the file buffer
+	// before enter_user_mode below, which never returns. Only the entry
+	// point survives past this line.
+	const uint64_t elf_entry = elf_header->e_entry;
+	buffer.reset();
 
 	const kernel::memory::vaddr_t argv_addr{ 0xffff'ffff'ffff'f000 };
 	err = kernel::memory::setup_page_tables(argv_addr, 1, true);
@@ -175,7 +183,7 @@ void exec_elf(void* buffer, const char* name, const char* args)
 		return;
 	}
 
-	enter_user_mode(argc, argv, kernel::memory::USER_SS, elf_header->e_entry,
+	enter_user_mode(argc, argv, kernel::memory::USER_SS, elf_entry,
 					stack_addr.data + stack_size - 8,
 					&kernel::task::CURRENT_TASK->kernel_stack_ptr);
 }

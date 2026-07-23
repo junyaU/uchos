@@ -33,16 +33,17 @@ void initialize_task()
 	Message m = make_request(MsgType::FS_REGISTER_PATH);
 	call(process_ids::FS_FAT32, &m);
 
-	m.type = MsgType::INITIALIZE_TASK;
+	m.type = MsgType::KERNEL_TASK_READY;
 	send_message(process_ids::KERNEL, &m);
 }
 
-void deallocate_ool_memory(ProcessId sender, void* addr, size_t size)
+void ool_release(const void* addr)
 {
-	Message m = { .type = MsgType::IPC_OOL_MEMORY_DEALLOC, .sender = sender };
-	m.tool_desc.addr = addr;
-	m.tool_desc.size = size;
-	m.tool_desc.present = true;
+	// The region is named by its mapped address; the kernel looks it up in
+	// this task's region table, unmaps it and frees the pages (issue #314
+	// Stage C)
+	Message m = {};
+	m.ool.addr = reinterpret_cast<uint64_t>(addr);
 
-	send_message(process_ids::KERNEL, &m);
+	sys_ipc(-1, -1, &m, IPC_OOL_RELEASE);
 }

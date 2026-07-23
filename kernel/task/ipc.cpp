@@ -7,6 +7,7 @@
 #include "error.hpp"
 #include "interrupt/irq_guard.hpp"
 #include "log/log.hpp"
+#include "memory/page.hpp"
 #include "memory/paging.hpp"
 #include "memory/user.hpp"
 #include "task.hpp"
@@ -49,44 +50,184 @@ bool pop_notification(Task* t, Message* out)
 }
 } // namespace
 
-error_t handle_ool_memory_dealloc(const Message& m)
+kernel::memory::unique_kbuf<> make_ool_buffer(size_t size)
 {
-	const kernel::memory::vaddr_t addr{ reinterpret_cast<uint64_t>(
-			m.tool_desc.addr) };
-	const kernel::memory::vaddr_t start_addr{ addr.data - addr.part(0) };
-	const size_t pages_to_unmap =
-			kernel::memory::calc_required_pages(addr, m.tool_desc.size);
-
-	return kernel::memory::unmap_frame(kernel::memory::get_active_page_table(),
-									   start_addr, pages_to_unmap);
-}
-
-error_t handle_ool_memory_alloc(Message& m, Task* dst)
-{
-	const kernel::memory::vaddr_t src_vaddr{ reinterpret_cast<uint64_t>(
-			m.tool_desc.addr) };
-	const size_t num_pages =
-			kernel::memory::calc_required_pages(src_vaddr, m.tool_desc.size);
-	paddr_t src_paddr = kernel::memory::get_paddr(
-			kernel::memory::get_active_page_table(), src_vaddr);
-	int data_offset = src_vaddr.part(0);
-
-	// kernel → userspace: the kernel is identity-mapped, so the buffer's
-	// physical address is its address. map_frame_to_vaddr maps whole frames and
-	// hands back a page-aligned vaddr, so the buffer's in-page offset still has
-	// to be re-applied below. Zeroing it only worked while kernel OOL buffers
-	// happened to be page-aligned; slab objects generally are not.
-	if (!is_user_address(m.tool_desc.addr, m.tool_desc.size)) {
-		src_paddr = reinterpret_cast<uint64_t>(m.tool_desc.addr);
+	if (size == 0) {
+		return kernel::memory::unique_kbuf<>{};
 	}
 
-	kernel::memory::vaddr_t dst_vaddr;
-	RETURN_IF_ERROR(kernel::memory::map_frame_to_vaddr(
-			dst->get_page_table(), src_paddr, num_pages, &dst_vaddr));
+	// PAGE_SIZE alignment forces the slab object past PAGE_SIZE, which gives
+	// it dedicated pages: nothing else can sit on a page a user may see
+	return kernel::memory::make_kbuf(size, kernel::memory::ALLOC_ZEROED,
+									 kernel::memory::PAGE_SIZE);
+}
 
-	m.tool_desc.addr = reinterpret_cast<void*>(dst_vaddr.data + data_offset);
+error_t reply_with_ool(const Message& req,
+					   Message* resp,
+					   kernel::memory::unique_kbuf<> buf,
+					   uint32_t size)
+{
+	// A fire-and-forget request (correlation 0) makes reply() a no-op that
+	// still returns OK: never attach the payload there, or checking the
+	// return value would release a buffer nobody received (leak)
+	if (req.correlation == 0 || !buf || size == 0) {
+		return reply(req, resp);
+	}
+
+	resp->ool.addr = reinterpret_cast<uint64_t>(buf.get());
+	resp->ool.size = size;
+
+	const error_t err = reply(req, resp);
+	if (IS_ERR(err)) {
+		// Not delivered: the buffer is freed on return
+		resp->ool = {};
+		return err;
+	}
+
+	static_cast<void>(buf.release()); // delivered: the requester owns it now
+	return OK;
+}
+
+void free_message_ool(Message& m)
+{
+	if (m.ool.size == 0 || m.ool.addr == 0) {
+		return;
+	}
+
+	void* addr = reinterpret_cast<void*>(m.ool.addr);
+	if (is_user_address(addr, m.ool.size)) {
+		// User vaddrs are never kernel-owned; nothing to free here
+		return;
+	}
+
+	kernel::memory::free(addr);
+	m.ool = {};
+}
+
+error_t copy_in_ool_from_user(Message* m)
+{
+	if (m->ool.size == 0) {
+		m->ool.addr = 0;
+		return OK;
+	}
+
+	if (m->ool.size > OOL_MAX_SIZE) {
+		return ERR_OOL_LIMIT;
+	}
+
+	const void __user* uaddr = reinterpret_cast<const void*>(m->ool.addr);
+	if (!is_user_address(uaddr, m->ool.size)) {
+		return ERR_INVALID_ARG;
+	}
+
+	auto buf = make_ool_buffer(m->ool.size);
+	if (!buf) {
+		return ERR_NO_MEMORY;
+	}
+
+	if (copy_from_user(buf.get(), uaddr, m->ool.size) != m->ool.size) {
+		return ERR_INVALID_ARG;
+	}
+
+	m->ool.addr = reinterpret_cast<uint64_t>(buf.release());
 
 	return OK;
+}
+
+void deliver_ool_to_user(Task* t, Message* m)
+{
+	if (m->ool.size == 0 || m->ool.addr == 0) {
+		return;
+	}
+
+	if ((m->ool.addr & (kernel::memory::PAGE_SIZE - 1)) != 0) {
+		// Not a make_ool_buffer() buffer: mapping it would expose whatever
+		// shares its pages. Protocol bug on the sending side.
+		LOG_ERROR("unaligned ool buffer for user delivery: type = %d",
+				  static_cast<int>(m->type));
+		free_message_ool(*m);
+		m->result = ERR_INVALID_ARG;
+		return;
+	}
+
+	OolRegion* slot = nullptr;
+	for (auto& r : t->ool_regions) {
+		if (r.kaddr == 0) {
+			slot = &r;
+			break;
+		}
+	}
+
+	if (slot == nullptr) {
+		// §9: keep the message, drop the payload, surface the error
+		LOG_ERROR("ool region table full: task %d", t->id.raw());
+		free_message_ool(*m);
+		m->result = ERR_OOL_LIMIT;
+		return;
+	}
+
+	const size_t pages = kernel::memory::calc_required_pages(
+			kernel::memory::vaddr_t{ m->ool.addr }, m->ool.size);
+
+	// The kernel is identity-mapped, so the buffer's kernel vaddr is also
+	// its physical frame address
+	kernel::memory::vaddr_t uaddr;
+	const error_t err = kernel::memory::map_frame_to_vaddr(
+			t->get_page_table(), m->ool.addr, pages, &uaddr);
+	if (IS_ERR(err)) {
+		LOG_ERROR_CODE(err, "failed to map ool buffer: task %d", t->id.raw());
+		free_message_ool(*m);
+		m->result = ERR_NO_MEMORY;
+		return;
+	}
+
+	*slot = OolRegion{ m->ool.addr, uaddr.data, static_cast<uint32_t>(pages) };
+	m->ool.addr = uaddr.data;
+}
+
+error_t release_ool_region(Task* t, uint64_t uaddr)
+{
+	for (auto& r : t->ool_regions) {
+		if (r.kaddr == 0 || r.uaddr != uaddr) {
+			continue;
+		}
+
+		kernel::memory::unmap_frame(t->get_page_table(),
+									kernel::memory::vaddr_t{ r.uaddr }, r.pages);
+		kernel::memory::free(reinterpret_cast<void*>(r.kaddr));
+		r = OolRegion{};
+		return OK;
+	}
+
+	LOG_ERROR_CODE(ERR_INVALID_ARG, "ool_release: no region at %p in task %d",
+				   reinterpret_cast<void*>(uaddr), t->id.raw());
+	return ERR_INVALID_ARG;
+}
+
+void release_ool_regions(Task* t)
+{
+	for (auto& r : t->ool_regions) {
+		if (r.kaddr != 0) {
+			kernel::memory::free(reinterpret_cast<void*>(r.kaddr));
+			r = OolRegion{};
+		}
+	}
+}
+
+void release_all_ool(Task* t)
+{
+	release_ool_regions(t);
+
+	// Undelivered messages and an uncollected reply still own their buffers
+	Message m;
+	while (try_receive(t, &m)) {
+		free_message_ool(m);
+	}
+
+	if (t->reply_pending) {
+		free_message_ool(t->reply_slot);
+		t->reply_pending = false;
+	}
 }
 
 error_t send_message(ProcessId dst_id, Message& m)
@@ -101,18 +242,16 @@ error_t send_message(ProcessId dst_id, Message& m)
 
 	Task* dst = tasks[dst_raw];
 	if (dst == nullptr) {
-		if (m.type != MsgType::INITIALIZE_TASK) {
+		if (m.type != MsgType::KERNEL_TASK_READY) {
 			LOG_ERROR_CODE(ERR_INVALID_TASK, "task %d is not found", dst_raw);
 			LOG_ERROR("message type: %d", m.type);
 		}
 		return ERR_INVALID_TASK;
 	}
 
-	if (m.type == MsgType::IPC_OOL_MEMORY_DEALLOC) {
-		RETURN_IF_ERROR(handle_ool_memory_dealloc(m));
-	} else if (m.tool_desc.present) {
-		RETURN_IF_ERROR(handle_ool_memory_alloc(m, dst));
-	}
+	// OOL payloads are delivered as-is: kernel buffers move by ownership and
+	// the user-space translation happens only at the syscall boundary
+	// (issue #314 Stage C), never inside the delivery path.
 
 	// Keep the delivery and the wakeup check atomic so a receiver going to
 	// sleep cannot miss the message (lost wakeup)

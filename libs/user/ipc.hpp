@@ -31,4 +31,11 @@ Message call(ProcessId dst, Message* msg);
 
 void initialize_task();
 
-void deallocate_ool_memory(ProcessId sender, void* addr, size_t size);
+/**
+ * @brief Release an OOL region received with a message
+ *
+ * Every received Message whose ool.size is nonzero maps a buffer into this
+ * process at ool.addr; pass that address here after use, or the pages stay
+ * mapped until the process exits.
+ */
+void ool_release(const void* addr);

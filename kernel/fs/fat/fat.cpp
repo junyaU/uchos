@@ -33,10 +33,9 @@ void fat32_service()
 	t->is_initialized = true;
 
 	// Register message handlers
-	t->add_msg_handler(MsgType::IPC_GET_FILE_INFO, handle_get_file_info);
-	t->add_msg_handler(MsgType::IPC_READ_FILE_DATA, handle_read_file_data);
-	t->add_msg_handler(MsgType::GET_DIRECTORY_CONTENTS,
-					   handle_get_directory_contents);
+	t->add_msg_handler(MsgType::FS_STAT, handle_fs_stat);
+	t->add_msg_handler(MsgType::FS_LOAD, handle_fs_load);
+	t->add_msg_handler(MsgType::FS_LIST_DIR, handle_fs_list_dir);
 	t->add_msg_handler(MsgType::FS_OPEN, handle_fs_open);
 	t->add_msg_handler(MsgType::FS_READ, handle_fs_read);
 	t->add_msg_handler(MsgType::FS_WRITE, handle_fs_write);
