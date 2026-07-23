@@ -191,13 +191,18 @@ void handle_normal_directory_change(const Message& m,
 	reply_change_dir(m, upper_name);
 }
 
+/// Resolve the task whose fs state (cwd) an FS request acts on: a forked
+/// child shares its parent's working directory, so requests resolve to the
+/// parent while it is alive, falling back to the sender itself otherwise.
 kernel::task::Task* get_effective_task(ProcessId sender)
 {
 	auto* t = kernel::task::get_task(sender);
-	if (t != nullptr && t->parent_id != process_ids::INVALID) {
-		return kernel::task::get_task(t->parent_id);
+	if (t == nullptr || t->parent_id == process_ids::INVALID) {
+		return t;
 	}
-	return t;
+
+	auto* parent = kernel::task::get_task(t->parent_id);
+	return parent != nullptr ? parent : t;
 }
 
 } // namespace
@@ -227,18 +232,11 @@ void handle_fs_change_dir(const Message& m)
 
 void handle_fs_list_dir(const Message& m)
 {
-	auto* t = kernel::task::get_task(m.sender);
+	auto* t = get_effective_task(m.sender);
 	if (t == nullptr) {
 		// Requester is gone; there is no one to reply to.
 		LOG_ERROR("Task %d not found", m.sender.raw());
 		return;
-	}
-
-	if (t->parent_id != process_ids::INVALID) {
-		kernel::task::Task* parent = kernel::task::get_task(t->parent_id);
-		if (parent != nullptr) {
-			t = parent;
-		}
 	}
 
 	DirectoryEntry* current_dir = t->fs_path.current_dir;
@@ -259,27 +257,16 @@ void handle_fs_list_dir(const Message& m)
 	}
 
 	int entries_count = 0;
-	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
-		if (current_dir[i].name[0] == DIR_ENTRY_END) {
-			break;
-		}
-
-		if (current_dir[i].name[0] == DIR_ENTRY_DELETED) {
-			continue;
-		}
-
-		if (current_dir[i].attribute == entry_attribute::LONG_NAME) {
-			continue;
-		}
-
+	scan_valid_entries(current_dir, [&](const DirectoryEntry& entry) {
 		Stat* s = reinterpret_cast<Stat*>(stat_buf.get()) + entries_count;
-		read_dir_entry_name(current_dir[i], s->name);
-		s->size = current_dir[i].file_size;
-		s->type = current_dir[i].attribute == entry_attribute::DIRECTORY
+		read_dir_entry_name(entry, s->name);
+		s->size = entry.file_size;
+		s->type = entry.attribute == entry_attribute::DIRECTORY
 						  ? StatType::DIRECTORY
 						  : StatType::REGULAR_FILE;
 		++entries_count;
-	}
+		return false;
+	});
 
 	Message sm = { .type = MsgType::FS_LIST_DIR, .sender = process_ids::FS_FAT32 };
 	sm.result = OK;
@@ -293,18 +280,11 @@ void handle_fs_pwd(const Message& m)
 {
 	Message reply = { .type = MsgType::FS_PWD, .sender = process_ids::FS_FAT32 };
 
-	kernel::task::Task* t = kernel::task::get_task(m.sender);
+	kernel::task::Task* t = get_effective_task(m.sender);
 	if (t == nullptr) {
 		// Requester is gone; there is no one to reply to.
 		LOG_ERROR("Task %d not found", m.sender.raw());
 		return;
-	}
-
-	if (t->parent_id != process_ids::INVALID) {
-		kernel::task::Task* parent = kernel::task::get_task(t->parent_id);
-		if (parent != nullptr) {
-			t = parent;
-		}
 	}
 
 	if (t->fs_path.current_dir == nullptr) {
@@ -327,18 +307,7 @@ void persist_directory_entry(DirectoryEntry* entry, const char* name)
 		return;
 	}
 
-	DirectoryEntry* disk_entry = nullptr;
-	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
-		if (ROOT_DIR[i].name[0] == DIR_ENTRY_END) {
-			break;
-		}
-
-		if (entry_name_is_equal(ROOT_DIR[i], name)) {
-			disk_entry = &ROOT_DIR[i];
-			break;
-		}
-	}
-
+	DirectoryEntry* disk_entry = find_dir_entry(ROOT_DIR, name);
 	if (disk_entry == nullptr) {
 		LOG_ERROR("Directory entry not found in ROOT_DIR");
 		return;

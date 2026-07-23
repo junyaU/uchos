@@ -38,6 +38,38 @@ cluster_t next_cluster(cluster_t cluster_id);
 kernel::fs::DirectoryEntry* find_dir_entry(kernel::fs::DirectoryEntry* parent_dir,
 										   const char* name);
 kernel::fs::DirectoryEntry* find_empty_dir_entry();
+
+/**
+ * @brief Iterate the live entries of a single directory cluster
+ *
+ * Single scan primitive for directory clusters: visits slots in order until
+ * the end marker, skipping deleted and long-file-name slots. fn receives a
+ * DirectoryEntry& and returns true to stop at that entry.
+ *
+ * @return The entry fn stopped at, or nullptr when the scan reached the end
+ * marker (or the cluster was exhausted)
+ */
+template<typename Fn>
+kernel::fs::DirectoryEntry* scan_valid_entries(kernel::fs::DirectoryEntry* dir,
+											   Fn fn)
+{
+	for (unsigned long i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
+		if (dir[i].name[0] == DIR_ENTRY_END) {
+			return nullptr;
+		}
+
+		if (dir[i].name[0] == DIR_ENTRY_DELETED ||
+			dir[i].attribute == kernel::fs::entry_attribute::LONG_NAME) {
+			continue;
+		}
+
+		if (fn(dir[i])) {
+			return &dir[i];
+		}
+	}
+
+	return nullptr;
+}
 // The (fat, total_clusters) overloads operate on an explicit FAT so tests
 // can use a private table; the parameterless-FAT overloads wrap the live
 // globals. Tests must never swap the globals themselves: the FS task uses
