@@ -103,6 +103,49 @@ void reply_read_result(const Message& req, const DirectoryEntry* entry)
 	reply_file_data(req, cache->buffer.data(), cache->total_size);
 }
 
+/// Fully resolved fd-based request. entry is non-null iff resolution
+/// succeeded; fd is only valid when entry is set.
+struct OpenFile {
+	FileDescriptor* fd;
+	DirectoryEntry* entry;
+};
+
+/**
+ * @brief Resolve sender task, file descriptor, and directory entry for an
+ * fd-based FS request (FS_READ / FS_WRITE)
+ *
+ * On failure this logs and replies the matching error itself, except when
+ * the requester task is already gone — then there is no one to reply to.
+ *
+ * @return OpenFile with entry != nullptr on success; entry == nullptr means
+ * the error was already handled and the caller just returns
+ */
+OpenFile resolve_open_file(const Message& m)
+{
+	kernel::task::Task* t = kernel::task::get_task(m.sender);
+	if (t == nullptr) {
+		LOG_ERROR("Task %d not found - likely already exited", m.sender.raw());
+		return {};
+	}
+
+	FileDescriptor* fd = kernel::fs::get_process_fd(
+			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
+	if (fd == nullptr) {
+		LOG_ERROR("fd not found");
+		reply_error(m, ERR_INVALID_FD);
+		return {};
+	}
+
+	DirectoryEntry* entry = find_dir_entry(ROOT_DIR, fd->name);
+	if (entry == nullptr) {
+		LOG_ERROR("entry not found");
+		reply_error(m, ERR_NO_FILE);
+		return {};
+	}
+
+	return { fd, entry };
+}
+
 } // namespace
 
 void execute_file(kernel::memory::unique_kbuf<> data,
@@ -182,29 +225,12 @@ void handle_fs_open(const Message& m)
 
 void handle_fs_read(const Message& m)
 {
-	kernel::task::Task* t = kernel::task::get_task(m.sender);
-	if (t == nullptr) {
-		LOG_ERROR("Task not found: %d", m.sender.raw());
-		reply_error(m, ERR_INVALID_TASK);
+	const OpenFile of = resolve_open_file(m);
+	if (of.entry == nullptr) {
 		return;
 	}
 
-	FileDescriptor* fd = kernel::fs::get_process_fd(
-			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
-	if (fd == nullptr) {
-		LOG_ERROR("fd not found");
-		reply_error(m, ERR_INVALID_FD);
-		return;
-	}
-
-	DirectoryEntry* entry = find_dir_entry(ROOT_DIR, fd->name);
-	if (entry == nullptr) {
-		LOG_ERROR("entry not found");
-		reply_error(m, ERR_NO_FILE);
-		return;
-	}
-
-	reply_read_result(m, entry);
+	reply_read_result(m, of.entry);
 }
 
 void handle_fs_close(const Message& m)
@@ -237,26 +263,12 @@ void handle_fs_write(const Message& m)
 	// Never trust the inline length beyond the payload actually delivered
 	const size_t count = std::min(m.data.fs.len, static_cast<size_t>(m.ool.size));
 
-	kernel::task::Task* t = kernel::task::get_task(m.sender);
-	if (t == nullptr) {
-		LOG_ERROR("Task %d not found - likely already exited", m.sender.raw());
+	const OpenFile of = resolve_open_file(m);
+	if (of.entry == nullptr) {
 		return;
 	}
-
-	FileDescriptor* fd = kernel::fs::get_process_fd(
-			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
-	if (fd == nullptr) {
-		LOG_ERROR("fd not found");
-		reply_error(m, ERR_INVALID_FD);
-		return;
-	}
-
-	DirectoryEntry* entry = find_dir_entry(ROOT_DIR, fd->name);
-	if (entry == nullptr) {
-		LOG_ERROR("entry not found");
-		reply_error(m, ERR_NO_FILE);
-		return;
-	}
+	FileDescriptor* fd = of.fd;
+	DirectoryEntry* entry = of.entry;
 
 	const size_t new_size = fd->offset + count;
 

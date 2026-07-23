@@ -87,17 +87,9 @@ cluster_t next_cluster(cluster_t cluster_id)
 
 DirectoryEntry* find_dir_entry(DirectoryEntry* parent_dir, const char* name)
 {
-	for (int i = 0; i < ENTRIES_PER_CLUSTER; ++i) {
-		if (parent_dir[i].name[0] == DIR_ENTRY_END) {
-			break;
-		}
-
-		if (entry_name_is_equal(parent_dir[i], name)) {
-			return &parent_dir[i];
-		}
-	}
-
-	return nullptr;
+	return scan_valid_entries(parent_dir, [name](const DirectoryEntry& entry) {
+		return entry_name_is_equal(entry, name);
+	});
 }
 
 DirectoryEntry* find_empty_dir_entry()
