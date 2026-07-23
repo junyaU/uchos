@@ -119,14 +119,4 @@ constexpr unsigned int BOOT_SECTOR = 0;
 // Main task entry point
 void fat32_service();
 
-// FAT32 public API
-namespace fat
-{
-// Execute an ELF image; takes ownership of the buffer (freed after the
-// segments are copied into the new address space)
-void execute_file(kernel::memory::unique_kbuf<> data,
-				  const char* name,
-				  const char* args);
-} // namespace fat
-
 } // namespace kernel::fs

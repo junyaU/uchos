@@ -5,7 +5,7 @@
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 #include <utility>
-#include "fs/fat/fat.hpp"
+#include "elf.hpp"
 #include "fs/path.hpp"
 #include "hardware/keyboard.hpp"
 #include "hardware/pci.hpp"
@@ -111,7 +111,7 @@ void kernel_service()
 void shell_service()
 {
 	// One synchronous FS_LOAD returns a kernel-owned copy of the binary as
-	// an OOL move; execute_file takes ownership and frees it once the
+	// an OOL move; exec_elf takes ownership and frees it once the
 	// segments are loaded (issue #314 Stage C)
 	Message m = { .type = MsgType::FS_LOAD, .sender = process_ids::SHELL };
 	char path[6] = "shell";
@@ -129,7 +129,7 @@ void shell_service()
 	}
 
 	CURRENT_TASK->is_initialized = true;
-	kernel::fs::fat::execute_file(std::move(shell_elf), "shell", nullptr);
+	exec_elf(std::move(shell_elf), "shell", nullptr);
 }
 
 void usb_handler_service()
