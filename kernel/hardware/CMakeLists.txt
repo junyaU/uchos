@@ -2,6 +2,7 @@ set(HARDWARE_SOURCE_FILES
         keyboard.cpp
         pci.cpp
         serial.cpp
+        usb_service.cpp
         )
 
 add_library(UchosHardware ${HARDWARE_SOURCE_FILES})

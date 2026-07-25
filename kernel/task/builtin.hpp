@@ -29,22 +29,4 @@ namespace kernel::task
  */
 void kernel_service();
 
-/**
- * @brief Shell task for user interaction
- *
- * This task implements the command-line shell interface, allowing
- * users to interact with the system, execute commands, and manage
- * processes.
- */
-void shell_service();
-
-/**
- * @brief USB event handler task
- *
- * This task processes USB events and manages USB device communication.
- * It handles device enumeration, data transfers, and USB protocol
- * management for connected devices.
- */
-void usb_handler_service();
-
 } // namespace kernel::task

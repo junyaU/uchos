@@ -17,7 +17,21 @@
 namespace kernel::task
 {
 
-void initialize();
+struct InitialTaskInfo;
+
+/**
+ * @brief Initialize tasking and create the boot tasks
+ *
+ * Creates the scheduler's own tasks (KERNEL, IDLE) and then one task per
+ * manifest entry, in slot order. The scheduler knows no individual
+ * service: the manifest lives with the caller (kernel/services.cpp,
+ * issue #315).
+ *
+ * @param services Boot service manifest, ordered by SystemProcessId
+ * starting at the first slot after IDLE, with no gap
+ * @param num_services Number of manifest entries
+ */
+void initialize(const InitialTaskInfo* services, size_t num_services);
 
 /**
  * @brief Start preemptive scheduling by arming the switch-task timer
