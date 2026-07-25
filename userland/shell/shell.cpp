@@ -64,13 +64,14 @@ void Shell::process_input(char* input, Terminal& term)
 		if (redirect_file != nullptr && strlen(redirect_file) > 0) {
 			// Create or open the file
 			fd_t file_fd = fs_create(redirect_file);
-			if (file_fd < 0) {
+			if (IS_ERR(file_fd)) {
 				// Try opening existing file
 				file_fd = fs_open(redirect_file, 0);
 			}
 
-			if (file_fd >= 0) {
-				// Redirect stdout to file
+			if (IS_OK(file_fd)) {
+				// Redirect stdout to file; on failure the output just
+				// stays on the console, which the user will see anyway
 				fs_dup2(file_fd, STDOUT_FILENO);
 				fs_close(file_fd);
 			}

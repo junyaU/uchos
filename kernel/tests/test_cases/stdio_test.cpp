@@ -90,12 +90,13 @@ void test_read_from_stdin()
 
 	const ScopedCurrentTask scoped_task(t);
 
-	// Test reading from stdin (currently returns 0)
+	// stdin (CONSOLE route) reports EOF by design: the console owner
+	// cannot serve reads while it is blocked in sys_wait (issue #315;
+	// interactive stdin arrives with the async shell loop in 3b)
 	char buffer[128];
 	const ssize_t result = kernel::syscall::sys_read(
 			STDIN_FILENO, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
 
-	// Currently stdin returns 0 (no data available)
 	ASSERT_EQ(result, 0);
 }
 
@@ -123,6 +124,15 @@ void test_invalid_fd()
 	const ssize_t result3 = kernel::syscall::sys_write(
 			10, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
 	ASSERT_EQ(result3, ERR_INVALID_FD);
+
+	// sys_read validates through the same fd lookup (issue #315)
+	const ssize_t result4 = kernel::syscall::sys_read(
+			-1, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
+	ASSERT_EQ(result4, ERR_INVALID_FD);
+
+	const ssize_t result5 = kernel::syscall::sys_read(
+			10, reinterpret_cast<uint64_t>(buffer), sizeof(buffer));
+	ASSERT_EQ(result5, ERR_INVALID_FD);
 }
 
 void test_fd_inheritance()

@@ -14,32 +14,36 @@ int main(int argc, char** argv)
 
 	// Open or create file
 	fd_t fd = fs_open(filename, 0);
-	if (fd < 0) {
+	if (IS_ERR(fd)) {
 		// Try to create the file
 		fd = fs_create(filename);
-		if (fd < 0) {
-			printu("Failed to open or create file: %s", filename);
+		if (IS_ERR(fd)) {
+			printu("Failed to open or create file: %s (%d)", filename,
+				   static_cast<int>(fd));
 			return 0;
 		}
 	}
 
 	// Write text to file
 	size_t text_len = strlen(text);
-	size_t written = fs_write(fd, text, text_len);
+	ssize_t written = fs_write(fd, text, text_len);
 
-	if (written == 0) {
-		printu("Failed to write to file: %s", filename);
+	if (IS_ERR(written)) {
+		printu("Failed to write to file: %s (%d)", filename,
+			   static_cast<int>(written));
 		fs_close(fd);
 		return 0;
 	}
 
 	// Write newline
 	const char newline[] = "\n";
-	fs_write(fd, newline, 1);
+	if (IS_ERR(fs_write(fd, newline, 1))) {
+		printu("Failed to write newline to %s", filename);
+	}
 
 	fs_close(fd);
 
-	printu("Written %d bytes to %s", written + 1, filename);
+	printu("Written %d bytes to %s", static_cast<int>(written) + 1, filename);
 
 	return 0;
 }

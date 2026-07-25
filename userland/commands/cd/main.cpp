@@ -14,9 +14,7 @@ int main(int argc, char** argv)
 	char* target_dir = argv[1];
 	char new_path[256] = { 0 };
 
-	fs_change_dir(new_path, target_dir);
-
-	if (new_path[0] == '\0') {
+	if (IS_ERR(fs_change_dir(new_path, target_dir))) {
 		printu("cd: The directory %s does not exist", target_dir);
 		return 0;
 	}
