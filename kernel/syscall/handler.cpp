@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -30,26 +31,72 @@ namespace kernel::syscall
 ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 {
 	const fd_t fd = static_cast<fd_t>(arg1);
-	// void __user* buf = reinterpret_cast<void*>(arg2);
-	// const size_t count = static_cast<size_t>(arg3);
+	void __user* buf = reinterpret_cast<void*>(arg2);
+	const size_t count = static_cast<size_t>(arg3);
 
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
 
-	// Validate file descriptor
-	if (kernel::fs::get_process_fd(t->fd_table.data(),
-								   kernel::task::MAX_FDS_PER_PROCESS,
-								   fd) == nullptr) {
+	kernel::fs::FileDescriptor* fd_entry = kernel::fs::get_process_fd(
+			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, fd);
+	if (fd_entry == nullptr) {
 		return ERR_INVALID_FD;
 	}
 
-	// For now, only support stdin (fd 0)
-	if (fd == STDIN_FILENO) {
-		// TODO: Implement actual keyboard input via IPC
-		// For now, return 0 (no data available)
+	if (count == 0) {
 		return 0;
 	}
 
-	// Other file descriptors not yet supported
+	// Reads follow the fd's routing, mirroring sys_write (issue #315)
+	switch (fd_entry->route) {
+		case FdRoute::CONSOLE:
+			// Interactive stdin needs the console owner to serve reads, but
+			// the shell is blocked in sys_wait for the whole life of the
+			// command that would be reading (it could never answer the
+			// RPC). Until the shell loop goes async (issue #315 3b), stdin
+			// honestly reports EOF instead of pretending to be readable.
+			return 0;
+		case FdRoute::FS: {
+			// The FS's read contract is currently "reply with the whole
+			// file as one OOL copy" (kernel/fs/fat reply_file_data); the
+			// window [offset, offset+count) is cut out here so sequential
+			// read() loops terminate. Both move into the FS server in 3b.
+			Message req = { .type = MsgType::FS_READ, .sender = t->id };
+			req.data.fs.fd = fd;
+			req.data.fs.len = count;
+
+			const error_t err = kernel::task::call(fd_entry->dest, &req);
+			if (IS_ERR(err)) {
+				return err;
+			}
+
+			// Own the reply payload before inspecting the result so an
+			// error reply that still carries one cannot leak it (the
+			// buffer stays kernel-owned for in-kernel callers)
+			kernel::memory::unique_kbuf<> data{ reinterpret_cast<void*>(
+					req.ool.addr) };
+			if (IS_ERR(req.result)) {
+				return req.result;
+			}
+
+			const size_t file_size = req.data.fs.len;
+			if (!data || fd_entry->offset >= file_size) {
+				return 0; // EOF (or empty file: those replies carry no OOL)
+			}
+
+			const size_t n = std::min(count, file_size - fd_entry->offset);
+			if (copy_to_user(buf,
+							 static_cast<const char*>(data.get()) + fd_entry->offset,
+							 n) != n) {
+				return ERR_INVALID_ARG;
+			}
+			fd_entry->offset += n;
+
+			return n;
+		}
+		case FdRoute::NONE:
+			break;
+	}
+
 	return ERR_INVALID_FD;
 }
 
