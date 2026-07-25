@@ -47,6 +47,36 @@ struct OpenFileRecord {
 
 constexpr int MAX_OPEN_FILES = 64;
 
+/**
+ * @brief One client's working directory, owned by the FS (issue #315 3b-9)
+ *
+ * Replaces Task::fs_path: the cwd used to live in the client's Task and
+ * this module mutated it across the task boundary. Only root tasks own a
+ * record; forked children act on their parent's (effective owner).
+ */
+struct ClientCwd {
+	/// Slot occupancy. The kernel never runs static constructors, so a
+	/// global table only gets zero-initialized: the free-slot sentinel MUST
+	/// be all-zeroes (false), never a nonzero value like ProcessId INVALID
+	/// (-1). Checking owner == INVALID here made every slot look owned by
+	/// pid 0 (KERNEL, alive forever) and the table was born full.
+	bool in_use;
+	ProcessId owner; ///< Valid only while in_use
+	/// Current directory cluster; owned buffer unless it is the shared
+	/// ROOT_DIR (freed on replace / reset / sweep)
+	kernel::fs::DirectoryEntry* dir;
+	char dir_name[13];	 ///< Display name of the current directory
+	char full_path[256]; ///< Absolute path from the root
+};
+
+constexpr int MAX_CWD_CLIENTS = 16;
+
+/// Register (or reset to root) owner's working directory.
+/// @return OK, or ERR_NO_MEMORY when the table is full even after sweeping
+error_t cwd_register(ProcessId owner);
+/// @return owner's cwd record, or nullptr when none is registered
+ClientCwd* cwd_lookup(ProcessId owner);
+
 /// @return The new handle, or 0 when the ledger is full even after sweeping
 uint32_t open_file_create(kernel::fs::DirectoryEntry* entry,
 						  const char* name,

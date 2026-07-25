@@ -7,7 +7,6 @@
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 #include "fs/file_descriptor.hpp"
-#include "fs/path.hpp"
 #include "list.hpp"
 #include "memory/paging.hpp"
 #include "memory/slab.hpp"
@@ -102,7 +101,6 @@ struct Task {
 	/// cannot serve here — it stays set for the child's whole life.
 	bool just_forked;
 	TaskState state;
-	Path fs_path;
 	uint64_t* stack;
 	size_t stack_size;
 	uint64_t kernel_stack_ptr;
