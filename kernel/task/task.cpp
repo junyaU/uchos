@@ -5,7 +5,6 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
-#include "fs/path.hpp"
 #include "interrupt/irq_guard.hpp"
 #include "interrupt/vector.hpp"
 #include "list.hpp"
@@ -429,7 +428,6 @@ Task::Task(int raw_id,
 	  is_initialized{ is_initialized },
 	  just_forked{ false },
 	  state{ state },
-	  fs_path({ nullptr, nullptr, nullptr }),
 	  stack{ nullptr },
 	  pending_notifications{ 0 },
 	  wait_reason{ WaitReason::NONE },
