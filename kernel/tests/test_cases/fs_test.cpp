@@ -370,6 +370,27 @@ void test_open_file_ledger_sweep()
 	open_file_release(h);
 }
 
+void test_cwd_ledger()
+{
+	using namespace kernel::fs::fat;
+
+	const ProcessId owner = ProcessId::from_raw(1);
+	ASSERT_EQ(cwd_register(owner), OK);
+
+	ClientCwd* c = cwd_lookup(owner);
+	ASSERT_NOT_NULL(c);
+	ASSERT_EQ(strcmp(c->dir_name, "/"), 0);
+	ASSERT_EQ(strcmp(c->full_path, "/"), 0);
+
+	// Re-registration resets the record instead of duplicating it
+	ASSERT_EQ(cwd_register(owner), OK);
+	ASSERT_EQ(cwd_lookup(owner), c);
+
+	// Unregistered owners have no working directory
+	ASSERT_NULL(cwd_lookup(ProcessId::from_raw(77)));
+	ASSERT_NULL(cwd_lookup(process_ids::INVALID));
+}
+
 void register_fs_tests()
 {
 	test_register("test_write_existing_file", test_write_existing_file);
@@ -388,4 +409,5 @@ void register_fs_tests()
 	test_register("test_cluster_chain_disk_full", test_cluster_chain_disk_full);
 	test_register("test_open_file_ledger_basic", test_open_file_ledger_basic);
 	test_register("test_open_file_ledger_sweep", test_open_file_ledger_sweep);
+	test_register("test_cwd_ledger", test_cwd_ledger);
 }

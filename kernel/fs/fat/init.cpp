@@ -9,7 +9,6 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include "fat.hpp"
-#include "fs/path.hpp"
 #include "internal_common.hpp"
 #include "log/log.hpp"
 #include "memory/slab.hpp"
@@ -61,28 +60,6 @@ error_t initialize_fat32()
 	ROOT_DIR = reinterpret_cast<kernel::fs::DirectoryEntry*>(root_buf.release());
 
 	return OK;
-}
-
-void handle_fs_register_path(const Message& m)
-{
-	Message reply = { .type = MsgType::FS_REGISTER_PATH,
-					  .sender = process_ids::FS_FAT32 };
-
-	kernel::task::Task* t = kernel::task::get_task(m.sender);
-	if (t == nullptr) {
-		LOG_ERROR("Task %d not found", m.sender.raw());
-		return;
-	}
-
-	// Root tasks start at the root directory. The FS runs in ring 0, so it
-	// sets the task's fs_path directly; the old forward-to-KERNEL hop (and
-	// its heap-allocated Path hand-off) is gone (issue #314 Stage B).
-	if (t->parent_id == process_ids::INVALID) {
-		t->fs_path = init_path(ROOT_DIR);
-	}
-
-	reply.result = OK;
-	kernel::task::reply(m, &reply);
 }
 
 } // namespace kernel::fs::fat
