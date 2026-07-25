@@ -89,7 +89,9 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: kernel-test-serial-log
-        path: qemu-test/serial.log
+        path: |
+          qemu-test/serial.log
+          qemu-test/qemu-debug.log
         if-no-files-found: ignore
 
     - name: Run clang-tidy

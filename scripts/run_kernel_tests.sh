@@ -118,10 +118,17 @@ if [ -n "$SMOKE_BINS" ]; then
     echo "smoke mode: storage disk with [$SMOKE_BINS]"
 fi
 
+qemu_debug_log="$WORK_DIR/qemu-debug.log"
+
+qemu-system-x86_64 --version | head -1
 echo "booting kernel tests in QEMU (timeout ${TIMEOUT_SEC}s, log: $serial_log)"
 
+# -d cpu_reset captures the CPU state (RIP etc.) when the guest triple
+# faults: with -no-reboot that otherwise shows up only as a silent
+# status-0 exit. Resolve the dumped RIP with llvm-addr2line -e $KERNEL_ELF.
 set +e
 timeout --foreground "$TIMEOUT_SEC" qemu-system-x86_64 -m 1G \
+    -d cpu_reset,guest_errors -D "$qemu_debug_log" \
     -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
     -drive if=pflash,format=raw,file="$vars_img" \
     -drive if=ide,index=0,media=disk,format=raw,file="$disk_img" \
@@ -133,6 +140,12 @@ qemu_status=${PIPESTATUS[0]}
 set -e
 
 echo "qemu exit status: $qemu_status"
+
+if [ "$qemu_status" -ne 33 ] && [ -s "$qemu_debug_log" ]; then
+    echo "---- qemu debug log (last 60 lines) ----"
+    tail -60 "$qemu_debug_log"
+    echo "----------------------------------------"
+fi
 
 if [ "$qemu_status" -eq 124 ]; then
     echo "FAIL: timed out after ${TIMEOUT_SEC}s (kernel never reported a test result)" >&2
