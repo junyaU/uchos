@@ -27,6 +27,23 @@ constexpr size_t SECTOR_SIZE = 512;
 /// Inline payload ceiling: anything larger travels as an OOL buffer.
 constexpr size_t MSG_INLINE_MAX = 128;
 
+/**
+ * @brief USB HID boot-protocol modifier bits carried in key_input.modifier
+ *
+ * The kernel forwards this byte verbatim (issue #315); interpreting it —
+ * shift for the keymap, control chords, layout — is the focus owner's job.
+ * @{
+ */
+constexpr uint8_t KEY_MOD_LCTRL = 0b00000001;
+constexpr uint8_t KEY_MOD_LSHIFT = 0b00000010;
+constexpr uint8_t KEY_MOD_LALT = 0b00000100;
+constexpr uint8_t KEY_MOD_LGUI = 0b00001000;
+constexpr uint8_t KEY_MOD_RCTRL = 0b00010000;
+constexpr uint8_t KEY_MOD_RSHIFT = 0b00100000;
+constexpr uint8_t KEY_MOD_RALT = 0b01000000;
+constexpr uint8_t KEY_MOD_RGUI = 0b10000000;
+/** @} */
+
 /// Upper bound for a single OOL payload; the user->kernel copy-in at the
 /// syscall boundary refuses anything larger (issue #314 Stage C).
 constexpr size_t OOL_MAX_SIZE = 16UL * 1024 * 1024;
@@ -53,6 +70,9 @@ enum class MsgType : int32_t {
 	KERNEL_TASK_READY,
 	KERNEL_MEMORY_USAGE,
 	KERNEL_PCI_LIST,
+	/// Claim the keyboard focus: raw NOTIFY_KEY_INPUT events are delivered
+	/// to the sender from now on. Handled by the USB handler task.
+	INPUT_SET_FOCUS,
 	BLK_READ,
 	BLK_WRITE,
 	NET_RX,
@@ -115,10 +135,11 @@ struct Message {
 			int task_id;
 		} init;
 
+		/// Raw key event: the kernel does no keymap conversion and no
+		/// press/release filtering (issue #315); ascii is gone on purpose
 		struct {
 			uint8_t key_code;
 			uint8_t modifier;
-			uint8_t ascii;
 			int press;
 		} key_input;
 
