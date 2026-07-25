@@ -167,6 +167,11 @@ error_t configure_pci_common_cfg(VirtioPciDevice& virtio_dev)
 	virtio_dev.common_cfg =
 			get_virtio_pci_capability<VirtioPciCommonCfg>(virtio_dev);
 
+	// MMIO is reached through the identity map, which only covers the low
+	// 64 GiB — a BAR the firmware placed higher faults on first touch, so
+	// leave the address on serial before that happens (issue #374)
+	LOG_INFO("virtio common cfg at %p", virtio_dev.common_cfg);
+
 	virtio_dev.common_cfg->device_status = 0;
 	while (virtio_dev.common_cfg->device_status != 0) {
 	}

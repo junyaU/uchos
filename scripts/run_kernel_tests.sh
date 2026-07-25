@@ -109,7 +109,12 @@ if [ -n "$SMOKE_BINS" ]; then
         fi
         mcopy -i "$storage_img" "$bin" ::/
     done
+    # X-PciMmio64Mb=0 keeps OVMF from opening a 64-bit MMIO window: newer
+    # firmware otherwise places the virtio BARs around 512 GiB, beyond the
+    # kernel's 64 GiB identity map, and the first common-cfg access triple
+    # faults (exactly what the interactive boot's older firmware never did)
     smoke_qemu_args=(
+        -fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=0
         -drive if=none,id=vblk,format=raw,file="$storage_img"
         -device virtio-blk-pci,drive=vblk
         -netdev user,id=net0
