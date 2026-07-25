@@ -16,6 +16,17 @@
 # Unlike run_qemu.sh this script is non-interactive and needs no sudo, loop
 # mounts or GDB stub.
 #
+# Ring-3 smoke mode (issue #374): setting SMOKE_BINS to a space-separated
+# list of userland binaries (must include the shell and echo) additionally
+#   - assembles a virtio-blk storage disk holding those binaries,
+#   - attaches the interactive boot's device set (XHCI keyboard, virtio-net
+#     with a user-mode netdev instead of TAP),
+#   - requires the "SMOKE_TEST: ... result=PASS" serial marker.
+# The kernel must then also be configured with -DKERNEL_SMOKE_TEST=ON: the
+# boot continues past the test suites into userland, the shell runs one
+# fork→exec→wait round-trip and the kernel exits QEMU with the combined
+# result (a watchdog turns a hang into a marked FAIL).
+#
 # Usage (all inputs overridable via environment variables):
 #   KERNEL_ELF=build/UchosKernel LOADER_EFI=Loader.efi ./scripts/run_kernel_tests.sh
 
@@ -27,6 +38,7 @@ OVMF_CODE="${OVMF_CODE:-}"
 OVMF_VARS="${OVMF_VARS:-}"
 TIMEOUT_SEC="${TIMEOUT_SEC:-300}"
 WORK_DIR="${WORK_DIR:-}"
+SMOKE_BINS="${SMOKE_BINS:-}"
 
 if [ -z "$WORK_DIR" ]; then
     WORK_DIR="$(mktemp -d)"
@@ -76,6 +88,33 @@ mcopy -i "$disk_img" "$KERNEL_ELF" ::/kernel.elf
 # OVMF variable store must be writable; work on a copy.
 cp "$OVMF_VARS" "$vars_img"
 
+# Smoke mode: build the virtio-blk storage disk (same mkfs.fat geometry as
+# scripts/create_disk_img.sh) and mirror the interactive boot's device set,
+# with a user-mode netdev standing in for the TAP interface. Without the
+# virtio-net device the net service would poke an absent config space.
+smoke_qemu_args=()
+if [ -n "$SMOKE_BINS" ]; then
+    storage_img="$WORK_DIR/storage.img"
+    rm -f "$storage_img"
+    truncate -s 1G "$storage_img"
+    mkfs.fat -n 'UCH STORAGE' -s 8 -f 2 -R 32 -F 32 "$storage_img" > /dev/null
+    for bin in $SMOKE_BINS; do
+        if [ ! -f "$bin" ]; then
+            echo "error: smoke binary not found: $bin" >&2
+            exit 1
+        fi
+        mcopy -i "$storage_img" "$bin" ::/
+    done
+    smoke_qemu_args=(
+        -device nec-usb-xhci -device usb-kbd
+        -drive if=none,id=vblk,format=raw,file="$storage_img"
+        -device virtio-blk-pci,drive=vblk
+        -netdev user,id=net0
+        -device virtio-net-pci,netdev=net0,mac=52:54:00:12:34:56
+    )
+    echo "smoke mode: storage disk with [$SMOKE_BINS]"
+fi
+
 echo "booting kernel tests in QEMU (timeout ${TIMEOUT_SEC}s, log: $serial_log)"
 
 set +e
@@ -84,6 +123,7 @@ timeout --foreground "$TIMEOUT_SEC" qemu-system-x86_64 -m 1G \
     -drive if=pflash,format=raw,file="$vars_img" \
     -drive if=ide,index=0,media=disk,format=raw,file="$disk_img" \
     -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
+    "${smoke_qemu_args[@]}" \
     -display none -serial stdio -monitor none -no-reboot \
     | tee "$serial_log"
 qemu_status=${PIPESTATUS[0]}
@@ -107,4 +147,13 @@ if ! grep -q "TEST_SUMMARY:.*result=PASS" "$serial_log"; then
     exit 1
 fi
 
-echo "PASS: all kernel tests passed"
+if [ -n "$SMOKE_BINS" ] && ! grep -q "SMOKE_TEST:.*result=PASS" "$serial_log"; then
+    echo "FAIL: exit status says PASS but no passing SMOKE_TEST marker was seen on serial" >&2
+    exit 1
+fi
+
+if [ -n "$SMOKE_BINS" ]; then
+    echo "PASS: all kernel tests and the ring-3 smoke test passed"
+else
+    echo "PASS: all kernel tests passed"
+fi

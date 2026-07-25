@@ -1,4 +1,6 @@
+#include <cstring>
 #include <libs/common/message.hpp>
+#include <libs/common/types.hpp>
 #include <libs/user/file.hpp>
 #include <libs/user/ipc.hpp>
 #include <libs/user/keymap.hpp>
@@ -10,7 +12,26 @@
 alignas(Terminal) char buffer[sizeof(Terminal)];
 alignas(Shell) char shell_buffer[sizeof(Shell)];
 
-int main(void)
+namespace
+{
+
+// KERNEL_SMOKE_TEST builds exec the shell with "-smoke" (issue #374): run
+// one command through the normal process_input fork→exec→wait path and
+// report the outcome to the kernel, which prints the CI serial marker and
+// exits QEMU. The command's own output still goes to the screen as usual.
+void run_smoke_test(Shell* s, Terminal* term)
+{
+	char command[] = "echo smoke";
+	const error_t status = s->process_input(command, *term);
+
+	Message report = make_request(MsgType::SMOKE_REPORT);
+	report.data.smoke.status = status;
+	send_message(process_ids::KERNEL, &report);
+}
+
+} // namespace
+
+int main(int argc, char** argv)
 {
 	auto* s = new (shell_buffer) Shell();
 	auto* term = new (buffer) Terminal(s);
@@ -20,6 +41,10 @@ int main(void)
 	// the key-event destination (issue #315)
 	Message focus = make_request(MsgType::INPUT_SET_FOCUS);
 	send_message(process_ids::XHCI, &focus);
+
+	if (argc > 1 && strcmp(argv[1], "-smoke") == 0) {
+		run_smoke_test(s, term);
+	}
 
 	Message msg;
 	while (true) {

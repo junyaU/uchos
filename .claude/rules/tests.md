@@ -26,5 +26,10 @@ paths:
 - CI では `scripts/run_kernel_tests.sh` がヘッドレス実行する: `-DKERNEL_TEST_EXIT=ON` でビルドしたカーネルが isa-debug-exit(port 0xf4)へ結果を書き、QEMU 終了コード(33=PASS / 35=FAIL)とシリアルの `TEST_SUMMARY:` マーカーの両方で判定される
 - 結果マーカー(`TEST_SUMMARY: total=N passed=N failed=N result=PASS|FAIL`)の形式を変える場合は `scripts/run_kernel_tests.sh` のパース処理も更新すること
 
+## ring-3 煙テスト(issue #374)
+- ring 0 で完結するカーネル内テストでは fork の 2 回戻り・exec の CR3 切替・sys_wait の親子連携(#371 型回帰)を検出できない。CI はこれを `-DKERNEL_SMOKE_TEST=ON` の煙テストで補う
+- 仕組み: テスト完走後もブートを継続 → シェルを `-smoke` 引数で exec → シェルが `echo smoke` を通常の fork→exec→wait 経路で 1 往復実行 → 結果を `SMOKE_REPORT` メッセージで KERNEL タスクへ報告 → カーネル(`kernel/tests/smoke.cpp`)が `SMOKE_TEST: ... result=PASS|FAIL` マーカーをシリアルに出して isa-debug-exit で終了(テスト結果との AND)。ハングは 60 秒のウォッチドッグが FAIL マーカー化する
+- `scripts/run_kernel_tests.sh` は `SMOKE_BINS="<shell> <echo>"` 指定時に virtio-blk ストレージディスクを組み立てて `SMOKE_TEST:` マーカーも判定する。マーカー形式を変える場合は両側を同期すること
+
 ## 注意
 - 既存テスト(memory / task / timer / virtio_blk / fs / fd / stdio)の書き方を踏襲すること

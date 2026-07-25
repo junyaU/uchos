@@ -98,6 +98,17 @@ option(KERNEL_TESTS "Build kernel test suites and run them at boot" ON)
 # leave OFF for interactive use so the boot continues into kernel_service.
 option(KERNEL_TEST_EXIT "Exit QEMU with the test result after tests complete" OFF)
 
+# Continue booting into userland after the test suites and run one ring-3
+# fork→exec→wait round-trip through the shell (issue #374): the shell is
+# exec'd with "-smoke", reports back via SMOKE_REPORT, and the kernel prints
+# the SMOKE_TEST serial marker and exits QEMU with the combined result. For
+# headless CI runs only; needs the shell and echo binaries on the virtio-blk
+# storage disk (scripts/run_kernel_tests.sh assembles it).
+option(KERNEL_SMOKE_TEST "Run the ring-3 fork/exec/wait smoke test at boot" OFF)
+if(KERNEL_SMOKE_TEST AND NOT KERNEL_TESTS)
+        message(FATAL_ERROR "KERNEL_SMOKE_TEST requires KERNEL_TESTS=ON")
+endif()
+
 # Instrument the slab allocator to catch heap corruption (use-after-free,
 # buffer overflow, double free) and leaks. Left ON by default so local dev and
 # interactive boots always run with the checks (same policy as KERNEL_TESTS);
@@ -131,6 +142,10 @@ if(KERNEL_TESTS)
         # consumes this define) is compiled there.
         if(KERNEL_TEST_EXIT)
                 add_compile_definitions(KERNEL_TEST_EXIT_ENABLED)
+        endif()
+
+        if(KERNEL_SMOKE_TEST)
+                add_compile_definitions(KERNEL_SMOKE_TEST_ENABLED)
         endif()
 
         add_subdirectory(tests)
