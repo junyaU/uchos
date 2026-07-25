@@ -192,6 +192,39 @@ void test_fd_limits()
 	ASSERT_EQ(new_fd, fds[0]); // Should reuse the freed slot
 }
 
+void test_fd_routing()
+{
+	// Create test FD table
+	fs::FileDescriptor fd_table[32];
+	fs::init_process_fd_table(fd_table, 32);
+
+	// Standard descriptors route console output to the shell task;
+	// sys_write follows this instead of matching "stdout" names (issue #315)
+	ASSERT_TRUE(fd_table[STDIN_FILENO].route == FdRoute::CONSOLE);
+	ASSERT_TRUE(fd_table[STDOUT_FILENO].route == FdRoute::CONSOLE);
+	ASSERT_TRUE(fd_table[STDOUT_FILENO].dest == process_ids::SHELL);
+	ASSERT_TRUE(fd_table[STDERR_FILENO].route == FdRoute::CONSOLE);
+	ASSERT_TRUE(fd_table[STDERR_FILENO].dest == process_ids::SHELL);
+
+	// FS-created entries route to the FAT32 service
+	fd_t fd = fs::allocate_process_fd(fd_table, 32, "routed.txt", 10,
+									  ProcessId::from_raw(1));
+	ASSERT_GT(fd, -1);
+	ASSERT_TRUE(fd_table[fd].route == FdRoute::FS);
+	ASSERT_TRUE(fd_table[fd].dest == process_ids::FS_FAT32);
+
+	// dup2 carries the routing with the entry: redirection is nothing but
+	// a routing swap now
+	error_t result = fs::dup_process_fd(fd_table, 32, fd, STDOUT_FILENO);
+	ASSERT_EQ(result, OK);
+	ASSERT_TRUE(fd_table[STDOUT_FILENO].route == FdRoute::FS);
+	ASSERT_TRUE(fd_table[STDOUT_FILENO].dest == process_ids::FS_FAT32);
+
+	// clear() drops the routing
+	fd_table[STDOUT_FILENO].clear();
+	ASSERT_TRUE(fd_table[STDOUT_FILENO].route == FdRoute::NONE);
+}
+
 void test_release_all_fds()
 {
 	// Create test FD table
@@ -232,5 +265,6 @@ void register_fd_tests()
 	test_register("test_fd_dup2", test_fd_dup2);
 	test_register("test_dup_process_fd", test_dup_process_fd);
 	test_register("test_fd_limits", test_fd_limits);
+	test_register("test_fd_routing", test_fd_routing);
 	test_register("test_release_all_fds", test_release_all_fds);
 }

@@ -75,9 +75,12 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 		return ERR_OOL_LIMIT;
 	}
 
-	if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
-		if (fd_entry->has_name("stdout") || fd_entry->has_name("stderr")) {
-			// Standard output - send to terminal
+	// The entry says where and how this write goes (issue #315): no fd
+	// numerology, no "stdout" name matching, no well-known service ids.
+	// That policy now lives with whoever created the entry.
+	switch (fd_entry->route) {
+		case FdRoute::CONSOLE: {
+			// One-way console output to the routed task
 			Message m = { .type = MsgType::NOTIFY_WRITE, .sender = t->id };
 
 			if (count < sizeof(m.data.write.buf)) {
@@ -86,12 +89,12 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 				// message then carries an empty string)
 				copy_from_user(m.data.write.buf, buf, count);
 				m.data.write.buf[count] = '\0';
-				kernel::task::send_message(process_ids::SHELL, m);
+				kernel::task::send_message(fd_entry->dest, m);
 				return count;
 			}
 
-			// The 256B ceiling is gone (issue #314 Stage C): large stdout
-			// payloads travel OOL and are released by the shell
+			// The 256B ceiling is gone (issue #314 Stage C): large console
+			// payloads travel OOL and are released by the receiver
 			auto kbuf = kernel::task::make_ool_buffer(count + 1);
 			if (!kbuf) {
 				return ERR_NO_MEMORY;
@@ -101,51 +104,48 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 			m.ool.addr = reinterpret_cast<uint64_t>(kbuf.get());
 			m.ool.size = count + 1;
 
-			const error_t err = kernel::task::send_message(process_ids::SHELL, m);
+			const error_t err = kernel::task::send_message(fd_entry->dest, m);
 			if (IS_ERR(err)) {
 				return err;
 			}
-			static_cast<void>(kbuf.release()); // delivered: the shell owns it now
+			static_cast<void>(kbuf.release()); // delivered: the receiver owns it
 
 			return count;
 		}
-		// File output - fd contains actual file info after dup2. Any size
-		// goes through one OOL path (issue #314 Stage C).
-		Message req = { .type = MsgType::FS_WRITE, .sender = t->id };
-		req.data.fs.fd = fd;
-		req.data.fs.len = count;
+		case FdRoute::FS: {
+			// File write: any size goes through one OOL path (issue #314
+			// Stage C), correlation-matched so the reply cannot be confused
+			// with other FS_WRITE traffic (Stage B)
+			Message req = { .type = MsgType::FS_WRITE, .sender = t->id };
+			req.data.fs.fd = fd;
+			req.data.fs.len = count;
 
-		auto kbuf = kernel::task::make_ool_buffer(count);
-		if (!kbuf) {
-			return ERR_NO_MEMORY;
-		}
-		if (copy_from_user(kbuf.get(), buf, count) != count) {
-			return ERR_INVALID_ARG;
-		}
-		req.ool.addr = reinterpret_cast<uint64_t>(kbuf.get());
-		req.ool.size = count;
+			auto kbuf = kernel::task::make_ool_buffer(count);
+			if (!kbuf) {
+				return ERR_NO_MEMORY;
+			}
+			if (copy_from_user(kbuf.get(), buf, count) != count) {
+				return ERR_INVALID_ARG;
+			}
+			req.ool.addr = reinterpret_cast<uint64_t>(kbuf.get());
+			req.ool.size = count;
 
-		// Correlation-matched RPC: the reply cannot be confused with any
-		// other FS_WRITE traffic (issue #314 Stage B)
-		const error_t err = kernel::task::call(process_ids::FS_FAT32, &req);
-		if (IS_ERR(err)) {
-			// Never delivered; kbuf frees the payload on return
-			return err;
-		}
-		static_cast<void>(kbuf.release()); // consumed (and freed) by the FS task
-		if (IS_ERR(req.result)) {
-			return req.result;
-		}
+			const error_t err = kernel::task::call(fd_entry->dest, &req);
+			if (IS_ERR(err)) {
+				// Never delivered; kbuf frees the payload on return
+				return err;
+			}
+			static_cast<void>(kbuf.release()); // consumed (and freed) by the server
+			if (IS_ERR(req.result)) {
+				return req.result;
+			}
 
-		return req.data.fs.len;
+			return req.data.fs.len;
+		}
+		case FdRoute::NONE:
+			break;
 	}
 
-	// For file descriptors, the user process should use fs_write() through IPC
-	// The kernel doesn't directly handle file writes in Phase 2
-	// This allows proper IPC message handling in userland
-
-	// For now, return an error indicating the operation is not supported at syscall
-	// level User should use the file system API (fs_write) instead
 	return ERR_INVALID_FD;
 }
 
