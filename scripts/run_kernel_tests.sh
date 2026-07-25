@@ -39,6 +39,9 @@ OVMF_VARS="${OVMF_VARS:-}"
 TIMEOUT_SEC="${TIMEOUT_SEC:-300}"
 WORK_DIR="${WORK_DIR:-}"
 SMOKE_BINS="${SMOKE_BINS:-}"
+# QEMU -d categories captured into qemu-debug.log; add "int" to trace the
+# exception cascade behind a silent triple fault.
+QEMU_DEBUG="${QEMU_DEBUG:-cpu_reset,guest_errors}"
 
 if [ -z "$WORK_DIR" ]; then
     WORK_DIR="$(mktemp -d)"
@@ -133,7 +136,7 @@ echo "booting kernel tests in QEMU (timeout ${TIMEOUT_SEC}s, log: $serial_log)"
 # status-0 exit. Resolve the dumped RIP with llvm-addr2line -e $KERNEL_ELF.
 set +e
 timeout --foreground "$TIMEOUT_SEC" qemu-system-x86_64 -m 1G \
-    -d cpu_reset,guest_errors -D "$qemu_debug_log" \
+    -d "$QEMU_DEBUG" -D "$qemu_debug_log" \
     -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
     -drive if=pflash,format=raw,file="$vars_img" \
     -drive if=ide,index=0,media=disk,format=raw,file="$disk_img" \
@@ -147,8 +150,8 @@ set -e
 echo "qemu exit status: $qemu_status"
 
 if [ "$qemu_status" -ne 33 ] && [ -s "$qemu_debug_log" ]; then
-    echo "---- qemu debug log (last 60 lines) ----"
-    tail -60 "$qemu_debug_log"
+    echo "---- qemu debug log (last 150 lines) ----"
+    tail -150 "$qemu_debug_log"
     echo "----------------------------------------"
 fi
 
