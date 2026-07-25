@@ -19,8 +19,8 @@
 # Ring-3 smoke mode (issue #374): setting SMOKE_BINS to a space-separated
 # list of userland binaries (must include the shell and echo) additionally
 #   - assembles a virtio-blk storage disk holding those binaries,
-#   - attaches the interactive boot's device set (XHCI keyboard, virtio-net
-#     with a user-mode netdev instead of TAP),
+#   - attaches the interactive boot's virtio devices (virtio-net with a
+#     user-mode netdev instead of TAP; no XHCI, see below),
 #   - requires the "SMOKE_TEST: ... result=PASS" serial marker.
 # The kernel must then also be configured with -DKERNEL_SMOKE_TEST=ON: the
 # boot continues past the test suites into userland, the shell runs one
@@ -89,9 +89,13 @@ mcopy -i "$disk_img" "$KERNEL_ELF" ::/kernel.elf
 cp "$OVMF_VARS" "$vars_img"
 
 # Smoke mode: build the virtio-blk storage disk (same mkfs.fat geometry as
-# scripts/create_disk_img.sh) and mirror the interactive boot's device set,
-# with a user-mode netdev standing in for the TAP interface. Without the
-# virtio-net device the net service would poke an absent config space.
+# scripts/create_disk_img.sh) and attach the virtio devices of the
+# interactive boot, with a user-mode netdev standing in for the TAP
+# interface. Without the virtio-net device the net service would poke an
+# absent config space. No XHCI keyboard: the smoke test never types (the
+# input path is out of scope, issue #374 approach B) and xHCI init hangs
+# QEMU on the GitHub runner; without the device the USB service logs
+# "xHCI device not found." and idles harmlessly.
 smoke_qemu_args=()
 if [ -n "$SMOKE_BINS" ]; then
     storage_img="$WORK_DIR/storage.img"
@@ -106,7 +110,6 @@ if [ -n "$SMOKE_BINS" ]; then
         mcopy -i "$storage_img" "$bin" ::/
     done
     smoke_qemu_args=(
-        -device nec-usb-xhci -device usb-kbd
         -drive if=none,id=vblk,format=raw,file="$storage_img"
         -device virtio-blk-pci,drive=vblk
         -netdev user,id=net0
