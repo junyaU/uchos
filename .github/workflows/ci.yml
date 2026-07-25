@@ -1,4 +1,5 @@
-# Build the kernel, run the kernel test suites headlessly in QEMU, and lint.
+# Build the kernel, run the kernel test suites plus the ring-3
+# fork→exec→wait smoke test (issue #374) headlessly in QEMU, and lint.
 # The UEFI loader is built from UchLoaderPkg with EDK2 and cached; the cache
 # is only invalidated when UchLoaderPkg/ or the pinned EDK2 tag changes.
 name: CI
@@ -17,7 +18,12 @@ env:
 jobs:
   build-test-lint:
     name: Build / QEMU tests / clang-tidy
-    runs-on: ubuntu-latest
+    # Pinned to the project's reference environment (Ubuntu 22.04, QEMU 6.2
+    # — see run_qemu.sh). The 24.04 stack (QEMU 8.2 + newer OVMF) changes
+    # the boot memory map enough to set off latent kernel bugs that are
+    # tracked separately: #383 (slab), #384 (fault-path logging), #385
+    # (PCI BARs above the identity map). Revisit once those are fixed.
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
@@ -26,6 +32,11 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y nasm clang lld clang-tidy qemu-system-x86 ovmf mtools dosfstools
+        # lint.sh pins clang-tidy-18, which 22.04's archive lacks
+        curl -sL https://apt.llvm.org/llvm.sh -o llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 18
+        sudo apt-get install -y clang-tidy-18
         curl -L https://github.com/uchan-nos/mikanos-build/releases/download/v2.0/x86_64-elf.tar.gz -o x86_64-elf.tar.gz
         tar -xzf x86_64-elf.tar.gz
 
@@ -60,22 +71,50 @@ jobs:
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
               -DKERNEL_TESTS=ON \
               -DKERNEL_TEST_EXIT=ON \
+              -DKERNEL_SMOKE_TEST=ON \
               -DKERNEL_HEAP_DEBUG=ON
 
     - name: Build
       run: cmake --build build --config ${{env.BUILD_TYPE}}
 
-    - name: Run kernel tests in QEMU
+    # The ring-3 smoke test (issue #374) boots into userland: the shell and
+    # the echo child it runs must be on the virtio-blk storage disk.
+    - name: Build userland smoke binaries
+      run: |
+        export CPPFLAGS="-I$GITHUB_WORKSPACE/x86_64-elf/include/c++/v1 -I$GITHUB_WORKSPACE/x86_64-elf/include \
+        -nostdlibinc -D__ELF__ -D_LDBL_EQ_DBL -D_GNU_SOURCE -D_POSIX_TIMERS"
+        export LDFLAGS="-L$GITHUB_WORKSPACE/x86_64-elf/lib"
+        make -C userland/shell shell
+        make -C userland/commands/echo echo
+
+    - name: Run kernel tests and ring-3 smoke test in QEMU
       run: |
         chmod +x ./scripts/run_kernel_tests.sh
-        WORK_DIR=qemu-test ./scripts/run_kernel_tests.sh
+        WORK_DIR=qemu-test \
+        SMOKE_BINS="userland/shell/shell userland/commands/echo/echo" \
+        ./scripts/run_kernel_tests.sh
 
     - name: Upload serial log
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: kernel-test-serial-log
-        path: qemu-test/serial.log
+        path: |
+          qemu-test/serial.log
+          qemu-test/qemu-debug.log
+        if-no-files-found: ignore
+
+    # The -d int trace names raw addresses; symbolizing them needs the exact
+    # binaries this run booted (local rebuilds differ by compiler version).
+    - name: Upload booted binaries for symbolization
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: smoke-debug-binaries
+        path: |
+          build/UchosKernel
+          userland/shell/shell
+          userland/commands/echo/echo
         if-no-files-found: ignore
 
     - name: Run clang-tidy

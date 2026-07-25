@@ -1,5 +1,5 @@
 TARGET = echo
-OBJS = main.o $(wildcard ../../../libs/user/*.o)
+OBJS = main.o
 
 include ../../Makefile.elf
 

@@ -57,7 +57,13 @@ void shell_service()
 	}
 
 	CURRENT_TASK->is_initialized = true;
+#ifdef KERNEL_SMOKE_TEST_ENABLED
+	// argv[1] tells the shell to run one fork→exec→wait round-trip on its
+	// own and report the outcome to KERNEL (issue #374)
+	exec_elf(std::move(shell_elf), "shell", "-smoke");
+#else
 	exec_elf(std::move(shell_elf), "shell", nullptr);
+#endif
 }
 
 using kernel::task::InitialTaskInfo;

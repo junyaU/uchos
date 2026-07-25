@@ -60,6 +60,8 @@ inline const char* error_to_string(error_t err)
 			return "No space";
 		case ERR_OOL_LIMIT:
 			return "OOL limit exceeded";
+		case ERR_TIMEOUT:
+			return "Timed out";
 	}
 
 	return "Unknown error";

@@ -10,11 +10,11 @@
 
 Shell::Shell() { memset(histories, 0, sizeof(histories)); }
 
-void Shell::process_input(char* input, Terminal& term)
+error_t Shell::process_input(char* input, Terminal& term)
 {
 	if (strlen(input) == 0) {
 		term.enable_input = true;
-		return;
+		return OK;
 	}
 
 	// Check for redirection
@@ -81,16 +81,19 @@ void Shell::process_input(char* input, Terminal& term)
 		exit(status);
 	}
 
+	error_t result = OK;
 	if (IS_ERR(pid)) {
 		// fork fails loudly now (issue #315); without this guard the
 		// parent would sys_wait forever for a child that never existed
 		term.printf("%s : fork failed (%d)\n", command_name, pid);
+		result = pid;
 	} else {
 		int child_status;
 		sys_wait(&child_status);
 
 		if (child_status != 0) {
 			term.printf("%s : command not found\n", command_name);
+			result = child_status;
 		}
 	}
 
@@ -104,4 +107,6 @@ void Shell::process_input(char* input, Terminal& term)
 	// Input stays disabled until the marker is handled; input_char's
 	// trailing print_user() is a no-op while disabled
 	term.enable_input = false;
+
+	return result;
 }

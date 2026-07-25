@@ -23,9 +23,13 @@ error_t init_virtio_pci_device(VirtioPciDevice* virtio_dev, int device_type)
 	}
 
 	if (dev == nullptr) {
-		LOG_ERROR("No virtio device found");
+		LOG_ERROR("No virtio device found: type %d", device_type);
 		return ERR_NO_DEVICE;
 	}
+
+	// Bracket the whole bring-up on serial: a crash between these two lines
+	// names the device it happened on (headless CI has only this log)
+	LOG_INFO("initializing virtio device: type %d", device_type);
 
 	const VirtioDeviceDescriptor* descriptor =
 			find_virtio_device_descriptor(device_type);
@@ -49,7 +53,9 @@ error_t init_virtio_pci_device(VirtioPciDevice* virtio_dev, int device_type)
 
 	find_virtio_pci_cap(*virtio_dev);
 
-	return set_virtio_pci_capability(*virtio_dev);
+	const error_t err = set_virtio_pci_capability(*virtio_dev);
+	LOG_INFO("virtio device ready: type %d (%d)", device_type, err);
+	return err;
 }
 
 int push_virtio_entry(VirtioVirtqueue* queue,

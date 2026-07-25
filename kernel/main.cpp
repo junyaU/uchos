@@ -10,6 +10,9 @@
 #include "task/builtin.hpp"
 #include "task/task.hpp"
 #include "tests/runner.hpp"
+#ifdef KERNEL_SMOKE_TEST_ENABLED
+#include "tests/smoke.hpp"
+#endif
 #include "timers/acpi.hpp"
 #include "timers/local_apic.hpp"
 #include "timers/timer.hpp"
@@ -67,6 +70,12 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 	// interrupt switching to a service task mid-suite would pollute the
 	// leak accounting and race against half-initialized boot state.
 	kernel::task::start_scheduling();
+
+#ifdef KERNEL_SMOKE_TEST_ENABLED
+	// This code is still the KERNEL task: hook the smoke handlers into the
+	// message loop kernel_service() is about to enter (issue #374)
+	kernel::tests::smoke_init();
+#endif
 
 	kernel::task::kernel_service();
 }

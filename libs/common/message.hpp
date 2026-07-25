@@ -90,6 +90,9 @@ enum class MsgType : int32_t {
 	FS_PWD,
 	FS_CHANGE_DIR,
 	FS_DUP2,
+	/// Ring-3 smoke result the shell sends to KERNEL in KERNEL_SMOKE_TEST
+	/// builds: one fork→exec→wait round-trip, judged by the kernel (#374)
+	SMOKE_REPORT,
 	MAX_MESSAGE_TYPE, // must be the last
 };
 
@@ -165,6 +168,13 @@ struct Message {
 			size_t offset;
 			char name[64];
 		} fs;
+
+		/// SMOKE_REPORT payload: OK when the whole fork→exec→wait round-trip
+		/// succeeded with a zero child status, else the first error_t on
+		/// that path (fork failure or the child's exit status)
+		struct {
+			error_t status;
+		} smoke;
 	} data;
 };
 
