@@ -1,4 +1,5 @@
 #include "elf.hpp"
+#include <libs/common/memory_layout.h>
 #include <cstdint>
 #include <cstring>
 #include "asm_utils.h"
@@ -180,6 +181,17 @@ void exec_elf(kernel::memory::unique_kbuf<> buffer,
 			stack_addr, stack_size / kernel::memory::PAGE_SIZE, true);
 	if (IS_ERR(err)) {
 		LOG_ERROR("failed to setup stack page table: %s", name);
+		return;
+	}
+
+	// User heap (issue #315): mapped eagerly at the layout-contract address
+	// so sbrk/malloc work without a syscall (libs/common/memory_layout.h is
+	// the shared contract, libs/user/newlib_support.c the consumer)
+	const kernel::memory::vaddr_t heap_addr{ USER_HEAP_BASE };
+	err = kernel::memory::setup_page_tables(
+			heap_addr, USER_HEAP_SIZE / kernel::memory::PAGE_SIZE, true);
+	if (IS_ERR(err)) {
+		LOG_ERROR("failed to setup heap page table: %s", name);
 		return;
 	}
 
