@@ -5,10 +5,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
-#include "fs/fat/fat.hpp"
 #include "fs/path.hpp"
-#include "hardware/virtio/blk.hpp"
-#include "hardware/virtio/net.hpp"
 #include "interrupt/irq_guard.hpp"
 #include "interrupt/vector.hpp"
 #include "list.hpp"
@@ -18,7 +15,6 @@
 #include "memory/paging_utils.h"
 #include "memory/segment.hpp"
 #include "memory/slab.hpp"
-#include "net/packet_handler.hpp"
 #include "task/builtin.hpp"
 #include "task/context.hpp"
 #include "task/context_switch.h"
@@ -33,38 +29,6 @@ std::array<Task*, MAX_TASKS> tasks;
 
 Task* CURRENT_TASK = nullptr;
 Task* IDLE_TASK = nullptr;
-
-constexpr InitialTaskInfo INITIAL_TASKS[] = {
-	{ SystemProcessId::KERNEL, "main", nullptr, false, true },
-	{ SystemProcessId::IDLE, "idle", &kernel::task::idle_service, true, true },
-	{ SystemProcessId::XHCI, "usb_handler", &kernel::task::usb_handler_service, true,
-	  true },
-	{ SystemProcessId::VIRTIO_BLK, "virtio_blk",
-	  &kernel::hw::virtio::virtio_blk_service, true, false },
-	{ SystemProcessId::FS_FAT32, "fat32", &kernel::fs::fat32_service, true, true },
-	{ SystemProcessId::SHELL, "shell", &kernel::task::shell_service, true, false },
-	{ SystemProcessId::VIRTIO_NET, "virtio_net",
-	  &kernel::hw::virtio::virtio_net_service, true, false },
-	{ SystemProcessId::NET, "net", &kernel::net::packet_handler_service, true,
-	  false },
-};
-
-namespace
-{
-// create_task() hands out slots in ascending order, so each entry's declared
-// SystemProcessId only holds if the array is ordered by those ids with no gap.
-constexpr bool initial_tasks_match_their_slots()
-{
-	for (size_t i = 0; i < sizeof(INITIAL_TASKS) / sizeof(INITIAL_TASKS[0]); ++i) {
-		if (static_cast<pid_t>(INITIAL_TASKS[i].id) != static_cast<pid_t>(i)) {
-			return false;
-		}
-	}
-	return true;
-}
-static_assert(initial_tasks_match_their_slots(),
-			  "INITIAL_TASKS must be ordered by SystemProcessId, gap-free");
-} // namespace
 
 ProcessId get_available_task_id()
 {
@@ -390,18 +354,45 @@ void exit_task(int status)
 	}
 }
 
-void initialize()
+namespace
+{
+// The scheduler owns exactly two tasks of its own; every real service
+// comes in through the manifest supplied to initialize() (issue #315:
+// this file must not know individual services).
+constexpr InitialTaskInfo SCHEDULER_TASKS[] = {
+	{ SystemProcessId::KERNEL, "main", nullptr, false, true },
+	{ SystemProcessId::IDLE, "idle", &idle_service, true, true },
+};
+
+void spawn_initial_task(const InitialTaskInfo& info)
+{
+	Task* new_task = create_task(info.name, reinterpret_cast<uint64_t>(info.entry),
+								 info.setup_context, info.is_initialized);
+	if (new_task == nullptr) {
+		return;
+	}
+
+	// create_task hands out slots in ascending order; a mismatch means the
+	// caller's manifest is not ordered by SystemProcessId, gap-free
+	if (!(new_task->id == info.id)) {
+		LOG_ERROR("task %s landed in slot %d, expected %d", info.name,
+				  new_task->id.raw(), static_cast<pid_t>(info.id));
+	}
+
+	schedule_task(new_task->id);
+}
+} // namespace
+
+void initialize(const InitialTaskInfo* services, size_t num_services)
 {
 	tasks = std::array<Task*, MAX_TASKS>();
 	list_init(&run_queue);
 
-	for (const auto& t_info : INITIAL_TASKS) {
-		Task* new_task =
-				create_task(t_info.name, reinterpret_cast<uint64_t>(t_info.entry),
-							t_info.setup_context, t_info.is_initialized);
-		if (new_task != nullptr) {
-			schedule_task(new_task->id);
-		}
+	for (const auto& info : SCHEDULER_TASKS) {
+		spawn_initial_task(info);
+	}
+	for (size_t i = 0; i < num_services; ++i) {
+		spawn_initial_task(services[i]);
 	}
 
 	CURRENT_TASK = tasks[process_ids::KERNEL.raw()];

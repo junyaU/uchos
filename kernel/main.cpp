@@ -5,6 +5,7 @@
 #include "memory/bootstrap_allocator.hpp"
 #include "memory/paging.hpp"
 #include "memory/segment.hpp"
+#include "services.hpp"
 #include "syscall/syscall.hpp"
 #include "task/builtin.hpp"
 #include "task/task.hpp"
@@ -55,7 +56,10 @@ extern "C" void Main(const FrameBufferConf& frame_buffer_conf,
 
 	kernel::syscall::initialize();
 
-	kernel::task::initialize();
+	size_t num_services = 0;
+	const kernel::task::InitialTaskInfo* services =
+			kernel::service_manifest(&num_services);
+	kernel::task::initialize(services, num_services);
 
 	kernel::tests::run_main_stage_tests();
 

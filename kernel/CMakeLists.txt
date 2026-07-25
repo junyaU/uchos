@@ -85,6 +85,7 @@ set(SOURCE_FILES
         elf.cpp
         list.cpp
         panic.cpp
+        services.cpp
 )
 
 # Build the kernel test suites and run them at boot. Left ON by default for
