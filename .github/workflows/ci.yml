@@ -95,6 +95,19 @@ jobs:
           qemu-test/qemu-debug.log
         if-no-files-found: ignore
 
+    # The -d int trace names raw addresses; symbolizing them needs the exact
+    # binaries this run booted (local rebuilds differ by compiler version).
+    - name: Upload booted binaries for symbolization
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: smoke-debug-binaries
+        path: |
+          build/UchosKernel
+          userland/shell/shell
+          userland/commands/echo/echo
+        if-no-files-found: ignore
+
     - name: Run clang-tidy
       run: |
         chmod +x ./lint.sh
