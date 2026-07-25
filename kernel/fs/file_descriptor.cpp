@@ -21,15 +21,14 @@ void init_process_fd_table(FileDescriptor* fd_table, size_t table_size)
 
 	// Set up standard file descriptors. The console routing is decided
 	// HERE, at entry creation — the syscall layer just follows it (issue
-	// #315). This init moves to the user-side runtime in 3b.
+	// #315). Console fds have no server-side object, so handle stays 0.
+	// This init moves to the user-side runtime in 3b.
 	// stdin
 	if (STDIN_FILENO < table_size) {
 		strncpy(fd_table[STDIN_FILENO].name, "stdin",
 				sizeof(fd_table[STDIN_FILENO].name) - 1);
 		fd_table[STDIN_FILENO].route = FdRoute::CONSOLE;
 		fd_table[STDIN_FILENO].dest = process_ids::SHELL;
-		fd_table[STDIN_FILENO].size = 0;
-		fd_table[STDIN_FILENO].offset = 0;
 	}
 
 	// stdout
@@ -38,8 +37,6 @@ void init_process_fd_table(FileDescriptor* fd_table, size_t table_size)
 				sizeof(fd_table[STDOUT_FILENO].name) - 1);
 		fd_table[STDOUT_FILENO].route = FdRoute::CONSOLE;
 		fd_table[STDOUT_FILENO].dest = process_ids::SHELL;
-		fd_table[STDOUT_FILENO].size = 0;
-		fd_table[STDOUT_FILENO].offset = 0;
 	}
 
 	// stderr
@@ -48,15 +45,13 @@ void init_process_fd_table(FileDescriptor* fd_table, size_t table_size)
 				sizeof(fd_table[STDERR_FILENO].name) - 1);
 		fd_table[STDERR_FILENO].route = FdRoute::CONSOLE;
 		fd_table[STDERR_FILENO].dest = process_ids::SHELL;
-		fd_table[STDERR_FILENO].size = 0;
-		fd_table[STDERR_FILENO].offset = 0;
 	}
 }
 
 fd_t allocate_process_fd(FileDescriptor* fd_table,
 						 size_t table_size,
 						 const char* name,
-						 size_t size,
+						 uint32_t handle,
 						 ProcessId pid)
 {
 	if (fd_table == nullptr || name == nullptr) {
@@ -69,11 +64,11 @@ fd_t allocate_process_fd(FileDescriptor* fd_table,
 		if (fd_table[i].is_unused()) {
 			// This helper is FS-side code (it moves into the FS server in
 			// 3b), so entries it creates route to the FAT32 service; the
-			// syscall layer only ever reads this (issue #315)
+			// syscall layer only ever reads this (issue #315). All file
+			// state lives behind the handle in the FS ledger.
 			fd_table[i].route = FdRoute::FS;
 			fd_table[i].dest = process_ids::FS_FAT32;
-			fd_table[i].size = size;
-			fd_table[i].offset = 0;
+			fd_table[i].handle = handle;
 			strncpy(fd_table[i].name, name, sizeof(fd_table[i].name) - 1);
 			fd_table[i].name[sizeof(fd_table[i].name) - 1] = '\0';
 			return i;

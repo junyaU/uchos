@@ -40,15 +40,15 @@ void init_process_fd_table(FileDescriptor* fd_table, size_t table_size);
  *
  * @param fd_table Process's file descriptor table
  * @param table_size Size of the file descriptor table
- * @param name File name (max 12 characters for 8.3 format)
- * @param size File size in bytes
+ * @param name File name label (max 12 characters for 8.3 format)
+ * @param handle Server-side open-file object id stored in the entry
  * @param pid Process ID that owns this descriptor
  * @return fd_t The allocated file descriptor number, or NO_FD on failure
  */
 fd_t allocate_process_fd(FileDescriptor* fd_table,
 						 size_t table_size,
 						 const char* name,
-						 size_t size,
+						 uint32_t handle,
 						 ProcessId pid);
 
 /**

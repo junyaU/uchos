@@ -1,11 +1,11 @@
 #include <sys/types.h>
-#include <algorithm>
 #include <cstring>
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 #include <libs/user/file.hpp>
 #include <libs/user/ipc.hpp>
+#include <libs/user/syscall.hpp>
 
 fd_t fs_open(const char* path, int flags)
 {
@@ -20,24 +20,11 @@ fd_t fs_open(const char* path, int flags)
 
 ssize_t fs_read(fd_t fd, void* buf, size_t count)
 {
-	Message m = make_request(MsgType::FS_READ);
-	m.data.fs.fd = fd;
-	m.data.fs.len = count;
-
-	Message res = call(process_ids::FS_FAT32, &m);
-	if (IS_ERR(res.result)) {
-		return res.result;
-	}
-	if (res.ool.size == 0) {
-		return 0; // empty file: the reply carries no OOL payload
-	}
-
-	const size_t copy_len = std::min(count, static_cast<size_t>(res.ool.size));
-	memcpy(buf, reinterpret_cast<const void*>(res.ool.addr), copy_len);
-
-	ool_release(reinterpret_cast<const void*>(res.ool.addr));
-
-	return copy_len;
+	// One path only (issue #315 3b-8): the kernel resolves fd -> server
+	// handle and forwards. The old direct-IPC route sent the client-local
+	// fd number, which the FS no longer understands.
+	return static_cast<ssize_t>(
+			sys_read(fd, reinterpret_cast<uint64_t>(buf), count));
 }
 
 void fs_close(fd_t fd)
@@ -75,29 +62,10 @@ error_t fs_pwd(char* buf, size_t size)
 
 ssize_t fs_write(fd_t fd, const void* buf, size_t count)
 {
-	if (count == 0) {
-		return 0;
-	}
-	if (count > OOL_MAX_SIZE) {
-		return ERR_OOL_LIMIT;
-	}
-
-	Message m = make_request(MsgType::FS_WRITE);
-	m.data.fs.fd = fd;
-	m.data.fs.len = count;
-
-	// The payload rides OOL at any size: the kernel copies it in at the
-	// syscall boundary, so the old 256B inline ceiling is gone (issue #314
-	// Stage C)
-	m.ool.addr = reinterpret_cast<uint64_t>(buf);
-	m.ool.size = count;
-
-	Message res = call(process_ids::FS_FAT32, &m);
-	if (IS_ERR(res.result)) {
-		return res.result;
-	}
-
-	return res.data.fs.len;
+	// Same single path as fs_read: fd -> handle translation is the
+	// kernel's job (issue #315 3b-8)
+	return static_cast<ssize_t>(
+			sys_write(fd, reinterpret_cast<uint64_t>(buf), count));
 }
 
 error_t fs_change_dir(char* buf, const char* path)

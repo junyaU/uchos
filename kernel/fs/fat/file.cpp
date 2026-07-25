@@ -81,7 +81,7 @@ FileCache* load_file(const DirectoryEntry* entry, ProcessId requester)
 }
 
 /**
- * @brief Read a file and reply to the requester with its contents
+ * @brief Reply with a file's whole contents (FS_LOAD: exec images)
  */
 void reply_read_result(const Message& req, const DirectoryEntry* entry)
 {
@@ -101,47 +101,52 @@ void reply_read_result(const Message& req, const DirectoryEntry* entry)
 	reply_file_data(req, cache->buffer.data(), cache->total_size);
 }
 
-/// Fully resolved fd-based request. entry is non-null iff resolution
-/// succeeded; fd is only valid when entry is set.
-struct OpenFile {
-	FileDescriptor* fd;
-	DirectoryEntry* entry;
-};
+/**
+ * @brief Reply with the [offset, offset+count) window of an open file
+ *
+ * The offset is FS state now (issue #315 3b-8): it lives in the ledger
+ * record and advances here, so sequential reads terminate at EOF without
+ * the kernel ever interpreting file positions.
+ */
+void reply_read_window(const Message& req, OpenFileRecord* rec)
+{
+	const DirectoryEntry* entry = rec->entry;
+	const size_t count = req.data.fs.len;
+
+	// EOF and empty files answer with an empty payload, not an error
+	if (entry->file_size == 0 || entry->first_cluster() == 0 ||
+		rec->offset >= entry->file_size) {
+		reply_file_data(req, nullptr, 0);
+		return;
+	}
+
+	FileCache* cache = load_file(entry, req.sender);
+	if (cache == nullptr) {
+		reply_error(req, ERR_FAILED_READ_FROM_DEVICE);
+		return;
+	}
+
+	const size_t n = std::min(count, entry->file_size - rec->offset);
+	reply_file_data(req, cache->buffer.data() + rec->offset, n);
+	rec->offset += n;
+}
 
 /**
- * @brief Resolve sender task, file descriptor, and directory entry for an
- * fd-based FS request (FS_READ / FS_WRITE)
+ * @brief Resolve an fd-based request's handle to its ledger record
  *
- * On failure this logs and replies the matching error itself, except when
- * the requester task is already gone — then there is no one to reply to.
- *
- * @return OpenFile with entry != nullptr on success; entry == nullptr means
- * the error was already handled and the caller just returns
+ * On failure this replies ERR_INVALID_FD itself; the caller just returns.
  */
-OpenFile resolve_open_file(const Message& m)
+OpenFileRecord* resolve_record(const Message& m)
 {
-	kernel::task::Task* t = kernel::task::get_task(m.sender);
-	if (t == nullptr) {
-		LOG_ERROR("Task %d not found - likely already exited", m.sender.raw());
-		return {};
-	}
-
-	FileDescriptor* fd = kernel::fs::get_process_fd(
-			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
-	if (fd == nullptr) {
-		LOG_ERROR("fd not found");
+	OpenFileRecord* rec = open_file_get(static_cast<uint32_t>(m.data.fs.fd));
+	if (rec == nullptr) {
+		LOG_ERROR("unknown open-file handle %d from task %d", m.data.fs.fd,
+				  m.sender.raw());
 		reply_error(m, ERR_INVALID_FD);
-		return {};
+		return nullptr;
 	}
 
-	DirectoryEntry* entry = find_dir_entry(ROOT_DIR, fd->name);
-	if (entry == nullptr) {
-		LOG_ERROR("entry not found");
-		reply_error(m, ERR_NO_FILE);
-		return {};
-	}
-
-	return { fd, entry };
+	return rec;
 }
 
 /**
@@ -371,10 +376,24 @@ void handle_fs_open(const Message& m)
 		return;
 	}
 
-	// Allocate a file descriptor in the process's FD table
+	// File state becomes an FS-owned ledger record; the client's routing
+	// entry only carries the handle (issue #315 3b-8)
+	const uint32_t handle = open_file_create(entry, name, m.sender);
+	if (handle == 0) {
+		req.result = ERR_NO_MEMORY;
+		kernel::task::reply(m, &req);
+		return;
+	}
+
+	// The ONE remaining touch on the client's task: installing the routing
+	// entry. Becomes a kernel-provided service API when the FS leaves
+	// ring 0 (issue #315 3b-10).
 	fd_t fd = kernel::fs::allocate_process_fd(t->fd_table.data(),
 											  kernel::task::MAX_FDS_PER_PROCESS,
-											  name, entry->file_size, m.sender);
+											  name, handle, m.sender);
+	if (fd < 0) {
+		open_file_release(handle);
+	}
 
 	req.data.fs.fd = fd;
 	req.result = fd < 0 ? ERR_INVALID_FD : OK;
@@ -383,12 +402,12 @@ void handle_fs_open(const Message& m)
 
 void handle_fs_read(const Message& m)
 {
-	const OpenFile of = resolve_open_file(m);
-	if (of.entry == nullptr) {
+	OpenFileRecord* rec = resolve_record(m);
+	if (rec == nullptr) {
 		return;
 	}
 
-	reply_read_result(m, of.entry);
+	reply_read_window(m, rec);
 }
 
 void handle_fs_close(const Message& m)
@@ -398,6 +417,13 @@ void handle_fs_close(const Message& m)
 		LOG_ERROR("Task %d not found in fs_close - likely already exited",
 				  m.sender.raw());
 		return;
+	}
+
+	// Drop the ledger reference before the routing entry disappears
+	kernel::fs::FileDescriptor* fd_entry = kernel::fs::get_process_fd(
+			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
+	if (fd_entry != nullptr) {
+		open_file_release(fd_entry->handle);
 	}
 
 	error_t result = kernel::fs::release_process_fd(
@@ -421,14 +447,13 @@ void handle_fs_write(const Message& m)
 	// Never trust the inline length beyond the payload actually delivered
 	const size_t count = std::min(m.data.fs.len, static_cast<size_t>(m.ool.size));
 
-	const OpenFile of = resolve_open_file(m);
-	if (of.entry == nullptr) {
+	OpenFileRecord* rec = resolve_record(m);
+	if (rec == nullptr) {
 		return;
 	}
-	FileDescriptor* fd = of.fd;
-	DirectoryEntry* entry = of.entry;
+	DirectoryEntry* entry = rec->entry;
 
-	const size_t new_size = fd->offset + count;
+	const size_t new_size = rec->offset + count;
 
 	const error_t grow_err = grow_file_if_needed(entry, new_size);
 	if (IS_ERR(grow_err)) {
@@ -437,14 +462,14 @@ void handle_fs_write(const Message& m)
 	}
 
 	size_t write_len = 0;
-	const error_t write_err = write_file_cluster(entry, fd->offset, write_buf.get(),
+	const error_t write_err = write_file_cluster(entry, rec->offset, write_buf.get(),
 												 count, &write_len);
 	if (IS_ERR(write_err)) {
 		reply_error(m, write_err);
 		return;
 	}
 
-	fd->offset += write_len;
+	rec->offset += write_len;
 
 	if (new_size != entry->file_size) {
 		if (new_size < entry->file_size) {
@@ -452,7 +477,7 @@ void handle_fs_write(const Message& m)
 		}
 
 		entry->file_size = new_size;
-		persist_directory_entry(entry, fd->name);
+		persist_directory_entry(entry, rec->name);
 	}
 
 	Message reply = { .type = MsgType::FS_WRITE, .sender = process_ids::FS_FAT32 };
@@ -497,9 +522,19 @@ void handle_fs_mkfile(const Message& m)
 	entry->attribute = entry_attribute::ARCHIVE;
 	entry->file_size = 0;
 
+	const uint32_t handle = open_file_create(entry, name, m.sender);
+	if (handle == 0) {
+		reply.result = ERR_NO_MEMORY;
+		kernel::task::reply(m, &reply);
+		return;
+	}
+
 	fd_t fd = kernel::fs::allocate_process_fd(t->fd_table.data(),
 											  kernel::task::MAX_FDS_PER_PROCESS,
-											  name, 0, m.sender);
+											  name, handle, m.sender);
+	if (fd < 0) {
+		open_file_release(handle);
+	}
 
 	reply.data.fs.fd = fd;
 	reply.result = fd < 0 ? ERR_INVALID_FD : OK;
@@ -525,12 +560,27 @@ void handle_fs_dup2(const Message& m)
 		return;
 	}
 
+	// The routing-entry copy will share oldfd's ledger record (that IS the
+	// redirect); account the reference before overwriting newfd, and drop
+	// whatever FS object newfd may have referenced until now
+	kernel::fs::FileDescriptor* old_entry = kernel::fs::get_process_fd(
+			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, oldfd);
+	if (old_entry == nullptr) {
+		reply_error(m, ERR_INVALID_FD);
+		return;
+	}
+	const uint32_t replaced_handle =
+			t->fd_table[newfd].is_used() ? t->fd_table[newfd].handle : 0;
+
 	const error_t dup_err = kernel::fs::dup_process_fd(
 			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, oldfd, newfd);
 	if (IS_ERR(dup_err)) {
 		reply_error(m, dup_err);
 		return;
 	}
+
+	open_file_addref(old_entry->handle);
+	open_file_release(replaced_handle);
 
 	reply.result = OK;
 	reply.data.fs.fd = newfd;
