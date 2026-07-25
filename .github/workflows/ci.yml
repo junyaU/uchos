@@ -18,7 +18,12 @@ env:
 jobs:
   build-test-lint:
     name: Build / QEMU tests / clang-tidy
-    runs-on: ubuntu-latest
+    # Pinned to the project's reference environment (Ubuntu 22.04, QEMU 6.2
+    # — see run_qemu.sh). The 24.04 stack (QEMU 8.2 + newer OVMF) changes
+    # the boot memory map enough to set off latent kernel bugs that are
+    # tracked separately: #383 (slab), #384 (fault-path logging), #385
+    # (PCI BARs above the identity map). Revisit once those are fixed.
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
@@ -27,6 +32,11 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y nasm clang lld clang-tidy qemu-system-x86 ovmf mtools dosfstools
+        # lint.sh pins clang-tidy-18, which 22.04's archive lacks
+        curl -sL https://apt.llvm.org/llvm.sh -o llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 18
+        sudo apt-get install -y clang-tidy-18
         curl -L https://github.com/uchan-nos/mikanos-build/releases/download/v2.0/x86_64-elf.tar.gz -o x86_64-elf.tar.gz
         tar -xzf x86_64-elf.tar.gz
 
@@ -82,7 +92,6 @@ jobs:
         chmod +x ./scripts/run_kernel_tests.sh
         WORK_DIR=qemu-test \
         SMOKE_BINS="userland/shell/shell userland/commands/echo/echo" \
-        QEMU_DEBUG=int,cpu_reset,guest_errors \
         ./scripts/run_kernel_tests.sh
 
     - name: Upload serial log
