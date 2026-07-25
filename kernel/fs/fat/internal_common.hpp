@@ -55,7 +55,13 @@ constexpr int MAX_OPEN_FILES = 64;
  * record; forked children act on their parent's (effective owner).
  */
 struct ClientCwd {
-	ProcessId owner; ///< INVALID = slot free
+	/// Slot occupancy. The kernel never runs static constructors, so a
+	/// global table only gets zero-initialized: the free-slot sentinel MUST
+	/// be all-zeroes (false), never a nonzero value like ProcessId INVALID
+	/// (-1). Checking owner == INVALID here made every slot look owned by
+	/// pid 0 (KERNEL, alive forever) and the table was born full.
+	bool in_use;
+	ProcessId owner; ///< Valid only while in_use
 	/// Current directory cluster; owned buffer unless it is the shared
 	/// ROOT_DIR (freed on replace / reset / sweep)
 	kernel::fs::DirectoryEntry* dir;

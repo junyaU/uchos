@@ -45,10 +45,9 @@ void free_cwd_dir(ClientCwd& c)
 void sweep_dead_cwd_owners()
 {
 	for (auto& c : cwd_table) {
-		if (c.owner != process_ids::INVALID &&
-			kernel::task::get_task(c.owner) == nullptr) {
+		if (c.in_use && kernel::task::get_task(c.owner) == nullptr) {
 			free_cwd_dir(c);
-			c.owner = process_ids::INVALID;
+			c.in_use = false;
 		}
 	}
 }
@@ -235,10 +234,11 @@ error_t cwd_register(ProcessId owner)
 
 	for (int attempt = 0; attempt < 2; ++attempt) {
 		for (auto& c : cwd_table) {
-			if (c.owner != process_ids::INVALID) {
+			if (c.in_use) {
 				continue;
 			}
 
+			c.in_use = true;
 			c.owner = owner;
 			c.dir = nullptr;
 			set_cwd_to_root(c);
@@ -254,12 +254,8 @@ error_t cwd_register(ProcessId owner)
 
 ClientCwd* cwd_lookup(ProcessId owner)
 {
-	if (owner == process_ids::INVALID) {
-		return nullptr;
-	}
-
 	for (auto& c : cwd_table) {
-		if (c.owner == owner) {
+		if (c.in_use && c.owner == owner) {
 			return &c;
 		}
 	}
