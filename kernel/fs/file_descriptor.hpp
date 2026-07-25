@@ -6,59 +6,18 @@
 #pragma once
 
 #include <cstddef>
-#include <cstring>
+#include <libs/common/file_descriptor.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
 
 namespace kernel::fs
 {
 
-/**
- * @brief File descriptor structure
- *
- * Represents an open file handle for a process. Each file descriptor
- * tracks the file being accessed, the owning process, and the current
- * read/write position.
- */
-struct FileDescriptor {
-	char name[13]; ///< 8.3 file name: up to 12 characters plus null
-	size_t size;   ///< File size in bytes
-	size_t offset; ///< Current read/write position
-
-	/**
-	 * @brief Check if this file descriptor is unused
-	 * @return true if the descriptor is not in use (empty name)
-	 */
-	bool is_unused() const { return name[0] == '\0'; }
-
-	/**
-	 * @brief Check if this file descriptor is in use
-	 * @return true if the descriptor is in use (non-empty name)
-	 */
-	bool is_used() const { return name[0] != '\0'; }
-
-	/**
-	 * @brief Clear this file descriptor entry
-	 *
-	 * Resets all fields to their default values, marking the descriptor as unused.
-	 */
-	void clear()
-	{
-		name[0] = '\0';
-		size = 0;
-		offset = 0;
-	}
-
-	/**
-	 * @brief Check if this file descriptor has the specified name
-	 * @param target_name The name to compare against
-	 * @return true if the name matches, false otherwise
-	 */
-	bool has_name(const char* target_name) const
-	{
-		return strcmp(name, target_name) == 0;
-	}
-};
+/// The type itself now lives in libs/common (issue #315: the entry is part
+/// of the kernel/service contract and the FS server will manage it from
+/// user space in 3b). This alias keeps kernel call sites unchanged until
+/// the helpers below move out with it.
+using FileDescriptor = ::FileDescriptor;
 
 // Process-local file descriptor management functions
 
