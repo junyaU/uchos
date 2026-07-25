@@ -28,18 +28,21 @@ enum class FdRoute : uint8_t {
 };
 
 /**
- * @brief File descriptor structure
+ * @brief File descriptor structure: a pure routing record
  *
- * Represents an open I/O handle for a process: where operations on it are
- * routed (route/dest) plus the file state the FS still keeps here until it
- * owns fd management itself (issue #315 3b).
+ * Holds only where operations on this fd go (route/dest) and which
+ * server-side object they name (handle). All file state — offset, size,
+ * name resolution — lives in the owning service's ledger (issue #315
+ * 3b-8); the kernel never interprets the handle.
  */
 struct FileDescriptor {
 	char name[13];	///< Label: 8.3 file name for FS fds, "stdout" etc. for std fds
 	FdRoute route;	///< Protocol the syscall layer uses for I/O on this fd
 	ProcessId dest; ///< Service task the I/O is sent to
-	size_t size;	///< File size in bytes
-	size_t offset;	///< Current read/write position
+	/// Server-side open-file object id, issued by dest and opaque here
+	/// (0 = none). fork/dup2 copy this record, so the copies SHARE the
+	/// server object — POSIX shared-offset semantics fall out for free.
+	uint32_t handle;
 
 	/**
 	 * @brief Check if this file descriptor is unused
@@ -64,8 +67,7 @@ struct FileDescriptor {
 		name[0] = '\0';
 		route = FdRoute::NONE;
 		dest = process_ids::INVALID;
-		size = 0;
-		offset = 0;
+		handle = 0;
 	}
 
 	/**

@@ -4,6 +4,7 @@ add_library(UchosFAT32 STATIC
     init.cpp
     directory.cpp
     file.cpp
+    open_files.cpp
     utils.cpp
 )
 

@@ -17,7 +17,6 @@
 #include "tests/framework.hpp"
 #include "tests/macros.hpp"
 
-
 using namespace kernel::fs::fat;
 
 // 8.3 names are up to 12 characters ("ABCDEFGH.EXT") plus a null terminator;
@@ -196,10 +195,8 @@ void test_file_cache_eviction_terminates()
 
 	ASSERT_TRUE(all_created);
 	ASSERT_TRUE(local_caches.size() <= 50);
-	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "F0") ==
-				nullptr);
-	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "F59") !=
-				nullptr);
+	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "F0") == nullptr);
+	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "F59") != nullptr);
 }
 
 /**
@@ -217,19 +214,14 @@ void test_file_cache_lru_order()
 	}
 
 	// Touch the oldest entry so "L1" becomes the least recently used one
-	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "L0") !=
-				nullptr);
+	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "L0") != nullptr);
 
 	// Cache is full: this create must evict exactly the LRU entry ("L1")
-	kernel::fs::create_file_cache(local_caches, "L50", 16,
-								  ProcessId::from_raw(1));
+	kernel::fs::create_file_cache(local_caches, "L50", 16, ProcessId::from_raw(1));
 
-	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "L0") !=
-				nullptr);
-	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "L1") ==
-				nullptr);
-	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "L50") !=
-				nullptr);
+	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "L0") != nullptr);
+	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "L1") == nullptr);
+	ASSERT_TRUE(kernel::fs::find_file_cache_by_path(local_caches, "L50") != nullptr);
 }
 
 /**
@@ -323,6 +315,61 @@ void test_cluster_chain_disk_full()
 /**
  * @brief Register all file system test cases
  */
+void test_open_file_ledger_basic()
+{
+	using namespace kernel::fs::fat;
+
+	// The ledger stores the entry pointer opaquely; a dummy is enough
+	kernel::fs::DirectoryEntry dummy_entry = {};
+
+	const uint32_t h1 =
+			open_file_create(&dummy_entry, "LEDGER1", ProcessId::from_raw(1));
+	ASSERT_NE(h1, 0);
+	const uint32_t h2 =
+			open_file_create(&dummy_entry, "LEDGER2", ProcessId::from_raw(1));
+	ASSERT_NE(h2, 0);
+	ASSERT_NE(h1, h2);
+
+	OpenFileRecord* r = open_file_get(h1);
+	ASSERT_NOT_NULL(r);
+	ASSERT_EQ(r->offset, 0);
+	ASSERT_EQ(strcmp(r->name, "LEDGER1"), 0);
+
+	// dup2 semantics: an extra reference keeps the record alive across
+	// one close, and the record dies with the last reference
+	open_file_addref(h1);
+	open_file_release(h1);
+	ASSERT_NOT_NULL(open_file_get(h1));
+	open_file_release(h1);
+	ASSERT_NULL(open_file_get(h1));
+
+	open_file_release(h2);
+	ASSERT_NULL(open_file_get(h2));
+}
+
+void test_open_file_ledger_sweep()
+{
+	using namespace kernel::fs::fat;
+
+	kernel::fs::DirectoryEntry dummy_entry = {};
+
+	// Owner pid 90 has no task: these records are what the sweep reclaims
+	// (process exit does not notify the FS by design, issue #315 3b-8)
+	int created = 0;
+	for (int i = 0; i < MAX_OPEN_FILES; ++i) {
+		if (open_file_create(&dummy_entry, "DEAD", ProcessId::from_raw(90)) != 0) {
+			++created;
+		}
+	}
+	ASSERT_GT(created, 0);
+
+	// Allocation pressure must trigger the dead-owner sweep, not fail
+	const uint32_t h =
+			open_file_create(&dummy_entry, "ALIVE", ProcessId::from_raw(0));
+	ASSERT_NE(h, 0);
+	open_file_release(h);
+}
+
 void register_fs_tests()
 {
 	test_register("test_write_existing_file", test_write_existing_file);
@@ -339,4 +386,6 @@ void register_fs_tests()
 	test_register("test_read_dir_entry_name_boundary",
 				  test_read_dir_entry_name_boundary);
 	test_register("test_cluster_chain_disk_full", test_cluster_chain_disk_full);
+	test_register("test_open_file_ledger_basic", test_open_file_ledger_basic);
+	test_register("test_open_file_ledger_sweep", test_open_file_ledger_sweep);
 }

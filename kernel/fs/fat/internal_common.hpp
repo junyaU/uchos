@@ -29,6 +29,32 @@ constexpr size_t FAT_WRITE_CHUNK_SIZE = 65536; // 64KB chunks for batch writes
 /// Space character used to right-pad the 8.3 short file name fields.
 constexpr char SFN_PAD = 0x20;
 
+/**
+ * @brief One open file in the FS-owned ledger (issue #315 3b-8)
+ *
+ * Keyed by an opaque handle stored in the client's routing entry; the
+ * offset lives HERE, so routing-entry copies (fork, dup2) share it —
+ * POSIX open-file-description semantics.
+ */
+struct OpenFileRecord {
+	uint32_t handle; ///< 0 = slot free
+	ProcessId owner; ///< Creator; used only by the dead-owner sweep
+	kernel::fs::DirectoryEntry* entry;
+	size_t offset;
+	int refcount; ///< dup2 adds a reference, close drops one
+	char name[13];
+};
+
+constexpr int MAX_OPEN_FILES = 64;
+
+/// @return The new handle, or 0 when the ledger is full even after sweeping
+uint32_t open_file_create(kernel::fs::DirectoryEntry* entry,
+						  const char* name,
+						  ProcessId owner);
+OpenFileRecord* open_file_get(uint32_t handle);
+void open_file_addref(uint32_t handle);
+void open_file_release(uint32_t handle);
+
 // Common utility functions
 void read_dir_entry_name_raw(const kernel::fs::DirectoryEntry& entry, char* dest);
 void read_dir_entry_name(const kernel::fs::DirectoryEntry& entry, char* dest);

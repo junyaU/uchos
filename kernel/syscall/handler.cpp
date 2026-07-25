@@ -56,12 +56,11 @@ ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 			// honestly reports EOF instead of pretending to be readable.
 			return 0;
 		case FdRoute::FS: {
-			// The FS's read contract is currently "reply with the whole
-			// file as one OOL copy" (kernel/fs/fat reply_file_data); the
-			// window [offset, offset+count) is cut out here so sequential
-			// read() loops terminate. Both move into the FS server in 3b.
+			// The reply is already the [offset, offset+count) window: the
+			// offset is FS state now (issue #315 3b-8) and the FS advances
+			// it. The kernel forwards the opaque handle and copies bytes.
 			Message req = { .type = MsgType::FS_READ, .sender = t->id };
-			req.data.fs.fd = fd;
+			req.data.fs.fd = static_cast<fd_t>(fd_entry->handle);
 			req.data.fs.len = count;
 
 			const error_t err = kernel::task::call(fd_entry->dest, &req);
@@ -78,18 +77,14 @@ ssize_t sys_read(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 				return req.result;
 			}
 
-			const size_t file_size = req.data.fs.len;
-			if (!data || fd_entry->offset >= file_size) {
-				return 0; // EOF (or empty file: those replies carry no OOL)
+			if (!data || req.data.fs.len == 0) {
+				return 0; // EOF or empty file: those replies carry no OOL
 			}
 
-			const size_t n = std::min(count, file_size - fd_entry->offset);
-			if (copy_to_user(buf,
-							 static_cast<const char*>(data.get()) + fd_entry->offset,
-							 n) != n) {
+			const size_t n = std::min(count, req.data.fs.len);
+			if (copy_to_user(buf, data.get(), n) != n) {
 				return ERR_INVALID_ARG;
 			}
-			fd_entry->offset += n;
 
 			return n;
 		}
@@ -164,7 +159,9 @@ ssize_t sys_write(uint64_t arg1, uint64_t arg2, uint64_t arg3)
 			// Stage C), correlation-matched so the reply cannot be confused
 			// with other FS_WRITE traffic (Stage B)
 			Message req = { .type = MsgType::FS_WRITE, .sender = t->id };
-			req.data.fs.fd = fd;
+			// The FS names the open file by the opaque handle, never by the
+			// client-local fd number (issue #315 3b-8)
+			req.data.fs.fd = static_cast<fd_t>(fd_entry->handle);
 			req.data.fs.len = count;
 
 			auto kbuf = kernel::task::make_ool_buffer(count);

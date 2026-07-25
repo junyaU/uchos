@@ -163,7 +163,7 @@ void test_fd_inheritance()
 	// Check the allocated FD was also copied
 	ASSERT_TRUE(child->fd_table[fd].is_used());
 	ASSERT_EQ(strcmp(child->fd_table[fd].name, "test.txt"), 0);
-	ASSERT_EQ(child->fd_table[fd].size, 100);
+	ASSERT_EQ(child->fd_table[fd].handle, 100);
 }
 
 void test_stdout_redirection()

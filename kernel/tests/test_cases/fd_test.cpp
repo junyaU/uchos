@@ -31,7 +31,7 @@ void test_fd_allocation()
 	ASSERT_NOT_NULL(entry);
 	ASSERT_TRUE(entry->is_used());
 	ASSERT_EQ(strcmp(entry->name, "test1.txt"), 0);
-	ASSERT_EQ(entry->size, 100);
+	ASSERT_EQ(entry->handle, 100);
 
 	// Test another allocation
 	fd_t fd2 = fs::allocate_process_fd(fd_table, 32, "test2.txt", 200,
@@ -90,14 +90,14 @@ void test_fd_fork_copy()
 	ASSERT_NOT_NULL(parent_entry1);
 	ASSERT_NOT_NULL(child_entry1);
 	ASSERT_EQ(strcmp(parent_entry1->name, child_entry1->name), 0);
-	ASSERT_EQ(parent_entry1->size, child_entry1->size);
+	ASSERT_EQ(parent_entry1->handle, child_entry1->handle);
 
 	fs::FileDescriptor* parent_entry2 = fs::get_process_fd(parent_table, 32, fd2);
 	fs::FileDescriptor* child_entry2 = fs::get_process_fd(child_table, 32, fd2);
 	ASSERT_NOT_NULL(parent_entry2);
 	ASSERT_NOT_NULL(child_entry2);
 	ASSERT_EQ(strcmp(parent_entry2->name, child_entry2->name), 0);
-	ASSERT_EQ(parent_entry2->size, child_entry2->size);
+	ASSERT_EQ(parent_entry2->handle, child_entry2->handle);
 
 	// Verify standard descriptors are also copied
 	ASSERT_TRUE(child_table[STDIN_FILENO].is_used());
@@ -125,7 +125,8 @@ void test_fd_dup2()
 	fs::FileDescriptor* redirected = fs::get_process_fd(fd_table, 32, STDOUT_FILENO);
 	ASSERT_NOT_NULL(redirected);
 	ASSERT_EQ(strcmp(redirected->name, "output.txt"), 0);
-	ASSERT_EQ(redirected->size, src->size);
+	// The copy shares the server-side object: same handle = same offset
+	ASSERT_EQ(redirected->handle, src->handle);
 }
 
 void test_dup_process_fd()
@@ -148,7 +149,7 @@ void test_dup_process_fd()
 	ASSERT_NOT_NULL(src);
 	ASSERT_NOT_NULL(dup);
 	ASSERT_EQ(strcmp(dup->name, src->name), 0);
-	ASSERT_EQ(dup->size, src->size);
+	ASSERT_EQ(dup->handle, src->handle);
 
 	// Error case: oldfd is unused
 	result = fs::dup_process_fd(fd_table, 32, 20, STDOUT_FILENO);
