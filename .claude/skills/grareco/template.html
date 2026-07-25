@@ -1,0 +1,409 @@
+<!-- =====================================================================
+グラレコテンプレート(/grareco スキル用)
+使い方: スクラッチパッドに pr<番号>-grareco.html としてコピーし、
+<!-- EDIT: --> の箇所だけ差し替える。<style> のトークン・クラスは変更しない。
+Artifact の CSP により外部リソース参照は不可(すべてインライン)。
+===================================================================== -->
+<title><!-- EDIT: グラレコ: 一言タイトル(PR #NNN) --></title>
+<style>
+:root {
+	--paper: #FBF8F1;
+	--panel: #FFFFFF;
+	--ink: #33302A;
+	--ink-soft: #6B6458;
+	--red: #D9482B;
+	--red-bg: #FBE9E3;
+	--teal: #0F8577;
+	--teal-bg: #E2F3F0;
+	--blue: #3A6EA5;
+	--hl: #FFD84D;
+	--sticky: #FFF3B0;
+	--sticky-ink: #4A4020;
+	--line: #33302A;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper: #26241E;
+		--panel: #2F2C25;
+		--ink: #EFEAE0;
+		--ink-soft: #ADA595;
+		--red: #FF8A65;
+		--red-bg: #46302A;
+		--teal: #4FC8B8;
+		--teal-bg: #23423D;
+		--blue: #8AB4E8;
+		--hl: #B99A22;
+		--sticky: #4A4322;
+		--sticky-ink: #F2E9C8;
+		--line: #EFEAE0;
+	}
+}
+:root[data-theme="light"] {
+	--paper: #FBF8F1;
+	--panel: #FFFFFF;
+	--ink: #33302A;
+	--ink-soft: #6B6458;
+	--red: #D9482B;
+	--red-bg: #FBE9E3;
+	--teal: #0F8577;
+	--teal-bg: #E2F3F0;
+	--blue: #3A6EA5;
+	--hl: #FFD84D;
+	--sticky: #FFF3B0;
+	--sticky-ink: #4A4020;
+	--line: #33302A;
+}
+:root[data-theme="dark"] {
+	--paper: #26241E;
+	--panel: #2F2C25;
+	--ink: #EFEAE0;
+	--ink-soft: #ADA595;
+	--red: #FF8A65;
+	--red-bg: #46302A;
+	--teal: #4FC8B8;
+	--teal-bg: #23423D;
+	--blue: #8AB4E8;
+	--hl: #B99A22;
+	--sticky: #4A4322;
+	--sticky-ink: #F2E9C8;
+	--line: #EFEAE0;
+}
+
+body {
+	background: var(--paper);
+	color: var(--ink);
+	font-family: "UD デジタル 教科書体 N-R", "UD Digi Kyokasho N-R", "Klee One", "Yu Kyokasho", "Segoe Print", "Hiragino Maru Gothic ProN", sans-serif;
+	line-height: 1.55;
+	margin: 0;
+	padding: 24px 16px 48px;
+}
+.board { max-width: 1180px; margin: 0 auto; }
+code {
+	font-family: "Cascadia Code", Consolas, "Courier New", monospace;
+	font-size: 0.86em;
+	background: color-mix(in srgb, var(--ink) 8%, transparent);
+	padding: 0 4px;
+	border-radius: 4px;
+	white-space: nowrap;
+}
+mark {
+	background: linear-gradient(transparent 52%, var(--hl) 52%, var(--hl) 94%, transparent 94%);
+	color: inherit;
+	padding: 0 2px;
+}
+
+.head { text-align: center; margin-bottom: 28px; }
+.ribbon {
+	display: inline-block;
+	border: 3px solid var(--line);
+	border-radius: 255px 18px 225px 18px / 18px 225px 18px 255px;
+	padding: 10px 34px;
+	font-size: clamp(1.3rem, 3.4vw, 2.1rem);
+	font-weight: 700;
+	transform: rotate(-0.6deg);
+	background: var(--panel);
+	text-wrap: balance;
+}
+.head .sub { margin-top: 12px; color: var(--ink-soft); font-size: 0.95rem; }
+.badge {
+	display: inline-block;
+	background: var(--blue);
+	color: var(--paper);
+	border-radius: 999px;
+	padding: 2px 14px;
+	font-weight: 700;
+	transform: rotate(1.2deg);
+	margin: 0 4px;
+}
+
+.sec { margin: 40px 0; }
+.sec-title {
+	font-size: 1.35rem;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0 0 4px;
+}
+.sec-title .num {
+	flex: none;
+	width: 2em; height: 2em;
+	border: 2.5px solid var(--line);
+	border-radius: 50% 46% 52% 48% / 48% 52% 46% 54%;
+	display: grid;
+	place-items: center;
+	font-size: 0.95rem;
+	background: var(--panel);
+}
+.sec-lede { color: var(--ink-soft); margin: 0 0 18px 3.1em; font-size: 0.95rem; }
+
+.duo {
+	display: grid;
+	grid-template-columns: 1fr auto 1fr;
+	gap: 14px;
+	align-items: stretch;
+}
+@media (max-width: 780px) {
+	.duo { grid-template-columns: 1fr; }
+	.bridge { transform: rotate(90deg); margin: -8px auto; }
+}
+
+.panel {
+	border: 3px solid var(--line);
+	border-radius: 225px 16px 255px 14px / 14px 255px 16px 225px;
+	background: var(--panel);
+	padding: 18px 20px 22px;
+	position: relative;
+}
+.panel.asis { border-color: var(--red); }
+.panel.tobe { border-color: var(--teal); }
+.tag {
+	position: absolute;
+	top: -16px; left: 18px;
+	padding: 2px 18px;
+	font-weight: 700;
+	border-radius: 999px;
+	transform: rotate(-2deg);
+	color: var(--paper);
+	letter-spacing: 0.12em;
+}
+.asis .tag { background: var(--red); }
+.tobe .tag { background: var(--teal); transform: rotate(1.6deg); }
+.panel h3 { margin: 8px 0 14px; font-size: 1.05rem; text-wrap: balance; }
+
+.flow { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+.step {
+	border: 2.5px solid var(--line);
+	border-radius: 255px 12px 225px 12px / 12px 225px 12px 255px;
+	padding: 8px 14px;
+	background: var(--panel);
+	font-size: 0.95rem;
+	text-align: center;
+}
+.step small { display: block; color: var(--ink-soft); font-size: 0.8rem; }
+.step.bad { border-color: var(--red); background: var(--red-bg); transform: rotate(-0.8deg); }
+.step.good { border-color: var(--teal); background: var(--teal-bg); transform: rotate(0.5deg); }
+.step.ghost { border-style: dashed; color: var(--ink-soft); background: transparent; }
+.arrow {
+	text-align: center;
+	color: var(--ink-soft);
+	font-size: 1.05rem;
+	line-height: 1.15;
+	padding: 1px 0;
+}
+.arrow b { color: var(--blue); font-size: 0.82rem; font-weight: 700; }
+.arrow.red b { color: var(--red); }
+.arrow.teal b { color: var(--teal); }
+
+.split {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+	margin-top: 4px;
+}
+@media (max-width: 520px) { .split { grid-template-columns: 1fr; } }
+
+.bridge {
+	align-self: center;
+	display: grid;
+	place-items: center;
+	color: var(--blue);
+	font-weight: 700;
+	text-align: center;
+	min-width: 96px;
+}
+.bridge svg { display: block; }
+.bridge .label { font-size: 0.85rem; margin-top: 2px; }
+
+.bubble {
+	position: relative;
+	margin: 12px 8px 4px;
+	border: 2.5px solid var(--line);
+	border-radius: 18px 22px 20px 24px;
+	padding: 8px 14px;
+	font-size: 0.9rem;
+	background: var(--panel);
+	transform: rotate(-1deg);
+}
+.bubble::after {
+	content: "";
+	position: absolute;
+	left: 26px; bottom: -12px;
+	border: 7px solid transparent;
+	border-top-color: var(--line);
+}
+.bubble.shock { border-color: var(--red); color: var(--red); font-weight: 700; }
+.bubble.shock::after { border-top-color: var(--red); }
+.bubble.calm { border-color: var(--teal); }
+.bubble.calm::after { border-top-color: var(--teal); }
+
+.note-list { margin: 14px 0 0; padding: 0; list-style: none; font-size: 0.9rem; }
+.note-list li { margin: 6px 0; padding-left: 1.4em; text-indent: -1.4em; }
+.note-list li::before { content: "✎ "; color: var(--blue); }
+.asis .note-list li::before { content: "⚠ "; color: var(--red); }
+.tobe .note-list li::before { content: "✔ "; color: var(--teal); }
+.dead { text-decoration: line-through; text-decoration-color: var(--red); text-decoration-thickness: 3px; }
+
+.fdcard {
+	border: 2.5px solid var(--line);
+	border-radius: 14px 18px 12px 20px;
+	background: var(--panel);
+	padding: 10px 12px;
+	font-size: 0.86rem;
+}
+.fdcard .fdtitle { font-weight: 700; margin-bottom: 6px; text-align: center; }
+.fdcard.ledger { border-color: var(--teal); border-width: 3px; }
+.fdcard.danger { border-color: var(--red); }
+.fdrow {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+	border-bottom: 1.5px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+	padding: 2px 2px;
+}
+.fdrow:last-child { border-bottom: none; }
+.fdrow .k { color: var(--ink-soft); }
+.fdrow .v { font-family: "Cascadia Code", Consolas, monospace; font-size: 0.82rem; }
+.fdrow.new { background: var(--teal-bg); border-radius: 6px; }
+.fdrow.new .k { color: var(--teal); font-weight: 700; }
+.fdrow.gone { opacity: 0.6; }
+.fdrow.gone .v { text-decoration: line-through; text-decoration-color: var(--red); text-decoration-thickness: 2px; }
+.fdrow.hot { background: var(--red-bg); border-radius: 6px; }
+.fdrow.hot .k { color: var(--red); font-weight: 700; }
+
+.stickies {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 18px;
+	margin-top: 20px;
+}
+.sticky {
+	background: var(--sticky);
+	color: var(--sticky-ink);
+	padding: 16px 18px 18px;
+	border-radius: 4px 10px 6px 12px;
+	box-shadow: 0 6px 14px rgba(0,0,0,0.14);
+	font-size: 0.92rem;
+}
+.sticky:nth-child(1) { transform: rotate(-1.4deg); }
+.sticky:nth-child(2) { transform: rotate(0.9deg); }
+.sticky:nth-child(3) { transform: rotate(-0.5deg); }
+.sticky b { display: block; margin-bottom: 6px; font-size: 0.98rem; }
+.sticky code { background: rgba(0,0,0,0.1); }
+
+.foot {
+	margin-top: 40px;
+	text-align: center;
+	color: var(--ink-soft);
+	font-size: 0.85rem;
+}
+</style>
+
+<div class="board">
+	<header class="head">
+		<div class="ribbon"><!-- EDIT: キャッチコピー(体言止め + !) --></div>
+		<div class="sub">
+			<span class="badge"><!-- EDIT: PR #NNN --></span> issue #NNN Phase X
+			<span class="badge"><!-- EDIT: YYYY-MM-DD --></span>
+			<!-- EDIT: 1 行サマリ。最重要語は <mark> で -->
+		</div>
+	</header>
+
+	<!-- ==================== ① 代表操作の旅路 ==================== -->
+	<section class="sec">
+		<h2 class="sec-title"><span class="num">①</span><!-- EDIT: セクション見出し --></h2>
+		<p class="sec-lede"><!-- EDIT: このセクションが答える問い(1 行) --></p>
+
+		<div class="duo">
+			<div class="panel asis">
+				<span class="tag">AS-IS</span>
+				<h3><!-- EDIT: 問題の一言 + 😱 --></h3>
+				<div class="flow">
+					<!-- EDIT: .step / .arrow を 4〜6 個。問題ステップは .step.bad、
+					     矢印ラベルは <b>、補足は <small>。消えゆく話は .step.ghost -->
+					<div class="step">…</div>
+					<div class="arrow">↓ <b>…</b></div>
+					<div class="step bad">…<small>…</small></div>
+				</div>
+				<div class="bubble shock"><!-- EDIT: AS-IS の核心を 1 文 --></div>
+			</div>
+
+			<div class="bridge">
+				<svg width="86" height="46" viewBox="0 0 86 46" aria-hidden="true">
+					<path d="M4 30 C 28 10, 52 10, 70 22" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+					<path d="M60 12 L 74 24 L 56 30" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+				</svg>
+				<span class="label"><!-- EDIT: 変化の一言(2 行以内)--></span>
+			</div>
+
+			<div class="panel tobe">
+				<span class="tag">TO-BE</span>
+				<h3><!-- EDIT: 解決の一言 + ✨ --></h3>
+				<div class="flow">
+					<div class="step">…</div>
+					<div class="arrow teal">↓ <b>…</b></div>
+					<div class="step good">…<small>…</small></div>
+				</div>
+				<div class="bubble calm"><!-- EDIT: TO-BE の核心。<mark> を 1 箇所 --></div>
+				<ul class="note-list">
+					<li><!-- EDIT: 補足(✔ が付く)--></li>
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<!-- ==================== ② 構造・所有権の対比 ==================== -->
+	<section class="sec">
+		<h2 class="sec-title"><span class="num">②</span><!-- EDIT: セクション見出し --></h2>
+		<p class="sec-lede"><!-- EDIT: 1 行 --></p>
+
+		<div class="duo">
+			<div class="panel asis">
+				<span class="tag">AS-IS</span>
+				<h3><!-- EDIT --></h3>
+				<div class="fdcard danger">
+					<div class="fdtitle"><!-- EDIT: 構造体・テーブル名 --></div>
+					<div class="fdrow"><span class="k">…</span><span class="v">…</span></div>
+					<div class="fdrow hot"><span class="k">問題のフィールド</span><span class="v">…</span></div>
+				</div>
+				<div class="bubble shock"><!-- EDIT --></div>
+			</div>
+
+			<div class="bridge">
+				<svg width="86" height="46" viewBox="0 0 86 46" aria-hidden="true">
+					<path d="M4 30 C 28 10, 52 10, 70 22" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+					<path d="M60 12 L 74 24 L 56 30" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+				</svg>
+				<span class="label"><!-- EDIT --></span>
+			</div>
+
+			<div class="panel tobe">
+				<span class="tag">TO-BE</span>
+				<h3><!-- EDIT --></h3>
+				<div class="fdcard">
+					<div class="fdtitle"><!-- EDIT --></div>
+					<div class="fdrow new"><span class="k">新フィールド</span><span class="v">…</span></div>
+					<div class="fdrow gone"><span class="k">消えたフィールド</span><span class="v">削除!</span></div>
+				</div>
+				<!-- EDIT: 台帳など対になるカードは .split + .fdcard.ledger で並べる -->
+				<div class="bubble calm"><!-- EDIT --></div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ==================== ✎ 付箋 ==================== -->
+	<section class="sec">
+		<h2 class="sec-title"><span class="num">✎</span>持ち帰りメモ(invariant)</h2>
+		<div class="stickies">
+			<!-- EDIT: 付箋は必ず 3 枚。絵文字 + 太字見出し + 「壊れると何が起きるか」。
+			     PR 本文の「危険箇所 top3」と同じ話を同じ言葉で書く(= /tutor の論点) -->
+			<div class="sticky"><b>🏷️ …</b>…</div>
+			<div class="sticky"><b>🏷️ …</b>…</div>
+			<div class="sticky"><b>🏷️ …</b>…</div>
+		</div>
+	</section>
+
+	<footer class="foot">
+		UCHos / issue #NNN「…」 — PR #NNN: +AAA / −BBB(N ファイル<!-- EDIT: 特記事項 -->)
+	</footer>
+</div>
