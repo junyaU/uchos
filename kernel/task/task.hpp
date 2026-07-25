@@ -82,6 +82,11 @@ struct Task {
 	char name[32];
 	int priority;
 	bool is_initialized;
+	/// Set by copy_task, consumed once by sys_fork: the new child resumes
+	/// inside sys_fork on the copied kernel stack, and this flag is how that
+	/// resume is recognized so fork can return 0 to the child. parent_id
+	/// cannot serve here — it stays set for the child's whole life.
+	bool just_forked;
 	TaskState state;
 	Path fs_path;
 	uint64_t* stack;
