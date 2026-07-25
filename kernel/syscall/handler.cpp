@@ -333,10 +333,20 @@ ProcessId sys_fork(void)
 	get_current_context(&current_ctx);
 
 	kernel::task::Task* t = kernel::task::CURRENT_TASK;
+
+	// A task waking up here on a stack copied by copy_task is the freshly
+	// created child re-entering sys_fork: fork returns 0 to it. This flag —
+	// not parent_id — is the child's return path (the old parent_id check
+	// served double duty, and repurposing it as a nested-fork error broke
+	// every fork: regression fixed here).
+	if (t->just_forked) {
+		t->just_forked = false;
+		return ProcessId::from_raw(0);
+	}
+
 	if (t->parent_id.raw() != -1) {
-		// Nested fork (a forked child forking again) is unsupported. Fail
-		// loudly (issue #315): the old silent 0 made the caller believe it
-		// was the child and run the child's code path in the parent.
+		// A genuine nested fork (a forked child forking again) is still
+		// unsupported: fail loudly instead of pretending (issue #315)
 		LOG_ERROR("fork depth > 1 is not supported (task %d)", t->id.raw());
 		return ProcessId::from_raw(ERR_FORK_FAILED);
 	}
