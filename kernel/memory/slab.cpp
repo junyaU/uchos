@@ -14,8 +14,35 @@
 #include "log/log.hpp"
 #include "page.hpp"
 
+#include "asm_utils.h"
+
 namespace kernel::memory
 {
+
+// ---- TEMP diagnostics for issue #383 (24.04-only alloc failure) ----
+// printf dies in the fault path (issue #384), so these write raw bytes to
+// COM1 directly: no formatting machinery, no SSE, no alignment hazard.
+namespace
+{
+void dbg_puts(const char* s)
+{
+	for (; *s != '\0'; ++s) {
+		write_to_io_port8(0x3f8, static_cast<uint8_t>(*s));
+	}
+}
+
+void dbg_hex(uint64_t v)
+{
+	dbg_puts("0x");
+	for (int shift = 60; shift >= 0; shift -= 4) {
+		const char c = "0123456789abcdef"[(v >> shift) & 0xf];
+		write_to_io_port8(0x3f8, static_cast<uint8_t>(c));
+	}
+}
+
+void dbg_dump_cache(MCache& cache);
+} // namespace
+// ---- END TEMP diagnostics ----
 
 MCache* get_cache_in_chain(const char* name)
 {
@@ -104,6 +131,45 @@ bool MCache::grow()
 	return true;
 }
 
+namespace
+{
+// TEMP (issue #383): printf-free dump of one cache's list state
+void dbg_dump_cache(MCache& cache)
+{
+	dbg_puts("SLABDBG cache=");
+	dbg_puts(cache.name());
+	dbg_puts(" obj_size=");
+	dbg_hex(cache.object_size());
+	dbg_puts("\r\n");
+
+	const struct {
+		const char* name;
+		std::list<std::unique_ptr<MSlab>>* list;
+	} lists[] = { { "free", &cache.slabs_free_ },
+				  { "partial", &cache.slabs_partial_ },
+				  { "full", &cache.slabs_full_ } };
+
+	for (const auto& entry : lists) {
+		dbg_puts("SLABDBG  ");
+		dbg_puts(entry.name);
+		dbg_puts(" size=");
+		dbg_hex(entry.list->size());
+		size_t walked = 0;
+		for (auto& slab : *entry.list) {
+			dbg_puts(" [st=");
+			dbg_hex(static_cast<uint64_t>(slab->status()));
+			dbg_puts(slab->is_full() ? ",F" : ",-");
+			dbg_puts(slab->is_empty() ? "E]" : "-]");
+			if (++walked > 8) {
+				dbg_puts(" ...");
+				break;
+			}
+		}
+		dbg_puts("\r\n");
+	}
+}
+} // namespace
+
 void* MCache::alloc()
 {
 	if (slabs_partial_.empty()) {
@@ -120,6 +186,7 @@ void* MCache::alloc()
 
 	void* addr = current_slab->alloc_object(object_size_);
 	if (addr == nullptr) {
+		dbg_dump_cache(*this); // TEMP (issue #383)
 		LOG_ERROR("failed to allocate object");
 		return nullptr;
 	}
@@ -285,6 +352,12 @@ void* alloc(size_t size, unsigned flags, int align)
 
 	void* addr = cache->alloc();
 	if (addr == nullptr) {
+		// TEMP (issue #383): name the failing call site without printf
+		dbg_puts("SLABDBG alloc-fail caller=");
+		dbg_hex(reinterpret_cast<uint64_t>(__builtin_return_address(0)));
+		dbg_puts(" size=");
+		dbg_hex(size);
+		dbg_puts("\r\n");
 		LOG_ERROR("failed to allocate memory");
 		return nullptr;
 	}
