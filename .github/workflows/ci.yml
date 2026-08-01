@@ -92,6 +92,7 @@ jobs:
         chmod +x ./scripts/run_kernel_tests.sh
         WORK_DIR=qemu-test \
         SMOKE_BINS="userland/shell/shell userland/commands/echo/echo" \
+        QEMU_DEBUG=int,cpu_reset,guest_errors \
         ./scripts/run_kernel_tests.sh
 
     - name: Upload serial log
