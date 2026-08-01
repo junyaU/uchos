@@ -29,6 +29,21 @@ Message make_request(MsgType type);
  */
 Message call(ProcessId dst, Message* msg);
 
+/**
+ * @brief Answer a received request (server side of an RPC, IPC_REPLY)
+ *
+ * Echoes the request's correlation so the kernel can pair the reply with
+ * the caller blocked in call(); the kernel stamps MSG_FLAG_REPLY and the
+ * true sender at the syscall boundary (issue #315 3b-10). A request with
+ * correlation 0 expects no reply and makes this a no-op. Put the
+ * server-side outcome in resp->result.
+ *
+ * @param req The request being answered
+ * @param resp Reply message (type/payload/result set by the caller)
+ * @return OK on delivery (or no-op), negative error_t otherwise
+ */
+error_t reply_message(const Message* req, Message* resp);
+
 void initialize_task();
 
 /**

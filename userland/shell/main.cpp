@@ -24,8 +24,21 @@ void run_smoke_test(Shell* s, Terminal* term)
 	char command[] = "echo smoke";
 	const error_t status = s->process_input(command, *term);
 
+	// One ping to pongd, the first manifest-launched ring-3 service: covers
+	// the ELF service boot path and the user-side reply path (issue #315
+	// 3b-10). The service answers "pong" — a transformation, so a lost
+	// reply leaves the zeroed request buffer behind and cannot pass.
+	Message ping = make_request(MsgType::PONGD_PING);
+	const Message pong = call(process_ids::PONGD, &ping);
+	error_t svc_status = OK;
+	if (IS_ERR(pong.result)) {
+		svc_status = pong.result;
+	} else if (strcmp(pong.data.write.buf, "pong") != 0) {
+		svc_status = ERR_INVALID_ARG;
+	}
+
 	Message report = make_request(MsgType::SMOKE_REPORT);
-	report.data.smoke.status = status;
+	report.data.smoke.status = IS_ERR(status) ? status : svc_status;
 	send_message(process_ids::KERNEL, &report);
 }
 

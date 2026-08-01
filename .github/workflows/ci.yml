@@ -81,12 +81,13 @@ jobs:
         export LDFLAGS="-L$GITHUB_WORKSPACE/x86_64-elf/lib"
         make -C userland/shell shell
         make -C userland/commands/echo echo
+        make -C userland/services/pongd pongd
 
     - name: Run kernel tests and ring-3 smoke test in QEMU
       run: |
         chmod +x ./scripts/run_kernel_tests.sh
         WORK_DIR=qemu-test \
-        SMOKE_BINS="userland/shell/shell userland/commands/echo/echo" \
+        SMOKE_BINS="userland/shell/shell userland/commands/echo/echo userland/services/pongd/pongd" \
         ./scripts/run_kernel_tests.sh
 
     - name: Upload serial log
@@ -110,6 +111,7 @@ jobs:
           build/UchosKernel
           userland/shell/shell
           userland/commands/echo/echo
+          userland/services/pongd/pongd
         if-no-files-found: ignore
 
     - name: Run clang-tidy

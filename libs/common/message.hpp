@@ -90,6 +90,10 @@ enum class MsgType : int32_t {
 	FS_PWD,
 	FS_CHANGE_DIR,
 	FS_DUP2,
+	/// Ping the pongd reference service; the reply carries "pong" in
+	/// data.write.buf. Proves the manifest ring-3 service boot and the
+	/// user-side reply path (issue #315 3b-10).
+	PONGD_PING,
 	/// Ring-3 smoke result the shell sends to KERNEL in KERNEL_SMOKE_TEST
 	/// builds: one fork→exec→wait round-trip, judged by the kernel (#374)
 	SMOKE_REPORT,

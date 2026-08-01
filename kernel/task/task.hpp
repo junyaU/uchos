@@ -176,6 +176,10 @@ struct InitialTaskInfo {
 	SystemProcessId id; ///< tasks[] slot this entry must land in (asserted)
 	const char* name;
 	void (*entry)(); ///< Service entry point, nullptr for the boot task
+	/// ELF name on the boot volume; non-null makes entry the generic
+	/// bootstrap that execs the task into ring 3 (issue #315 3b-10)
+	const char* binary;
+	const char* args; ///< argv tail of a ring-3 launch, usually nullptr
 	bool setup_context;
 	bool is_initialized;
 };
