@@ -60,10 +60,21 @@ __attribute__((no_caller_saved_registers)) const char* report_fault(
 template<uint64_t error_code, bool has_error_code>
 struct FaultHandler;
 
+// force_align_arg_pointer on both handlers (issue #384): the C call chain
+// below a fault handler must be ABI-aligned no matter what RSP parity the
+// exception delivery produced. Without it, clang's interrupt prologue can
+// leave every callee 8 bytes off, and the first function that spills an XMM
+// register to the stack (printf's movdqa) raises #GP — whose handler then
+// faults the same way, recursing into a triple fault. Delivery parity
+// differs between environments (QEMU 8.2 / real hardware align the frame
+// to 16 bytes; QEMU 6.2 does not), which is why the interactive setup
+// never showed this.
+
 // no error code
 template<uint64_t error_code>
 struct FaultHandler<error_code, false> {
-	static inline __attribute__((interrupt)) void handler(InterruptFrame* frame)
+	static inline __attribute__((interrupt, force_align_arg_pointer)) void handler(
+			InterruptFrame* frame)
 	{
 		const char* name = report_fault(error_code, frame);
 
@@ -74,8 +85,9 @@ struct FaultHandler<error_code, false> {
 // exisiting error code
 template<uint64_t error_code>
 struct FaultHandler<error_code, true> {
-	static inline __attribute__((interrupt)) void handler(InterruptFrame* frame,
-														  uint64_t code)
+	static inline __attribute__((interrupt, force_align_arg_pointer)) void handler(
+			InterruptFrame* frame,
+			uint64_t code)
 	{
 		if (error_code == PAGE_FAULT) {
 			const uint64_t fault_addr = get_cr2();
