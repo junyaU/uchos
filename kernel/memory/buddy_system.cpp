@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "bit_utils.hpp"
+#include "interrupt/irq_guard.hpp"
 #include "log/log.hpp"
 #include "memory/page.hpp"
 
@@ -42,6 +43,11 @@ void BuddySystem::split_memory_block(int order)
 
 void* BuddySystem::allocate(size_t size)
 {
+	// free_lists_ and the page flags are shared by every task, and tasks are
+	// preempted mid-kernel; without this the slab grow path and a direct
+	// page allocation can interleave and corrupt the lists (issue #383)
+	kernel::interrupt::IrqGuard guard;
+
 	const int order = calculate_order(pages_for_bytes(size));
 	if (order == -1) {
 		LOG_ERROR("invalid size: %d", size);
@@ -86,6 +92,9 @@ void* BuddySystem::allocate(size_t size)
 
 void BuddySystem::free(void* addr, size_t size)
 {
+	// Same atomicity contract as allocate() (issue #383)
+	kernel::interrupt::IrqGuard guard;
+
 	auto* start_page = &pages[reinterpret_cast<uintptr_t>(addr) / PAGE_SIZE];
 	if (start_page->is_free()) {
 		LOG_ERROR("double free detected at address: %p", addr);
