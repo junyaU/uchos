@@ -141,6 +141,14 @@ void service_bootstrap()
 
 	CURRENT_TASK->is_initialized = true;
 	exec_elf(std::move(elf_buf), self->name, self->args);
+
+	// exec_elf only returns on failure (segment/stack/heap mapping). Falling
+	// off this function would run off a dead ring-0 stack frame into a
+	// garbage RIP and panic the whole system — park the task instead.
+	LOG_ERROR("exec failed for service binary: %s", self->binary);
+	while (true) {
+		__asm__("hlt");
+	}
 }
 
 } // namespace
