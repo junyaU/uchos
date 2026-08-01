@@ -221,9 +221,20 @@ void test_ipc_recv_returns_queued_message()
 	ASSERT_EQ(t->state, kernel::task::TASK_RUNNING);
 }
 
+void test_manifest_ring3_service_slot()
+{
+	// The boot manifest launches pongd through the generic ring-3
+	// bootstrap (issue #315 3b-10). Its declared slot must hold a task of
+	// that name, or every process_ids::PONGD send goes to a stranger.
+	Task* t = get_task(process_ids::PONGD);
+	ASSERT_NOT_NULL(t);
+	ASSERT_EQ(strcmp(t->name, "pongd"), 0);
+}
+
 void register_task_tests()
 {
 	test_register("task_creation_basic", test_task_creation_basic);
+	test_register("manifest_ring3_service_slot", test_manifest_ring3_service_slot);
 	test_register("task_id_management", test_task_id_management);
 	test_register("task_message_handling", test_task_message_handling);
 	test_register("task_copy", test_task_copy);

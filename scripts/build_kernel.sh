@@ -91,6 +91,21 @@ for MKF in $(ls $work_path/userland/commands/*/Makefile); do
     fi
 done
 
+# Ring-3 services launched from the boot manifest (issue #315 3b-10)
+for MKF in $(ls $work_path/userland/services/*/Makefile 2>/dev/null); do
+    APP_DIR=$(dirname $MKF)
+    APP=$(basename $APP_DIR)
+    printf "${YELLOW}Building service: $APP${NC}\n"
+    make ${MAKE_OPTS:-} -C $APP_DIR clean > /dev/null 2>&1
+    if ! make ${MAKE_OPTS:-} -C $APP_DIR $APP; then
+        printf "${RED}✗ Failed to build service: $APP${NC}\n"
+        BUILD_FAILED=1
+        FAILED_APPS+=("services/$APP")
+    else
+        printf "${GREEN}✓ Successfully built service: $APP${NC}\n"
+    fi
+done
+
 # Summary message at the end
 if [ $BUILD_FAILED -eq 1 ]; then
     printf "\n${RED}════════════════════════════════════════════════════════════════${NC}\n"
@@ -122,6 +137,14 @@ for COMMAND in $(ls $work_path/userland/commands); do
     if [ -f $work_path/userland/commands/$COMMAND/$COMMAND ]; then
         sudo cp $work_path/userland/commands/$COMMAND/$COMMAND $mount_point/
         sudo cp $work_path/userland/commands/$COMMAND/$COMMAND $storage_mount_point/
+    fi
+done
+
+# The boot manifest loads ring-3 services by name from the volume root
+for SERVICE in $(ls $work_path/userland/services 2>/dev/null); do
+    if [ -f $work_path/userland/services/$SERVICE/$SERVICE ]; then
+        sudo cp $work_path/userland/services/$SERVICE/$SERVICE $mount_point/
+        sudo cp $work_path/userland/services/$SERVICE/$SERVICE $storage_mount_point/
     fi
 done
 

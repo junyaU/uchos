@@ -97,7 +97,7 @@ uchos/
 │   ├── graphics/       # 画面描画・フォント・ログ
 │   └── tests/          # カーネル内部テストフレームワーク
 ├── UchLoaderPkg/       # UEFI ブートローダー(EDK2)
-├── userland/           # shell/ と commands/(ls, cat, echo, ping 等)
+├── userland/           # shell/、commands/(ls, cat, echo, ping 等)、services/(ring3 サービス)
 ├── libs/               # common(カーネル・ユーザー共通)/ user(ユーザーランドランタイム)
 ├── scripts/            # ビルド・ディスクイメージ作成・TAP 設定スクリプト
 └── x86_64-elf/         # クロスコンパイル用 newlib / libc++(編集禁止)
