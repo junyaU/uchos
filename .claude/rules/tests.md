@@ -31,5 +31,10 @@ paths:
 - 仕組み: テスト完走後もブートを継続 → シェルを `-smoke` 引数で exec → シェルが `echo smoke` を通常の fork→exec→wait 経路で 1 往復実行 → 結果を `SMOKE_REPORT` メッセージで KERNEL タスクへ報告 → カーネル(`kernel/tests/smoke.cpp`)が `SMOKE_TEST: ... result=PASS|FAIL` マーカーをシリアルに出して isa-debug-exit で終了(テスト結果との AND)。ハングは 60 秒のウォッチドッグが FAIL マーカー化する
 - `scripts/run_kernel_tests.sh` は `SMOKE_BINS="<shell> <echo>"` 指定時に virtio-blk ストレージディスクを組み立てて `SMOKE_TEST:` マーカーも判定する。マーカー形式を変える場合は両側を同期すること
 
+## CI 失敗の切り分け(replay-first)
+- CI 失敗の初手は `./scripts/replay_ci_run.sh <run-id>`(引数なし = 直近の失敗 run)。CI がブートした実バイナリ(smoke-debug-binaries アーティファクト)をローカル QEMU で再生し、「決定的なコードバグ」か「QEMU/OVMF の環境差」かを 1 実験で判定する。ローカル再ビルドでの再現試行はコンパイラ差で別バイナリになるため切り分けにならない
+- ローカルでも落ちる場合は `QEMU_DEBUG=int,cpu_reset,guest_errors` で例外トレースを取り、`llvm-addr2line -e <CI の ELF>` で行番号化する(手元の再ビルドではアドレスが合わないので必ず CI 実バイナリで解決する)
+- printf が死ぬ文脈(例外経路・沈黙死)の観測は `write_to_io_port8(0x3f8, c)` のシリアル直書きが安全(経緯: issue #383/#384)
+
 ## 注意
 - 既存テスト(memory / task / timer / virtio_blk / fs / fd / stdio)の書き方を踏襲すること

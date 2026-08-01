@@ -113,6 +113,16 @@ gdb build/UchosKernel
 target remote :12345
 ```
 
+### 🔁 CI デバッグの初手は replay(replay-first)
+
+CI が落ちたら、ローカルで再ビルドして試す前に **CI がブートした実バイナリをそのままローカル QEMU で再生**する(ローカルビルドはコンパイラ差で別バイナリになり、切り分けにならない):
+
+```bash
+./scripts/replay_ci_run.sh <run-id>   # 省略時は直近の失敗 run
+```
+
+判定は二値: **ローカルでも落ちる** = 決定的なコードバグ(以降 CI 往復なしで手元デバッグ)/ **ローカルでは通る** = QEMU・OVMF の環境差を疑う。詳細・トレース取得(`QEMU_DEBUG=int,...`)はスクリプト冒頭のコメント参照。issue #383/#384 の切り分けを決めた手法(経緯は #383 のコメント)。
+
 ### 🩺 ヒープデバッグ(KERNEL_HEAP_DEBUG)
 
 slab アロケータに poison / redzone / 確保元トラッキングを仕込み、use-after-free・バッファオーバーフロー・二重 free・リークを **違反地点で** 検出する(実装: `kernel/memory/heap_debug.{hpp,cpp}`)。**既定 ON**(`KERNEL_TESTS` と同方針でローカル開発・対話ブートに常時稼働)。性能計測などで無効化する場合のみ `-DKERNEL_HEAP_DEBUG=OFF` を渡す(OFF ビルドはコード・性能とも従来と同一)。
