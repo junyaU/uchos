@@ -1,6 +1,7 @@
 #include "tests/test_cases/memory_test.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <utility>
 #include "memory/bootstrap_allocator.hpp"
@@ -460,9 +461,62 @@ void test_unique_kbuf_null_is_safe()
 	ASSERT_FALSE(static_cast<bool>(empty));
 }
 
+namespace
+{
+uint64_t read_rflags()
+{
+	uint64_t rflags;
+	__asm__ volatile("pushfq\n\tpopq %0" : "=r"(rflags));
+	return rflags;
+}
+
+constexpr uint64_t RFLAGS_IF = 1UL << 9;
+} // namespace
+
+void test_heap_ops_preserve_interrupt_flag()
+{
+	// alloc()/free() and newlib malloc mask interrupts internally now
+	// (issue #388); the guards must RESTORE the caller's IF, never force
+	// it. A cli critical section that touches the heap would otherwise
+	// reopen an interrupt window in the middle of itself.
+	const bool entered_enabled = (read_rflags() & RFLAGS_IF) != 0;
+
+	__asm__ volatile("sti");
+	void* p = kernel::memory::alloc(64, kernel::memory::ALLOC_UNINITIALIZED);
+	const bool enabled_stays_enabled = (read_rflags() & RFLAGS_IF) != 0;
+	kernel::memory::free(p);
+	const bool enabled_after_free = (read_rflags() & RFLAGS_IF) != 0;
+
+	__asm__ volatile("cli");
+	void* q = kernel::memory::alloc(64, kernel::memory::ALLOC_UNINITIALIZED);
+	const bool masked_after_alloc = (read_rflags() & RFLAGS_IF) == 0;
+	kernel::memory::free(q);
+	const bool masked_after_free = (read_rflags() & RFLAGS_IF) == 0;
+	void* m = malloc(64);
+	const bool masked_after_malloc = (read_rflags() & RFLAGS_IF) == 0;
+	free(m);
+	const bool masked_after_libc_free = (read_rflags() & RFLAGS_IF) == 0;
+
+	if (entered_enabled) {
+		__asm__ volatile("sti");
+	}
+
+	ASSERT_NOT_NULL(p);
+	ASSERT_NOT_NULL(q);
+	ASSERT_NOT_NULL(m);
+	ASSERT_TRUE(enabled_stays_enabled);
+	ASSERT_TRUE(enabled_after_free);
+	ASSERT_TRUE(masked_after_alloc);
+	ASSERT_TRUE(masked_after_free);
+	ASSERT_TRUE(masked_after_malloc);
+	ASSERT_TRUE(masked_after_libc_free);
+}
+
 void register_slab_tests()
 {
 	test_register("slab_basic", test_slab_basic);
+	test_register("heap_ops_preserve_interrupt_flag",
+				  test_heap_ops_preserve_interrupt_flag);
 	test_register("cache_chain_walk_matches_size",
 				  test_cache_chain_walk_matches_size);
 	test_register("slab_list_invariants_across_burst",
