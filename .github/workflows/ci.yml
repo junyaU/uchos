@@ -23,7 +23,7 @@ jobs:
     # the boot memory map enough to set off latent kernel bugs that are
     # tracked separately: #383 (slab), #384 (fault-path logging), #385
     # (PCI BARs above the identity map). Revisit once those are fixed.
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest # TEMP: issue #383 fix verification on the 24.04 stack
 
     steps:
     - uses: actions/checkout@v4
