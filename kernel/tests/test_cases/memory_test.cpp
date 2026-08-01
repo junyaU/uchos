@@ -148,8 +148,8 @@ void test_get_page_bounds()
 
 	// the last valid page resolves
 	const size_t num_pages = kernel::memory::pages.size();
-	void* last_page_addr = reinterpret_cast<void*>((num_pages - 1) *
-												   kernel::memory::PAGE_SIZE);
+	void* last_page_addr =
+			reinterpret_cast<void*>((num_pages - 1) * kernel::memory::PAGE_SIZE);
 	ASSERT_NOT_NULL(kernel::memory::get_page(last_page_addr));
 
 	// one page past the end must not resolve (used to be an off-by-one)
@@ -243,6 +243,82 @@ void test_slab_error_handling()
 	// Test allocation with size 0
 	ptr = kernel::memory::alloc(0, kernel::memory::ALLOC_UNINITIALIZED);
 	ASSERT_NULL(ptr);
+}
+
+namespace
+{
+
+// The slab list invariant issue #383's corruption violated: every slab sits
+// in the list matching its fill state, and each list walk agrees with its
+// size bookkeeping. Before the fix, global constructors never ran, so
+// cache_chain (a global std::list) had a null sentinel: the walk started at
+// a phantom node threaded through physical page 0 and this check failed on
+// the very first call.
+void check_all_cache_invariants()
+{
+	for (auto& cache : kernel::memory::cache_chain) {
+		for (auto& slab : cache->slabs_partial_) {
+			EXPECT_FALSE(slab->is_full());
+			EXPECT_FALSE(slab->is_empty());
+		}
+		for (auto& slab : cache->slabs_full_) {
+			EXPECT_TRUE(slab->is_full());
+		}
+		for (auto& slab : cache->slabs_free_) {
+			EXPECT_TRUE(slab->is_empty());
+		}
+	}
+}
+
+} // namespace
+
+// Walking cache_chain from the sentinel must yield exactly size() live
+// caches; the pre-fix zeroed sentinel yielded a phantom node with a null
+// MCache pointer first (issue #383)
+void test_cache_chain_walk_matches_size()
+{
+	size_t counted = 0;
+	for (auto& cache : kernel::memory::cache_chain) {
+		ASSERT_NOT_NULL(cache.get());
+		ASSERT_NE(cache->name()[0], '\0');
+		++counted;
+	}
+	ASSERT_EQ(counted, kernel::memory::cache_chain.size());
+}
+
+void test_slab_list_invariants_across_burst()
+{
+	check_all_cache_invariants();
+
+	// A fork-style burst: enough same-class objects to fill several slabs,
+	// with interleaved frees so slabs travel free -> partial -> full and
+	// back while the invariant is re-checked at every step
+	constexpr int num_ptrs = 24;
+	void* ptrs[num_ptrs] = {};
+
+	for (void*& ptr : ptrs) {
+		ptr = kernel::memory::alloc(512, kernel::memory::ALLOC_UNINITIALIZED);
+		ASSERT_NOT_NULL(ptr);
+	}
+	check_all_cache_invariants();
+
+	for (int i = 0; i < num_ptrs; i += 2) {
+		kernel::memory::free(ptrs[i]);
+		ptrs[i] = nullptr;
+	}
+	check_all_cache_invariants();
+
+	for (int i = 0; i < num_ptrs; i += 2) {
+		ptrs[i] = kernel::memory::alloc(512, kernel::memory::ALLOC_UNINITIALIZED);
+		ASSERT_NOT_NULL(ptrs[i]);
+	}
+	check_all_cache_invariants();
+
+	for (void*& ptr : ptrs) {
+		kernel::memory::free(ptr);
+		ptr = nullptr;
+	}
+	check_all_cache_invariants();
 }
 
 void test_slab_double_free_detected()
@@ -387,6 +463,10 @@ void test_unique_kbuf_null_is_safe()
 void register_slab_tests()
 {
 	test_register("slab_basic", test_slab_basic);
+	test_register("cache_chain_walk_matches_size",
+				  test_cache_chain_walk_matches_size);
+	test_register("slab_list_invariants_across_burst",
+				  test_slab_list_invariants_across_burst);
 	test_register("slab_cache_creation", test_slab_cache_creation);
 	test_register("slab_aligned_allocation", test_slab_aligned_allocation);
 	test_register("slab_zeroed_allocation", test_slab_zeroed_allocation);
