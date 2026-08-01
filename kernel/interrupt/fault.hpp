@@ -63,7 +63,8 @@ struct FaultHandler;
 // no error code
 template<uint64_t error_code>
 struct FaultHandler<error_code, false> {
-	static inline __attribute__((interrupt)) void handler(InterruptFrame* frame)
+	static inline __attribute__((interrupt, force_align_arg_pointer)) void
+	handler(InterruptFrame* frame)
 	{
 		const char* name = report_fault(error_code, frame);
 
@@ -74,8 +75,8 @@ struct FaultHandler<error_code, false> {
 // exisiting error code
 template<uint64_t error_code>
 struct FaultHandler<error_code, true> {
-	static inline __attribute__((interrupt)) void handler(InterruptFrame* frame,
-														  uint64_t code)
+	static inline __attribute__((interrupt, force_align_arg_pointer)) void
+	handler(InterruptFrame* frame, uint64_t code)
 	{
 		if (error_code == PAGE_FAULT) {
 			const uint64_t fault_addr = get_cr2();
