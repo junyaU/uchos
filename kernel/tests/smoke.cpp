@@ -41,7 +41,7 @@ void conclude(error_t status, const char* detail)
 
 void handle_smoke_report(const Message& m)
 {
-	conclude(m.data.smoke.status, "shell fork/exec/wait");
+	conclude(m.data.smoke.status, "shell fork/exec/wait + pongd + file open/read/close");
 }
 
 void handle_watchdog_timeout(const Message& m)

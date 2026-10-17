@@ -9,6 +9,7 @@
 #include <libs/common/message.hpp>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include "error.hpp"
 #include "fat.hpp"
 #include "fs/file_descriptor.hpp"
 #include "fs/file_info.hpp"
@@ -316,6 +317,83 @@ void truncate_file(DirectoryEntry* entry, size_t new_size)
 	write_fat_table_to_disk();
 }
 
+/*
+ * The client's fd table belongs to the kernel. These three requests are
+ * the only way the FS edits it, so the FS keeps working once it no longer
+ * shares the kernel's address space. Each is a call() to KERNEL, which
+ * never calls back into the FS, so they cannot deadlock.
+ */
+
+/**
+ * @brief Ask the kernel to give the client an fd routed back to this FS
+ * @param client Task the fd is installed for
+ * @param name Label stored in the entry (8.3 name)
+ * @param handle Ledger handle the entry carries
+ * @return The client's new fd, or a negative error_t
+ */
+fd_t request_fd_install(ProcessId client, const char* name, uint32_t handle)
+{
+	Message m = { .type = MsgType::FD_INSTALL, .sender = process_ids::FS_FAT32 };
+	m.data.fd_route.client = client.raw();
+	m.data.fd_route.handle = handle;
+	strncpy(m.data.fd_route.name, name, sizeof(m.data.fd_route.name) - 1);
+
+	const error_t err = kernel::task::call(process_ids::KERNEL, &m);
+	if (IS_ERR(err)) {
+		return err;
+	}
+	return IS_ERR(m.result) ? m.result : m.data.fd_route.fd;
+}
+
+/**
+ * @brief Ask the kernel to remove one of the client's fds this FS issued
+ * @param client Task whose fd is removed
+ * @param fd Descriptor to remove
+ * @param out_handle Receives the removed entry's ledger handle
+ * @return OK, or a negative error_t (the fd is left as it was)
+ */
+error_t request_fd_remove(ProcessId client, fd_t fd, uint32_t* out_handle)
+{
+	Message m = { .type = MsgType::FD_REMOVE, .sender = process_ids::FS_FAT32 };
+	m.data.fd_route.client = client.raw();
+	m.data.fd_route.fd = fd;
+
+	RETURN_IF_ERROR(kernel::task::call(process_ids::KERNEL, &m));
+	RETURN_IF_ERROR(m.result);
+
+	*out_handle = m.data.fd_route.handle;
+	return OK;
+}
+
+/**
+ * @brief Ask the kernel to copy the client's oldfd over newfd (dup2)
+ * @param client Task whose table is edited
+ * @param oldfd Descriptor to copy; must be one this FS issued
+ * @param newfd Descriptor slot to overwrite
+ * @param out_old_handle Receives oldfd's ledger handle
+ * @param out_replaced_handle Receives newfd's previous handle if this FS
+ * issued it, else 0
+ * @return OK, or a negative error_t (the table is left as it was)
+ */
+error_t request_fd_dup(ProcessId client,
+					   fd_t oldfd,
+					   fd_t newfd,
+					   uint32_t* out_old_handle,
+					   uint32_t* out_replaced_handle)
+{
+	Message m = { .type = MsgType::FD_DUP, .sender = process_ids::FS_FAT32 };
+	m.data.fd_route.client = client.raw();
+	m.data.fd_route.fd = oldfd;
+	m.data.fd_route.newfd = newfd;
+
+	RETURN_IF_ERROR(kernel::task::call(process_ids::KERNEL, &m));
+	RETURN_IF_ERROR(m.result);
+
+	*out_old_handle = m.data.fd_route.handle;
+	*out_replaced_handle = m.data.fd_route.replaced_handle;
+	return OK;
+}
+
 } // namespace
 
 void handle_fs_stat(const Message& m)
@@ -368,14 +446,6 @@ void handle_fs_open(const Message& m)
 		return;
 	}
 
-	// Get the requesting process's task
-	kernel::task::Task* t = kernel::task::get_task(m.sender);
-	if (t == nullptr) {
-		req.result = ERR_INVALID_TASK;
-		kernel::task::reply(m, &req);
-		return;
-	}
-
 	// File state becomes an FS-owned ledger record; the client's routing
 	// entry only carries the handle (issue #315 3b-8)
 	const uint32_t handle = open_file_create(entry, name, m.sender);
@@ -385,18 +455,13 @@ void handle_fs_open(const Message& m)
 		return;
 	}
 
-	// The ONE remaining touch on the client's task: installing the routing
-	// entry. Becomes a kernel-provided service API when the FS leaves
-	// ring 0 (issue #315 3b-10).
-	fd_t fd = kernel::fs::allocate_process_fd(t->fd_table.data(),
-											  kernel::task::MAX_FDS_PER_PROCESS,
-											  name, handle, m.sender);
+	const fd_t fd = request_fd_install(m.sender, name, handle);
 	if (fd < 0) {
 		open_file_release(handle);
 	}
 
-	req.data.fs.fd = fd;
-	req.result = fd < 0 ? ERR_INVALID_FD : OK;
+	req.data.fs.fd = fd < 0 ? NO_FD : fd;
+	req.result = fd < 0 ? fd : OK;
 	kernel::task::reply(m, &req);
 }
 
@@ -412,26 +477,16 @@ void handle_fs_read(const Message& m)
 
 void handle_fs_close(const Message& m)
 {
-	kernel::task::Task* t = kernel::task::get_task(m.sender);
-	if (t == nullptr) {
-		LOG_ERROR("Task %d not found in fs_close - likely already exited",
-				  m.sender.raw());
+	// Drop the ledger reference once the routing entry is gone
+	uint32_t handle = 0;
+	const error_t err = request_fd_remove(m.sender, m.data.fs.fd, &handle);
+	if (IS_ERR(err)) {
+		LOG_ERROR("Failed to close fd %d of task %d: error %d", m.data.fs.fd,
+				  m.sender.raw(), err);
 		return;
 	}
 
-	// Drop the ledger reference before the routing entry disappears
-	kernel::fs::FileDescriptor* fd_entry = kernel::fs::get_process_fd(
-			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
-	if (fd_entry != nullptr) {
-		open_file_release(fd_entry->handle);
-	}
-
-	error_t result = kernel::fs::release_process_fd(
-			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, m.data.fs.fd);
-	if (IS_ERR(result)) {
-		LOG_ERROR("Failed to close fd %d: error %d", m.data.fs.fd, result);
-		return;
-	}
+	open_file_release(handle);
 }
 
 void handle_fs_write(const Message& m)
@@ -494,13 +549,6 @@ void handle_fs_mkfile(const Message& m)
 	const char* name = reinterpret_cast<const char*>(m.data.fs.name);
 	kernel::graphics::to_upper(const_cast<char*>(name));
 
-	kernel::task::Task* t = kernel::task::get_task(m.sender);
-	if (t == nullptr) {
-		// Requester is gone; there is no one to reply to.
-		LOG_ERROR("Task %d not found - likely already exited", m.sender.raw());
-		return;
-	}
-
 	DirectoryEntry* existing_entry = find_dir_entry(ROOT_DIR, name);
 	if (existing_entry != nullptr) {
 		LOG_ERROR("File already exists: %s", name);
@@ -529,15 +577,13 @@ void handle_fs_mkfile(const Message& m)
 		return;
 	}
 
-	fd_t fd = kernel::fs::allocate_process_fd(t->fd_table.data(),
-											  kernel::task::MAX_FDS_PER_PROCESS,
-											  name, handle, m.sender);
+	const fd_t fd = request_fd_install(m.sender, name, handle);
 	if (fd < 0) {
 		open_file_release(handle);
 	}
 
-	reply.data.fs.fd = fd;
-	reply.result = fd < 0 ? ERR_INVALID_FD : OK;
+	reply.data.fs.fd = fd < 0 ? NO_FD : fd;
+	reply.result = fd < 0 ? fd : OK;
 	kernel::task::reply(m, &reply);
 }
 
@@ -548,38 +594,25 @@ void handle_fs_dup2(const Message& m)
 	fd_t oldfd = m.data.fs.fd;
 	fd_t newfd = m.data.fs.operation;
 
-	kernel::task::Task* t = kernel::task::get_task(m.sender);
-	if (t == nullptr) {
-		reply_error(m, ERR_INVALID_TASK);
-		return;
-	}
-
 	// TODO: Support for other file descriptors
 	if (newfd != STDOUT_FILENO && newfd != STDERR_FILENO) {
 		reply_error(m, ERR_INVALID_FD);
 		return;
 	}
 
-	// The routing-entry copy will share oldfd's ledger record (that IS the
-	// redirect); account the reference before overwriting newfd, and drop
-	// whatever FS object newfd may have referenced until now
-	kernel::fs::FileDescriptor* old_entry = kernel::fs::get_process_fd(
-			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, oldfd);
-	if (old_entry == nullptr) {
-		reply_error(m, ERR_INVALID_FD);
-		return;
-	}
-	const uint32_t replaced_handle =
-			t->fd_table[newfd].is_used() ? t->fd_table[newfd].handle : 0;
-
-	const error_t dup_err = kernel::fs::dup_process_fd(
-			t->fd_table.data(), kernel::task::MAX_FDS_PER_PROCESS, oldfd, newfd);
+	// The routing-entry copy shares oldfd's ledger record (that IS the
+	// redirect): account the new reference, then drop whatever record of
+	// ours newfd referenced until now
+	uint32_t old_handle = 0;
+	uint32_t replaced_handle = 0;
+	const error_t dup_err =
+			request_fd_dup(m.sender, oldfd, newfd, &old_handle, &replaced_handle);
 	if (IS_ERR(dup_err)) {
 		reply_error(m, dup_err);
 		return;
 	}
 
-	open_file_addref(old_entry->handle);
+	open_file_addref(old_handle);
 	open_file_release(replaced_handle);
 
 	reply.result = OK;

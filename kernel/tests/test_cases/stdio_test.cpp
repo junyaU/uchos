@@ -144,7 +144,7 @@ void test_fd_inheritance()
 	// Modify parent's FD table - allocate a file descriptor
 	fd_t fd = kernel::fs::allocate_process_fd(parent->fd_table.data(),
 											  MAX_FDS_PER_PROCESS, "test.txt", 100,
-											  parent->id);
+											  process_ids::FS_FAT32);
 	ASSERT_GT(fd, -1);
 
 	// Set parent as current task for copy_task
@@ -176,7 +176,7 @@ void test_stdout_redirection()
 
 	// Allocate a file descriptor to redirect to
 	fd_t file_fd = kernel::fs::allocate_process_fd(
-			t->fd_table.data(), MAX_FDS_PER_PROCESS, "output.txt", 0, t->id);
+			t->fd_table.data(), MAX_FDS_PER_PROCESS, "output.txt", 0, process_ids::FS_FAT32);
 	ASSERT_GT(file_fd, -1);
 
 	// TODO: Update test for new dup2 complete copy implementation
@@ -213,7 +213,7 @@ void test_stderr_redirection()
 
 	// Allocate a file descriptor to redirect to
 	fd_t file_fd = kernel::fs::allocate_process_fd(
-			t->fd_table.data(), MAX_FDS_PER_PROCESS, "error.txt", 0, t->id);
+			t->fd_table.data(), MAX_FDS_PER_PROCESS, "error.txt", 0, process_ids::FS_FAT32);
 	ASSERT_GT(file_fd, -1);
 
 	// Simulate redirection by setting redirect_to
@@ -241,7 +241,7 @@ void test_large_write_redirection()
 
 	// Allocate a file descriptor to redirect to
 	fd_t file_fd = kernel::fs::allocate_process_fd(
-			t->fd_table.data(), MAX_FDS_PER_PROCESS, "large.txt", 0, t->id);
+			t->fd_table.data(), MAX_FDS_PER_PROCESS, "large.txt", 0, process_ids::FS_FAT32);
 	ASSERT_GT(file_fd, -1);
 
 	// TODO: Update test for new dup2 complete copy implementation

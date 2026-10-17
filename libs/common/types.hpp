@@ -44,6 +44,7 @@ enum ErrorCode : error_t {
 	ERR_NO_SPACE = -14,
 	ERR_OOL_LIMIT = -15,
 	ERR_TIMEOUT = -16,
+	ERR_NOT_PERMITTED = -17,
 };
 
 // file descriptor
