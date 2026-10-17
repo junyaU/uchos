@@ -97,6 +97,16 @@ enum class MsgType : int32_t {
 	/// Ring-3 smoke result the shell sends to KERNEL in KERNEL_SMOKE_TEST
 	/// builds: one fork→exec→wait round-trip, judged by the kernel (#374)
 	SMOKE_REPORT,
+	/// Install an FS-routed entry in a client's fd table (handled by
+	/// KERNEL). The FS cannot touch other tasks' tables once it leaves the
+	/// kernel, so it asks; the entry always routes back to the requester.
+	FD_INSTALL,
+	/// Remove a client's fd entry owned by the requester; the reply carries
+	/// the removed entry's handle so the FS can drop its ledger record.
+	FD_REMOVE,
+	/// Copy a client's fd entry owned by the requester over another fd
+	/// (dup2); the reply carries the copied and the overwritten handles.
+	FD_DUP,
 	MAX_MESSAGE_TYPE, // must be the last
 };
 
@@ -179,6 +189,17 @@ struct Message {
 		struct {
 			error_t status;
 		} smoke;
+
+		/// FD_INSTALL / FD_REMOVE / FD_DUP payload. The requester (always
+		/// the stamped call() sender) names the client whose table changes.
+		struct {
+			pid_t client;			  ///< Task whose fd table is edited
+			fd_t fd;				  ///< INSTALL reply / REMOVE / DUP source
+			fd_t newfd;				  ///< DUP target
+			uint32_t handle;		  ///< INSTALL input / REMOVE, DUP replies
+			uint32_t replaced_handle; ///< DUP reply: overwritten entry's handle
+			char name[13];			  ///< INSTALL: label stored in the entry
+		} fd_route;
 	} data;
 };
 

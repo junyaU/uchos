@@ -3,6 +3,7 @@
 #include <cstring>
 #include <libs/common/process_id.hpp>
 #include <libs/common/types.hpp>
+#include "error.hpp"
 #include "log/log.hpp"
 
 namespace kernel::fs
@@ -52,7 +53,7 @@ fd_t allocate_process_fd(FileDescriptor* fd_table,
 						 size_t table_size,
 						 const char* name,
 						 uint32_t handle,
-						 ProcessId pid)
+						 ProcessId dest)
 {
 	if (fd_table == nullptr || name == nullptr) {
 		LOG_ERROR("Invalid arguments for allocate_process_fd");
@@ -62,12 +63,11 @@ fd_t allocate_process_fd(FileDescriptor* fd_table,
 	// Find first unused entry
 	for (size_t i = 0; i < table_size; ++i) {
 		if (fd_table[i].is_unused()) {
-			// This helper is FS-side code (it moves into the FS server in
-			// 3b), so entries it creates route to the FAT32 service; the
-			// syscall layer only ever reads this (issue #315). All file
-			// state lives behind the handle in the FS ledger.
+			// The entry routes back to the service that issued the handle;
+			// the syscall layer only ever reads this (issue #315). All file
+			// state lives behind the handle in that service's ledger.
 			fd_table[i].route = FdRoute::FS;
-			fd_table[i].dest = process_ids::FS_FAT32;
+			fd_table[i].dest = dest;
 			fd_table[i].handle = handle;
 			strncpy(fd_table[i].name, name, sizeof(fd_table[i].name) - 1);
 			fd_table[i].name[sizeof(fd_table[i].name) - 1] = '\0';
@@ -75,7 +75,7 @@ fd_t allocate_process_fd(FileDescriptor* fd_table,
 		}
 	}
 
-	LOG_ERROR("Process %d: No available file descriptors", pid.raw());
+	LOG_ERROR("No available file descriptors (service %d)", dest.raw());
 	return NO_FD;
 }
 
@@ -130,6 +130,56 @@ error_t dup_process_fd(FileDescriptor* fd_table,
 
 	fd_table[newfd] = *old_entry;
 
+	return OK;
+}
+
+error_t remove_owned_fd(FileDescriptor* fd_table,
+						size_t table_size,
+						fd_t fd,
+						ProcessId owner,
+						uint32_t* out_handle)
+{
+	const FileDescriptor* entry = get_process_fd(fd_table, table_size, fd);
+	if (entry == nullptr || entry->route != FdRoute::FS || entry->dest != owner) {
+		return ERR_INVALID_FD;
+	}
+
+	const uint32_t handle = entry->handle;
+	RETURN_IF_ERROR(release_process_fd(fd_table, table_size, fd));
+
+	*out_handle = handle;
+	return OK;
+}
+
+error_t dup_owned_fd(FileDescriptor* fd_table,
+					 size_t table_size,
+					 fd_t oldfd,
+					 fd_t newfd,
+					 ProcessId owner,
+					 uint32_t* out_old_handle,
+					 uint32_t* out_replaced_handle)
+{
+	const FileDescriptor* old_entry = get_process_fd(fd_table, table_size, oldfd);
+	if (old_entry == nullptr || old_entry->route != FdRoute::FS ||
+		old_entry->dest != owner) {
+		return ERR_INVALID_FD;
+	}
+
+	if (newfd < 0 || static_cast<size_t>(newfd) >= table_size) {
+		return ERR_INVALID_FD;
+	}
+
+	const FileDescriptor& replaced = fd_table[newfd];
+	const bool replaced_is_owners = replaced.is_used() &&
+									replaced.route == FdRoute::FS &&
+									replaced.dest == owner;
+	const uint32_t replaced_handle = replaced_is_owners ? replaced.handle : 0;
+	const uint32_t old_handle = old_entry->handle;
+
+	RETURN_IF_ERROR(dup_process_fd(fd_table, table_size, oldfd, newfd));
+
+	*out_old_handle = old_handle;
+	*out_replaced_handle = replaced_handle;
 	return OK;
 }
 

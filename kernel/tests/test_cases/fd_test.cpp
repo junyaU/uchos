@@ -22,7 +22,7 @@ void test_fd_allocation()
 
 	// Test allocation
 	fd_t fd1 = fs::allocate_process_fd(fd_table, 32, "test1.txt", 100,
-									   ProcessId::from_raw(1));
+									   process_ids::FS_FAT32);
 	ASSERT_GT(fd1, -1);
 	ASSERT_LT(fd1, 32);
 
@@ -35,7 +35,7 @@ void test_fd_allocation()
 
 	// Test another allocation
 	fd_t fd2 = fs::allocate_process_fd(fd_table, 32, "test2.txt", 200,
-									   ProcessId::from_raw(1));
+									   process_ids::FS_FAT32);
 	ASSERT_NE(fd1, fd2);
 	ASSERT_GT(fd2, -1);
 }
@@ -48,7 +48,7 @@ void test_fd_release()
 
 	// Allocate and release
 	fd_t fd = fs::allocate_process_fd(fd_table, 32, "temp.txt", 50,
-									  ProcessId::from_raw(1));
+									  process_ids::FS_FAT32);
 	ASSERT_GT(fd, -1);
 
 	error_t result = fs::release_process_fd(fd_table, 32, fd);
@@ -74,9 +74,9 @@ void test_fd_fork_copy()
 
 	// Add some file descriptors
 	fd_t fd1 = fs::allocate_process_fd(parent_table, 32, "parent1.txt", 100,
-									   ProcessId::from_raw(1));
+									   process_ids::FS_FAT32);
 	fd_t fd2 = fs::allocate_process_fd(parent_table, 32, "parent2.txt", 200,
-									   ProcessId::from_raw(1));
+									   process_ids::FS_FAT32);
 
 	// Create child FD table and copy
 	fs::FileDescriptor child_table[32];
@@ -113,7 +113,7 @@ void test_fd_dup2()
 
 	// Allocate a file descriptor
 	fd_t file_fd = fs::allocate_process_fd(fd_table, 32, "output.txt", 0,
-										   ProcessId::from_raw(1));
+										   process_ids::FS_FAT32);
 	ASSERT_GT(file_fd, -1);
 
 	// dup2 replaces the target entry with a copy of the source entry
@@ -137,7 +137,7 @@ void test_dup_process_fd()
 
 	// Allocate a file descriptor
 	fd_t file_fd = fs::allocate_process_fd(fd_table, 32, "output.txt", 42,
-										   ProcessId::from_raw(1));
+										   process_ids::FS_FAT32);
 	ASSERT_GT(file_fd, -1);
 
 	// Normal case: dup the file fd onto STDOUT_FILENO
@@ -175,13 +175,13 @@ void test_fd_limits()
 							 "file4.txt" };
 	for (int i = 0; i < 5; i++) {
 		fds[i] = fs::allocate_process_fd(fd_table, 8, names[i], 100,
-										 ProcessId::from_raw(1));
+										 process_ids::FS_FAT32);
 		ASSERT_GT(fds[i], -1);
 	}
 
 	// Next allocation should fail
 	fd_t overflow_fd = fs::allocate_process_fd(fd_table, 8, "overflow.txt", 100,
-											   ProcessId::from_raw(1));
+											   process_ids::FS_FAT32);
 	ASSERT_EQ(overflow_fd, NO_FD);
 
 	// Release one and try again
@@ -189,7 +189,7 @@ void test_fd_limits()
 	ASSERT_EQ(result, OK);
 
 	fd_t new_fd = fs::allocate_process_fd(fd_table, 8, "new.txt", 100,
-										  ProcessId::from_raw(1));
+										  process_ids::FS_FAT32);
 	ASSERT_EQ(new_fd, fds[0]); // Should reuse the freed slot
 }
 
@@ -207,12 +207,19 @@ void test_fd_routing()
 	ASSERT_TRUE(fd_table[STDERR_FILENO].route == FdRoute::CONSOLE);
 	ASSERT_TRUE(fd_table[STDERR_FILENO].dest == process_ids::SHELL);
 
-	// FS-created entries route to the FAT32 service
+	// An entry routes back to the service that issued its handle (the
+	// kernel no longer assumes the FAT32 service)
 	fd_t fd = fs::allocate_process_fd(fd_table, 32, "routed.txt", 10,
-									  ProcessId::from_raw(1));
+									  process_ids::FS_FAT32);
 	ASSERT_GT(fd, -1);
 	ASSERT_TRUE(fd_table[fd].route == FdRoute::FS);
 	ASSERT_TRUE(fd_table[fd].dest == process_ids::FS_FAT32);
+
+	fd_t other = fs::allocate_process_fd(fd_table, 32, "other.txt", 11,
+										 process_ids::PONGD);
+	ASSERT_GT(other, -1);
+	ASSERT_TRUE(fd_table[other].dest == process_ids::PONGD);
+	fd_table[other].clear();
 
 	// dup2 carries the routing with the entry: redirection is nothing but
 	// a routing swap now
@@ -237,7 +244,7 @@ void test_release_all_fds()
 							 "file4.txt" };
 	for (int i = 0; i < 5; i++) {
 		fd_t fd = fs::allocate_process_fd(fd_table, 32, names[i], 100,
-										  ProcessId::from_raw(1));
+										  process_ids::FS_FAT32);
 		ASSERT_GT(fd, -1);
 	}
 
@@ -258,6 +265,93 @@ void test_release_all_fds()
 	ASSERT_TRUE(fd_table[STDERR_FILENO].is_used());
 }
 
+void test_remove_owned_fd()
+{
+	fs::FileDescriptor fd_table[32];
+	fs::init_process_fd_table(fd_table, 32);
+
+	fd_t fd = fs::allocate_process_fd(fd_table, 32, "mine.txt", 77,
+									  process_ids::FS_FAT32);
+	ASSERT_GT(fd, -1);
+
+	// Another service cannot close an fd it did not issue
+	uint32_t handle = 0;
+	error_t result =
+			fs::remove_owned_fd(fd_table, 32, fd, process_ids::PONGD, &handle);
+	ASSERT_EQ(result, ERR_INVALID_FD);
+	ASSERT_TRUE(fd_table[fd].is_used());
+	ASSERT_EQ(handle, 0U);
+
+	// Console fds route to the shell, so no service may remove them
+	result = fs::remove_owned_fd(fd_table, 32, STDOUT_FILENO,
+								 process_ids::FS_FAT32, &handle);
+	ASSERT_EQ(result, ERR_INVALID_FD);
+	ASSERT_TRUE(fd_table[STDOUT_FILENO].is_used());
+
+	// The issuer can, and gets the handle back to drop its ledger record
+	result = fs::remove_owned_fd(fd_table, 32, fd, process_ids::FS_FAT32, &handle);
+	ASSERT_EQ(result, OK);
+	ASSERT_EQ(handle, 77U);
+	ASSERT_TRUE(fd_table[fd].is_unused());
+
+	// A second removal finds nothing
+	result = fs::remove_owned_fd(fd_table, 32, fd, process_ids::FS_FAT32, &handle);
+	ASSERT_EQ(result, ERR_INVALID_FD);
+}
+
+void test_dup_owned_fd()
+{
+	fs::FileDescriptor fd_table[32];
+	fs::init_process_fd_table(fd_table, 32);
+
+	fd_t file_fd = fs::allocate_process_fd(fd_table, 32, "out.txt", 5,
+										   process_ids::FS_FAT32);
+	ASSERT_GT(file_fd, -1);
+
+	// Only the issuer of the source entry may copy it
+	uint32_t old_handle = 0;
+	uint32_t replaced_handle = 0;
+	error_t result = fs::dup_owned_fd(fd_table, 32, file_fd, STDOUT_FILENO,
+									  process_ids::PONGD, &old_handle,
+									  &replaced_handle);
+	ASSERT_EQ(result, ERR_INVALID_FD);
+	ASSERT_TRUE(fd_table[STDOUT_FILENO].route == FdRoute::CONSOLE);
+
+	// Redirecting stdout overwrites a console entry: it carries no handle
+	// of ours, so nothing is reported for release
+	result = fs::dup_owned_fd(fd_table, 32, file_fd, STDOUT_FILENO,
+							  process_ids::FS_FAT32, &old_handle, &replaced_handle);
+	ASSERT_EQ(result, OK);
+	ASSERT_EQ(old_handle, 5U);
+	ASSERT_EQ(replaced_handle, 0U);
+	ASSERT_TRUE(fd_table[STDOUT_FILENO].route == FdRoute::FS);
+	ASSERT_EQ(fd_table[STDOUT_FILENO].handle, 5U);
+
+	// Overwriting one of our own entries reports its handle for release
+	fd_t second_fd = fs::allocate_process_fd(fd_table, 32, "next.txt", 6,
+											 process_ids::FS_FAT32);
+	ASSERT_GT(second_fd, -1);
+	result = fs::dup_owned_fd(fd_table, 32, second_fd, STDOUT_FILENO,
+							  process_ids::FS_FAT32, &old_handle, &replaced_handle);
+	ASSERT_EQ(result, OK);
+	ASSERT_EQ(old_handle, 6U);
+	ASSERT_EQ(replaced_handle, 5U);
+
+	// A handle issued by another service is never reported to us
+	fd_t foreign_fd = fs::allocate_process_fd(fd_table, 32, "theirs.txt", 9,
+											  process_ids::PONGD);
+	ASSERT_GT(foreign_fd, -1);
+	result = fs::dup_owned_fd(fd_table, 32, file_fd, foreign_fd,
+							  process_ids::FS_FAT32, &old_handle, &replaced_handle);
+	ASSERT_EQ(result, OK);
+	ASSERT_EQ(replaced_handle, 0U);
+
+	// Out-of-range target
+	result = fs::dup_owned_fd(fd_table, 32, file_fd, 32, process_ids::FS_FAT32,
+							  &old_handle, &replaced_handle);
+	ASSERT_EQ(result, ERR_INVALID_FD);
+}
+
 void register_fd_tests()
 {
 	test_register("test_fd_allocation", test_fd_allocation);
@@ -268,4 +362,6 @@ void register_fd_tests()
 	test_register("test_fd_limits", test_fd_limits);
 	test_register("test_fd_routing", test_fd_routing);
 	test_register("test_release_all_fds", test_release_all_fds);
+	test_register("test_remove_owned_fd", test_remove_owned_fd);
+	test_register("test_dup_owned_fd", test_dup_owned_fd);
 }

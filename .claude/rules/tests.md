@@ -28,7 +28,7 @@ paths:
 
 ## ring-3 煙テスト(issue #374)
 - ring 0 で完結するカーネル内テストでは fork の 2 回戻り・exec の CR3 切替・sys_wait の親子連携(#371 型回帰)を検出できない。CI はこれを `-DKERNEL_SMOKE_TEST=ON` の煙テストで補う
-- 仕組み: テスト完走後もブートを継続 → シェルを `-smoke` 引数で exec → シェルが `echo smoke` を通常の fork→exec→wait 経路で 1 往復実行 → 結果を `SMOKE_REPORT` メッセージで KERNEL タスクへ報告 → カーネル(`kernel/tests/smoke.cpp`)が `SMOKE_TEST: ... result=PASS|FAIL` マーカーをシリアルに出して isa-debug-exit で終了(テスト結果との AND)。ハングは 60 秒のウォッチドッグが FAIL マーカー化する
+- 仕組み: テスト完走後もブートを継続 → シェルを `-smoke` 引数で exec → シェルが `echo smoke` を通常の fork→exec→wait 経路で 1 往復実行し、pongd への ping と、`echo` ファイルの open→read(ELF マジック確認)→close も行う → 結果を `SMOKE_REPORT` メッセージで KERNEL タスクへ報告 → カーネル(`kernel/tests/smoke.cpp`)が `SMOKE_TEST: ... result=PASS|FAIL` マーカーをシリアルに出して isa-debug-exit で終了(テスト結果との AND)。ハングは 60 秒のウォッチドッグが FAIL マーカー化する
 - `scripts/run_kernel_tests.sh` は `SMOKE_BINS="<shell> <echo>"` 指定時に virtio-blk ストレージディスクを組み立てて `SMOKE_TEST:` マーカーも判定する。マーカー形式を変える場合は両側を同期すること
 
 ## CI 失敗の切り分け(replay-first)

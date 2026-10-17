@@ -37,8 +37,45 @@ void run_smoke_test(Shell* s, Terminal* term)
 		svc_status = ERR_INVALID_ARG;
 	}
 
+	// Open, read and close one file: open installs the fd entry through the
+	// FS's FD_INSTALL request to KERNEL, read follows that entry, close
+	// removes it with FD_REMOVE. The echo binary is always on the smoke
+	// disk, so its ELF magic is a fixed expected value. close is a one-way
+	// send, so reopen to prove it ran: the FS handles requests in order, so
+	// a removed entry must free the same lowest slot for the next open.
+	error_t file_status = OK;
+	const fd_t fd = fs_open("echo", 0);
+	if (fd < 0) {
+		file_status = fd;
+	} else {
+		char magic[4] = {};
+		const ssize_t n = fs_read(fd, magic, sizeof(magic));
+		if (n < 0) {
+			file_status = static_cast<error_t>(n);
+		} else if (n != sizeof(magic) || memcmp(magic, "\x7f" "ELF", 4) != 0) {
+			file_status = ERR_INVALID_ARG;
+		}
+		fs_close(fd);
+
+		const fd_t reopened = fs_open("echo", 0);
+		if (!IS_ERR(file_status) && reopened != fd) {
+			file_status = reopened < 0 ? reopened : ERR_INVALID_FD;
+		}
+		if (reopened >= 0) {
+			fs_close(reopened);
+		}
+	}
+
+	error_t first_error = status;
+	if (!IS_ERR(first_error)) {
+		first_error = svc_status;
+	}
+	if (!IS_ERR(first_error)) {
+		first_error = file_status;
+	}
+
 	Message report = make_request(MsgType::SMOKE_REPORT);
-	report.data.smoke.status = IS_ERR(status) ? status : svc_status;
+	report.data.smoke.status = first_error;
 	send_message(process_ids::KERNEL, &report);
 }
 
