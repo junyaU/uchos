@@ -10,6 +10,7 @@
 #include "bit_utils.hpp"
 #include "buddy_system.hpp"
 #include "heap_debug.hpp"
+#include "interrupt/irq_guard.hpp"
 #include "log/log.hpp"
 #include "page.hpp"
 
@@ -239,6 +240,12 @@ constexpr size_t MAX_ALLOC_SIZE = (1UL << MAX_ORDER) * PAGE_SIZE;
 
 void* alloc(size_t size, unsigned flags, int align)
 {
+	// Tasks are preempted mid-kernel (the timer switches even in syscall
+	// context), so every mutation of the cache/slab lists must be atomic
+	// against another task entering the allocator (issue #383): a lost
+	// free-list node surfaces later as "no free objects" on a partial slab.
+	kernel::interrupt::IrqGuard guard;
+
 	if (size == 0) {
 		LOG_ERROR("alloc: size must be non-zero");
 		return nullptr;
@@ -320,6 +327,9 @@ void free(void* addr)
 		return;
 	}
 
+	// Same atomicity contract as alloc() (issue #383)
+	kernel::interrupt::IrqGuard guard;
+
 #ifdef KERNEL_HEAP_DEBUG_ENABLED
 	// Validate the payload pointer, check its redzones, poison the object, and
 	// translate back to the raw slab object. A double/invalid free returns
@@ -367,6 +377,9 @@ bool is_slab_object_in_use(void* addr)
 	if (addr == nullptr) {
 		return false;
 	}
+
+	// Reads the same lists/tables the guarded alloc()/free() mutate
+	kernel::interrupt::IrqGuard guard;
 
 #ifdef KERNEL_HEAP_DEBUG_ENABLED
 	// A live payload pointer maps to its raw object; anything else falls
