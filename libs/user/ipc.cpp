@@ -28,6 +28,15 @@ Message call(ProcessId dst, Message* msg)
 	return *msg;
 }
 
+error_t reply_message(const Message* req, Message* resp)
+{
+	// The server only echoes the pairing id; the kernel stamps the reply
+	// flag and the true sender at the syscall boundary (issue #315 3b-10)
+	resp->correlation = req->correlation;
+	return static_cast<error_t>(
+			sys_ipc(req->sender.raw(), resp->sender.raw(), resp, IPC_REPLY));
+}
+
 void initialize_task()
 {
 	Message m = make_request(MsgType::FS_REGISTER_PATH);

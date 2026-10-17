@@ -57,17 +57,22 @@ gh run download "$run_id" -n kernel-test-serial-log -D "$ci_logs_dir" ||
     echo "note: no kernel-test-serial-log artifact on this run"
 
 kernel_elf="$bins_dir/build/UchosKernel"
-shell_bin="$bins_dir/userland/shell/shell"
-echo_bin="$bins_dir/userland/commands/echo/echo"
 if [ ! -f "$kernel_elf" ]; then
     echo "error: artifact did not contain build/UchosKernel" >&2
     exit 1
 fi
 
+# Every userland binary the run uploaded goes onto the smoke disk: the
+# artifact list (ci.yml smoke-debug-binaries) is the single source of
+# truth, so a service added there never gets silently left off the replay
+# disk (a hardcoded shell+echo list once turned a missing-pongd artifact
+# into a bogus "fails locally" verdict).
 smoke_bins=""
-if [ -f "$shell_bin" ] && [ -f "$echo_bin" ]; then
-    smoke_bins="$shell_bin $echo_bin"
-else
+if [ -d "$bins_dir/userland" ]; then
+    smoke_bins="$(find "$bins_dir/userland" -type f | sort | tr '\n' ' ')"
+    smoke_bins="${smoke_bins% }"
+fi
+if [ -z "$smoke_bins" ]; then
     echo "note: userland binaries missing from the artifact; kernel tests only"
 fi
 

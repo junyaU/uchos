@@ -359,8 +359,8 @@ namespace
 // comes in through the manifest supplied to initialize() (issue #315:
 // this file must not know individual services).
 constexpr InitialTaskInfo SCHEDULER_TASKS[] = {
-	{ SystemProcessId::KERNEL, "main", nullptr, false, true },
-	{ SystemProcessId::IDLE, "idle", &idle_service, true, true },
+	{ SystemProcessId::KERNEL, "main", nullptr, nullptr, nullptr, false, true },
+	{ SystemProcessId::IDLE, "idle", &idle_service, nullptr, nullptr, true, true },
 };
 
 void spawn_initial_task(const InitialTaskInfo& info)
