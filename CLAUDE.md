@@ -154,7 +154,7 @@ llvm-addr2line -e build/UchosKernel <addr>
   1. 設計判断とその理由(捨てた代替案も一言)
   2. 実装者として危険だと思う箇所 top3(`file:line`)
   3. 触れた危険地帯(なければ「なし」)
-- **危険地帯に触れる PR** はマージ前に `/tutor` で理解確認を行う前提。ユーザーから次の危険地帯の実装依頼を受けたとき、直前の危険地帯 PR が未マージ・理解確認未了なら、着手前にその旨を一言確認する(WIP 上限 1)
+- **危険地帯に触れる PR** はユーザーが精読してからマージする(必要なら `/grareco` を予習素材に)。ユーザーから次の危険地帯の実装依頼を受けたとき、直前の危険地帯 PR が未マージなら、着手前にその旨を一言確認する(WIP 上限 1)
 - 危険地帯に触れない PR(fs/ net/ graphics/ userland/ リファクタ・テスト追加)は PR 本文 + CI で足りる。精読は求めない
 
 ## 📌 重要な開発指針
@@ -181,4 +181,4 @@ llvm-addr2line -e build/UchosKernel <addr>
 
 - `.claude/settings.json` - 共有の権限設定と clang-format 自動適用フック(コミット対象)
 - `.claude/rules/` - パススコープのルール(kernel / userland / tests)。該当ファイル編集時に自動ロード
-- `.claude/skills/` - 定型作業の手順書(`/add-userland-command`, `/kernel-testing`, `/net-debug`, `/tutor`)
+- `.claude/skills/` - 定型作業の手順書(`/add-userland-command`, `/kernel-testing`, `/net-debug`, `/grareco`)
